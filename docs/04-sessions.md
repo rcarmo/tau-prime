@@ -2,11 +2,17 @@
 
 Sessions preserve conversations and agent state across runs.
 
-## Design direction
+## Design
 
-Tau will use an append-only session tree. Instead of mutating old state, Tau appends entries and reconstructs state by replaying them.
+Tau uses an append-only session tree. Instead of mutating old state, Tau appends entries and reconstructs state by replaying them.
 
-## Planned entry types
+The low-level implementation lives in:
+
+```text
+src/tau_agent/session/
+```
+
+## Entry types
 
 - `message`
 - `model_change`
@@ -17,6 +23,16 @@ Tau will use an append-only session tree. Instead of mutating old state, Tau app
 - `leaf`
 - `session_info`
 - `custom`
+
+## Current capabilities
+
+Tau can now:
+
+- serialize and deserialize session entries as JSONL
+- append entries to local session files
+- read session files in order
+- reconstruct linear session state
+- reconstruct a root-to-leaf branch path
 
 ## Boundary
 

@@ -26,5 +26,6 @@ The most important boundary is that `tau_agent` should stay portable. It can def
 - [Phase 4: AgentHarness](phase-4-agent-harness.md)
 - [Phase 5: Built-in Coding Tools](phase-5-coding-tools.md)
 - [Phase 6: Non-interactive Print-mode CLI](phase-6-print-mode-cli.md)
+- [Phase 7: Session Tree and JSONL Persistence](phase-7-session-tree.md)
 
 More pages will be added here as each phase lands.
