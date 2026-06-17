@@ -87,3 +87,4 @@ nav:
       - "Phase 23: Advanced TUI and Product Polish": architecture/phase-23-tui-polish.md
   - ADRs:
       - Use Textual for TUI: adr/0001-use-textual-for-tui.md
+      - Keep Tool Docs Hand-written: adr/0002-keep-tool-docs-hand-written.md

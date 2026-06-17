@@ -2,6 +2,11 @@
 
 Tools let the assistant inspect and modify the user's environment through structured calls.
 
+This page is the user-facing source of truth for built-in tool behavior. The
+Python factory functions also have docstrings for contributors, but generated
+API reference docs are intentionally deferred; see
+[ADR 0002](adr/0002-keep-tool-docs-hand-written.md).
+
 Tau separates the idea of a tool from any specific frontend:
 
 - `tau_agent` defines provider-neutral tool types and executes requested tool calls.
