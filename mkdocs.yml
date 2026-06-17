@@ -73,5 +73,6 @@ nav:
       - "Phase 12: Textual TUI": architecture/phase-12-textual-tui.md
       - "Phase 13: Tau Home, Paths, and .agents Resources": architecture/phase-13-paths-agents-resources.md
       - "Phase 14: Session Manager and Resume": architecture/phase-14-session-manager-resume.md
+      - "Phase 15: Slash Command Registry": architecture/phase-15-slash-command-registry.md
   - ADRs:
       - Use Textual for TUI: adr/0001-use-textual-for-tui.md

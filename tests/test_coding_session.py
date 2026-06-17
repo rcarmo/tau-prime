@@ -313,6 +313,8 @@ def test_minimal_commands_are_handled(tmp_path: Path) -> None:
     )
 
     assert session.handle_command("hello").handled is False
-    assert session.handle_command("/help").message == "Available commands: /help, /exit"
+    assert session.handle_command("/help").message is not None
+    assert "/help" in session.handle_command("/help").message
+    assert session.handle_command("/clear").clear_requested is True
     assert session.handle_command("/exit").exit_requested is True
     assert session.handle_command("/unknown").message == "Unknown command: /unknown"

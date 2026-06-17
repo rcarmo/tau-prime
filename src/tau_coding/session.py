@@ -17,6 +17,7 @@ from tau_agent.session import (
 )
 from tau_agent.tools import AgentTool
 from tau_ai import ModelProvider
+from tau_coding.commands import CommandRegistry, CommandResult, create_default_command_registry
 from tau_coding.paths import TauPaths
 from tau_coding.prompt_templates import PromptTemplate, load_prompt_templates
 from tau_coding.resources import ResourceError, TauResourcePaths
@@ -46,15 +47,7 @@ class CodingSessionConfig:
     resource_paths: TauResourcePaths | None = None
     session_id: str | None = None
     session_manager: SessionManager | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class CommandResult:
-    """Result of handling a coding-session slash command."""
-
-    handled: bool
-    exit_requested: bool = False
-    message: str | None = None
+    command_registry: CommandRegistry | None = None
 
 
 class CodingSession:
@@ -74,6 +67,7 @@ class CodingSession:
         last_parent_id: str | None,
         skills: tuple[Skill, ...] = (),
         prompt_templates: tuple[PromptTemplate, ...] = (),
+        command_registry: CommandRegistry | None = None,
     ) -> None:
         self._config = config
         self._state = state
@@ -81,6 +75,7 @@ class CodingSession:
         self._last_parent_id = last_parent_id
         self._skills = skills
         self._prompt_templates = prompt_templates
+        self._command_registry = command_registry or create_default_command_registry()
 
     @classmethod
     async def load(cls, config: CodingSessionConfig) -> CodingSession:
@@ -133,6 +128,7 @@ class CodingSession:
             last_parent_id=_last_parent_id_from_state(state),
             skills=skills,
             prompt_templates=prompt_templates,
+            command_registry=config.command_registry,
         )
 
     @property
@@ -175,6 +171,16 @@ class CodingSession:
         """Return loaded prompt templates."""
         return self._prompt_templates
 
+    @property
+    def session_id(self) -> str | None:
+        """Return this session's manager id, if indexed."""
+        return self._config.session_id
+
+    @property
+    def session_manager(self) -> SessionManager | None:
+        """Return the session manager, if available."""
+        return self._config.session_manager
+
     def cancel(self) -> None:
         """Cancel the currently running agent turn, if any."""
         self._harness.cancel()
@@ -185,19 +191,7 @@ class CodingSession:
         This is intentionally tiny. Later phases can replace it with a full Pi-like
         command registry without changing the persistence boundary.
         """
-        stripped = text.strip()
-        if not stripped.startswith("/"):
-            return CommandResult(handled=False)
-        if stripped.startswith("/skill:"):
-            return CommandResult(handled=False)
-        if stripped == "/exit":
-            return CommandResult(handled=True, exit_requested=True, message="Exiting session.")
-        if stripped == "/help":
-            return CommandResult(
-                handled=True,
-                message="Available commands: /help, /exit",
-            )
-        return CommandResult(handled=True, message=f"Unknown command: {stripped}")
+        return self._command_registry.execute(self, text)
 
     def expand_prompt_text(self, text: str) -> str:
         """Expand prompt text using loaded markdown resources."""

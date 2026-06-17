@@ -30,6 +30,12 @@ class TuiState:
         """Append a transcript item."""
         self.items.append(ChatItem(role=role, text=text))
 
+    def clear(self) -> None:
+        """Clear visible transcript state without modifying durable session history."""
+        self.items.clear()
+        self.assistant_buffer = ""
+        self.error = None
+
     def load_messages(self, messages: Iterable[AgentMessage]) -> None:
         """Populate the transcript from restored session messages."""
         for message in messages:

@@ -1,5 +1,11 @@
 """Tau coding-agent application package."""
 
+from tau_coding.commands import (
+    CommandRegistry,
+    CommandResult,
+    SlashCommand,
+    create_default_command_registry,
+)
 from tau_coding.paths import TauPaths
 from tau_coding.prompt_templates import (
     PromptTemplate,
@@ -18,7 +24,6 @@ from tau_coding.resources import ResourceError, TauResourcePaths
 from tau_coding.session import (
     CodingSession,
     CodingSessionConfig,
-    CommandResult,
     default_session_path,
     jsonl_session_storage,
 )
@@ -54,6 +59,7 @@ __all__ = [
     "CodingSession",
     "CodingSessionConfig",
     "CodingSessionRecord",
+    "CommandRegistry",
     "CommandResult",
     "BuildSystemPromptOptions",
     "EventRenderer",
@@ -65,6 +71,7 @@ __all__ = [
     "ResourceError",
     "SessionManager",
     "Skill",
+    "SlashCommand",
     "TauPaths",
     "TauResourcePaths",
     "ToolDefinition",
@@ -77,6 +84,7 @@ __all__ = [
     "create_coding_tools",
     "create_edit_tool",
     "create_edit_tool_definition",
+    "create_default_command_registry",
     "create_event_renderer",
     "create_read_tool",
     "create_read_tool_definition",

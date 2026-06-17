@@ -1,0 +1,308 @@
+"""Slash command registry for Tau coding sessions."""
+
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
+
+from tau_agent.tools import AgentTool
+from tau_coding.prompt_templates import PromptTemplate
+from tau_coding.session_manager import CodingSessionRecord, SessionManager
+from tau_coding.skills import Skill
+
+
+class CommandSession(Protocol):
+    """Session attributes available to slash-command handlers."""
+
+    @property
+    def cwd(self) -> Path: ...
+
+    @property
+    def model(self) -> str: ...
+
+    @property
+    def tools(self) -> Sequence[AgentTool]: ...
+
+    @property
+    def skills(self) -> Sequence[Skill]: ...
+
+    @property
+    def prompt_templates(self) -> Sequence[PromptTemplate]: ...
+
+    @property
+    def session_id(self) -> str | None: ...
+
+    @property
+    def session_manager(self) -> SessionManager | None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class CommandResult:
+    """Result of handling a coding-session slash command."""
+
+    handled: bool
+    exit_requested: bool = False
+    clear_requested: bool = False
+    message: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CommandContext:
+    """Runtime context passed to slash-command handlers."""
+
+    session: CommandSession
+    registry: CommandRegistry
+    text: str
+    name: str
+    args: str
+
+
+CommandHandler = Callable[[CommandContext], CommandResult]
+
+
+@dataclass(frozen=True, slots=True)
+class SlashCommand:
+    """A registered slash command and its user-facing metadata."""
+
+    name: str
+    description: str
+    usage: str
+    handler: CommandHandler
+    aliases: tuple[str, ...] = ()
+
+
+class CommandRegistry:
+    """Parse, register, list, and execute slash commands."""
+
+    def __init__(self) -> None:
+        self._commands: dict[str, SlashCommand] = {}
+        self._aliases: dict[str, str] = {}
+
+    def register(self, command: SlashCommand) -> None:
+        """Register a slash command and its aliases."""
+        name = _normalize_name(command.name)
+        if name in self._commands:
+            raise ValueError(f"Duplicate slash command: /{name}")
+        self._commands[name] = command
+        for alias in command.aliases:
+            normalized_alias = _normalize_name(alias)
+            if normalized_alias in self._commands or normalized_alias in self._aliases:
+                raise ValueError(f"Duplicate slash command alias: /{normalized_alias}")
+            self._aliases[normalized_alias] = name
+
+    def get(self, name: str) -> SlashCommand | None:
+        """Return a command by name or alias."""
+        normalized = _normalize_name(name)
+        command_name = self._aliases.get(normalized, normalized)
+        return self._commands.get(command_name)
+
+    def list_commands(self) -> tuple[SlashCommand, ...]:
+        """Return registered commands sorted by name."""
+        return tuple(self._commands[name] for name in sorted(self._commands))
+
+    def execute(self, session: CommandSession, text: str) -> CommandResult:
+        """Execute a slash command, or return unhandled for ordinary prompts."""
+        stripped = text.strip()
+        if not stripped.startswith("/"):
+            return CommandResult(handled=False)
+
+        if stripped.startswith("/skill:"):
+            return CommandResult(handled=False)
+
+        name, args = _parse_command(stripped)
+        if not name:
+            return CommandResult(handled=False)
+
+        command = self.get(name)
+        if command is None:
+            return CommandResult(handled=True, message=f"Unknown command: /{name}")
+
+        return command.handler(
+            CommandContext(session=session, registry=self, text=stripped, name=name, args=args)
+        )
+
+
+def create_default_command_registry() -> CommandRegistry:
+    """Create Tau's built-in slash command registry."""
+    registry = CommandRegistry()
+    registry.register(
+        SlashCommand(
+            name="help",
+            aliases=("?",),
+            usage="/help",
+            description="Show available slash commands.",
+            handler=_help_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="exit",
+            aliases=("quit", "q"),
+            usage="/exit",
+            description="Exit the current TUI session.",
+            handler=_exit_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="clear",
+            usage="/clear",
+            description="Clear the visible transcript without deleting session history.",
+            handler=_clear_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="status",
+            usage="/status",
+            description="Show current session status.",
+            handler=_status_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="skills",
+            usage="/skills",
+            description="List loaded skills.",
+            handler=_skills_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="skill",
+            usage="/skill:<name> [request]",
+            description="Use a loaded skill in the next prompt.",
+            handler=_skill_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="sessions",
+            usage="/sessions",
+            description="List indexed sessions.",
+            handler=_sessions_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="resume",
+            usage="/resume <session-id>",
+            description="Explain how to resume a session.",
+            handler=_resume_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="model",
+            usage="/model",
+            description="Show model switching status.",
+            handler=_model_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="provider",
+            usage="/provider",
+            description="Show provider switching status.",
+            handler=_provider_command,
+        )
+    )
+    return registry
+
+
+def _help_command(context: CommandContext) -> CommandResult:
+    lines = ["Available commands:"]
+    for command in context.registry.list_commands():
+        lines.append(f"{command.usage}\t{command.description}")
+    return CommandResult(handled=True, message="\n".join(lines))
+
+
+def _exit_command(context: CommandContext) -> CommandResult:
+    return CommandResult(handled=True, exit_requested=True, message="Exiting session.")
+
+
+def _clear_command(context: CommandContext) -> CommandResult:
+    return CommandResult(handled=True, clear_requested=True, message="Transcript cleared.")
+
+
+def _status_command(context: CommandContext) -> CommandResult:
+    session = context.session
+    lines = [
+        f"Model: {session.model}",
+        f"CWD: {session.cwd}",
+        f"Tools: {len(session.tools)}",
+        f"Skills: {len(session.skills)}",
+        f"Prompt templates: {len(session.prompt_templates)}",
+    ]
+    if session.session_id is not None:
+        lines.append(f"Session: {session.session_id}")
+    return CommandResult(handled=True, message="\n".join(lines))
+
+
+def _skills_command(context: CommandContext) -> CommandResult:
+    if not context.session.skills:
+        return CommandResult(handled=True, message="No skills loaded.")
+
+    lines = ["Available skills:"]
+    for skill in sorted(context.session.skills, key=lambda item: item.name):
+        description = skill.description or "No description"
+        lines.append(f"- {skill.name}: {description}")
+    lines.append("Use a skill with /skill:<name> [request].")
+    return CommandResult(handled=True, message="\n".join(lines))
+
+
+def _skill_command(context: CommandContext) -> CommandResult:
+    return CommandResult(
+        handled=True,
+        message="Use /skill:<name> [request] to expand a loaded skill into your prompt.",
+    )
+
+
+def _sessions_command(context: CommandContext) -> CommandResult:
+    manager = context.session.session_manager
+    if manager is None:
+        return CommandResult(handled=True, message="Session manager is not available.")
+
+    records = manager.list_sessions()
+    if not records:
+        return CommandResult(handled=True, message="No sessions found.")
+
+    lines = ["Indexed sessions:"]
+    for record in records:
+        lines.append(_format_session_record(record))
+    return CommandResult(handled=True, message="\n".join(lines))
+
+
+def _resume_command(context: CommandContext) -> CommandResult:
+    return CommandResult(
+        handled=True,
+        message=(
+            "In-TUI session switching is not implemented yet. "
+            "Start Tau with: tau --resume <session-id>"
+        ),
+    )
+
+
+def _model_command(context: CommandContext) -> CommandResult:
+    return CommandResult(
+        handled=True,
+        message=f"Current model: {context.session.model}\nModel switching is not implemented yet.",
+    )
+
+
+def _provider_command(context: CommandContext) -> CommandResult:
+    return CommandResult(handled=True, message="Provider switching is not implemented yet.")
+
+
+def _format_session_record(record: CodingSessionRecord) -> str:
+    title = record.title or "Untitled"
+    return f"- {record.id}: {title} ({record.model}) {record.cwd}"
+
+
+def _parse_command(text: str) -> tuple[str, str]:
+    command, separator, args = text[1:].partition(" ")
+    return _normalize_name(command), args.strip() if separator else ""
+
+
+def _normalize_name(name: str) -> str:
+    return name.strip().removeprefix("/").lower()

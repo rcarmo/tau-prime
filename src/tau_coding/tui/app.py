@@ -114,6 +114,8 @@ class TauTuiApp(App[None]):
 
         command = self.session.handle_command(text)
         if command.handled:
+            if command.clear_requested:
+                self.state.clear()
             if command.message:
                 self.state.add_item("status", command.message)
             self._refresh()

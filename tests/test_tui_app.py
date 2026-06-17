@@ -13,6 +13,7 @@ from tau_agent import (
     ToolResultMessage,
     UserMessage,
 )
+from tau_coding.commands import CommandResult
 from tau_coding.session_manager import CodingSessionRecord
 from tau_coding.skills import Skill
 from tau_coding.tools import create_coding_tools
@@ -30,6 +31,11 @@ class FakeSession:
         self.tools = tuple(create_coding_tools(cwd=self.cwd))
         self.skills = (Skill(name="review", path=self.cwd / "review.md", content="Review code"),)
         self.prompt_templates = ()
+
+    def handle_command(self, text: str) -> CommandResult:
+        if text == "/clear":
+            return CommandResult(handled=True, clear_requested=True, message="Transcript cleared.")
+        return CommandResult(handled=False)
 
     async def prompt(self, text: str) -> AsyncIterator[AgentEvent]:
         for event in self.events:
@@ -87,6 +93,20 @@ def test_tui_app_loads_restored_messages_into_display_state() -> None:
         ("tool", "→ read {'path': 'README.md'}"),
         ("tool", "✓ read\nREADME contents"),
     ]
+
+
+@pytest.mark.anyio
+async def test_tui_app_clear_command_clears_visible_state() -> None:
+    app = TauTuiApp(FakeSession(messages=[UserMessage(content="Earlier")]))
+
+    async with app.run_test() as pilot:
+        prompt = app.query_one("#prompt")
+        prompt.value = "/clear"
+        await pilot.press("enter")
+
+        assert [(item.role, item.text) for item in app.state.items] == [
+            ("status", "Transcript cleared.")
+        ]
 
 
 @pytest.mark.anyio
