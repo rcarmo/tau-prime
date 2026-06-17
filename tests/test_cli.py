@@ -178,13 +178,38 @@ def test_tui_command_invokes_tui_runner(monkeypatch: pytest.MonkeyPatch, tmp_pat
             "fake",
             "--resume",
             "session-1",
-            "--new-session",
             "tui",
         ],
     )
 
     assert result.exit_code == 0
-    assert calls == [("fake", tmp_path, "session-1", True)]
+    assert calls == [("fake", tmp_path, "session-1", False)]
+
+
+def test_tui_command_rejects_resume_with_new_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    async def fake_run_openai_tui(
+        model: str, cwd: Path, session_id: str | None, new_session: bool
+    ) -> None:
+        raise RuntimeError("--resume and --new-session cannot be used together")
+
+    monkeypatch.setattr(cli, "run_openai_tui", fake_run_openai_tui)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--cwd",
+            str(tmp_path),
+            "--resume",
+            "session-1",
+            "--new-session",
+            "tui",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--resume and --new-session cannot be used together" in result.output
 
 
 def test_sessions_command_lists_indexed_sessions(

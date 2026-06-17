@@ -169,6 +169,9 @@ async def run_tui_app(
     session_manager: SessionManager | None = None,
 ) -> None:
     """Create the default provider/session and run the Textual app."""
+    if new_session and session_id is not None:
+        raise RuntimeError("--resume and --new-session cannot be used together")
+
     provider = OpenAICompatibleProvider(openai_compatible_config_from_env())
     manager = session_manager or SessionManager()
     try:
