@@ -231,7 +231,8 @@ def upsert_provider(
 ) -> ProviderSettings:
     """Return settings with a provider added or replaced."""
     providers_by_name = {item.name: item for item in settings.providers}
-    if provider.name in providers_by_name:
+    builtin_names = {entry.name for entry in BUILTIN_PROVIDER_CATALOG}
+    if provider.name in providers_by_name and provider.name in builtin_names:
         provider = _merge_provider_config(providers_by_name[provider.name], provider)
     providers_by_name[provider.name] = provider
     default_provider = provider.name if set_default else settings.default_provider
@@ -264,7 +265,7 @@ def _merge_provider_config(existing: ProviderConfig, incoming: ProviderConfig) -
         return incoming
     models = _unique_strings((*incoming.models, *existing.models))
     default_model = (
-        incoming.default_model if incoming.default_model in models else existing.default_model
+        existing.default_model if existing.default_model in models else incoming.default_model
     )
     headers = {**existing.headers, **incoming.headers}
     return replace(incoming, models=models, default_model=default_model, headers=headers)

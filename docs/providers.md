@@ -76,8 +76,8 @@ Example:
   "base_url": "https://router.huggingface.co/v1",
   "api_key_env": "HF_TOKEN",
   "credential_name": "huggingface",
-  "models": ["Qwen/Qwen3-Coder"],
-  "default_model": "Qwen/Qwen3-Coder",
+  "models": ["openai/gpt-oss-120b"],
+  "default_model": "openai/gpt-oss-120b",
   "headers": {
     "X-HF-Bill-To": "my-org"
   }

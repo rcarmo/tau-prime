@@ -301,8 +301,8 @@ def test_load_provider_settings_merges_builtin_model_catalog(tmp_path: Path) -> 
       "base_url": "https://router.huggingface.co/v1",
       "api_key_env": "HF_TOKEN",
       "credential_name": "huggingface",
-      "models": ["Qwen/Qwen3-Coder", "custom/coder"],
-      "default_model": "Qwen/Qwen3-Coder",
+      "models": ["openai/gpt-oss-120b", "custom/coder"],
+      "default_model": "openai/gpt-oss-120b",
       "headers": {"X-HF-Bill-To": "my-org"}
     }
   ]
@@ -314,8 +314,9 @@ def test_load_provider_settings_merges_builtin_model_catalog(tmp_path: Path) -> 
     settings = load_provider_settings(TauPaths(home=tau_home))
 
     provider = settings.get_provider("huggingface")
-    assert provider.default_model == "Qwen/Qwen3-Coder"
+    assert provider.default_model == "openai/gpt-oss-120b"
     assert provider.headers == {"X-HF-Bill-To": "my-org"}
+    assert "Qwen/Qwen3-Coder-480B-A35B-Instruct" in provider.models
     assert "MiniMaxAI/MiniMax-M3" in provider.models
     assert "moonshotai/Kimi-K2.7-Code" in provider.models
     assert "custom/coder" in provider.models

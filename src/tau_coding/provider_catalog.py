@@ -100,7 +100,7 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
         models=(
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
-            "Qwen/Qwen3-Coder",
+            "Qwen/Qwen3-Coder-480B-A35B-Instruct",
             "Qwen/Qwen3-Coder-Next",
             "Qwen/Qwen3-235B-A22B-Thinking-2507",
             "Qwen/Qwen2.5-Coder-32B-Instruct",
@@ -116,7 +116,7 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
             "mistralai/Codestral-22B-v0.1",
             "bigcode/starcoder2-15b",
         ),
-        default_model="Qwen/Qwen3-Coder",
+        default_model="openai/gpt-oss-120b",
         docs_url="https://huggingface.co/inference/get-started",
     ),
 )
