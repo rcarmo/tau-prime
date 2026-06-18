@@ -340,6 +340,7 @@ class LoginScreen(ModalScreen[str | None]):
         """Dismiss with the submitted API key."""
         if event.input.id != "login-api-key":
             return
+        event.stop()
         self.dismiss(event.value.strip() or None)
 
     def action_cancel(self) -> None:
@@ -654,6 +655,8 @@ class TauTuiApp(App[None]):
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle a submitted prompt or slash command."""
+        if event.input.id != "prompt":
+            return
         raw_text = event.value
         applied_completion = self._apply_selected_completion(raw_text)
         if applied_completion is not None and applied_completion != raw_text:

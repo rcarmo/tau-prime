@@ -66,6 +66,7 @@ class FakeSession:
         self.session_manager = None
         self.compact_summaries: list[str] = []
         self.resumed_session_ids: list[str] = []
+        self.prompt_texts: list[str] = []
         self.reload_count = 0
 
     def handle_command(self, text: str) -> CommandResult:
@@ -105,6 +106,7 @@ class FakeSession:
         return f"Resumed session: {session_id}"
 
     async def prompt(self, text: str) -> AsyncIterator[AgentEvent]:
+        self.prompt_texts.append(text)
         for event in self.events:
             yield event
 
@@ -779,6 +781,8 @@ async def test_tui_login_saves_provider_key(
 
     assert session.reload_count == 1
     assert session.provider_name == "openai"
+    assert session.prompt_texts == []
+    assert all(item.text != "stored-openai-key" for item in app.state.items)
     assert (tmp_path / ".tau" / "credentials.json").read_text(encoding="utf-8")
 
 
