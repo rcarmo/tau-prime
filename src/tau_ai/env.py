@@ -1,5 +1,6 @@
 """Environment-based provider configuration helpers."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from os import environ
 
@@ -16,6 +17,7 @@ class OpenAICompatibleConfig:
 
     api_key: str
     base_url: str = DEFAULT_OPENAI_COMPATIBLE_BASE_URL
+    headers: Mapping[str, str] | None = None
     timeout_seconds: float = DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS
     max_retries: int = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRIES
     max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS
@@ -27,6 +29,7 @@ class AnthropicConfig:
 
     api_key: str
     base_url: str = DEFAULT_ANTHROPIC_BASE_URL
+    headers: Mapping[str, str] | None = None
     timeout_seconds: float = DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS
     max_retries: int = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRIES
     max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS

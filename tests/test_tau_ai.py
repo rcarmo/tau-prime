@@ -120,7 +120,11 @@ async def test_openai_compatible_provider_formats_request_and_streams_text() -> 
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = OpenAICompatibleProvider(
-            OpenAICompatibleConfig(api_key="test-key", base_url="https://example.test/v1"),
+            OpenAICompatibleConfig(
+                api_key="test-key",
+                base_url="https://example.test/v1",
+                headers={"X-HF-Bill-To": "my-org"},
+            ),
             client=client,
         )
 
@@ -146,6 +150,7 @@ async def test_openai_compatible_provider_formats_request_and_streams_text() -> 
     request = requests[0]
     assert request.url == "https://example.test/v1/chat/completions"
     assert request.headers["authorization"] == "Bearer test-key"
+    assert request.headers["x-hf-bill-to"] == "my-org"
 
     payload = loads(request.content)
     assert payload["model"] == "test-model"
@@ -326,7 +331,11 @@ async def test_anthropic_provider_formats_request_and_streams_text() -> None:
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = AnthropicProvider(
-            AnthropicConfig(api_key="test-key", base_url="https://api.anthropic.test/v1"),
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                headers={"anthropic-beta": "fine-grained-tool-streaming-2025-05-14"},
+            ),
             client=client,
         )
 
@@ -353,6 +362,7 @@ async def test_anthropic_provider_formats_request_and_streams_text() -> None:
     assert request.url == "https://api.anthropic.test/v1/messages"
     assert request.headers["x-api-key"] == "test-key"
     assert request.headers["anthropic-version"] == "2023-06-01"
+    assert request.headers["anthropic-beta"] == "fine-grained-tool-streaming-2025-05-14"
 
     payload = loads(request.content)
     assert payload["model"] == "claude-test"

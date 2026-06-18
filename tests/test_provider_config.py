@@ -46,6 +46,7 @@ def test_save_and_load_provider_settings_round_trip(tmp_path: Path) -> None:
                 api_key_env="LOCAL_API_KEY",
                 models=("qwen", "llama"),
                 default_model="qwen",
+                headers={"X-Test": "enabled"},
                 timeout_seconds=120,
                 max_retries=2,
                 max_retry_delay_seconds=0.5,
@@ -135,6 +136,7 @@ def test_openai_compatible_config_from_provider_uses_configured_env_var(
 
     assert config.api_key == "test-key"
     assert config.base_url == "http://localhost:11434/v1"
+    assert config.headers == {}
     assert config.timeout_seconds == 60.0
     assert config.max_retries == 0
     assert config.max_retry_delay_seconds == 1.0
@@ -171,6 +173,24 @@ def test_openai_compatible_config_from_provider_uses_configured_timeout(
     assert config.timeout_seconds == 180
     assert config.max_retries == 3
     assert config.max_retry_delay_seconds == 0.25
+
+
+def test_openai_compatible_config_from_provider_uses_configured_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOCAL_API_KEY", "test-key")
+    provider = OpenAICompatibleProviderConfig(
+        name="local",
+        base_url="http://localhost:11434/v1/",
+        api_key_env="LOCAL_API_KEY",
+        models=("qwen",),
+        default_model="qwen",
+        headers={"X-HF-Bill-To": "my-org"},
+    )
+
+    config = openai_compatible_config_from_provider(provider)
+
+    assert config.headers == {"X-HF-Bill-To": "my-org"}
 
 
 def test_openai_compatible_config_from_provider_uses_stored_credential(
@@ -212,6 +232,51 @@ def test_anthropic_config_from_provider_uses_stored_credential(
 
     assert config.api_key == "stored-anthropic-key"
     assert config.base_url == "https://api.anthropic.com/v1"
+
+
+def test_provider_settings_from_json_loads_headers() -> None:
+    settings = provider_settings_from_json(
+        {
+            "default_provider": "huggingface",
+            "providers": [
+                {
+                    "type": "openai-compatible",
+                    "name": "huggingface",
+                    "base_url": "https://router.huggingface.co/v1",
+                    "api_key_env": "HF_TOKEN",
+                    "credential_name": "huggingface",
+                    "models": ["Qwen/Qwen3-Coder"],
+                    "default_model": "Qwen/Qwen3-Coder",
+                    "headers": {"X-HF-Bill-To": "my-org"},
+                }
+            ],
+        }
+    )
+
+    provider = settings.get_provider("huggingface")
+
+    assert isinstance(provider, OpenAICompatibleProviderConfig)
+    assert provider.headers == {"X-HF-Bill-To": "my-org"}
+
+
+def test_provider_settings_from_json_rejects_invalid_headers() -> None:
+    with pytest.raises(ProviderConfigError, match="string object"):
+        provider_settings_from_json(
+            {
+                "default_provider": "local",
+                "providers": [
+                    {
+                        "type": "openai-compatible",
+                        "name": "local",
+                        "base_url": "http://localhost:11434/v1",
+                        "api_key_env": "LOCAL_API_KEY",
+                        "models": ["qwen"],
+                        "default_model": "qwen",
+                        "headers": {"X-Test": 123},
+                    }
+                ],
+            }
+        )
 
 
 def test_provider_settings_from_json_rejects_invalid_timeout() -> None:

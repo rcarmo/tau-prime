@@ -42,6 +42,7 @@ class OpenAICompatibleProviderConfig:
     credential_name: str | None = None
     models: tuple[str, ...] = (DEFAULT_MODEL,)
     default_model: str = DEFAULT_MODEL
+    headers: dict[str, str] = field(default_factory=dict)
     timeout_seconds: float = DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS
     max_retries: int = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRIES
     max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS
@@ -63,6 +64,7 @@ class OpenAICompatibleProviderConfig:
             "credential_name": self.credential_name,
             "models": list(self.models),
             "default_model": self.default_model,
+            "headers": dict(self.headers),
             "timeout_seconds": self.timeout_seconds,
             "max_retries": self.max_retries,
             "max_retry_delay_seconds": self.max_retry_delay_seconds,
@@ -79,6 +81,7 @@ class AnthropicProviderConfig:
     credential_name: str | None = "anthropic"
     models: tuple[str, ...] = ("claude-sonnet-4-6",)
     default_model: str = "claude-sonnet-4-6"
+    headers: dict[str, str] = field(default_factory=dict)
     timeout_seconds: float = DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS
     max_retries: int = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRIES
     max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS
@@ -100,6 +103,7 @@ class AnthropicProviderConfig:
             "credential_name": self.credential_name,
             "models": list(self.models),
             "default_model": self.default_model,
+            "headers": dict(self.headers),
             "timeout_seconds": self.timeout_seconds,
             "max_retries": self.max_retries,
             "max_retry_delay_seconds": self.max_retry_delay_seconds,
@@ -277,6 +281,7 @@ def openai_compatible_config_from_provider(
     return OpenAICompatibleConfig(
         api_key=api_key,
         base_url=base_url.rstrip("/"),
+        headers=provider.headers,
         timeout_seconds=provider.timeout_seconds,
         max_retries=provider.max_retries,
         max_retry_delay_seconds=provider.max_retry_delay_seconds,
@@ -293,6 +298,7 @@ def anthropic_config_from_provider(
     return AnthropicConfig(
         api_key=api_key,
         base_url=provider.base_url.rstrip("/"),
+        headers=provider.headers,
         timeout_seconds=provider.timeout_seconds,
         max_retries=provider.max_retries,
         max_retry_delay_seconds=provider.max_retry_delay_seconds,
@@ -320,6 +326,7 @@ def _provider_from_json(data: object) -> ProviderConfig:
     )
     models = _string_tuple(data.get("models"), f"providers[{name}].models")
     default_model = _string(data.get("default_model"), f"providers[{name}].default_model")
+    headers = _string_dict(data.get("headers", {}), f"providers[{name}].headers")
     timeout_seconds = _positive_float(
         data.get("timeout_seconds", DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS),
         f"providers[{name}].timeout_seconds",
@@ -345,6 +352,7 @@ def _provider_from_json(data: object) -> ProviderConfig:
             credential_name=credential_name,
             models=models,
             default_model=default_model,
+            headers=headers,
             timeout_seconds=timeout_seconds,
             max_retries=max_retries,
             max_retry_delay_seconds=max_retry_delay_seconds,
@@ -356,6 +364,7 @@ def _provider_from_json(data: object) -> ProviderConfig:
         credential_name=credential_name,
         models=models,
         default_model=default_model,
+        headers=headers,
         timeout_seconds=timeout_seconds,
         max_retries=max_retries,
         max_retry_delay_seconds=max_retry_delay_seconds,
@@ -418,6 +427,19 @@ def _string_tuple(value: object, field_name: str) -> tuple[str, ...]:
     items = tuple(item.strip() for item in value if isinstance(item, str) and item.strip())
     if len(items) != len(value):
         raise ProviderConfigError(f"Provider field must be a string list: {field_name}")
+    return items
+
+
+def _string_dict(value: object, field_name: str) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ProviderConfigError(f"Provider field must be a string object: {field_name}")
+    items: dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not key.strip():
+            raise ProviderConfigError(f"Provider field must be a string object: {field_name}")
+        if not isinstance(item, str) or not item.strip():
+            raise ProviderConfigError(f"Provider field must be a string object: {field_name}")
+        items[key.strip()] = item.strip()
     return items
 
 

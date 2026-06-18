@@ -60,7 +60,10 @@ class OpenAICompatibleProvider:
                 messages=messages,
                 tools=tools,
             )
-            headers = {"Authorization": f"Bearer {self._config.api_key}"}
+            headers = {
+                **(dict(self._config.headers or {})),
+                "Authorization": f"Bearer {self._config.api_key}",
+            }
             url = f"{self._config.base_url.rstrip('/')}/chat/completions"
 
             yield ProviderResponseStartEvent(model=model)

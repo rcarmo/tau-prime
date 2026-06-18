@@ -62,9 +62,27 @@ tau --provider local \
   setup
 ```
 
-Provider entries can also include `timeout_seconds`, `max_retries`, and
-`max_retry_delay_seconds` in `~/.tau/providers.json`. Timeout must be greater
-than zero; retry count and retry delay must be zero or greater.
+Provider entries can also include `headers`, `timeout_seconds`, `max_retries`,
+and `max_retry_delay_seconds` in `~/.tau/providers.json`. `headers` must be an
+object with string keys and string values. Timeout must be greater than zero;
+retry count and retry delay must be zero or greater.
+
+Example:
+
+```json
+{
+  "name": "huggingface",
+  "type": "openai-compatible",
+  "base_url": "https://router.huggingface.co/v1",
+  "api_key_env": "HF_TOKEN",
+  "credential_name": "huggingface",
+  "models": ["Qwen/Qwen3-Coder"],
+  "default_model": "Qwen/Qwen3-Coder",
+  "headers": {
+    "X-HF-Bill-To": "my-org"
+  }
+}
+```
 
 Run Tau with a configured provider:
 

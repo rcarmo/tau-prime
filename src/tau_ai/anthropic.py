@@ -64,6 +64,7 @@ class AnthropicProvider:
                 tools=tools,
             )
             headers = {
+                **(dict(self._config.headers or {})),
                 "anthropic-version": ANTHROPIC_VERSION,
                 "content-type": "application/json",
                 "x-api-key": self._config.api_key,

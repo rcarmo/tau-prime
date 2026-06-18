@@ -51,6 +51,9 @@ Example:
       "api_key_env": "LOCAL_API_KEY",
       "models": ["qwen", "llama"],
       "default_model": "qwen",
+      "headers": {
+        "X-Provider-Header": "value"
+      },
       "timeout_seconds": 120,
       "max_retries": 2,
       "max_retry_delay_seconds": 0.5
@@ -63,7 +66,19 @@ API keys are not written to this file. Each provider entry names the environment
 variable that should contain its API key. `timeout_seconds` is optional and
 defaults to `60`; when present, it must be greater than zero. `max_retries`
 defaults to `0`, and `max_retry_delay_seconds` defaults to `1`; both must be
-zero or greater.
+zero or greater. `headers` is optional and must be an object with string keys
+and string values. Tau sends these headers with provider requests, while keeping
+its own authentication headers under runtime control.
+
+For example, Hugging Face organization billing can be configured with:
+
+```json
+{
+  "headers": {
+    "X-HF-Bill-To": "my-org"
+  }
+}
+```
 
 Useful commands:
 
