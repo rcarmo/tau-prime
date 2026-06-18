@@ -695,6 +695,17 @@ async def test_tui_app_uses_configured_command_palette_keybinding() -> None:
 
 
 @pytest.mark.anyio
+async def test_tui_app_quits_from_focused_prompt_with_default_keybinding() -> None:
+    app = TauTuiApp(FakeSession())
+
+    async with app.run_test() as pilot:
+        await pilot.press("ctrl+d")
+        await pilot.pause()
+
+        assert app._exit is True
+
+
+@pytest.mark.anyio
 async def test_tui_app_uses_configured_completion_keybinding() -> None:
     app = TauTuiApp(
         FakeSession(),

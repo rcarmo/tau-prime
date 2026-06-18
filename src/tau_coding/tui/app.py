@@ -97,6 +97,10 @@ class PromptInput(Input):
         """Open the app-level session picker."""
         self._completion_target().action_open_session_picker()
 
+    async def action_quit(self) -> None:
+        """Quit the app through the app-level action."""
+        await self.app.action_quit()
+
     def action_scroll_down(self) -> None:
         """Use down arrow for completion selection while focused."""
         self._completion_target().action_completion_next()
@@ -105,7 +109,7 @@ class PromptInput(Input):
         """Use up arrow for completion selection while focused."""
         self._completion_target().action_completion_previous()
 
-    def on_key(self, event: Key) -> None:
+    async def on_key(self, event: Key) -> None:
         """Route completion keys before default input handling."""
         keybindings = self.tui_keybindings
         if event.key == keybindings.accept_completion:
@@ -123,6 +127,9 @@ class PromptInput(Input):
         elif event.key == keybindings.completion_previous:
             event.stop()
             self._completion_target().action_completion_previous()
+        elif event.key == keybindings.quit:
+            event.stop()
+            await self.action_quit()
 
     def _completion_target(self) -> CompletionActionTarget:
         return cast(CompletionActionTarget, self.app)
