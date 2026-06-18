@@ -379,6 +379,49 @@ def test_load_provider_settings_merges_builtin_model_catalog(tmp_path: Path) -> 
     assert "custom/coder" in provider.models
 
 
+def test_load_provider_settings_restores_builtin_credential_name(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "env-key")
+    tau_home = tmp_path / ".tau"
+    tau_home.mkdir()
+    (tau_home / "providers.json").write_text(
+        """
+{
+  "default_provider": "openrouter",
+  "providers": [
+    {
+      "type": "openai-compatible",
+      "name": "openrouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "credential_name": null,
+      "models": ["openai/gpt-5.5"],
+      "default_model": "openai/gpt-5.5"
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    class FakeCredentials:
+        def get(self, name: str) -> str | None:
+            return "stored-key" if name == "openrouter" else None
+
+    settings = load_provider_settings(TauPaths(home=tau_home))
+    provider = settings.get_provider("openrouter")
+
+    assert isinstance(provider, OpenAICompatibleProviderConfig)
+    assert provider.credential_name == "openrouter"
+    config = openai_compatible_config_from_provider(
+        provider,
+        credential_reader=FakeCredentials(),
+    )
+    assert config.api_key == "stored-key"
+
+
 def test_provider_settings_from_json_rejects_invalid_headers() -> None:
     with pytest.raises(ProviderConfigError, match="string object"):
         provider_settings_from_json(

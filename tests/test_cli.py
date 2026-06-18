@@ -15,7 +15,11 @@ from tau_ai import (
 from tau_coding import CodingSessionRecord, SessionManager, cli
 from tau_coding.cli import app, run_print_mode
 from tau_coding.paths import TauPaths
-from tau_coding.provider_config import load_provider_settings
+from tau_coding.provider_config import (
+    OpenAICompatibleProviderConfig,
+    ProviderSettings,
+    load_provider_settings,
+)
 from tau_coding.rendering import PrintOutputMode
 from tau_coding.resources import TauResourcePaths
 from tau_coding.system_prompt import BuildSystemPromptOptions, build_system_prompt
@@ -521,6 +525,47 @@ def test_providers_command_lists_default_provider(
     assert " \tanthropic\tanthropic\tclaude-sonnet-4-6" in result.stdout
     assert " \topenrouter\topenai-compatible\topenai/gpt-5.5" in result.stdout
     assert " \thuggingface\topenai-compatible\topenai/gpt-oss-120b" in result.stdout
+
+
+def test_render_provider_settings_shows_credential_source(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.delenv("STORED_API_KEY", raising=False)
+    monkeypatch.setenv("ENV_API_KEY", "env-key")
+    monkeypatch.delenv("MISSING_API_KEY", raising=False)
+    settings = ProviderSettings(
+        default_provider="stored",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="stored",
+                api_key_env="STORED_API_KEY",
+                credential_name="stored",
+            ),
+            OpenAICompatibleProviderConfig(
+                name="env",
+                api_key_env="ENV_API_KEY",
+                credential_name=None,
+            ),
+            OpenAICompatibleProviderConfig(
+                name="missing",
+                api_key_env="MISSING_API_KEY",
+                credential_name="missing",
+            ),
+        ),
+    )
+
+    class FakeCredentials:
+        def get(self, name: str) -> str | None:
+            return "stored-key" if name == "stored" else None
+
+    cli.render_provider_settings(settings, credential_reader=FakeCredentials())
+
+    output = capsys.readouterr().out
+    assert "*\tstored\topenai-compatible\tgpt-5.5" in output
+    assert "\tSTORED_API_KEY\tstored:stored\t" in output
+    assert "\tENV_API_KEY\tenv:ENV_API_KEY\t" in output
+    assert "\tMISSING_API_KEY\tmissing\t" in output
 
 
 def test_setup_command_writes_provider_settings(

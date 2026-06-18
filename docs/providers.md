@@ -69,6 +69,11 @@ List configured providers:
 tau providers
 ```
 
+`tau providers` shows whether each provider will use a stored Tau credential,
+an environment-variable fallback, or has missing credentials. Stored API keys
+and OAuth credentials in `~/.tau/credentials.json` take precedence over
+provider-specific environment variables such as `OPENAI_API_KEY`.
+
 Create or update a provider:
 
 ```bash
