@@ -1550,15 +1550,22 @@ async def test_tui_app_queues_steering_prompt_while_running() -> None:
         await pilot.press("enter")
         await pilot.pause()
 
-        status = app.query_one("#status")
+        queued_messages = app.query_one("#queued-messages")
         assert prompt.text == ""
         assert session.prompt_texts == ["adjust course"]
         assert session.streaming_behaviors == ["steer"]
         assert app.state.queued_steering == ("adjust course",)
         assert app.state.queued_follow_up == ()
-        assert "queued: 1 steering message" in str(status.render())
+        assert queued_messages.display is True
+        rendered_queue = tui_app._render_queued_messages(
+            app.state,
+            theme=app.tui_settings.resolved_theme,
+        )
+        assert "↪ steering · inserted at the next turn: adjust course" in [
+            str(row) for row in rendered_queue.renderables
+        ]
 
-    assert notifications == ["Queued steering message."]
+    assert notifications == []
 
 
 @pytest.mark.anyio
@@ -1581,15 +1588,22 @@ async def test_tui_app_queues_follow_up_prompt_from_keybinding() -> None:
         await pilot.press("alt+enter")
         await pilot.pause()
 
-        status = app.query_one("#status")
+        queued_messages = app.query_one("#queued-messages")
         assert prompt.text == ""
         assert session.prompt_texts == ["after this"]
         assert session.streaming_behaviors == ["follow_up"]
         assert app.state.queued_steering == ()
         assert app.state.queued_follow_up == ("after this",)
-        assert "queued: 1 follow-up message" in str(status.render())
+        assert queued_messages.display is True
+        rendered_queue = tui_app._render_queued_messages(
+            app.state,
+            theme=app.tui_settings.resolved_theme,
+        )
+        assert "↳ follow-up · queued after this turn: after this" in [
+            str(row) for row in rendered_queue.renderables
+        ]
 
-    assert notifications == ["Queued follow-up message."]
+    assert notifications == []
 
 
 @pytest.mark.anyio

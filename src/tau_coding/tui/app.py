@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal, Protocol, cast
 
 from rich.text import Text
+from rich.console import Group
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingsMap
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -849,6 +850,15 @@ class TauTuiApp(App[None]):
         padding: 0 1 0 0;
     }
 
+    #queued-messages {
+        height: auto;
+        max-height: 8;
+        margin: 0 1 0 1;
+        padding: 0 1;
+        background: $tau-screen-background;
+        color: $tau-muted-text;
+    }
+
     #prompt {
         height: auto;
         background: $tau-prompt-background;
@@ -1123,6 +1133,7 @@ class TauTuiApp(App[None]):
                     highlight=True,
                     markup=False,
                 )
+                yield Static("", id="queued-messages")
                 yield PromptInput(
                     placeholder="Ask Tau…  Enter submits, Shift+Enter inserts a newline",
                     id="prompt",
@@ -1249,10 +1260,6 @@ class TauTuiApp(App[None]):
             self._notify(f"Could not queue message: {exc}", severity="error")
             return
         self._refresh()
-        if streaming_behavior == "follow_up":
-            self._notify("Queued follow-up message.")
-        else:
-            self._notify("Queued steering message.")
 
     async def _run_prompt(self, text: str, run_id: int | None = None) -> None:
         """Run one prompt and stream session events into the TUI state."""
@@ -1642,6 +1649,9 @@ class TauTuiApp(App[None]):
         compact_info.update_from_session(self.session, theme=theme)
         transcript = self.query_one("#transcript", TranscriptView)
         transcript.update_from_state(self.state, theme=theme)
+        queued_messages = self.query_one("#queued-messages", Static)
+        queued_messages.display = self.state.queued_message_count > 0
+        queued_messages.update(_render_queued_messages(self.state, theme=theme))
         self._sync_activity_indicator()
         status = self.query_one("#status", Static)
         status.update(self._status_text())
@@ -1686,10 +1696,9 @@ class TauTuiApp(App[None]):
         trail.update(_render_activity_trail(trail.size.width, self._activity_frame))
 
     def _status_text(self) -> str:
-        queue_text = _queue_status_text(self.state)
         if not self.state.running:
-            return f"Ready | queued: {queue_text}" if queue_text else "Ready"
-        return f"queued: {queue_text}" if queue_text else ""
+            return "Ready"
+        return ""
 
     def _refresh_completions(self) -> None:
         suggestions = self.query_one("#autocomplete", Static)
@@ -1874,17 +1883,18 @@ def _theme_css_variables(theme: TuiTheme) -> dict[str, str]:
     }
 
 
-def _queue_status_text(state: TuiState) -> str:
-    parts: list[str] = []
-    steering_count = len(state.queued_steering)
-    follow_up_count = len(state.queued_follow_up)
-    if steering_count:
-        suffix = "" if steering_count == 1 else "s"
-        parts.append(f"{steering_count} steering message{suffix}")
-    if follow_up_count:
-        suffix = "" if follow_up_count == 1 else "s"
-        parts.append(f"{follow_up_count} follow-up message{suffix}")
-    return ", ".join(parts)
+def _render_queued_messages(state: TuiState, *, theme: TuiTheme) -> Group:
+    """Render queued prompts stacked above the prompt input."""
+    rows: list[Text] = []
+    for message in state.queued_steering:
+        row = Text("↪ steering · inserted at the next turn: ", style=theme.muted_text)
+        row.append(message, style=theme.prompt_text)
+        rows.append(row)
+    for message in state.queued_follow_up:
+        row = Text("↳ follow-up · queued after this turn: ", style=theme.muted_text)
+        row.append(message, style=theme.prompt_text)
+        rows.append(row)
+    return Group(*rows)
 
 
 def _app_bindings(keybindings: TuiKeybindings) -> list[Binding]:
