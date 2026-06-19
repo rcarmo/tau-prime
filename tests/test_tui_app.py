@@ -209,17 +209,22 @@ def test_session_sidebar_renders_session_metadata() -> None:
     assert "review" in output
 
 
-def test_session_sidebar_uses_bold_muted_headers_without_section_borders() -> None:
+def test_session_sidebar_uses_accented_aligned_headers_without_section_borders() -> None:
     console = Console(record=True, width=80)
     sidebar = render_session_sidebar(FakeSession())
     panels = [renderable for renderable in sidebar.renderables if isinstance(renderable, Panel)]
+    session_section = sidebar.renderables[1]
+    header = session_section.renderables[0]
 
     console.print(sidebar)
 
     output = console.export_text()
     assert panels == []
-    assert "session" in output
-    assert "context" in output
+    assert header.left == 1
+    assert str(header.renderable.style) == "bold #f4a261"
+    assert " session" in output
+    assert " context" in output
+    assert "─" in output
     assert "┌" not in output
     assert "│" not in output
 

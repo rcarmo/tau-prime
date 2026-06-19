@@ -9,7 +9,7 @@ from rich.align import Align
 from rich.console import Console, Group, RenderableType
 from rich.markdown import Markdown
 from rich.padding import Padding
-from rich.panel import Panel
+from rich.rule import Rule
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.table import Table
@@ -199,9 +199,13 @@ def render_session_sidebar(
     return Group(
         Padding(Align.center(equation), (0, 0, 1, 0)),
         _sidebar_section("session", metadata, theme=theme),
+        _sidebar_separator(theme=theme),
         _sidebar_section("context", context, theme=theme),
+        _sidebar_separator(theme=theme),
         _sidebar_section("tools", tools, theme=theme),
+        _sidebar_separator(theme=theme),
         _sidebar_section("skills", skills, theme=theme),
+        _sidebar_separator(theme=theme),
         _sidebar_section("prompts", prompts, theme=theme),
     )
 
@@ -213,8 +217,13 @@ def _sidebar_section(
     theme: TuiTheme,
 ) -> RenderableType:
     """Render one sidebar section without a surrounding border."""
-    header = Text(title, style=f"bold {theme.completion_description}")
-    return Group(header, Padding(body, (0, 0, 1, 1)))
+    header = Text(title, style=f"bold {theme.accent}")
+    return Group(Padding(header, (0, 0, 0, 1)), Padding(body, (0, 0, 1, 1)))
+
+
+def _sidebar_separator(*, theme: TuiTheme) -> RenderableType:
+    """Render a subtle divider between sidebar sections."""
+    return Padding(Rule(style=theme.border), (0, 0, 1, 0))
 
 
 def render_compact_session_info(
