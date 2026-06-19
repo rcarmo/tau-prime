@@ -104,6 +104,8 @@ class CompletionActionTarget(Protocol):
 
     def action_accept_completion(self) -> None: ...
 
+    def action_cancel(self) -> None: ...
+
     def action_completion_next(self) -> None: ...
 
     def action_completion_previous(self) -> None: ...
@@ -262,6 +264,9 @@ class PromptInput(TextArea):
         elif event.key == keybindings.accept_completion:
             event.stop()
             self._completion_target().action_accept_completion()
+        elif event.key == keybindings.cancel:
+            event.stop()
+            self._completion_target().action_cancel()
         elif event.key == keybindings.command_palette:
             event.stop()
             self._completion_target().action_open_command_palette()
@@ -1053,6 +1058,7 @@ class TauTuiApp(App[None]):
         self.state.load_messages(session.messages)
         self.adapter = TuiEventAdapter(self.state)
         self._prompt_worker: Worker[None] | None = None
+        self._prompt_run_id = 0
         self._completion_state = CompletionState()
         self._activity_frame = 0
         self._activity_timer: Timer | None = None
@@ -1182,8 +1188,10 @@ class TauTuiApp(App[None]):
 
     def _submit_prompt(self, text: str) -> None:
         """Add a prompt to the transcript and start the agent worker."""
+        self._prompt_run_id += 1
+        run_id = self._prompt_run_id
         self._refresh()
-        self._prompt_worker = self.run_worker(self._run_prompt(text), exclusive=True)
+        self._prompt_worker = self.run_worker(self._run_prompt(text, run_id), exclusive=True)
 
     async def _queue_prompt(
         self,
@@ -1204,25 +1212,52 @@ class TauTuiApp(App[None]):
         else:
             self._notify("Queued steering message.")
 
-    async def _run_prompt(self, text: str) -> None:
+    async def _run_prompt(self, text: str, run_id: int | None = None) -> None:
         """Run one prompt and stream session events into the TUI state."""
+        active_run_id = self._prompt_run_id if run_id is None else run_id
         try:
             async for event in self.session.prompt(text):
+                if active_run_id != self._prompt_run_id:
+                    return
                 self.adapter.apply(event)
                 if isinstance(event, ErrorEvent) and not event.recoverable:
                     _attach_diagnostic_log_path_to_error(self.state, self.session)
                 self._refresh()
         except Exception as exc:  # noqa: BLE001 - surface unexpected worker errors in the TUI
+            if active_run_id != self._prompt_run_id:
+                return
             message = _format_prompt_error(exc, self.session)
             self.state.error = message
             self.state.add_item("error", message)
             self.state.running = False
             self._refresh()
+        finally:
+            if active_run_id == self._prompt_run_id:
+                self._prompt_worker = None
 
     def action_cancel(self) -> None:
         """Cancel the active agent turn."""
-        if self.state.running:
-            self.session.cancel()
+        self._cancel_active_prompt(notify=True)
+
+    def _cancel_active_prompt(self, *, notify: bool) -> None:
+        """Cancel the active prompt worker and ignore any late events from it."""
+        worker = self._prompt_worker
+        is_worker_active = worker is not None and not worker.is_cancelled
+        is_session_running = bool(getattr(self.session, "is_running", False))
+        if not (self.state.running or is_session_running or is_worker_active):
+            return
+
+        self._prompt_run_id += 1
+        cancel = getattr(self.session, "cancel", None)
+        if callable(cancel):
+            cancel()
+        if worker is not None and not worker.is_cancelled:
+            worker.cancel()
+        self._prompt_worker = None
+        self.state.running = False
+        self.state.assistant_buffer = ""
+        self._refresh()
+        if notify:
             self._notify("Cancellation requested.")
 
     def action_accept_completion(self) -> None:
@@ -1354,6 +1389,7 @@ class TauTuiApp(App[None]):
         self._refresh()
 
     async def _new_session(self) -> None:
+        self._cancel_active_prompt(notify=False)
         new_session = getattr(self.session, "new_session", None)
         if new_session is None:
             self._notify("Session manager is not available.")
