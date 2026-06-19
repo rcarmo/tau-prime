@@ -1464,7 +1464,7 @@ class TauTuiApp(App[None]):
         """Accept the currently selected prompt completion."""
         if isinstance(
             self.screen,
-            SessionPickerScreen | LoginProviderPickerScreen | ModelPickerScreen,
+            SessionPickerScreen | LoginProviderPickerScreen | ThemePickerScreen | ModelPickerScreen,
         ):
             self.screen.action_select_cursor()
             return
@@ -1481,7 +1481,7 @@ class TauTuiApp(App[None]):
         """Select the next prompt completion or move down in the prompt."""
         if isinstance(
             self.screen,
-            SessionPickerScreen | LoginProviderPickerScreen | ModelPickerScreen,
+            SessionPickerScreen | LoginProviderPickerScreen | ThemePickerScreen | ModelPickerScreen,
         ):
             self.screen.action_cursor_down()
             return

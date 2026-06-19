@@ -920,8 +920,14 @@ async def test_tui_app_theme_command_opens_picker_and_persists_selection(
         ]
 
         theme_list = picker.query_one("#theme-picker-list", ListView)
-        theme_list.index = 1
-        await pilot.press("enter")
+        assert theme_list.index == 0
+        await pilot.press("down")
+        await pilot.pause()
+        assert theme_list.index == 1
+        await pilot.press("up")
+        await pilot.pause()
+        assert theme_list.index == 0
+        await pilot.press("down", "enter")
         await pilot.pause()
 
         assert app.tui_settings.theme == "tau-light"
