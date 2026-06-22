@@ -26,7 +26,12 @@ from tau_agent import (
 )
 from tau_coding.commands import CommandResult
 from tau_coding.credentials import OAuthCredential
-from tau_coding.provider_config import OpenAICompatibleProviderConfig, ProviderSettings
+from tau_coding.provider_config import (
+    OpenAICodexProviderConfig,
+    OpenAICompatibleProviderConfig,
+    ProviderSettings,
+    ScopedModelConfig,
+)
 from tau_coding.session import ModelChoice, SessionTreeChoice, TerminalCommandResult
 from tau_coding.session_manager import CodingSessionRecord
 from tau_coding.skills import Skill, format_skill_invocation
@@ -2674,6 +2679,207 @@ async def test_tui_app_runs_initial_prompt() -> None:
 
 
 @pytest.mark.anyio
+async def test_run_tui_app_starts_with_latest_directory_provider_model(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+    record = CodingSessionRecord(
+        id="new-session",
+        path=tmp_path / "new-session.jsonl",
+        cwd=tmp_path,
+        model="gpt-5.5",
+        title=None,
+        created_at=1.0,
+        updated_at=1.0,
+        provider_name="openai-codex",
+    )
+
+    class FakeProvider:
+        async def aclose(self) -> None:
+            calls.append("provider_closed")
+
+    class FakeManager:
+        def latest_session_for_cwd(self, cwd: Path) -> CodingSessionRecord | None:
+            calls.append(f"latest:{cwd}")
+            return record
+
+        def create_session(
+            self,
+            *,
+            cwd: Path,
+            model: str,
+            provider_name: str | None = None,
+        ) -> CodingSessionRecord:
+            calls.append(f"create:{cwd}:{model}:{provider_name}")
+            return record
+
+        def get_session(self, session_id: str) -> CodingSessionRecord | None:
+            return None
+
+    class FakeCodingSession:
+        @classmethod
+        async def load(cls, config: object) -> str:
+            assert config.provider_name == "openai-codex"  # type: ignore[attr-defined]
+            assert config.model == "gpt-5.5"  # type: ignore[attr-defined]
+            calls.append("load")
+            return "session"
+
+    class FakeApp:
+        def __init__(self, session: str, **kwargs: object) -> None:
+            assert session == "session"
+
+        async def run_async(self) -> None:
+            calls.append("run")
+
+    settings = ProviderSettings(
+        default_provider="openai",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="openai",
+                models=("gpt-5.5",),
+                default_model="gpt-5.5",
+            ),
+            OpenAICodexProviderConfig(
+                name="openai-codex",
+                models=("gpt-5.5",),
+                default_model="gpt-5.5",
+            ),
+        ),
+    )
+    monkeypatch.setattr(tui_app, "load_provider_settings", lambda: settings)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
+    monkeypatch.setattr(
+        tui_app,
+        "create_model_provider",
+        lambda provider, **kwargs: calls.append(f"provider:{provider.name}:{kwargs['model']}")
+        or FakeProvider(),
+    )
+    monkeypatch.setattr(tui_app, "CodingSession", FakeCodingSession)
+    monkeypatch.setattr(tui_app, "TauTuiApp", FakeApp)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
+
+    await tui_app.run_tui_app(cwd=tmp_path, model=None, session_manager=FakeManager())
+
+    assert calls == [
+        f"latest:{tmp_path}",
+        "provider:openai-codex:gpt-5.5",
+        f"create:{tmp_path}:gpt-5.5:openai-codex",
+        "load",
+        "run",
+        "provider_closed",
+    ]
+
+
+@pytest.mark.anyio
+async def test_run_tui_app_falls_back_to_scoped_model_when_latest_is_out_of_scope(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+    latest = CodingSessionRecord(
+        id="latest-session",
+        path=tmp_path / "latest-session.jsonl",
+        cwd=tmp_path,
+        model="gpt-5.5",
+        title=None,
+        created_at=1.0,
+        updated_at=1.0,
+        provider_name="openai",
+    )
+    record = CodingSessionRecord(
+        id="new-session",
+        path=tmp_path / "new-session.jsonl",
+        cwd=tmp_path,
+        model="gpt-5.5",
+        title=None,
+        created_at=2.0,
+        updated_at=2.0,
+        provider_name="openai-codex",
+    )
+
+    class FakeProvider:
+        async def aclose(self) -> None:
+            calls.append("provider_closed")
+
+    class FakeCredentialStore:
+        def get(self, name: str) -> str | None:
+            return None
+
+        def get_oauth(self, name: str) -> object | None:
+            return object() if name == "openai-codex" else None
+
+    class FakeManager:
+        def latest_session_for_cwd(self, cwd: Path) -> CodingSessionRecord | None:
+            calls.append(f"latest:{cwd}")
+            return latest
+
+        def create_session(
+            self,
+            *,
+            cwd: Path,
+            model: str,
+            provider_name: str | None = None,
+        ) -> CodingSessionRecord:
+            calls.append(f"create:{cwd}:{model}:{provider_name}")
+            return record
+
+        def get_session(self, session_id: str) -> CodingSessionRecord | None:
+            return None
+
+    class FakeCodingSession:
+        @classmethod
+        async def load(cls, config: object) -> str:
+            assert config.provider_name == "openai-codex"  # type: ignore[attr-defined]
+            calls.append("load")
+            return "session"
+
+    class FakeApp:
+        def __init__(self, session: str, **kwargs: object) -> None:
+            assert session == "session"
+
+        async def run_async(self) -> None:
+            calls.append("run")
+
+    settings = ProviderSettings(
+        default_provider="openai",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="openai",
+                models=("gpt-5.5",),
+                default_model="gpt-5.5",
+            ),
+            OpenAICodexProviderConfig(
+                name="openai-codex",
+                models=("gpt-5.5",),
+                default_model="gpt-5.5",
+            ),
+        ),
+        scoped_models=(ScopedModelConfig(provider="openai-codex", model="gpt-5.5"),),
+    )
+    monkeypatch.setattr(tui_app, "FileCredentialStore", lambda: FakeCredentialStore())
+    monkeypatch.setattr(tui_app, "load_provider_settings", lambda: settings)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
+    monkeypatch.setattr(
+        tui_app,
+        "create_model_provider",
+        lambda provider, **kwargs: calls.append(f"provider:{provider.name}:{kwargs['model']}")
+        or FakeProvider(),
+    )
+    monkeypatch.setattr(tui_app, "CodingSession", FakeCodingSession)
+    monkeypatch.setattr(tui_app, "TauTuiApp", FakeApp)
+
+    await tui_app.run_tui_app(cwd=tmp_path, model=None, session_manager=FakeManager())
+
+    assert calls == [
+        f"latest:{tmp_path}",
+        "provider:openai-codex:gpt-5.5",
+        f"create:{tmp_path}:gpt-5.5:openai-codex",
+        "load",
+        "run",
+        "provider_closed",
+    ]
+
+
+@pytest.mark.anyio
 async def test_run_tui_app_creates_new_session_by_default(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -2693,8 +2899,14 @@ async def test_run_tui_app_creates_new_session_by_default(
             calls.append("provider_closed")
 
     class FakeManager:
-        def create_session(self, *, cwd: Path, model: str) -> CodingSessionRecord:
-            calls.append(f"create:{cwd}:{model}")
+        def create_session(
+            self,
+            *,
+            cwd: Path,
+            model: str,
+            provider_name: str | None = None,
+        ) -> CodingSessionRecord:
+            calls.append(f"create:{cwd}:{model}:{provider_name}")
             return record
 
         def get_session(self, session_id: str) -> CodingSessionRecord | None:
@@ -2741,6 +2953,7 @@ async def test_run_tui_app_creates_new_session_by_default(
     )
     monkeypatch.setattr(tui_app, "CodingSession", FakeCodingSession)
     monkeypatch.setattr(tui_app, "TauTuiApp", FakeApp)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
 
     await tui_app.run_tui_app(
         model=None,
@@ -2751,7 +2964,7 @@ async def test_run_tui_app_creates_new_session_by_default(
         session_manager=FakeManager(),
     )
 
-    assert calls == [f"create:{tmp_path}:local-model", "load", "run", "provider_closed"]
+    assert calls == [f"create:{tmp_path}:local-model:local", "load", "run", "provider_closed"]
 
 
 @pytest.mark.anyio
@@ -2770,8 +2983,14 @@ async def test_run_tui_app_opens_when_provider_login_is_missing(
     )
 
     class FakeManager:
-        def create_session(self, *, cwd: Path, model: str) -> CodingSessionRecord:
-            calls.append(f"create:{cwd}:{model}")
+        def create_session(
+            self,
+            *,
+            cwd: Path,
+            model: str,
+            provider_name: str | None = None,
+        ) -> CodingSessionRecord:
+            calls.append(f"create:{cwd}:{model}:{provider_name}")
             return record
 
         def get_session(self, session_id: str) -> CodingSessionRecord | None:
@@ -2803,10 +3022,11 @@ async def test_run_tui_app_opens_when_provider_login_is_missing(
     )
     monkeypatch.setattr(tui_app, "CodingSession", FakeCodingSession)
     monkeypatch.setattr(tui_app, "TauTuiApp", FakeApp)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
 
     await tui_app.run_tui_app(cwd=tmp_path, model=None, session_manager=FakeManager())
 
-    assert calls == [f"create:{tmp_path}:gpt-5.5", "load:LoginRequiredProvider", "run"]
+    assert calls == [f"create:{tmp_path}:gpt-5.5:openai", "load:LoginRequiredProvider", "run"]
 
 
 @pytest.mark.anyio
@@ -2829,7 +3049,13 @@ async def test_run_tui_app_resumes_explicit_session(
             calls.append("provider_closed")
 
     class FakeManager:
-        def create_session(self, *, cwd: Path, model: str) -> CodingSessionRecord:
+        def create_session(
+            self,
+            *,
+            cwd: Path,
+            model: str,
+            provider_name: str | None = None,
+        ) -> CodingSessionRecord:
             raise AssertionError("explicit resume should not create a new session")
 
         def get_session(self, session_id: str) -> CodingSessionRecord | None:
@@ -2859,6 +3085,7 @@ async def test_run_tui_app_resumes_explicit_session(
     )
     monkeypatch.setattr(tui_app, "CodingSession", FakeCodingSession)
     monkeypatch.setattr(tui_app, "TauTuiApp", FakeApp)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
 
     await tui_app.run_tui_app(
         model="fake-model",

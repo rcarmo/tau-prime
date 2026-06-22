@@ -398,7 +398,11 @@ class CodingSession:
         self._sync_thinking_level_to_active_model()
         self._refresh_runtime_provider()
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(self._config.session_id, model=self.model)
+            self._config.session_manager.touch_session(
+                self._config.session_id,
+                model=self.model,
+                provider_name=self.provider_name,
+            )
         suffix = " with branch summary" if summary_entry is not None else ""
         return f"Branched session at {target_id}{suffix}."
 
@@ -560,7 +564,11 @@ class CodingSession:
         self._sync_thinking_level_to_active_model()
         self._refresh_runtime_provider()
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(self._config.session_id, model=model)
+            self._config.session_manager.touch_session(
+                self._config.session_id,
+                model=model,
+                provider_name=self.provider_name,
+            )
 
     def set_model_choice(self, choice: ModelChoice) -> None:
         """Switch provider/model as one operation."""
@@ -635,7 +643,11 @@ class CodingSession:
         self._harness.config.model = model
         self._thinking_level = thinking_level
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(self._config.session_id, model=model)
+            self._config.session_manager.touch_session(
+                self._config.session_id,
+                model=model,
+                provider_name=self.provider_name,
+            )
 
     async def set_thinking_level(self, level: str) -> str:
         """Persist and activate a thinking mode for future turns."""
@@ -672,7 +684,11 @@ class CodingSession:
         entries = await self._config.storage.read_all()
         self._state = SessionState.from_entries(entries, leaf_id=entry.id)
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(self._config.session_id, model=self.model)
+            self._config.session_manager.touch_session(
+                self._config.session_id,
+                model=self.model,
+                provider_name=self.provider_name,
+            )
         return f"Thinking mode: {normalized}"
 
     async def cycle_thinking_level(self) -> str:
@@ -845,7 +861,11 @@ class CodingSession:
         if manager is None:
             raise ValueError("Session manager is not available")
 
-        record = manager.create_session(cwd=self.cwd, model=self.model)
+        record = manager.create_session(
+            cwd=self.cwd,
+            model=self.model,
+            provider_name=self.provider_name,
+        )
         replacement = await type(self).load(
             replace(
                 self._config,
@@ -1048,7 +1068,11 @@ class CodingSession:
         entries = await self._config.storage.read_all()
         self._state = SessionState.from_entries(entries)
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(self._config.session_id, model=self.model)
+            self._config.session_manager.touch_session(
+                self._config.session_id,
+                model=self.model,
+                provider_name=self.provider_name,
+            )
 
     def _provider_is_usable(self, provider: ProviderConfig) -> bool:
         return provider_has_usable_credentials(
@@ -1094,7 +1118,11 @@ class CodingSession:
         self._state = SessionState.from_entries(entries, leaf_id=compaction.id)
         self._harness.replace_messages(self._state.messages)
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(self._config.session_id, model=self.model)
+            self._config.session_manager.touch_session(
+                self._config.session_id,
+                model=self.model,
+                provider_name=self.provider_name,
+            )
         return compaction
 
 

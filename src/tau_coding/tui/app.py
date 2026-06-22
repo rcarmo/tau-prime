@@ -43,8 +43,10 @@ from tau_coding.provider_catalog import (
 )
 from tau_coding.provider_config import (
     ProviderConfig,
+    ProviderSelection,
     load_provider_settings,
     provider_config_from_catalog_entry,
+    provider_has_usable_credentials,
     resolve_provider_selection,
     save_provider_settings,
     upsert_provider,
@@ -2957,6 +2959,127 @@ def _attach_diagnostic_log_path_to_error(state: TuiState, session: CodingSession
     state.add_item("error", message)
 
 
+def _explicit_resume_record(
+    manager: SessionManager,
+    *,
+    session_id: str | None,
+) -> object | None:
+    if session_id is None:
+        return None
+    record = manager.get_session(session_id)
+    if record is None:
+        raise RuntimeError(f"Unknown session: {session_id}")
+    return record
+
+
+def _latest_startup_record(manager: SessionManager, *, cwd: Path) -> object | None:
+    latest = getattr(manager, "latest_session_for_cwd", None)
+    if callable(latest):
+        return latest(cwd)
+    records = manager.list_sessions(cwd) if hasattr(manager, "list_sessions") else ()
+    return records[0] if records else None
+
+
+def _create_startup_session_record(
+    manager: SessionManager,
+    *,
+    cwd: Path,
+    selection: ProviderSelection,
+) -> object:
+    try:
+        return manager.create_session(
+            cwd=cwd,
+            model=selection.model,
+            provider_name=selection.provider.name,
+        )
+    except TypeError:
+        return manager.create_session(cwd=cwd, model=selection.model)  # type: ignore[call-arg]
+
+
+def _resolve_tui_startup_selection(
+    settings: Any,
+    *,
+    manager: SessionManager,
+    cwd: Path,
+    record: Any | None,
+    provider_name: str | None,
+    model: str | None,
+    explicit_resume: bool,
+) -> ProviderSelection:
+    if provider_name is not None or model is not None:
+        return resolve_provider_selection(settings, provider_name=provider_name, model=model)
+
+    reference = record if record is not None else _latest_startup_record(manager, cwd=cwd)
+    scoped = _usable_scoped_startup_choices(settings)
+    scoped_required = bool(settings.scoped_models) and not explicit_resume
+    record_selection = _selection_from_session_record(settings, reference)
+    if record_selection is not None:
+        record_choice = ModelChoice(
+            provider_name=record_selection.provider.name,
+            model=record_selection.model,
+        )
+        if not scoped_required or record_choice in scoped:
+            return record_selection
+
+    if scoped:
+        choice = scoped[0]
+        return resolve_provider_selection(
+            settings,
+            provider_name=choice.provider_name,
+            model=choice.model,
+        )
+
+    return resolve_provider_selection(settings)
+
+
+def _selection_from_session_record(settings: Any, record: Any | None) -> ProviderSelection | None:
+    if record is None:
+        return None
+    record_model = getattr(record, "model", None)
+    if not isinstance(record_model, str) or not record_model:
+        return None
+
+    record_provider = getattr(record, "provider_name", None)
+    if isinstance(record_provider, str) and record_provider:
+        try:
+            return resolve_provider_selection(
+                settings,
+                provider_name=record_provider,
+                model=record_model,
+            )
+        except Exception:
+            return None
+
+    for choice in _usable_scoped_startup_choices(settings):
+        if choice.model == record_model:
+            return resolve_provider_selection(
+                settings,
+                provider_name=choice.provider_name,
+                model=choice.model,
+            )
+
+    for provider in settings.providers:
+        if record_model in provider.models:
+            return ProviderSelection(provider=provider, model=record_model)
+    return None
+
+
+def _usable_scoped_startup_choices(settings: Any) -> tuple[ModelChoice, ...]:
+    credential_store = FileCredentialStore()
+    choices: list[ModelChoice] = []
+    for item in settings.scoped_models:
+        try:
+            provider = settings.get_provider(item.provider)
+        except Exception:
+            continue
+        if item.model not in provider.models:
+            continue
+        if not provider_has_usable_credentials(provider, credential_reader=credential_store):
+            continue
+        choices.append(ModelChoice(provider_name=item.provider, model=item.model))
+    return tuple(choices)
+
+
 async def run_tui_app(
     *,
     model: str | None,
@@ -2973,10 +3096,19 @@ async def run_tui_app(
         raise RuntimeError("--resume and --new-session cannot be used together")
 
     provider_settings = load_provider_settings()
-    selection = resolve_provider_selection(
+    manager = session_manager or SessionManager()
+    record = _explicit_resume_record(
+        manager,
+        session_id=session_id,
+    )
+    selection = _resolve_tui_startup_selection(
         provider_settings,
+        manager=manager,
+        cwd=cwd,
+        record=record,
         provider_name=provider_name,
         model=model,
+        explicit_resume=session_id is not None,
     )
     startup_message: str | None = None
     runtime_provider_config: ProviderConfig | None = selection.provider
@@ -2993,16 +3125,14 @@ async def run_tui_app(
         )
         provider = LoginRequiredProvider(startup_message)
         runtime_provider_config = None
-    manager = session_manager or SessionManager()
     session: CodingSession | None = None
     try:
-        if session_id is not None:
-            existing_record = manager.get_session(session_id)
-            if existing_record is None:
-                raise RuntimeError(f"Unknown session: {session_id}")
-            record = existing_record
-        else:
-            record = manager.create_session(cwd=cwd, model=selection.model)
+        if record is None:
+            record = _create_startup_session_record(
+                manager,
+                cwd=cwd,
+                selection=selection,
+            )
 
         session = await CodingSession.load(
             CodingSessionConfig(
