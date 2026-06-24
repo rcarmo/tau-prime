@@ -1474,7 +1474,7 @@ class TauTuiApp(App[None]):
         height: 1fr;
         border: none;
         background: $tau-transcript-background;
-        padding: 0 1 0 0;
+        padding: 0 0 0 2;
         scrollbar-size-vertical: 0;
         scrollbar-size-horizontal: 0;
     }
@@ -1493,6 +1493,16 @@ class TauTuiApp(App[None]):
         margin: 0 1 1 1;
     }
 
+    #prompt-prefix {
+        width: 2;
+        height: 3;
+        padding: 0 0 0 0;
+        margin: 0;
+        content-align: center middle;
+        color: $tau-accent;
+        text-style: bold;
+    }
+
     #prompt {
         width: 1fr;
         height: auto;
@@ -1502,14 +1512,6 @@ class TauTuiApp(App[None]):
         margin: 0;
         padding: 0 1;
         max-height: 8;
-    }
-
-    #activity-indicator {
-        width: 1;
-        height: 3;
-        margin: 0 0 0 1;
-        background: transparent;
-        color: transparent;
     }
 
     #prompt:focus {
@@ -1817,12 +1819,12 @@ class TauTuiApp(App[None]):
                 )
                 yield Static("", id="queued-messages")
                 with Horizontal(id="prompt-row"):
+                    yield Static("τ", id="prompt-prefix")
                     yield PromptInput(
                         placeholder="Ask Tau…  Enter submits, Shift+Enter inserts a newline",
                         id="prompt",
                         tui_keybindings=self.tui_settings.keybindings,
                     )
-                    yield Static("", id="activity-indicator")
                 yield CompactSessionInfo(id="compact-session-info")
                 yield Static("", id="autocomplete")
         yield Footer()
@@ -1850,6 +1852,13 @@ class TauTuiApp(App[None]):
     def on_resize(self, event: Resize) -> None:
         """Update responsive chrome when the terminal changes size."""
         self._update_responsive_layout(event.size.width, event.size.height)
+
+    def on_click(self, event: events.Click) -> None:
+        """Return keyboard focus to the prompt after clicks in the main TUI."""
+        if event.button != 1:
+            return
+        with suppress(NoMatches):
+            self.screen.query_one("#prompt", PromptInput).focus()
 
     @on(events.TextSelected)
     async def on_text_selected(self) -> None:
@@ -2771,7 +2780,7 @@ class TauTuiApp(App[None]):
         theme = self.tui_settings.resolved_theme
         try:
             prompt = self.query_one("#prompt", PromptInput)
-            indicator = self.query_one("#activity-indicator", Static)
+            prompt_prefix = self.query_one("#prompt-prefix", Static)
         except NoMatches:
             return
         prompt.styles.border = (
@@ -2783,7 +2792,7 @@ class TauTuiApp(App[None]):
                 shell_mode=_is_terminal_command_prompt(prompt.text),
             ),
         )
-        indicator.update(
+        prompt_prefix.update(
             _render_activity_indicator(
                 theme,
                 frame=self._activity_frame,
@@ -2852,9 +2861,9 @@ def _activity_prompt_border_color(
 
 
 def _render_activity_indicator(theme: TuiTheme, *, frame: int, running: bool) -> Text:
-    """Render the narrow working indicator that sits to the right of the prompt."""
+    """Render the prompt prefix, turning Tau into a moving square while running."""
     if not running:
-        return Text("\n".join(" " for _ in range(ACTIVITY_INDICATOR_HEIGHT)))
+        return Text("τ", style=f"bold {theme.accent}")
 
     cycle_length = (ACTIVITY_INDICATOR_HEIGHT - 1) * 2
     cycle_position = frame % cycle_length
@@ -2865,14 +2874,14 @@ def _render_activity_indicator(theme: TuiTheme, *, frame: int, running: bool) ->
     )
     direction = 1 if cycle_position < ACTIVITY_INDICATOR_HEIGHT else -1
     trail_rows = {
-        active_row: theme.highlight_background,
+        active_row: theme.accent,
         active_row - direction: _blend_hex_colors(
-            theme.highlight_background,
+            theme.accent,
             theme.screen_background,
             fraction=0.35,
         ),
         active_row - (direction * 2): _blend_hex_colors(
-            theme.highlight_background,
+            theme.accent,
             theme.screen_background,
             fraction=0.65,
         ),
@@ -3237,6 +3246,13 @@ def _theme_css_variables(theme: TuiTheme) -> dict[str, str]:
         "tau-accent": theme.accent,
         "tau-highlight-background": theme.highlight_background,
         "tau-highlight-text": theme.highlight_text,
+        "tau-markdown-highlight": theme.markdown_heading,
+        "tau-markdown-table-header": theme.markdown_table_header,
+        "tau-markdown-table-border": theme.markdown_table_border,
+        "tau-markdown-inline-code": theme.markdown_inline_code,
+        "tau-markdown-code-block-background": theme.markdown_code_block_background,
+        "tau-markdown-link": theme.markdown_link,
+        "tau-markdown-bullet": theme.markdown_bullet,
         "footer-background": theme.chrome_background,
         "footer-foreground": theme.chrome_text,
         "footer-description-background": theme.chrome_background,

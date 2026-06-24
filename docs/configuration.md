@@ -174,6 +174,10 @@ windows and hides it automatically when the terminal is narrow or short.
 When visible, it includes the active provider/model, thinking mode, loaded tools,
 skills, prompt templates, and context files such as `AGENTS.md`.
 
+Clicking anywhere in the main TUI returns keyboard focus to the prompt input,
+so you can inspect the transcript or sidebar and immediately keep typing without
+manually tabbing back to the bottom prompt.
+
 The TUI uses Textual's built-in footer to show shortcut hints for prompt
 submission, newlines, command/session pickers, thinking controls, queued
 follow-ups, and prompt clear actions. The visible footer bindings switch when

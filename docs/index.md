@@ -44,9 +44,10 @@ Tau currently has:
 - provider setup and switching
 - stored Tau credentials with environment-variable fallback
 - context accounting, manual/automatic compaction, and HTML session export
-- a Textual TUI with responsive sidebar, text selection, selected-message copy,
-  activity status, thinking controls, optional thinking-token display, and
-  queued steering/follow-up prompts while the agent is running
+- a Textual TUI with responsive sidebar, click-anywhere prompt refocus,
+  text selection, selected-message copy, activity status, thinking controls,
+  optional thinking-token display, and queued steering/follow-up prompts while
+  the agent is running
 - beginner-friendly design documentation
 
 ## Where to start
@@ -54,6 +55,7 @@ Tau currently has:
 - New to the project? Read [Getting Started](getting-started.md).
 - Installing Tau as a command? Read [Installation](installation.md).
 - Looking for file formats and paths? Read [Configuration and Files](configuration.md).
+- Want reusable prompt templates? Read [Custom Prompts](custom-prompts.md).
 - Want the full plan? Read the [Roadmap](00-roadmap.md).
 - Want the big-picture boundaries? Read [Architecture](01-architecture.md).
 - Want the current core model? Read [Core Types and Events](05-core-types-and-events.md).

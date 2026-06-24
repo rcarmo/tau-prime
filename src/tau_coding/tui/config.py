@@ -80,6 +80,13 @@ class TuiTheme:
     accent: str
     highlight_background: str
     highlight_text: str
+    markdown_heading: str
+    markdown_table_header: str
+    markdown_table_border: str
+    markdown_inline_code: str
+    markdown_code_block_background: str
+    markdown_link: str
+    markdown_bullet: str
     completion_selected: str
     completion_selected_description: str
     completion_description: str
@@ -101,9 +108,16 @@ TAU_DARK_THEME = TuiTheme(
     prompt_text="#e5e7eb",
     prompt_border="#2d3748",
     autocomplete_background="#000000",
-    accent="#f4a261",
+    accent="#db945a",
     highlight_background="#a7f3f0",
     highlight_text="#061a1a",
+    markdown_heading="#db945a",
+    markdown_table_header="#7b7b7b",
+    markdown_table_border="#7b7b7b",
+    markdown_inline_code="#759e95",
+    markdown_code_block_background="#161b21",
+    markdown_link="#93c5fd",
+    markdown_bullet="#db945a",
     completion_selected="bold #061a1a on #a7f3f0",
     completion_selected_description="#123333 on #a7f3f0",
     completion_description="#667085",
@@ -139,6 +153,13 @@ HIGH_CONTRAST_THEME = TuiTheme(
     accent="#ffb454",
     highlight_background="#7fffd4",
     highlight_text="#000000",
+    markdown_heading="#ffb454",
+    markdown_table_header="#d0d0d0",
+    markdown_table_border="#d0d0d0",
+    markdown_inline_code="#7fffd4",
+    markdown_code_block_background="#161b21",
+    markdown_link="#80d8ff",
+    markdown_bullet="#ffb454",
     completion_selected="bold black on #7fffd4",
     completion_selected_description="black on #7fffd4",
     completion_description="white",
@@ -174,6 +195,13 @@ TAU_LIGHT_THEME = TuiTheme(
     accent="#0f766e",
     highlight_background="#dbeafe",
     highlight_text="#1d4ed8",
+    markdown_heading="#b45309",
+    markdown_table_header="#64748b",
+    markdown_table_border="#cbd5e1",
+    markdown_inline_code="#0f766e",
+    markdown_code_block_background="#f1f5f9",
+    markdown_link="#2563eb",
+    markdown_bullet="#b45309",
     completion_selected="bold #0f172a on #dbeafe",
     completion_selected_description="#334155 on #dbeafe",
     completion_description="#667085",

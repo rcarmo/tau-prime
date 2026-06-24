@@ -221,6 +221,10 @@ Common slash commands:
 | `/hotkeys` | Show common keyboard shortcuts. |
 | `/quit` | Exit the session. |
 
+Important TUI behavior:
+
+- Click anywhere in the main TUI to return keyboard focus to the prompt input.
+
 Common shortcuts:
 
 | Shortcut | Action |

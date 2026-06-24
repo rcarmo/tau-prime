@@ -1,4 +1,5 @@
 import asyncio
+import re
 from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
@@ -58,6 +59,7 @@ from tau_coding.tui.app import (
     TreePickerScreen,
     _activity_prompt_border_color,
     _completion_selected_render_line,
+    _theme_css_variables,
     _terminal_command_prefix_span,
     _visible_completion_state,
 )
@@ -72,9 +74,11 @@ from tau_coding.tui.config import (
 )
 from tau_coding.tui.state import ChatItem
 from tau_coding.tui.widgets import (
+    LeftAlignedMarkdownHeading,
     StreamingTranscriptMessageWidget,
     TranscriptMessageWidget,
     TranscriptView,
+    ThemedMarkdownWidget,
     _compact_token_count,
     _syntax_language,
     _transcript_plain_body_text,
@@ -83,6 +87,13 @@ from tau_coding.tui.widgets import (
     render_session_sidebar,
     transcript_item_selection_text,
 )
+
+
+ANSI_PATTERN = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _strip_ansi(text: str) -> str:
+    return ANSI_PATTERN.sub("", text)
 
 
 class FakeSessionState:
@@ -525,8 +536,8 @@ def test_assistant_chat_items_apply_syntax_highlighting_to_code_fences() -> None
 
     assert "def" in output
     assert "return" in output
-    assert "\x1b[94;48;2;0;0;0mdef" in output
-    assert "\x1b[94;48;2;0;0;0mreturn" in output
+    assert "\x1b[94;48;2;22;27;33mdef" in output
+    assert "\x1b[94;48;2;22;27;33mreturn" in output
 
 
 def test_chat_items_fallback_unknown_fenced_language_to_plain_code() -> None:
@@ -830,16 +841,89 @@ def test_light_theme_tool_error_uses_red_text_without_background() -> None:
     assert "38;2;185;28;28;48;2" not in output
 
 
-def test_dark_theme_markdown_code_uses_accent_highlight() -> None:
+def test_dark_theme_markdown_code_uses_aqua_highlight() -> None:
     console = Console(record=True, width=80)
     console.print(render_chat_item(ChatItem(role="assistant", text="Use `tau` here.")))
+
+    output = console.export_text(styles=True)
+
+    assert "38;2;117;158;149" in output
+    assert "38;2;219;148;90" not in output
+
+
+def test_assistant_markdown_titles_use_highlight_color_and_left_alignment() -> None:
+    console = Console(record=True, width=60, color_system="truecolor")
+    console.print(render_chat_item(ChatItem(role="assistant", text="# Title\n\n## Header")))
+
+    output = console.export_text(styles=True)
+    plain_output = _strip_ansi(output)
+
+    assert "38;2;244;162;97" in output
+    assert "Title" in plain_output
+    assert not plain_output.splitlines()[1].startswith(" " * 20)
+    assert LeftAlignedMarkdownHeading.LEVEL_ALIGN["h1"] == "left"
+
+
+def test_dark_theme_markdown_links_use_theme_link_color() -> None:
+    console = Console(record=True, width=80, color_system="truecolor")
+    console.print(render_chat_item(ChatItem(role="assistant", text="Read [docs](https://example.com).")))
+
+    output = console.export_text(styles=True)
+
+    assert "38;2;147;197;253" in output
+
+
+def test_dark_theme_markdown_bullets_use_theme_bullet_color() -> None:
+    console = Console(record=True, width=80, color_system="truecolor")
+    console.print(render_chat_item(ChatItem(role="assistant", text="- first\n- second")))
 
     output = console.export_text(styles=True)
 
     assert "38;2;244;162;97" in output
 
 
-def test_light_theme_markdown_code_uses_highlight_text_without_background() -> None:
+def test_markdown_tables_use_highlight_color_for_headers() -> None:
+    console = Console(record=True, width=80, color_system="truecolor")
+    console.print(
+        render_chat_item(ChatItem(role="assistant", text="| Name | Value |\n| --- | --- |\n| A | B |"))
+    )
+
+    output = console.export_text(styles=True)
+
+    assert "38;2;219;148;90" in output
+    assert "\x1b[36" not in output
+
+
+@pytest.mark.anyio
+async def test_textual_markdown_widget_uses_theme_link_style() -> None:
+    app = TauTuiApp(
+        FakeSession([AssistantMessage(content="Read [docs](https://example.com).")]),
+    )
+
+    async with app.run_test() as pilot:
+        await pilot.pause()
+
+        markdown = app.query_one(ThemedMarkdownWidget)
+
+    assert markdown.tau_link_style == TAU_DARK_THEME.markdown_link
+
+
+def test_textual_markdown_uses_theme_highlight_and_aqua_inline_code() -> None:
+    variables = _theme_css_variables(TAU_LIGHT_THEME)
+
+    assert variables["tau-markdown-highlight"] == TAU_LIGHT_THEME.markdown_heading
+    assert variables["tau-markdown-table-header"] == TAU_LIGHT_THEME.markdown_table_header
+    assert variables["tau-markdown-table-border"] == TAU_LIGHT_THEME.markdown_table_border
+    assert variables["tau-markdown-inline-code"] == TAU_LIGHT_THEME.markdown_inline_code
+    assert (
+        variables["tau-markdown-code-block-background"]
+        == TAU_LIGHT_THEME.markdown_code_block_background
+    )
+    assert variables["tau-markdown-link"] == TAU_LIGHT_THEME.markdown_link
+    assert variables["tau-markdown-bullet"] == TAU_LIGHT_THEME.markdown_bullet
+
+
+def test_light_theme_markdown_code_uses_aqua_without_background() -> None:
     console = Console(record=True, width=80)
     console.print(
         render_chat_item(
@@ -850,8 +934,8 @@ def test_light_theme_markdown_code_uses_highlight_text_without_background() -> N
 
     output = console.export_text(styles=True)
 
-    assert "38;2;29;78;216" in output
-    assert "38;2;29;78;216;48;2" not in output
+    assert "38;2;15;118;110" in output
+    assert "38;2;15;118;110;48;2" not in output
 
 
 def test_tool_chat_items_color_status_metadata_not_tool_name_or_results() -> None:
@@ -1504,12 +1588,12 @@ async def test_tui_app_shows_activity_indicator_while_running() -> None:
 
     async with app.run_test():
         prompt = app.query_one("#prompt")
-        indicator = app.query_one("#activity-indicator")
+        indicator = app.query_one("#prompt-prefix")
 
         assert not app.query("#status")
         assert not app.query("#activity-status")
         assert prompt.styles.border.top[1].hex.lower() == "#2d3748"
-        assert indicator.render().plain == " \n \n "
+        assert indicator.render().plain == "τ"
 
         app.adapter.apply(AgentStartEvent())
         app._refresh()
@@ -1529,7 +1613,7 @@ async def test_tui_app_shows_activity_indicator_while_running() -> None:
 
         assert not app.query("#status")
         assert prompt.styles.border.top[1].hex.lower() == "#2d3748"
-        assert indicator.render().plain == " \n \n "
+        assert indicator.render().plain == "τ"
 
 
 @pytest.mark.anyio
@@ -1538,7 +1622,7 @@ async def test_tui_app_clears_activity_status_on_error() -> None:
 
     async with app.run_test():
         prompt = app.query_one("#prompt")
-        indicator = app.query_one("#activity-indicator")
+        indicator = app.query_one("#prompt-prefix")
         app.adapter.apply(AgentStartEvent())
         app._refresh()
         app.adapter.apply(ErrorEvent(message="provider failed", recoverable=False))
@@ -1547,7 +1631,7 @@ async def test_tui_app_clears_activity_status_on_error() -> None:
         assert not app.query("#status")
         assert not app.query("#activity-status")
         assert prompt.styles.border.top[1].hex.lower() == "#2d3748"
-        assert indicator.render().plain == " \n \n "
+        assert indicator.render().plain == "τ"
 
 
 @pytest.mark.anyio
@@ -2396,6 +2480,23 @@ async def test_tui_app_notifications_render_literal_markup_text() -> None:
 
     assert notification.message == "Error: value [type=extra_forbidden]"
     assert notification.markup is False
+
+
+@pytest.mark.anyio
+async def test_tui_app_clicking_transcript_refocuses_prompt() -> None:
+    app = TauTuiApp(FakeSession())
+
+    async with app.run_test() as pilot:
+        prompt = app.query_one("#prompt", PromptInput)
+        transcript = app.query_one("#transcript", TranscriptView)
+        transcript.focus()
+        await pilot.pause()
+        assert app.screen.focused is transcript
+
+        await pilot.click("#transcript")
+        await pilot.pause()
+
+        assert app.screen.focused is prompt
 
 
 @pytest.mark.anyio
