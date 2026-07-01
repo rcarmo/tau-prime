@@ -31,18 +31,21 @@ Please keep these principles in mind:
 
 ## Local development
 
-Use `uv` for Python commands so they run in the project environment.
+Use a Python 3.13+ virtual environment for Python commands so they run in the project environment. `uv` is supported, but the standard `pip` flow is:
 
 ```bash
-uv sync --dev
-uv run tau --version
+python3.13 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+tau --version
 ```
 
 Run Tau from the checkout:
 
 ```bash
-uv run tau
-uv run tau -p "explain this repo"
+tau
+tau -p "explain this repo"
 ```
 
 ## Contributor workflow
@@ -132,11 +135,11 @@ gh pr checks 207 --repo huggingface/tau
 ### Recommended development sequence
 
 1. **Read the issue** — `gh issue view 123 --repo huggingface/tau`
-2. **Set up your environment** — `uv sync --dev`
+2. **Set up your environment** — `python -m pip install -r requirements-dev.txt && python -m pip install -e .`
 3. **Create a branch or worktree** — follow naming conventions above
 4. **Implement changes** — follow layer boundaries below
 5. **Write tests** — use fake providers/tools for deterministic tests
-6. **Run checks** — `uv run pytest`, `uv run ruff check .`, `uv run mypy`
+6. **Run checks** — `python -m pytest`, `python -m ruff check .`, `python -m mypy`
 7. **Update docs** — `dev-notes/` for substantial changes, `website/` for user-facing
 8. **Commit** — one coherent change per commit
 9. **Push and open a PR** — `git push origin feat/issue-123-desc` then `gh pr create`
@@ -146,10 +149,10 @@ gh pr checks 207 --repo huggingface/tau
 Run the relevant focused tests while developing, then run the full checks before opening a pull request when practical:
 
 ```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
+python -m pytest
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
 ```
 
 For the documentation site:

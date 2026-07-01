@@ -43,6 +43,14 @@ async def _collect(stream: AsyncIterator[object]) -> list[object]:
     return [event async for event in stream]
 
 
+class RecordingLLMObserver:
+    def __init__(self) -> None:
+        self.records: list[LLMObservation] = []
+
+    def record(self, observation: LLMObservation) -> None:
+        self.records.append(observation)
+
+
 @pytest.mark.anyio
 async def test_fake_provider_replays_scripted_events() -> None:
     scripted = [
@@ -1600,8 +1608,9 @@ async def test_openai_compatible_provider_can_send_responses_reasoning_effort() 
             )
         )
 
-    assert loads(requests[0].content)["reasoning"] == {"effort": "high"}
-    assert "reasoning_effort" not in loads(requests[0].content)
+    payload = loads(requests[0].content)
+    assert payload["reasoning"] == {"effort": "high", "summary": "auto"}
+    assert "reasoning_effort" not in payload
 
 
 @pytest.mark.anyio

@@ -30,17 +30,22 @@ The roadmap and phase status are tracked in
 ```bash
 git clone https://github.com/alejandro-ao/tau.git
 cd tau
-uv sync --dev
-uv run tau --version
+python3.13 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+tau --version
 ```
+
+If you use `uv`, `uv sync --dev` and `uv run ...` remain supported.
 
 Checks:
 
 ```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
+python -m pytest
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
 ```
 
 ## The docs site

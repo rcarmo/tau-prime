@@ -61,10 +61,21 @@ uv tool install tau-ai
 tau --version
 ```
 
-Don't have `uv`?
+Prefer `pip`?
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+python3.13 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install tau-ai
+```
+
+To install from a source checkout or source tarball:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install .
+tau --version
 ```
 
 For local development:
@@ -72,8 +83,11 @@ For local development:
 ```bash
 git clone https://github.com/alejandro-ao/tau.git
 cd tau
-uv sync --dev
-uv run tau --version
+python3.13 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+tau --version
 ```
 
 ## Quickstart

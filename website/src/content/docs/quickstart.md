@@ -8,11 +8,27 @@ minutes.
 
 ## 1. Install Tau
 
-Tau is a Python tool. The easiest way to install it is with
+Tau is a Python 3.13+ tool. The fastest install path is
 [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install tau-ai
+```
+
+You can also install with standard `pip`:
+
+```bash
+python3.13 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install tau-ai
+```
+
+Or, from a source checkout/tarball:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install .
 ```
 
 Check it worked:
@@ -20,12 +36,6 @@ Check it worked:
 ```bash
 tau --version
 ```
-
-:::tip[Don't have uv?]
-`uv` is a fast Python package manager. Install it with
-`curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) or see the
-[uv install docs](https://docs.astral.sh/uv/getting-started/installation/).
-:::
 
 ## 2. Connect a model
 

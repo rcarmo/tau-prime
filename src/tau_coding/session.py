@@ -1178,9 +1178,7 @@ class CodingSession:
         persisted_count = len(self._harness.messages)
         overflow_event: ErrorEvent | None = None
         try:
-            prompt_stream = self._harness.prompt(expanded_content)
-            before_count = await self._persist_initial_prompt_message(before_count)
-            async for event in prompt_stream:
+            async for event in self._harness.prompt(expanded_content):
                 if isinstance(event, ErrorEvent) and not event.recoverable:
                     self._last_diagnostic_log_path = self._diagnostic_logger.log_error_event(
                         context=context,

@@ -2339,8 +2339,9 @@ async def test_session_set_model_choice_persists_default_provider_model(
         credential_store: FileCredentialStore | None = None,
         model: str | None = None,
         thinking_level: str | None = None,
+        llm_observer: object | None = None,
     ) -> SwitchableFakeProvider:
-        del credential_store, thinking_level
+        del credential_store, thinking_level, llm_observer
         created.append((provider_config.name, model))  # type: ignore[attr-defined]
         return SwitchableFakeProvider(provider_config)
 
@@ -2453,8 +2454,9 @@ async def test_session_new_session_uses_default_provider_model(
         credential_store: FileCredentialStore | None = None,
         model: str | None = None,
         thinking_level: str | None = None,
+        llm_observer: object | None = None,
     ) -> SwitchableFakeProvider:
-        del credential_store, thinking_level
+        del credential_store, thinking_level, llm_observer
         created.append((provider_config.name, model))  # type: ignore[attr-defined]
         return SwitchableFakeProvider(provider_config)
 
@@ -2507,8 +2509,9 @@ async def test_session_new_session_is_indexed_after_first_message(
         credential_store: FileCredentialStore | None = None,
         model: str | None = None,
         thinking_level: str | None = None,
+        llm_observer: object | None = None,
     ) -> FakeProvider:
-        del provider_config, credential_store, model, thinking_level
+        del provider_config, credential_store, model, thinking_level, llm_observer
         return FakeProvider(
             [
                 [
@@ -2593,8 +2596,9 @@ async def test_session_resume_uses_target_session_provider_model(
         credential_store: FileCredentialStore | None = None,
         model: str | None = None,
         thinking_level: str | None = None,
+        llm_observer: object | None = None,
     ) -> SwitchableFakeProvider:
-        del credential_store, thinking_level
+        del credential_store, thinking_level, llm_observer
         created.append((provider_config.name, model))  # type: ignore[attr-defined]
         return SwitchableFakeProvider(provider_config)
 
