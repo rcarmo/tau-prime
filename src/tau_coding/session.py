@@ -30,7 +30,7 @@ from tau_agent.session import (
 from tau_agent.session.entries import SessionEntry
 from tau_agent.session.tree import SessionTreeError, path_to_entry
 from tau_agent.tools import AgentTool
-from tau_ai import ModelProvider
+from tau_ai import LLMObserver, ModelProvider
 from tau_ai.events import ProviderErrorEvent, ProviderResponseEndEvent, ProviderTextDeltaEvent
 from tau_coding.branch_summary import summarize_branch_messages_with_model
 from tau_coding.commands import CommandRegistry, CommandResult, create_default_command_registry
@@ -195,6 +195,7 @@ class CodingSessionConfig:
     thinking_level: ThinkingLevel = DEFAULT_THINKING_LEVEL
     index_on_first_persist: bool = False
     shell_command_prefix: str | None = None
+    llm_observer: LLMObserver | None = None
 
 
 class CodingSession:
@@ -232,6 +233,7 @@ class CodingSession:
         self._provider_name = config.provider_name
         self._provider_settings = config.provider_settings
         self._runtime_provider_config = config.runtime_provider_config
+        self._llm_observer = config.llm_observer
         self._resource_paths = resource_paths_with_cwd(config.resource_paths, config.cwd)
         self._auto_compact_token_threshold = config.auto_compact_token_threshold
         self._auto_compact_enabled = config.auto_compact_enabled
@@ -752,6 +754,7 @@ class CodingSession:
                 credential_store=self._credential_store,
                 model=model,
                 thinking_level=thinking_level,
+                llm_observer=self._llm_observer,
             )
         except RuntimeError as exc:
             raise ProviderConfigError(str(exc)) from exc
@@ -853,6 +856,7 @@ class CodingSession:
                 credential_store=self._credential_store,
                 model=self.model,
                 thinking_level=self._thinking_level,
+                llm_observer=self._llm_observer,
             )
         except RuntimeError as exc:
             raise ProviderConfigError(str(exc)) from exc
@@ -979,6 +983,7 @@ class CodingSession:
                 auto_compact_enabled=self._auto_compact_enabled,
                 thinking_level=self._thinking_level,
                 shell_command_prefix=self._config.shell_command_prefix,
+                llm_observer=self._llm_observer,
             )
         )
         self._config = replacement._config
@@ -993,6 +998,7 @@ class CodingSession:
         self._provider_name = replacement._provider_name
         self._provider_settings = replacement._provider_settings
         self._runtime_provider_config = replacement._runtime_provider_config
+        self._llm_observer = replacement._llm_observer
         self._resource_paths = replacement._resource_paths
         self._auto_compact_token_threshold = replacement._auto_compact_token_threshold
         self._auto_compact_enabled = replacement._auto_compact_enabled
@@ -1052,6 +1058,7 @@ class CodingSession:
         self._provider_name = replacement._provider_name
         self._provider_settings = replacement._provider_settings
         self._runtime_provider_config = replacement._runtime_provider_config
+        self._llm_observer = replacement._llm_observer
         self._resource_paths = replacement._resource_paths
         self._auto_compact_token_threshold = replacement._auto_compact_token_threshold
         self._auto_compact_enabled = replacement._auto_compact_enabled

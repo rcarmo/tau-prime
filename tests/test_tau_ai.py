@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator, Mapping
-from json import loads
+from json import dumps, loads
 
 import httpx
 import pytest
@@ -18,6 +18,9 @@ from tau_ai import (
     AnthropicConfig,
     AnthropicProvider,
     FakeProvider,
+    redact_json_value,
+    redact_headers,
+    LLMObservation,
     ModelInfo,
     OpenAICodexConfig,
     OpenAICodexCredentials,
@@ -1826,3 +1829,128 @@ async def test_anthropic_provider_does_not_retry_non_transient_stream_error() ->
             "error": {"type": "invalid_request_error", "message": "bad request"},
         },
     }
+
+
+def test_llm_observation_redacts_headers_and_prompt_like_text() -> None:
+    headers = redact_headers(
+        {
+            "Authorization": "Bearer secret-key",
+            "X-Api-Key": "api-secret",
+            "X-HF-Bill-To": "my-org",
+        }
+    )
+
+    assert headers["Authorization"] == "[REDACTED]"
+    assert headers["X-Api-Key"] == "[REDACTED]"
+    assert headers["X-HF-Bill-To"] == "my-org"
+
+    body = redact_json_value(
+        {
+            "model": "test-model",
+            "messages": [{"role": "user", "content": "secret prompt"}],
+            "input": {"type": "function_call", "path": "/private/file.txt"},
+        }
+    )
+
+    assert isinstance(body, dict)
+    assert body["model"] == "test-model"
+    messages = body["messages"]
+    assert isinstance(messages, list)
+    message = messages[0]
+    assert isinstance(message, dict)
+    assert message["role"] == "user"
+    content = message["content"]
+    assert isinstance(content, dict)
+    assert content["redacted"] is True
+    assert content["length"] == len("secret prompt")
+    input_value = body["input"]
+    assert isinstance(input_value, dict)
+    assert input_value["type"] == "function_call"
+    path = input_value["path"]
+    assert isinstance(path, dict)
+    assert path["redacted"] is True
+
+
+@pytest.mark.anyio
+async def test_openai_compatible_provider_observes_redacted_request_and_response() -> None:
+    observer = RecordingLLMObserver()
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            text='data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n',
+            headers={"content-type": "text/event-stream", "x-request-id": "req-1"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = OpenAICompatibleProvider(
+            OpenAICompatibleConfig(api_key="test-key", base_url="https://example.test/v1"),
+            client=client,
+            observer=observer,
+        )
+
+        await _collect(
+            provider.stream_response(
+                model="test-model",
+                system="system secret",
+                messages=[UserMessage(content="user secret")],
+                tools=[],
+            )
+        )
+
+    assert [record.kind for record in observer.records] == ["request", "response"]
+    request = observer.records[0]
+    assert request.provider == "openai-compatible"
+    assert request.model == "test-model"
+    assert request.method == "POST"
+    assert request.url == "https://example.test/v1/chat/completions"
+    assert request.attempt == 1
+    assert request.stream is True
+    assert request.data["request"]["headers"]["Authorization"] == "[REDACTED]"  # type: ignore[index]
+    request_body = request.data["request"]["body"]  # type: ignore[index]
+    assert request_body["model"] == "test-model"  # type: ignore[index]
+    assert request_body["stream"] is True  # type: ignore[index]
+    system_content = request_body["messages"][0]["content"]  # type: ignore[index]
+    user_content = request_body["messages"][1]["content"]  # type: ignore[index]
+    assert system_content["redacted"] is True  # type: ignore[index]
+    assert system_content["length"] == len("system secret")  # type: ignore[index]
+    assert user_content["redacted"] is True  # type: ignore[index]
+    assert "system secret" not in dumps(request.to_json())
+    assert "user secret" not in dumps(request.to_json())
+    assert "test-key" not in dumps(request.to_json())
+
+    response = observer.records[1]
+    assert response.data["response"]["status_code"] == 200  # type: ignore[index]
+    assert response.data["response"]["headers"]["x-request-id"] == "req-1"  # type: ignore[index]
+
+
+@pytest.mark.anyio
+async def test_openai_compatible_provider_observes_redacted_error_body() -> None:
+    observer = RecordingLLMObserver()
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, text="bad request includes user secret")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = OpenAICompatibleProvider(
+            OpenAICompatibleConfig(api_key="test-key", base_url="https://example.test/v1"),
+            client=client,
+            observer=observer,
+        )
+
+        events = await _collect(
+            provider.stream_response(
+                model="test-model",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say hello")],
+                tools=[],
+            )
+        )
+
+    assert isinstance(events[-1], ProviderErrorEvent)
+    assert [record.kind for record in observer.records] == ["request", "response", "error"]
+    error = observer.records[-1]
+    error_body = error.data["error"]["body"]  # type: ignore[index]
+    assert error_body["redacted"] is True  # type: ignore[index]
+    assert error_body["length"] == len("bad request includes user secret")  # type: ignore[index]
+    assert "bad request includes user secret" not in dumps(error.to_json())

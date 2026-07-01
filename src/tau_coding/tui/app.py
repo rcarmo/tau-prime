@@ -54,6 +54,7 @@ from tau_ai import ProviderErrorEvent, ProviderEvent
 from tau_ai.provider import CancellationToken
 from tau_coding.commands import CommandRegistry, create_default_command_registry
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
+from tau_coding.diagnostics import llm_observer_from_env
 from tau_coding.oauth import OAuthAuthInfo, OAuthPrompt, login_openai_codex
 from tau_coding.provider_catalog import (
     BUILTIN_PROVIDER_CATALOG,
@@ -3788,6 +3789,7 @@ async def run_tui_app(
     )
     startup_message: str | None = None
     runtime_provider_config: ProviderConfig | None = selection.provider
+    llm_observer = llm_observer_from_env()
     try:
         startup_thinking_level = provider_default_thinking_level(
             selection.provider, model=selection.model
@@ -3796,6 +3798,7 @@ async def run_tui_app(
             selection.provider,
             model=selection.model,
             thinking_level=startup_thinking_level,
+            llm_observer=llm_observer,
         )
     except RuntimeError:
         login_required_message = (
@@ -3830,6 +3833,7 @@ async def run_tui_app(
                 auto_compact_token_threshold=auto_compact_token_threshold,
                 index_on_first_persist=index_on_first_persist,
                 shell_command_prefix=shell_settings.shell_command_prefix,
+                llm_observer=llm_observer,
             )
         )
         app = TauTuiApp(
