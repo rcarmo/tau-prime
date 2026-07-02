@@ -10,6 +10,7 @@ from tau_coding import (
     create_coding_tools,
     create_edit_tool,
     create_edit_tool_definition,
+    create_python_tool,
     create_read_tool,
     create_read_tool_definition,
     create_write_tool,
@@ -31,7 +32,7 @@ class FakeCancellationToken:
 async def test_create_coding_tools_returns_initial_tool_set(tmp_path: Path) -> None:
     tools = create_coding_tools(cwd=tmp_path)
 
-    assert [tool.name for tool in tools] == ["read", "write", "edit", "sh"]
+    assert [tool.name for tool in tools] == ["read", "write", "edit", "python", "sh"]
     edit_tool = tools[2]
     assert edit_tool.prompt_snippet is not None
     assert "Use edit for precise file changes instead of shell commands" in edit_tool.prompt_guidelines[0]
@@ -155,6 +156,37 @@ async def test_edit_tool_requires_unique_matches(tmp_path: Path) -> None:
                 "edits": [{"oldText": "repeat", "newText": "once"}],
             }
         )
+
+
+@pytest.mark.anyio
+async def test_python_tool_executes_code_without_shell(tmp_path: Path) -> None:
+    tool = create_python_tool(cwd=tmp_path)
+
+    result = await tool.execute(
+        {
+            "code": "import pathlib, sys; print(pathlib.Path.cwd().name); print(sys.argv[1])",
+            "args": ["ok"],
+        }
+    )
+
+    assert result.ok is True
+    assert result.name == "python"
+    assert result.content == f"{tmp_path.name}\nok\n"
+    assert result.error is None
+    assert result.data is not None
+    assert result.data["exit_code"] == 0
+    assert result.data["args"] == ["ok"]
+
+
+@pytest.mark.anyio
+async def test_python_tool_reports_failure(tmp_path: Path) -> None:
+    tool = create_python_tool(cwd=tmp_path)
+
+    result = await tool.execute({"code": "raise SystemExit(7)"})
+
+    assert result.ok is False
+    assert result.error == "Python exited with code 7"
+    assert "Python exited with code 7" in result.content
 
 
 @pytest.mark.anyio

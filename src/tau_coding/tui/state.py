@@ -254,6 +254,13 @@ def format_tool_call_invocation(tool_call: ToolCall) -> str:
         if path is None:
             return _fallback_tool_call_invocation(tool_call)
         return f"write {path}"
+    if tool_call.name == "python":
+        code = _string_argument(arguments, "code")
+        if code is None:
+            return _fallback_tool_call_invocation(tool_call)
+        first_line = code.strip().splitlines()[0] if code.strip() else ""
+        suffix = "…" if len(code.strip().splitlines()) > 1 or len(first_line) > 60 else ""
+        return f"python -c {first_line[:60]!r}{suffix}"
     if tool_call.name in {"sh", "bash"}:
         command = _string_argument(arguments, "command")
         if command is None:

@@ -15,6 +15,7 @@ import json
 import mimetypes
 import os
 import signal
+import sys
 import tempfile
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -100,7 +101,7 @@ def create_coding_tools(
 ) -> list[AgentTool]:
     """Create the default coding-tool set for a local project.
 
-    The returned tools are ordered as `read`, `write`, `edit`, and `sh`.
+    The returned tools are ordered as `read`, `write`, `edit`, `python`, and `sh`.
     Relative paths used with those tools are resolved against `cwd`; when `cwd`
     is omitted, the process current working directory at factory-call time is
     used. The tools share per-path write/edit locks within this process so
@@ -112,6 +113,7 @@ def create_coding_tools(
         create_read_tool(cwd=root),
         create_write_tool(cwd=root),
         create_edit_tool(cwd=root),
+        create_python_tool(cwd=root),
         create_sh_tool(cwd=root, shell_command_prefix=shell_command_prefix),
     ]
 
@@ -433,6 +435,142 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
 def create_edit_tool(*, cwd: str | Path | None = None) -> AgentTool:
     """Create an `AgentTool` for exact, validated text replacement in one file."""
     return create_edit_tool_definition(cwd=cwd).to_agent_tool()
+
+
+def create_python_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinition:
+    """Create a definition for the `python` tool."""
+    root = Path.cwd() if cwd is None else Path(cwd)
+
+    async def execute(
+        arguments: Mapping[str, JSONValue],
+        signal: ToolCancellationToken | None = None,
+    ) -> AgentToolResult:
+        code = _str_arg(arguments, "code")
+        raw_args = arguments.get("args", [])
+        if raw_args is None:
+            raw_args = []
+        if not isinstance(raw_args, list) or not all(isinstance(item, str) for item in raw_args):
+            raise ToolInputError("args must be a list of strings")
+        timeout = _optional_float_arg(arguments, "timeout")
+        if timeout is not None and timeout <= 0:
+            raise ToolInputError("timeout must be greater than 0")
+        if signal is not None and signal.is_cancelled():
+            raise ToolInputError("Python execution cancelled")
+
+        start = monotonic()
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-c",
+            code,
+            *raw_args,
+            cwd=root,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            start_new_session=os.name == "posix",
+        )
+        output_bytes, _stderr, timed_out, cancelled = await _communicate_with_cancellation(
+            process,
+            timeout=timeout,
+            signal=signal,
+        )
+
+        output = output_bytes.decode(errors="replace")
+        truncation = truncate_tail(output)
+        full_output_path: str | None = None
+        output_text = truncation.content or "(no output)"
+        if truncation.truncated:
+            full_output_path = _write_temp_output(output, prefix="tau-python-")
+            start_line = truncation.total_lines - truncation.output_lines + 1
+            end_line = truncation.total_lines
+            if truncation.last_line_partial:
+                output_text += (
+                    f"\n\n[Showing last {format_size(truncation.output_bytes)} of line {end_line}. "
+                    f"Full output: {full_output_path}]"
+                )
+            elif truncation.truncated_by == "lines":
+                output_text += (
+                    f"\n\n[Showing lines {start_line}-{end_line} of {truncation.total_lines}. "
+                    f"Full output: {full_output_path}]"
+                )
+            else:
+                output_text += (
+                    f"\n\n[Showing lines {start_line}-{end_line} of {truncation.total_lines} "
+                    f"({format_size(DEFAULT_MAX_OUTPUT_BYTES)} limit). "
+                    f"Full output: {full_output_path}]"
+                )
+
+        exit_code = process.returncode
+        status: str | None = None
+        if timed_out:
+            status = (
+                f"Python execution timed out after {timeout:g} seconds"
+                if timeout
+                else "Python execution timed out"
+            )
+        elif cancelled:
+            status = "Python execution cancelled"
+        elif exit_code not in (0, None):
+            status = f"Python exited with code {exit_code}"
+        if status:
+            output_text = append_status_block(output_text, status)
+
+        ok = exit_code == 0 and not timed_out and not cancelled
+        return AgentToolResult(
+            tool_call_id="",
+            name="python",
+            ok=ok,
+            content=output_text,
+            error=None if ok else status,
+            data={
+                "exit_code": exit_code,
+                "timed_out": timed_out,
+                "cancelled": cancelled,
+                "duration_seconds": round(monotonic() - start, 3),
+                "truncation": truncation.to_json(),
+                "full_output_path": full_output_path,
+                "args": raw_args,
+            },
+        )
+
+    return ToolDefinition(
+        name="python",
+        description=(
+            "Execute Python code using the current Python interpreter without going through sh. "
+            "Use this instead of shell heredocs or complex shell quoting for small scripts, JSON/text processing, "
+            "and portable file transformations. Code is passed directly to python -c, stdin is closed, and "
+            f"output is truncated to last {DEFAULT_MAX_OUTPUT_LINES} lines or "
+            f"{DEFAULT_MAX_OUTPUT_BYTES // 1024}KB (whichever is hit first)."
+        ),
+        prompt_snippet="Execute Python code directly without shell heredocs",
+        prompt_guidelines=(
+            "Use python for inline scripts instead of sh heredocs, python <<EOF, or complex shell quoting.",
+            "Use read/edit/write for simple file inspection and edits; use python when structured parsing or transformation is clearer.",
+            "Keep code self-contained and portable; do not rely on shell expansion or stdin.",
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "Python code to execute with python -c"},
+                "args": {
+                    "type": "array",
+                    "description": "Optional argv strings available as sys.argv[1:]",
+                    "items": {"type": "string"},
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "Timeout in seconds (optional, no default timeout)",
+                },
+            },
+            "required": ["code"],
+        },
+        executor=execute,
+    )
+
+
+def create_python_tool(*, cwd: str | Path | None = None) -> AgentTool:
+    """Create an `AgentTool` for executing Python code without invoking a shell."""
+    return create_python_tool_definition(cwd=cwd).to_agent_tool()
 
 
 def create_sh_tool_definition(
@@ -1057,11 +1195,11 @@ def _kill_process_tree(process: asyncio.subprocess.Process) -> None:
             return
 
 
-def _write_temp_output(output: str) -> str:
+def _write_temp_output(output: str, *, prefix: str = "tau-sh-") -> str:
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
-        prefix="tau-sh-",
+        prefix=prefix,
         suffix=".log",
         delete=False,
     ) as handle:

@@ -143,6 +143,8 @@ from tau_coding.tools import (
     create_coding_tools,
     create_edit_tool,
     create_edit_tool_definition,
+    create_python_tool,
+    create_python_tool_definition,
     create_read_tool,
     create_read_tool_definition,
     create_sh_tool,
@@ -151,7 +153,7 @@ from tau_coding.tools import (
     create_write_tool_definition,
 )
 
-__version__ = "0.1.11"
+__version__ = "0.1.12"
 
 __all__ = [
     "__version__",
@@ -214,6 +216,8 @@ __all__ = [
     "create_edit_tool_definition",
     "create_default_command_registry",
     "create_event_renderer",
+    "create_python_tool",
+    "create_python_tool_definition",
     "create_read_tool",
     "create_read_tool_definition",
     "create_sh_tool",
