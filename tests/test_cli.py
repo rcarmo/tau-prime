@@ -32,7 +32,7 @@ def test_version_command() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "tau 0.1.9"
+    assert result.stdout.strip() == "tau 0.1.10"
 
 
 def test_version_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -45,7 +45,7 @@ def test_version_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPa
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "tau 0.1.9"
+    assert result.stdout.strip() == "tau 0.1.10"
 
 
 def test_print_mode_writes_update_notice_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -217,7 +217,7 @@ async def test_run_print_mode_prints_final_assistant_text(
     assert provider.calls[0][1] == build_system_prompt(
         BuildSystemPromptOptions(cwd=tmp_path, tools=create_coding_tools(cwd=tmp_path))
     )
-    assert [tool.name for tool in provider.calls[0][3]] == ["read", "write", "edit", "bash"]
+    assert [tool.name for tool in provider.calls[0][3]] == ["read", "write", "edit", "sh"]
 
 
 @pytest.mark.anyio

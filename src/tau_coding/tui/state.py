@@ -231,7 +231,7 @@ def _parse_compaction_summary_message(content: str) -> str | None:
 def format_tool_call_block(tool_call: ToolCall) -> str:
     """Format a collapsed tool call for live and restored transcript blocks."""
     invocation = format_tool_call_invocation(tool_call)
-    if tool_call.name == "bash":
+    if tool_call.name in {"sh", "bash"}:
         return invocation
     return f"→ {invocation}"
 
@@ -254,7 +254,7 @@ def format_tool_call_invocation(tool_call: ToolCall) -> str:
         if path is None:
             return _fallback_tool_call_invocation(tool_call)
         return f"write {path}"
-    if tool_call.name == "bash":
+    if tool_call.name in {"sh", "bash"}:
         command = _string_argument(arguments, "command")
         if command is None:
             return _fallback_tool_call_invocation(tool_call)

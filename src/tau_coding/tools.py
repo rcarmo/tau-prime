@@ -100,19 +100,19 @@ def create_coding_tools(
 ) -> list[AgentTool]:
     """Create the default coding-tool set for a local project.
 
-    The returned tools are ordered as `read`, `write`, `edit`, and `bash`.
+    The returned tools are ordered as `read`, `write`, `edit`, and `sh`.
     Relative paths used with those tools are resolved against `cwd`; when `cwd`
     is omitted, the process current working directory at factory-call time is
     used. The tools share per-path write/edit locks within this process so
     concurrent mutations of the same file do not interleave. When configured,
-    `shell_command_prefix` is prepended to every bash tool command.
+    `shell_command_prefix` is prepended to every sh tool command.
     """
     root = Path.cwd() if cwd is None else Path(cwd)
     return [
         create_read_tool(cwd=root),
         create_write_tool(cwd=root),
         create_edit_tool(cwd=root),
-        create_bash_tool(cwd=root, shell_command_prefix=shell_command_prefix),
+        create_sh_tool(cwd=root, shell_command_prefix=shell_command_prefix),
     ]
 
 
@@ -435,12 +435,12 @@ def create_edit_tool(*, cwd: str | Path | None = None) -> AgentTool:
     return create_edit_tool_definition(cwd=cwd).to_agent_tool()
 
 
-def create_bash_tool_definition(
+def create_sh_tool_definition(
     *,
     cwd: str | Path | None = None,
     shell_command_prefix: str | None = None,
 ) -> ToolDefinition:
-    """Create a definition for the `bash` tool.
+    """Create a definition for the `sh` tool.
 
     The tool runs a shell command with `cwd` as the subprocess working
     directory and combines stdout and stderr into one UTF-8 decoded output
@@ -537,7 +537,7 @@ def create_bash_tool_definition(
         ok = exit_code == 0 and not timed_out and not cancelled
         return AgentToolResult(
             tool_call_id="",
-            name="bash",
+            name="sh",
             ok=ok,
             content=output_text,
             error=None if ok else status,
@@ -554,7 +554,7 @@ def create_bash_tool_definition(
         )
 
     return ToolDefinition(
-        name="bash",
+        name="sh",
         description=(
             "Execute one non-interactive shell command in the current working directory. "
             "The runtime shell may be basic POSIX sh (for example a-Shell on iOS), not GNU bash; "
@@ -566,7 +566,7 @@ def create_bash_tool_definition(
         ),
         prompt_snippet="Execute a single non-interactive shell command (basic sh may be all that is available)",
         prompt_guidelines=(
-            "Use bash only for simple non-interactive commands; it may actually be basic POSIX sh on constrained systems such as a-Shell/iOS.",
+            "Use sh only for simple non-interactive commands; it may be basic POSIX sh on constrained systems such as a-Shell/iOS.",
             "Do not assume Bash-only features like arrays, [[ ... ]], process substitution, pipefail, brace expansion, or a persistent shell session.",
             "Prefer read/edit/write for file inspection and modification instead of shelling out with cat, sed, here-docs, or redirection.",
         ),
@@ -585,16 +585,34 @@ def create_bash_tool_definition(
     )
 
 
-def create_bash_tool(
+def create_sh_tool(
     *,
     cwd: str | Path | None = None,
     shell_command_prefix: str | None = None,
 ) -> AgentTool:
     """Create an `AgentTool` for executing shell commands with captured output."""
-    return create_bash_tool_definition(
+    return create_sh_tool_definition(
         cwd=cwd,
         shell_command_prefix=shell_command_prefix,
     ).to_agent_tool()
+
+
+def create_bash_tool_definition(
+    *,
+    cwd: str | Path | None = None,
+    shell_command_prefix: str | None = None,
+) -> ToolDefinition:
+    """Deprecated compatibility alias for :func:`create_sh_tool_definition`."""
+    return create_sh_tool_definition(cwd=cwd, shell_command_prefix=shell_command_prefix)
+
+
+def create_bash_tool(
+    *,
+    cwd: str | Path | None = None,
+    shell_command_prefix: str | None = None,
+) -> AgentTool:
+    """Deprecated compatibility alias for :func:`create_sh_tool`."""
+    return create_sh_tool(cwd=cwd, shell_command_prefix=shell_command_prefix)
 
 
 def _prefixed_shell_command(command: str, prefix: str | None) -> str:

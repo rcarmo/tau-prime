@@ -31,7 +31,7 @@ class FakeCancellationToken:
 async def test_create_coding_tools_returns_initial_tool_set(tmp_path: Path) -> None:
     tools = create_coding_tools(cwd=tmp_path)
 
-    assert [tool.name for tool in tools] == ["read", "write", "edit", "bash"]
+    assert [tool.name for tool in tools] == ["read", "write", "edit", "sh"]
     edit_tool = tools[2]
     assert edit_tool.prompt_snippet is not None
     assert "Use edit for precise file changes instead of shell commands" in edit_tool.prompt_guidelines[0]
@@ -49,6 +49,7 @@ def test_bash_tool_warns_about_constrained_shells(tmp_path: Path) -> None:
 
     assert "non-interactive shell command" in tool.description
     assert "basic POSIX sh" in tool.description
+    assert tool.name == "sh"
     assert "a-Shell/iOS" in " ".join(tool.prompt_guidelines)
     assert "prefer POSIX sh syntax" in tool.input_schema["properties"]["command"]["description"]
 
@@ -177,9 +178,9 @@ async def test_create_coding_tools_applies_shell_command_prefix(
         cwd=tmp_path,
         shell_command_prefix="shopt -s expand_aliases\nalias greet='printf coding-tool-alias'",
     )
-    bash_tool = next(tool for tool in tools if tool.name == "bash")
+    sh_tool = next(tool for tool in tools if tool.name == "sh")
 
-    result = await bash_tool.execute({"command": "greet"})
+    result = await sh_tool.execute({"command": "greet"})
 
     assert result.ok is True
     assert result.content == "coding-tool-alias"

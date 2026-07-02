@@ -181,7 +181,7 @@ async def test_load_empty_session_defers_transcript_file(tmp_path: Path) -> None
     assert session.available_thinking_levels == ("off", "minimal", "low", "medium", "high", "xhigh")
     assert session.cwd == tmp_path
     assert session.model == "fake"
-    assert [tool.name for tool in session.tools] == ["read", "write", "edit", "bash"]
+    assert [tool.name for tool in session.tools] == ["read", "write", "edit", "sh"]
 
 
 @pytest.mark.anyio
@@ -471,9 +471,9 @@ async def test_agent_bash_tool_uses_configured_shell_command_prefix(tmp_path: Pa
             shell_command_prefix="shopt -s expand_aliases\nalias greet='printf agent-alias'",
         )
     )
-    bash_tool = next(tool for tool in session.tools if tool.name == "bash")
+    sh_tool = next(tool for tool in session.tools if tool.name == "sh")
 
-    result = await bash_tool.execute({"command": "greet"})
+    result = await sh_tool.execute({"command": "greet"})
 
     assert result.ok is True
     assert result.content == "agent-alias"

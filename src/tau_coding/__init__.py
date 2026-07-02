@@ -145,11 +145,13 @@ from tau_coding.tools import (
     create_edit_tool_definition,
     create_read_tool,
     create_read_tool_definition,
+    create_sh_tool,
+    create_sh_tool_definition,
     create_write_tool,
     create_write_tool_definition,
 )
 
-__version__ = "0.1.9"
+__version__ = "0.1.10"
 
 __all__ = [
     "__version__",
@@ -214,6 +216,8 @@ __all__ = [
     "create_event_renderer",
     "create_read_tool",
     "create_read_tool_definition",
+    "create_sh_tool",
+    "create_sh_tool_definition",
     "create_write_tool",
     "create_write_tool_definition",
     "credentials_path",
