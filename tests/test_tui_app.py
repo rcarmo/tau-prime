@@ -853,7 +853,7 @@ def test_light_theme_tool_error_uses_red_text_without_background() -> None:
     console = Console(record=True, width=80)
     console.print(
         render_chat_item(
-            ChatItem(role="tool", text="$ false", tool_result_text="✗ bash\nfailed"),
+            ChatItem(role="tool", text="$ false", tool_result_text="✗ sh\nfailed"),
             theme=TAU_LIGHT_THEME,
             show_tool_results=True,
         )
@@ -979,7 +979,7 @@ def test_tool_chat_items_color_status_metadata_not_tool_name_or_results() -> Non
     error_console = Console(record=True, width=80)
     error_console.print(
         render_chat_item(
-            ChatItem(role="tool", text="$ false", tool_result_text="✗ bash\nfailed"),
+            ChatItem(role="tool", text="$ false", tool_result_text="✗ sh\nfailed"),
             show_tool_results=True,
         )
     )
@@ -996,8 +996,8 @@ def test_tool_chat_items_color_status_metadata_not_tool_name_or_results() -> Non
     assert f"{green};48;2;0;0;0mcontents" not in success_output
 
     assert red in error_output
-    assert f"{white};48;2;0;0;0m✗ bash" in error_output
-    assert f"{red};48;2;0;0;0m✗ bash" not in error_output
+    assert f"{white};48;2;0;0;0m✗ sh" in error_output
+    assert f"{red};48;2;0;0;0m✗ sh" not in error_output
     assert f"{red};48;2;0;0;0mfailed" not in error_output
 
 
@@ -3717,7 +3717,7 @@ async def test_tui_app_runs_terminal_command_and_adds_context() -> None:
     assert session.terminal_commands == [("pwd", True)]
     assert session.prompt_texts == []
     assert [(item.role, item.text, item.tool_result_text) for item in app.state.items] == [
-        ("tool", "$ pwd", "✓ bash · added to context\ncommand output")
+        ("tool", "$ pwd", "✓ sh · added to context\ncommand output")
     ]
 
 
@@ -3734,7 +3734,7 @@ async def test_tui_app_runs_terminal_command_without_context() -> None:
 
     assert session.terminal_commands == [("pwd", False)]
     assert session.prompt_texts == []
-    assert app.state.items[-1].tool_result_text == "✓ bash · not added to context\ncommand output"
+    assert app.state.items[-1].tool_result_text == "✓ sh · not added to context\ncommand output"
     assert app.state.items[-1].always_show_tool_result is True
 
 
@@ -3779,7 +3779,7 @@ async def test_tui_app_renders_terminal_command_while_running(add_to_context: bo
         await task
 
     context_label = "added to context" if add_to_context else "not added to context"
-    assert app.state.items[-1].tool_result_text == f"✓ bash · {context_label}\nfinished"
+    assert app.state.items[-1].tool_result_text == f"✓ sh · {context_label}\nfinished"
 
 
 @pytest.mark.anyio
@@ -3810,7 +3810,7 @@ async def test_tui_app_marks_failed_terminal_command_as_error() -> None:
 
     assert session.prompt_texts == []
     assert app.state.items[-1].text == "$ false"
-    assert app.state.items[-1].tool_result_text == "✗ bash · not added to context\nfailed"
+    assert app.state.items[-1].tool_result_text == "✗ sh · not added to context\nfailed"
 
 
 @pytest.mark.anyio
@@ -3835,7 +3835,7 @@ async def test_tui_app_marks_terminal_command_exception_as_failed() -> None:
         await pilot.pause()
 
     assert app.state.items[-1].text == "$ false"
-    assert app.state.items[-1].tool_result_text == "✗ bash · not added to context\nboom"
+    assert app.state.items[-1].tool_result_text == "✗ sh · not added to context\nboom"
 
 
 @pytest.mark.anyio
@@ -3843,7 +3843,7 @@ async def test_tui_app_renders_terminal_command_output_when_tool_results_are_col
     item = ChatItem(
         role="tool",
         text="$ pwd",
-        tool_result_text="✓ bash · not added to context\ncommand output",
+        tool_result_text="✓ sh · not added to context\ncommand output",
         always_show_tool_result=True,
     )
 

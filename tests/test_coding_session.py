@@ -447,7 +447,7 @@ async def test_terminal_command_uses_configured_shell_command_prefix(tmp_path: P
             system="You are Tau.",
             storage=storage,
             cwd=tmp_path,
-            shell_command_prefix="shopt -s expand_aliases\nalias greet='printf terminal-alias'",
+            shell_command_prefix="greet() { printf terminal-alias; }",
         )
     )
 
@@ -468,7 +468,7 @@ async def test_agent_bash_tool_uses_configured_shell_command_prefix(tmp_path: Pa
             system="You are Tau.",
             storage=storage,
             cwd=tmp_path,
-            shell_command_prefix="shopt -s expand_aliases\nalias greet='printf agent-alias'",
+            shell_command_prefix="greet() { printf agent-alias; }",
         )
     )
     sh_tool = next(tool for tool in session.tools if tool.name == "sh")
@@ -2156,7 +2156,7 @@ async def test_session_resume_preserves_shell_command_prefix(tmp_path: Path) -> 
             cwd=first_record.cwd,
             session_id=first_record.id,
             session_manager=manager,
-            shell_command_prefix="shopt -s expand_aliases\nalias greet='printf resumed-alias'",
+            shell_command_prefix="greet() { printf resumed-alias; }",
         )
     )
     await second_storage.append(SessionInfoEntry(cwd=str(second_record.cwd)))

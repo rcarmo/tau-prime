@@ -1799,7 +1799,7 @@ def _unavailable_thinking_message(session: CodingSession) -> str:
 def _terminal_command_context_message(command: str, output: str) -> str:
     return (
         "Terminal command executed by the user.\n\n"
-        f"Command:\n```bash\n{command}\n```\n\n"
+        f"Command:\n```sh\n{command}\n```\n\n"
         f"Output:\n```text\n{output}\n```"
     )
 

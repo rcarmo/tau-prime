@@ -176,7 +176,7 @@ async def test_create_coding_tools_applies_shell_command_prefix(
 ) -> None:
     tools = create_coding_tools(
         cwd=tmp_path,
-        shell_command_prefix="shopt -s expand_aliases\nalias greet='printf coding-tool-alias'",
+        shell_command_prefix="greet() { printf coding-tool-alias; }",
     )
     sh_tool = next(tool for tool in tools if tool.name == "sh")
 
@@ -190,23 +190,17 @@ async def test_create_coding_tools_applies_shell_command_prefix(
 
 @pytest.mark.anyio
 async def test_bash_tool_applies_opt_in_shell_command_prefix(tmp_path: Path) -> None:
-    rc_path = tmp_path / ".zshrc"
-    marker = tmp_path / "sourced"
-    rc_path.write_text(
-        "alias greet='printf alias-output'\n"
-        f"touch {shlex.quote(str(marker))}\n",
-        encoding="utf-8",
-    )
-    prefix = f"shopt -s expand_aliases\neval \"$(grep '^alias ' {shlex.quote(str(rc_path))})\""
+    marker = tmp_path / "called"
+    prefix = f"greet() {{ printf function-output; touch {shlex.quote(str(marker))}; }}"
     tool = create_bash_tool(cwd=tmp_path, shell_command_prefix=prefix)
 
     result = await tool.execute({"command": "greet"})
 
     assert result.ok is True
-    assert result.content == "alias-output"
+    assert result.content == "function-output"
     assert result.data is not None
     assert result.data["shell_command_prefix_applied"] is True
-    assert not marker.exists()
+    assert marker.exists()
 
 
 @pytest.mark.anyio

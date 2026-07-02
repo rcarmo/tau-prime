@@ -337,7 +337,7 @@ def format_terminal_command_result_block(
     """Format an input-bar terminal command result for visible TUI display."""
     status = "✓" if ok else "✗"
     suffix = " · added to context" if added_to_context else " · not added to context"
-    lines = [f"{status} bash{suffix}"]
+    lines = [f"{status} sh{suffix}"]
     if output:
         lines.append(_preview_text(output, max_lines=TERMINAL_COMMAND_OUTPUT_PREVIEW_LINES))
     return "\n".join(lines)

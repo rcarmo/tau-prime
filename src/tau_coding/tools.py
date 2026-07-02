@@ -480,7 +480,6 @@ def create_sh_tool_definition(
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 start_new_session=True,
-                executable="bash" if prefix else None,
             )
         else:
             process = await asyncio.create_subprocess_shell(
@@ -557,8 +556,8 @@ def create_sh_tool_definition(
         name="sh",
         description=(
             "Execute one non-interactive shell command in the current working directory. "
-            "The runtime shell may be basic POSIX sh (for example a-Shell on iOS), not GNU bash; "
-            "do not assume Bash-specific syntax, job control, a persistent session, or a full desktop toolchain. "
+            "Assume only basic POSIX sh is available (for example a-Shell on iOS); "
+            "do not assume non-POSIX syntax, job control, a persistent session, or a full desktop toolchain. "
             "Returns stdout and stderr. "
             f"Output is truncated to last {DEFAULT_MAX_OUTPUT_LINES} lines or "
             f"{DEFAULT_MAX_OUTPUT_BYTES // 1024}KB (whichever is hit first). If truncated, "
@@ -567,7 +566,7 @@ def create_sh_tool_definition(
         prompt_snippet="Execute a single non-interactive shell command (basic sh may be all that is available)",
         prompt_guidelines=(
             "Use sh only for simple non-interactive commands; it may be basic POSIX sh on constrained systems such as a-Shell/iOS.",
-            "Do not assume Bash-only features like arrays, [[ ... ]], process substitution, pipefail, brace expansion, or a persistent shell session.",
+            "Do not use non-POSIX shell features like arrays, [[ ... ]], process substitution, pipefail, brace expansion, or a persistent shell session.",
             "Prefer read/edit/write for file inspection and modification instead of shelling out with cat, sed, here-docs, or redirection.",
         ),
         input_schema={
@@ -1062,7 +1061,7 @@ def _write_temp_output(output: str) -> str:
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
-        prefix="tau-bash-",
+        prefix="tau-sh-",
         suffix=".log",
         delete=False,
     ) as handle:

@@ -23,22 +23,20 @@ def test_load_shell_settings_accepts_pi_style_shell_command_prefix(tmp_path: Pat
     path = shell_settings_path(paths)
     path.parent.mkdir(parents=True)
     path.write_text(
-        '{"shellCommandPrefix": "shopt -s expand_aliases\\nalias gs=\\\"git status\\\""}',
+        '{"shellCommandPrefix": "gs() { git status; }"}',
         encoding="utf-8",
     )
 
     settings = load_shell_settings(paths)
 
-    assert settings.shell_command_prefix == 'shopt -s expand_aliases\nalias gs="git status"'
-    assert settings.to_json() == {
-        "shellCommandPrefix": 'shopt -s expand_aliases\nalias gs="git status"'
-    }
+    assert settings.shell_command_prefix == "gs() { git status; }"
+    assert settings.to_json() == {"shellCommandPrefix": "gs() { git status; }"}
 
 
 def test_shell_settings_accepts_tau_style_shell_command_prefix() -> None:
-    settings = shell_settings_from_json({"shell_command_prefix": " alias ll='ls -la' "})
+    settings = shell_settings_from_json({"shell_command_prefix": " ll() { ls -la; } "})
 
-    assert settings.shell_command_prefix == "alias ll='ls -la'"
+    assert settings.shell_command_prefix == "ll() { ls -la; }"
 
 
 def test_shell_settings_rejects_unknown_fields() -> None:
