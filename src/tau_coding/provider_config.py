@@ -895,6 +895,7 @@ def anthropic_config_from_provider(
             thinking_level=thinking_level,
         )
     )
+    auth_header = "authorization" if provider.name == "github-copilot" else "x-api-key"
     return AnthropicConfig(
         api_key=api_key,
         base_url=provider.base_url.rstrip("/"),
@@ -904,6 +905,7 @@ def anthropic_config_from_provider(
         max_retry_delay_seconds=provider.max_retry_delay_seconds,
         thinking_budget_tokens=thinking_budget_tokens,
         thinking_type=thinking_type,
+        auth_header=auth_header,
     )
 
 
@@ -923,11 +925,11 @@ def provider_has_usable_credentials(
 ) -> bool:
     """Return whether Tau can attempt calls for this provider without prompting setup."""
     if provider.credential_name and credential_reader is not None:
-        if isinstance(provider, OpenAICodexProviderConfig):
+        if isinstance(provider, OpenAICodexProviderConfig) or provider.name == "github-copilot":
             get_oauth = getattr(credential_reader, "get_oauth", None)
             if get_oauth is not None and get_oauth(provider.credential_name) is not None:
                 return True
-        elif credential_reader.get(provider.credential_name):
+        if credential_reader.get(provider.credential_name):
             return True
     return bool(environ.get(provider.api_key_env))
 
@@ -1150,6 +1152,11 @@ def _api_key_from_provider(
         credential = credential_reader.get(provider.credential_name)
         if credential:
             return credential
+        get_oauth = getattr(credential_reader, "get_oauth", None)
+        if get_oauth is not None:
+            oauth_credential = get_oauth(provider.credential_name)
+            if oauth_credential is not None:
+                return oauth_credential.access
 
     api_key = environ.get(provider.api_key_env)
     if api_key:

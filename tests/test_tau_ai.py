@@ -1963,3 +1963,37 @@ async def test_openai_compatible_provider_observes_redacted_error_body() -> None
     assert error_body["redacted"] is True  # type: ignore[index]
     assert error_body["length"] == len("bad request includes user secret")  # type: ignore[index]
     assert "bad request includes user secret" not in dumps(error.to_json())
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_can_use_bearer_auth_for_copilot() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text='data: {"type":"message_stop"}\n\n',
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="copilot-token",
+                base_url="https://api.individual.githubcopilot.com",
+                auth_header="authorization",
+            ),
+            client=client,
+        )
+        async for _event in provider.stream_response(
+            model="claude-sonnet-4.6",
+            system="",
+            messages=[UserMessage(content="hello")],
+            tools=[],
+        ):
+            pass
+
+    request = requests[0]
+    assert request.headers["authorization"] == "Bearer copilot-token"
+    assert "x-api-key" not in request.headers

@@ -57,7 +57,7 @@ from tau_ai.provider import CancellationToken
 from tau_coding.commands import CommandRegistry, create_default_command_registry
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
 from tau_coding.diagnostics import llm_observer_from_env
-from tau_coding.oauth import OAuthAuthInfo, OAuthPrompt, login_openai_codex
+from tau_coding.oauth import OAuthAuthInfo, OAuthPrompt, login_github_copilot, login_openai_codex
 from tau_coding.provider_catalog import (
     BUILTIN_PROVIDER_CATALOG,
     ProviderCatalogEntry,
@@ -1386,11 +1386,17 @@ class OAuthLoginScreen(ModalScreen[OAuthCredential | None]):
 
     async def _run_login(self) -> None:
         try:
-            credential = await login_openai_codex(
-                on_auth=self._show_auth,
-                on_prompt=self._prompt_for_code,
-                on_manual_code_input=self._manual_code_input,
-            )
+            if self.provider.name == "github-copilot":
+                credential = await login_github_copilot(
+                    on_auth=self._show_auth,
+                    on_prompt=self._prompt_for_code,
+                )
+            else:
+                credential = await login_openai_codex(
+                    on_auth=self._show_auth,
+                    on_prompt=self._prompt_for_code,
+                    on_manual_code_input=self._manual_code_input,
+                )
         except Exception as exc:  # noqa: BLE001 - surface OAuth failures in the TUI
             self.query_one("#login-help", Static).update(f"OAuth failed: {exc}")
             return
@@ -2663,7 +2669,7 @@ class TauTuiApp(App[None]):
         if entry is None:
             self._notify(f"Unknown provider: {provider_name}", severity="error")
             return
-        if entry.kind == "openai-codex":
+        if entry.kind == "openai-codex" or entry.name == "github-copilot":
             self.push_screen(
                 OAuthLoginScreen(entry, theme=self.tui_settings.resolved_theme),
                 callback=lambda credential: self._handle_oauth_login_result(entry, credential),
@@ -3344,13 +3350,21 @@ def _login_provider_label(provider: ProviderCatalogEntry) -> str:
 def _subscription_login_providers(
     providers: Sequence[ProviderCatalogEntry],
 ) -> tuple[ProviderCatalogEntry, ...]:
-    return tuple(provider for provider in providers if provider.kind == "openai-codex")
+    return tuple(
+        provider
+        for provider in providers
+        if provider.kind == "openai-codex" or provider.name == "github-copilot"
+    )
 
 
 def _api_key_login_providers(
     providers: Sequence[ProviderCatalogEntry],
 ) -> tuple[ProviderCatalogEntry, ...]:
-    return tuple(provider for provider in providers if provider.kind != "openai-codex")
+    return tuple(
+        provider
+        for provider in providers
+        if provider.kind != "openai-codex" and provider.name != "github-copilot"
+    )
 
 
 def _stored_credential_providers(

@@ -37,6 +37,7 @@ def test_load_provider_settings_missing_file_uses_openai_default(tmp_path: Path)
         "openai",
         "openai-codex",
         "anthropic",
+        "github-copilot",
         "openrouter",
         "huggingface",
         "deepseek",
@@ -56,6 +57,7 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
     huggingface = settings.get_provider("huggingface")
     codex = settings.get_provider("openai-codex")
     anthropic = settings.get_provider("anthropic")
+    copilot = settings.get_provider("github-copilot")
 
     assert openai.context_windows["gpt-5.5"] == 272_000
     assert openai.context_windows["gpt-5.5-pro"] == 1_050_000
@@ -116,6 +118,15 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
     )
     assert provider_thinking_unavailable_reason(anthropic, model="claude-sonnet-4-6") is None
     assert provider_thinking_levels(anthropic, model="claude-haiku-4-5") == ()
+    assert copilot.default_model == "gpt-5.4"
+    assert "claude-sonnet-4.6" in copilot.models
+    assert provider_thinking_levels(copilot, model="gpt-5.4") == (
+        "off",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    )
 
 
 def test_save_provider_settings_writes_backup_when_replacing(tmp_path: Path) -> None:
@@ -245,6 +256,7 @@ def test_upsert_openai_compatible_provider_replaces_and_sets_default() -> None:
     assert [item.name for item in updated.providers] == [
         "anthropic",
         "deepseek",
+        "github-copilot",
         "huggingface",
         "local",
         "nebius",
@@ -958,3 +970,31 @@ async def test_ensure_dynamic_provider_models_without_credentials_is_noop(
         )
 
     assert updated.get_provider("nebius").models == ()
+
+
+def test_github_copilot_provider_uses_stored_oauth_access_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GITHUB_COPILOT_TOKEN", raising=False)
+    provider = ProviderSettings().get_provider("github-copilot")
+
+    class FakeCredentials:
+        def get(self, name: str) -> str | None:
+            return None
+
+        def get_oauth(self, name: str) -> OAuthCredential | None:
+            if name != "github-copilot":
+                return None
+            return OAuthCredential(
+                access="copilot-token",
+                refresh="github-token",
+                expires=999_999_999_999,
+                account_id="github.com",
+            )
+
+    config = openai_compatible_config_from_provider(
+        provider,
+        credential_reader=FakeCredentials(),
+    )
+
+    assert config.api_key == "copilot-token"

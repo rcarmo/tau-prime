@@ -42,6 +42,7 @@ class AnthropicConfig:
     max_retry_delay_seconds: float = DEFAULT_OPENAI_COMPATIBLE_MAX_RETRY_DELAY_SECONDS
     thinking_budget_tokens: int | None = None
     thinking_type: AnthropicThinkingType | None = None
+    auth_header: str = "x-api-key"
 
 
 def openai_compatible_config_from_env(
