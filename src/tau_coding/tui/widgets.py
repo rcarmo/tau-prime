@@ -394,11 +394,12 @@ class TranscriptView(VerticalScroll):
         state: TuiState,
         *,
         theme: TuiTheme = TAU_DARK_THEME,
+        scroll_end: bool = False,
     ) -> None:
         """Redraw the transcript from display state."""
         self._render_state = state
         self._render_theme = theme
-        self._redraw(scroll_end=self._should_follow_output)
+        self._redraw(scroll_end=True if scroll_end else self._should_follow_output)
 
     def on_resize(self, event: Resize) -> None:
         """Re-render transcript entries when the terminal width changes."""
@@ -562,19 +563,28 @@ class TranscriptView(VerticalScroll):
         if should_follow:
             self._request_follow_scroll(force=scroll_end)
 
-    async def finish_assistant_message(self, text: str | None = None) -> None:
+    async def finish_assistant_message(
+        self,
+        text: str | None = None,
+        *,
+        scroll_end: bool = False,
+    ) -> None:
         """Finalize the active assistant widget after the provider sends the full message."""
         widget = self._active_assistant_widget
+        should_follow = self._should_follow_output if not scroll_end else True
         if widget is None:
             if text:
                 await self.append_item(
                     ChatItem(role="assistant", text=text),
                     theme=self._render_theme,
+                    scroll_end=scroll_end,
                 )
             return
         if text is not None:
             await widget.replace_text(text)
         self._active_assistant_widget = None
+        if should_follow:
+            self._request_follow_scroll(force=scroll_end)
 
     @property
     def lines(self) -> tuple[TranscriptLine, ...]:

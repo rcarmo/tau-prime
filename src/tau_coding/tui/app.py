@@ -1931,6 +1931,7 @@ class TauTuiApp(App[None]):
         self._sync_prompt_shell_mode(event.text_area.text)
         self._completion_state = self._build_completion_state(event.text_area.text)
         self._refresh_completions()
+        self._scroll_transcript_to_bottom()
 
     async def action_submit_prompt(self) -> None:
         """Submit the current prompt text or slash command."""
@@ -2065,10 +2066,12 @@ class TauTuiApp(App[None]):
 
         if self.state.running:
             self._remember_prompt(text)
+            self._scroll_transcript_to_bottom()
             await self._queue_prompt(text, streaming_behavior=streaming_behavior)
             return
 
         self._remember_prompt(text)
+        self._scroll_transcript_to_bottom()
         self._submit_prompt(text)
 
     def _remember_prompt(self, text: str) -> None:
@@ -2129,11 +2132,15 @@ class TauTuiApp(App[None]):
         self._prompt_run_id += 1
         run_id = self._prompt_run_id
         self._follow_transcript_output()
-        self._refresh()
+        self._refresh(scroll_end=True)
         self._prompt_worker = self.run_worker(self._run_prompt(text, run_id), exclusive=True)
 
     def _follow_transcript_output(self) -> None:
         """Put the transcript back in follow mode for explicit user actions."""
+        self._scroll_transcript_to_bottom()
+
+    def _scroll_transcript_to_bottom(self) -> None:
+        """Force the transcript to the newest content immediately after user/agent activity."""
         if not self.screen_stack:
             return
         with suppress(NoMatches):
@@ -2152,7 +2159,7 @@ class TauTuiApp(App[None]):
             always_show_tool_result=True,
         )
         self._follow_transcript_output()
-        self._refresh()
+        self._refresh(scroll_end=True)
 
         try:
             result = await run_terminal_command(command, add_to_context=add_to_context)
@@ -2165,7 +2172,7 @@ class TauTuiApp(App[None]):
                     output=str(exc),
                 )
             self._notify(f"Could not run command: {exc}", severity="error")
-            self._refresh()
+            self._refresh(scroll_end=True)
             return
 
         if item_index >= len(self.state.items):
@@ -2178,7 +2185,7 @@ class TauTuiApp(App[None]):
             output=result.output,
         )
         self._follow_transcript_output()
-        self._refresh()
+        self._refresh(scroll_end=True)
 
     def _set_tui_theme(self, theme: TuiThemeName) -> None:
         self.tui_settings = TuiSettings(
@@ -2203,7 +2210,7 @@ class TauTuiApp(App[None]):
         except Exception as exc:  # noqa: BLE001 - surface queueing failures in the TUI
             self._notify(f"Could not queue message: {exc}", severity="error")
             return
-        self._refresh()
+        self._refresh(scroll_end=True)
 
     async def _run_prompt(self, text: str, run_id: int | None = None) -> None:
         """Run one prompt and stream session events into the TUI state."""
@@ -2225,7 +2232,7 @@ class TauTuiApp(App[None]):
             self.state.add_item("error", message)
             self.state.running = False
             self._sync_text_selection_state()
-            self._refresh()
+            self._refresh(scroll_end=True)
         finally:
             if active_run_id == self._prompt_run_id:
                 self._prompt_worker = None
@@ -2245,13 +2252,14 @@ class TauTuiApp(App[None]):
             self._refresh_chrome()
             return
         if isinstance(event, AgentEndEvent):
-            await transcript.finish_assistant_message()
+            await transcript.finish_assistant_message(scroll_end=True)
             self._refresh_chrome()
+            self._scroll_transcript_to_bottom()
             return
         if isinstance(event, MessageStartEvent):
             return
         if isinstance(event, MessageDeltaEvent):
-            await transcript.append_assistant_delta(event.delta, theme=theme)
+            await transcript.append_assistant_delta(event.delta, theme=theme, scroll_end=True)
             self._sync_activity_indicator()
             return
         if isinstance(event, ThinkingDeltaEvent):
@@ -2259,6 +2267,7 @@ class TauTuiApp(App[None]):
                 event.delta,
                 theme=theme,
                 show_thinking=self.state.show_thinking,
+                scroll_end=True,
             )
             self._sync_activity_indicator()
             return
@@ -2267,31 +2276,34 @@ class TauTuiApp(App[None]):
                 self._refresh()
                 return
             if event.message.role == "assistant":
-                await transcript.finish_assistant_message(event.message.content)
+                await transcript.finish_assistant_message(event.message.content, scroll_end=True)
                 self._refresh_chrome()
+                self._scroll_transcript_to_bottom()
                 return
             return
         if isinstance(event, ToolExecutionStartEvent):
-            await transcript.finish_assistant_message()
+            await transcript.finish_assistant_message(scroll_end=True)
             await transcript.append_item(
                 self.state.items[-1],
                 theme=theme,
                 show_tool_results=self.state.show_tool_results,
+                scroll_end=True,
             )
             self._refresh_chrome()
             return
         if isinstance(event, ToolExecutionUpdateEvent | RetryEvent | ErrorEvent):
-            await transcript.finish_assistant_message()
+            await transcript.finish_assistant_message(scroll_end=True)
             if self.state.items:
                 await transcript.append_item(
                     self.state.items[-1],
                     theme=theme,
                     show_tool_results=self.state.show_tool_results,
+                    scroll_end=True,
                 )
             self._refresh_chrome()
             return
         if isinstance(event, ToolExecutionEndEvent):
-            self._refresh()
+            self._refresh(scroll_end=True)
             return
         if isinstance(event, QueueUpdateEvent):
             self._refresh_chrome()
@@ -2907,11 +2919,11 @@ class TauTuiApp(App[None]):
         )
         self.notify(message, severity=severity, markup=False)
 
-    def _refresh(self) -> None:
+    def _refresh(self, *, scroll_end: bool = False) -> None:
         theme = self.tui_settings.resolved_theme
         self._refresh_chrome(theme=theme)
         transcript = self.query_one("#transcript", TranscriptView)
-        transcript.update_from_state(self.state, theme=theme)
+        transcript.update_from_state(self.state, theme=theme, scroll_end=scroll_end)
 
     def _refresh_chrome(self, *, theme: TuiTheme | None = None) -> None:
         """Refresh non-transcript chrome without remounting transcript blocks."""

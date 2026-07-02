@@ -4242,7 +4242,7 @@ async def test_tui_prompt_worker_shows_diagnostic_log_path_for_error_event(tmp_p
 
     session = ErrorSession()
     app = TauTuiApp(session)
-    app._refresh = lambda: None  # type: ignore[method-assign]
+    app._refresh = lambda **_kwargs: None  # type: ignore[method-assign]
 
     await app._run_prompt("break")
 
@@ -4270,7 +4270,7 @@ async def test_tui_prompt_worker_shows_diagnostic_log_path_on_failure(tmp_path: 
 
     session = FailingSession()
     app = TauTuiApp(session)
-    app._refresh = lambda: None  # type: ignore[method-assign]
+    app._refresh = lambda **_kwargs: None  # type: ignore[method-assign]
 
     await app._run_prompt("break")
 
