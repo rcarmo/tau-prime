@@ -1,6 +1,7 @@
 [build-system]
-requires = ["hatchling>=1.26"]
-build-backend = "hatchling.build"
+requires = []
+build-backend = "build_backend"
+backend-path = ["."]
 
 [project]
 name = "tau-ai"
@@ -36,11 +37,6 @@ dev = [
     "ruff>=0.5",
 ]
 
-[tool.hatch.build.targets.sdist]
-exclude = ["/uv.lock"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/tau_ai", "src/tau_agent", "src/tau_coding"]
 
 [tool.ruff]
 line-length = 100
