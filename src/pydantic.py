@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import json
 from types import UnionType
-from typing import Any, get_args, get_origin
+from typing import Any, get_args, get_origin, get_type_hints
 
 
 class ValidationError(ValueError):
@@ -66,13 +66,19 @@ def _coerce_value(annotation: Any, value: Any) -> Any:
     annotation = _unwrap_alias(annotation)
     if value is None:
         return None
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+    if str(origin) == "typing.Annotated" and args:
+        return _coerce_value(args[0], value)
+    if str(origin) == "typing.Literal":
+        if args and value not in args:
+            raise ValidationError(f"Expected one of {args!r}, got {value!r}")
+        return value
     if _is_model_type(annotation):
         if isinstance(value, annotation):
             return value
         if isinstance(value, dict):
             return annotation.model_validate(value)
-    origin = get_origin(annotation)
-    args = get_args(annotation)
     if origin is list and args and isinstance(value, list):
         return [_coerce_value(args[0], item) for item in value]
     if origin is dict and len(args) == 2 and isinstance(value, dict):
@@ -89,9 +95,17 @@ def _coerce_value(annotation: Any, value: Any) -> Any:
                     return model_type.model_validate(value)
                 except Exception:
                     continue
+        for arg in args:
+            try:
+                return _coerce_value(arg, value)
+            except Exception:
+                continue
         return value
-    if str(origin) == "typing.Annotated" and args:
-        return _coerce_value(args[0], value)
+    if annotation in {str, int, float, bool} and not isinstance(value, annotation):
+        try:
+            return annotation(value)
+        except Exception as exc:  # noqa: BLE001
+            raise ValidationError(str(exc)) from exc
     return value
 
 
@@ -110,7 +124,11 @@ def _to_plain(value: Any) -> Any:
 def _all_annotations(cls: type[Any]) -> dict[str, Any]:
     annotations: dict[str, Any] = {}
     for base in reversed(cls.__mro__):
-        annotations.update(getattr(base, "__annotations__", {}))
+        try:
+            resolved = get_type_hints(base, include_extras=True)
+        except Exception:  # noqa: BLE001 - fall back for partially initialized classes
+            resolved = getattr(base, "__annotations__", {})
+        annotations.update(resolved)
     return annotations
 
 
@@ -158,13 +176,29 @@ class BaseModel:
         return cls.model_validate(data)
 
     def model_dump(self, **kwargs: Any) -> dict[str, Any]:
-        del kwargs
+        exclude_none = bool(kwargs.get("exclude_none", False))
         annotations = _all_annotations(self.__class__)
-        return {name: _to_plain(getattr(self, name)) for name in annotations if name != "model_config"}
+        output: dict[str, Any] = {}
+        for name in annotations:
+            if name == "model_config":
+                continue
+            value = getattr(self, name)
+            if exclude_none and value is None:
+                continue
+            output[name] = _to_plain(value)
+        return output
 
     def model_dump_json(self, **kwargs: Any) -> str:
         indent = kwargs.get("indent")
-        return json.dumps(self.model_dump(), separators=None if indent else (",", ":"), indent=indent)
+        return json.dumps(
+            self.model_dump(**kwargs), separators=None if indent else (",", ":"), indent=indent
+        )
+
+    def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Any:
+        data = copy.deepcopy(self.model_dump()) if deep else dict(self.model_dump())
+        if update:
+            data.update(update)
+        return self.__class__.model_validate(data)
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__) and self.model_dump() == other.model_dump()
@@ -192,5 +226,6 @@ class TypeAdapter:
             raise ValidationError("Could not match union type")
         return result
 
-    def dump_json(self, value: Any) -> bytes:
-        return json.dumps(_to_plain(value), separators=(",", ":")).encode("utf-8")
+    def dump_json(self, value: Any, **kwargs: Any) -> bytes:
+        indent = kwargs.get("indent")
+        return json.dumps(_to_plain(value), separators=None if indent else (",", ":"), indent=indent).encode("utf-8")

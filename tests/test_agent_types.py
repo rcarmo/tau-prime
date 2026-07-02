@@ -118,3 +118,23 @@ def test_events_have_stable_type_names() -> None:
         "tool_execution_end",
         "error",
     ]
+
+
+def test_lightweight_models_support_model_copy_update() -> None:
+    result = AgentToolResult(tool_call_id="", name="read", ok=True, content="done")
+
+    copied = result.model_copy(update={"tool_call_id": "call-1"})
+
+    assert copied == AgentToolResult(tool_call_id="call-1", name="read", ok=True, content="done")
+    assert result.tool_call_id == ""
+
+
+def test_lightweight_models_support_exclude_none_and_copy_deep() -> None:
+    result = AgentToolResult(tool_call_id="call-1", name="read", ok=True, content="done")
+
+    assert "data" not in result.model_dump(exclude_none=True)
+    copied = result.model_copy(update={"data": {"nested": []}}, deep=True)
+    copied.data["nested"].append("value")  # type: ignore[index, union-attr]
+
+    assert result.data is None
+    assert copied.data == {"nested": ["value"]}
