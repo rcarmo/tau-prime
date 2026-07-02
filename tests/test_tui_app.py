@@ -1591,6 +1591,7 @@ async def test_tui_app_uses_textual_footer_for_shortcut_hints() -> None:
             "Sessions": "ctrl+r",
             "Thinking": "shift+tab",
             "Model": "ctrl+p",
+            "Sidebar": "ctrl+b",
             "Cancel": "escape",
         }
 
@@ -1626,6 +1627,7 @@ async def test_tui_app_footer_hints_update_while_running() -> None:
             "Cancel": "escape",
             "Thinking": "ctrl+t",
             "Tools": "ctrl+o",
+            "Sidebar": "ctrl+b",
         }
 
 
@@ -1646,7 +1648,7 @@ async def test_tui_prompt_grows_to_six_lines_then_scrolls() -> None:
         prompt = app.query_one("#prompt", TextArea)
         assert prompt.size.height == 1
 
-        prompt.text = "x" * 500
+        prompt.text = "x" * 700
         await pilot.pause()
         assert prompt.size.height == 6
 
@@ -1657,8 +1659,20 @@ async def test_tui_prompt_grows_to_six_lines_then_scrolls() -> None:
 
 
 @pytest.mark.anyio
-async def test_tui_sidebar_is_visible_on_medium_windows() -> None:
+async def test_tui_sidebar_is_hidden_by_default_on_medium_windows() -> None:
     app = TauTuiApp(FakeSession())
+
+    async with app.run_test(size=(120, 30)):
+        sidebar = app.query_one("#sidebar")
+        compact_info = app.query_one("#compact-session-info")
+        assert sidebar.display is False
+        assert compact_info.display is True
+        assert app.has_class("-hide-sidebar")
+
+
+@pytest.mark.anyio
+async def test_tui_sidebar_is_visible_when_enabled_on_medium_windows() -> None:
+    app = TauTuiApp(FakeSession(), tui_settings=TuiSettings(show_sidebar=True))
 
     async with app.run_test(size=(120, 30)):
         sidebar = app.query_one("#sidebar")
@@ -1670,7 +1684,7 @@ async def test_tui_sidebar_is_visible_on_medium_windows() -> None:
 
 @pytest.mark.anyio
 async def test_tui_sidebar_fills_workspace_height() -> None:
-    app = TauTuiApp(FakeSession())
+    app = TauTuiApp(FakeSession(), tui_settings=TuiSettings(show_sidebar=True))
 
     async with app.run_test(size=(120, 30)):
         workspace = app.query_one("#workspace")
@@ -1705,8 +1719,28 @@ async def test_tui_sidebar_hides_on_short_windows() -> None:
 
 
 @pytest.mark.anyio
-async def test_tui_sidebar_visibility_updates_on_resize() -> None:
+async def test_tui_sidebar_toggle_shows_sidebar_and_persists_setting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
     app = TauTuiApp(FakeSession())
+
+    async with app.run_test(size=(120, 30)) as pilot:
+        sidebar = app.query_one("#sidebar")
+        assert sidebar.display is False
+
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+
+        assert app.tui_settings.show_sidebar is True
+        assert sidebar.display is True
+        assert not app.has_class("-hide-sidebar")
+        assert '"show_sidebar": true' in tui_settings_path().read_text(encoding="utf-8")
+
+
+@pytest.mark.anyio
+async def test_tui_sidebar_visibility_updates_on_resize() -> None:
+    app = TauTuiApp(FakeSession(), tui_settings=TuiSettings(show_sidebar=True))
 
     async with app.run_test(size=(120, 30)) as pilot:
         sidebar = app.query_one("#sidebar")

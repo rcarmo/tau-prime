@@ -44,6 +44,7 @@ def test_load_tui_settings_reads_keybindings(tmp_path: Path) -> None:
             "thinking_cycle": "f3",
             "model_cycle": "f6",
             "toggle_thinking": "f4",
+            "toggle_sidebar": "f7",
             "copy_message": "ctrl+b"
           },
           "theme": "high-contrast"
@@ -59,6 +60,7 @@ def test_load_tui_settings_reads_keybindings(tmp_path: Path) -> None:
     assert settings.keybindings.queue_follow_up == "f5"
     assert settings.keybindings.toggle_tool_results == "ctrl+o"
     assert settings.keybindings.toggle_thinking == "f4"
+    assert settings.keybindings.toggle_sidebar == "f7"
     assert settings.keybindings.accept_completion == "f2"
     assert settings.keybindings.thinking_cycle == "f3"
     assert settings.keybindings.model_cycle == "f6"
@@ -127,6 +129,13 @@ def test_tui_settings_load_auto_copy_selection() -> None:
     assert settings.to_json()["auto_copy_selection"] is True
 
 
+def test_tui_settings_load_show_sidebar() -> None:
+    settings = tui_settings_from_json({"show_sidebar": True})
+
+    assert settings.show_sidebar is True
+    assert settings.to_json()["show_sidebar"] is True
+
+
 def test_tui_settings_reject_invalid_auto_copy_selection() -> None:
     with pytest.raises(TuiConfigError, match="auto_copy_selection"):
         tui_settings_from_json({"auto_copy_selection": "yes"})
@@ -142,6 +151,7 @@ def test_tui_keybindings_serialize_to_json() -> None:
             thinking_cycle="f3",
             model_cycle="f6",
             toggle_thinking="f4",
+            toggle_sidebar="f7",
             copy_message="ctrl+b",
         ),
         theme="high-contrast",
@@ -152,12 +162,14 @@ def test_tui_keybindings_serialize_to_json() -> None:
     assert settings.to_json()["keybindings"]["queue_follow_up"] == "f5"
     assert settings.to_json()["keybindings"]["toggle_tool_results"] == "ctrl+o"
     assert settings.to_json()["keybindings"]["toggle_thinking"] == "f4"
+    assert settings.to_json()["keybindings"]["toggle_sidebar"] == "f7"
     assert settings.to_json()["keybindings"]["accept_completion"] == "f2"
     assert settings.to_json()["keybindings"]["thinking_cycle"] == "f3"
     assert settings.to_json()["keybindings"]["model_cycle"] == "f6"
     assert settings.to_json()["keybindings"]["copy_message"] == "ctrl+b"
     assert settings.to_json()["theme"] == "high-contrast"
     assert settings.to_json()["auto_copy_selection"] is False
+    assert settings.to_json()["show_sidebar"] is False
 
 
 def test_get_tui_theme_returns_builtin_theme() -> None:

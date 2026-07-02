@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import difflib
+import importlib.util
 import json
 import mimetypes
 import os
@@ -92,6 +93,9 @@ class ToolDefinition:
 
 
 _file_locks: dict[Path, asyncio.Lock] = {}
+_python_process_limiter: asyncio.Semaphore | None = None
+_python_process_limiter_limit: int | None = None
+DEFAULT_MAX_PYTHON_PROCESSES = 2
 
 
 def create_coding_tools(
@@ -101,7 +105,7 @@ def create_coding_tools(
 ) -> list[AgentTool]:
     """Create the default coding-tool set for a local project.
 
-    The returned tools are ordered as `read`, `write`, `edit`, `python`, and `sh`.
+    The returned tools are ordered as `read`, `write`, `edit`, `python`, `sh`, and `pytest`.
     Relative paths used with those tools are resolved against `cwd`; when `cwd`
     is omitted, the process current working directory at factory-call time is
     used. The tools share per-path write/edit locks within this process so
@@ -115,6 +119,7 @@ def create_coding_tools(
         create_edit_tool(cwd=root),
         create_python_tool(cwd=root),
         create_sh_tool(cwd=root, shell_command_prefix=shell_command_prefix),
+        create_pytest_tool(cwd=root),
     ]
 
 
@@ -458,22 +463,24 @@ def create_python_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
             raise ToolInputError("Python execution cancelled")
 
         start = monotonic()
-        process = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-c",
-            code,
-            *raw_args,
-            cwd=root,
-            stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            start_new_session=os.name == "posix",
-        )
-        output_bytes, _stderr, timed_out, cancelled = await _communicate_with_cancellation(
-            process,
-            timeout=timeout,
-            signal=signal,
-        )
+        limiter = _python_process_semaphore()
+        async with limiter:
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-c",
+                code,
+                *raw_args,
+                cwd=root,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                start_new_session=os.name == "posix",
+            )
+            output_bytes, _stderr, timed_out, cancelled = await _communicate_with_cancellation(
+                process,
+                timeout=timeout,
+                signal=signal,
+            )
 
         output = output_bytes.decode(errors="replace")
         truncation = truncate_tail(output)
@@ -571,6 +578,126 @@ def create_python_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
 def create_python_tool(*, cwd: str | Path | None = None) -> AgentTool:
     """Create an `AgentTool` for executing Python code without invoking a shell."""
     return create_python_tool_definition(cwd=cwd).to_agent_tool()
+
+
+def create_pytest_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinition:
+    """Create a definition for running pytest through the active interpreter, serially."""
+    root = Path.cwd() if cwd is None else Path(cwd)
+
+    async def execute(
+        arguments: Mapping[str, JSONValue],
+        signal: ToolCancellationToken | None = None,
+    ) -> AgentToolResult:
+        raw_args = arguments.get("args", [])
+        if raw_args is None:
+            raw_args = []
+        if not isinstance(raw_args, list) or not all(isinstance(item, str) for item in raw_args):
+            raise ToolInputError("args must be a list of strings")
+        timeout = _optional_float_arg(arguments, "timeout")
+        if timeout is not None and timeout <= 0:
+            raise ToolInputError("timeout must be greater than 0")
+        if signal is not None and signal.is_cancelled():
+            raise ToolInputError("pytest execution cancelled")
+
+        pytest_args = _linear_pytest_args(tuple(raw_args))
+        start = monotonic()
+        limiter = _python_process_semaphore()
+        async with limiter:
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-m",
+                "pytest",
+                *pytest_args,
+                cwd=root,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                start_new_session=os.name == "posix",
+                env=_linear_pytest_env(),
+            )
+            output_bytes, _stderr, timed_out, cancelled = await _communicate_with_cancellation(
+                process,
+                timeout=timeout,
+                signal=signal,
+            )
+
+        output = output_bytes.decode(errors="replace")
+        truncation = truncate_tail(output)
+        full_output_path: str | None = None
+        output_text = truncation.content or "(no output)"
+        if truncation.truncated:
+            full_output_path = _write_temp_output(output, prefix="tau-pytest-")
+            start_line = truncation.total_lines - truncation.output_lines + 1
+            end_line = truncation.total_lines
+            output_text += (
+                f"\n\n[Showing lines {start_line}-{end_line} of {truncation.total_lines}. "
+                f"Full output: {full_output_path}]"
+            )
+
+        exit_code = process.returncode
+        status: str | None = None
+        if timed_out:
+            status = f"pytest timed out after {timeout:g} seconds" if timeout else "pytest timed out"
+        elif cancelled:
+            status = "pytest execution cancelled"
+        elif exit_code not in (0, None):
+            status = f"pytest exited with code {exit_code}"
+        if status:
+            output_text = append_status_block(output_text, status)
+
+        ok = exit_code == 0 and not timed_out and not cancelled
+        return AgentToolResult(
+            tool_call_id="",
+            name="pytest",
+            ok=ok,
+            content=output_text,
+            error=None if ok else status,
+            data={
+                "exit_code": exit_code,
+                "timed_out": timed_out,
+                "cancelled": cancelled,
+                "duration_seconds": round(monotonic() - start, 3),
+                "truncation": truncation.to_json(),
+                "full_output_path": full_output_path,
+                "args": list(pytest_args),
+                "linear": True,
+                "max_python_processes": _max_python_processes(),
+            },
+        )
+
+    return ToolDefinition(
+        name="pytest",
+        description=(
+            "Run pytest with the current Python interpreter in a serialized, agent-safe way. "
+            "This avoids shell quoting, disables common pytest parallelism, and shares Tau's Python process limiter."
+        ),
+        prompt_snippet="Run pytest linearly with python -m pytest",
+        prompt_guidelines=(
+            "Use pytest instead of sh for Python test runs.",
+            "Pass test paths and pytest flags as args; do not wrap them in a shell command string.",
+            "Runs are serialized by Tau's Python process limiter and force pytest-xdist to -n 0 when available.",
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "array",
+                    "description": "pytest arguments, for example ['-q', 'tests/test_file.py']",
+                    "items": {"type": "string"},
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "Timeout in seconds (optional, no default timeout)",
+                },
+            },
+        },
+        executor=execute,
+    )
+
+
+def create_pytest_tool(*, cwd: str | Path | None = None) -> AgentTool:
+    """Create an `AgentTool` for serialized pytest execution."""
+    return create_pytest_tool_definition(cwd=cwd).to_agent_tool()
 
 
 def create_sh_tool_definition(
@@ -770,6 +897,55 @@ def format_size(bytes_count: int) -> str:
 def append_status_block(text: str, status: str) -> str:
     """Append command status text after a blank line when output already exists."""
     return f"{text}\n\n{status}" if text else status
+
+
+def _max_python_processes() -> int:
+    raw = os.environ.get("TAU_MAX_PYTHON_PROCESSES")
+    if raw is None or not raw.strip():
+        return DEFAULT_MAX_PYTHON_PROCESSES
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_MAX_PYTHON_PROCESSES
+    return max(1, value)
+
+
+def _python_process_semaphore() -> asyncio.Semaphore:
+    global _python_process_limiter, _python_process_limiter_limit
+    limit = _max_python_processes()
+    if _python_process_limiter is None or _python_process_limiter_limit != limit:
+        _python_process_limiter = asyncio.Semaphore(limit)
+        _python_process_limiter_limit = limit
+    return _python_process_limiter
+
+
+def _linear_pytest_args(args: tuple[str, ...]) -> tuple[str, ...]:
+    if _pytest_args_disable_xdist(args) or importlib.util.find_spec("xdist") is None:
+        return args
+    return ("-n", "0", *args)
+
+
+def _pytest_args_disable_xdist(args: tuple[str, ...]) -> bool:
+    for index, arg in enumerate(args):
+        if arg in {"-n", "--numprocesses"}:
+            return True
+        if arg.startswith("-n") and len(arg) > 2:
+            return True
+        if arg.startswith("--numprocesses="):
+            return True
+        if arg == "-p" and index + 1 < len(args) and args[index + 1] == "no:xdist":
+            return True
+    return False
+
+
+def _linear_pytest_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env.setdefault("PYTHONHASHSEED", "0")
+    env.setdefault("OMP_NUM_THREADS", "1")
+    env.setdefault("OPENBLAS_NUM_THREADS", "1")
+    env.setdefault("MKL_NUM_THREADS", "1")
+    env.setdefault("NUMEXPR_NUM_THREADS", "1")
+    return env
 
 
 async def _communicate_with_cancellation(

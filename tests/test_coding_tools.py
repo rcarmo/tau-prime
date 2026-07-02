@@ -10,6 +10,7 @@ from tau_coding import (
     create_coding_tools,
     create_edit_tool,
     create_edit_tool_definition,
+    create_pytest_tool,
     create_python_tool,
     create_read_tool,
     create_read_tool_definition,
@@ -32,7 +33,7 @@ class FakeCancellationToken:
 async def test_create_coding_tools_returns_initial_tool_set(tmp_path: Path) -> None:
     tools = create_coding_tools(cwd=tmp_path)
 
-    assert [tool.name for tool in tools] == ["read", "write", "edit", "python", "sh"]
+    assert [tool.name for tool in tools] == ["read", "write", "edit", "python", "sh", "pytest"]
     edit_tool = tools[2]
     assert edit_tool.prompt_snippet is not None
     assert "Use edit for precise file changes instead of shell commands" in edit_tool.prompt_guidelines[0]
@@ -187,6 +188,41 @@ async def test_python_tool_reports_failure(tmp_path: Path) -> None:
     assert result.ok is False
     assert result.error == "Python exited with code 7"
     assert "Python exited with code 7" in result.content
+
+
+@pytest.mark.anyio
+async def test_python_tool_limits_concurrent_processes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("TAU_MAX_PYTHON_PROCESSES", "1")
+    tool = create_python_tool(cwd=tmp_path)
+    start = monotonic()
+
+    results = await asyncio.gather(
+        tool.execute({"code": "import time; time.sleep(0.25); print('one')"}),
+        tool.execute({"code": "import time; time.sleep(0.25); print('two')"}),
+    )
+
+    assert all(result.ok for result in results)
+    assert monotonic() - start >= 0.45
+
+
+@pytest.mark.anyio
+async def test_pytest_tool_invokes_pytest_linearly(tmp_path: Path) -> None:
+    (tmp_path / "test_sample.py").write_text(
+        "def test_sample():\n    assert True\n",
+        encoding="utf-8",
+    )
+    tool = create_pytest_tool(cwd=tmp_path)
+
+    result = await tool.execute({"args": ["-q", "test_sample.py"]})
+
+    assert result.ok is True
+    assert "1 passed" in result.content
+    assert result.data is not None
+    assert result.data["linear"] is True
+    assert result.data["args"][-2:] == ["-q", "test_sample.py"]
 
 
 @pytest.mark.anyio

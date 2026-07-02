@@ -29,6 +29,7 @@ class TuiKeybindings:
     model_cycle: str = "ctrl+p"
     toggle_thinking: str = "ctrl+t"
     toggle_tool_results: str = "ctrl+o"
+    toggle_sidebar: str = "ctrl+b"
     copy_message: str = "ctrl+c"
     quit: str = "ctrl+d"
 
@@ -46,6 +47,7 @@ class TuiKeybindings:
             "model_cycle": self.model_cycle,
             "toggle_thinking": self.toggle_thinking,
             "toggle_tool_results": self.toggle_tool_results,
+            "toggle_sidebar": self.toggle_sidebar,
             "copy_message": self.copy_message,
             "quit": self.quit,
         }
@@ -242,12 +244,14 @@ class TuiSettings:
     keybindings: TuiKeybindings = field(default_factory=TuiKeybindings)
     theme: TuiThemeName = "tau-dark"
     auto_copy_selection: bool = False
+    show_sidebar: bool = False
 
     def to_json(self) -> dict[str, Any]:
         """Serialize these settings to JSON-compatible data."""
         return {
             "auto_copy_selection": self.auto_copy_selection,
             "keybindings": self.keybindings.to_json(),
+            "show_sidebar": self.show_sidebar,
             "theme": self.theme,
         }
 
@@ -283,7 +287,7 @@ def save_tui_settings(settings: TuiSettings, paths: TauPaths | None = None) -> P
 
 def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
     """Parse TUI settings from JSON-compatible data."""
-    allowed_fields = {"auto_copy_selection", "keybindings", "theme"}
+    allowed_fields = {"auto_copy_selection", "keybindings", "show_sidebar", "theme"}
     unknown_fields = set(data) - allowed_fields
     if unknown_fields:
         raise TuiConfigError(f"Unknown TUI settings field: {sorted(unknown_fields)[0]}")
@@ -298,6 +302,7 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
             data.get("auto_copy_selection", False),
             "auto_copy_selection",
         ),
+        show_sidebar=_bool_setting(data.get("show_sidebar", False), "show_sidebar"),
     )
 
 

@@ -172,6 +172,8 @@ class CompletionActionTarget(Protocol):
 
     def action_toggle_tool_results(self) -> None: ...
 
+    def action_toggle_sidebar(self) -> None: ...
+
     def action_toggle_thinking(self) -> None: ...
 
     def action_edit_queued_follow_up(self) -> bool: ...
@@ -299,6 +301,10 @@ class PromptInput(TextArea):
         """Toggle app-level tool result display."""
         self._completion_target().action_toggle_tool_results()
 
+    def action_toggle_sidebar(self) -> None:
+        """Toggle app-level sidebar display."""
+        self._completion_target().action_toggle_sidebar()
+
     def action_toggle_thinking(self) -> None:
         """Toggle app-level thinking-token display."""
         self._completion_target().action_toggle_thinking()
@@ -407,6 +413,9 @@ class PromptInput(TextArea):
         elif event.key == keybindings.toggle_tool_results:
             event.stop()
             self._completion_target().action_toggle_tool_results()
+        elif event.key == keybindings.toggle_sidebar:
+            event.stop()
+            self._completion_target().action_toggle_sidebar()
         elif event.key == keybindings.toggle_thinking:
             event.stop()
             self._completion_target().action_toggle_thinking()
@@ -2204,6 +2213,7 @@ class TauTuiApp(App[None]):
             keybindings=self.tui_settings.keybindings,
             theme=theme,
             auto_copy_selection=self.tui_settings.auto_copy_selection,
+            show_sidebar=self.tui_settings.show_sidebar,
         )
         save_tui_settings(self.tui_settings)
         self.refresh_css(animate=False)
@@ -2512,6 +2522,19 @@ class TauTuiApp(App[None]):
         expanded = self.state.toggle_tool_results()
         self._refresh()
         self._notify("Tool results expanded." if expanded else "Tool results collapsed.")
+
+    def action_toggle_sidebar(self) -> None:
+        """Toggle the session sidebar and persist the preference."""
+        self.tui_settings = TuiSettings(
+            keybindings=self.tui_settings.keybindings,
+            theme=self.tui_settings.theme,
+            auto_copy_selection=self.tui_settings.auto_copy_selection,
+            show_sidebar=not self.tui_settings.show_sidebar,
+        )
+        save_tui_settings(self.tui_settings)
+        self._update_responsive_layout(self.size.width, self.size.height)
+        self._refresh_footer_bindings()
+        self._notify("Sidebar shown." if self.tui_settings.show_sidebar else "Sidebar hidden.")
 
     def action_toggle_thinking(self) -> None:
         """Toggle thinking-token display in the transcript."""
@@ -3021,7 +3044,8 @@ class TauTuiApp(App[None]):
         self._refresh_footer_bindings()
 
     def _update_responsive_layout(self, width: int, height: int) -> None:
-        show_sidebar = width >= SIDEBAR_MIN_WIDTH and height >= SIDEBAR_MIN_HEIGHT
+        enough_space = width >= SIDEBAR_MIN_WIDTH and height >= SIDEBAR_MIN_HEIGHT
+        show_sidebar = self.tui_settings.show_sidebar and enough_space
         self.set_class(not show_sidebar, "-hide-sidebar")
 
     def _build_completion_state(self, text: str) -> CompletionState:
@@ -3550,6 +3574,7 @@ def _app_bindings(keybindings: TuiKeybindings) -> list[Binding]:
             priority=True,
         ),
         Binding(keybindings.toggle_tool_results, "toggle_tool_results", "Tool results"),
+        Binding(keybindings.toggle_sidebar, "toggle_sidebar", "Sidebar"),
         Binding(keybindings.toggle_thinking, "toggle_thinking", "Thinking tokens"),
         Binding(keybindings.copy_message, "clear_prompt", "Clear input"),
         Binding(keybindings.quit, "quit", "Quit"),
@@ -3602,6 +3627,7 @@ def _prompt_bindings(
                 "Tools",
                 priority=True,
             ),
+            Binding(keybindings.toggle_sidebar, "toggle_sidebar", "Sidebar", priority=True),
         ]
         return bindings + _hidden_prompt_bindings(keybindings, visible_bindings=bindings)
     bindings = [
@@ -3611,6 +3637,7 @@ def _prompt_bindings(
         Binding(keybindings.session_picker, "open_session_picker", "Sessions", priority=True),
         Binding(keybindings.thinking_cycle, "cycle_thinking", "Thinking", priority=True),
         Binding(keybindings.model_cycle, "cycle_model", "Model", priority=True),
+        Binding(keybindings.toggle_sidebar, "toggle_sidebar", "Sidebar", priority=True),
         Binding(
             keybindings.copy_message,
             "clear_prompt",
@@ -3639,6 +3666,7 @@ def _hidden_prompt_bindings(
         (keybindings.thinking_cycle, "cycle_thinking"),
         (keybindings.model_cycle, "cycle_model"),
         (keybindings.toggle_tool_results, "toggle_tool_results"),
+        (keybindings.toggle_sidebar, "toggle_sidebar"),
         (keybindings.toggle_thinking, "toggle_thinking"),
         (keybindings.copy_message, "clear_prompt"),
         (keybindings.accept_completion, "accept_completion"),
