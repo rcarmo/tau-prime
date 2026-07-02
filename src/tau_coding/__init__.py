@@ -1,5 +1,7 @@
 """Tau coding-agent application package."""
 
+from __future__ import annotations
+
 from tau_coding.commands import (
     CommandRegistry,
     CommandResult,
@@ -147,7 +149,7 @@ from tau_coding.tools import (
     create_write_tool_definition,
 )
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "__version__",

@@ -6,6 +6,8 @@ parameter. Tau uses this to populate a provider's model list dynamically at
 build time instead of hardcoding a catalog.
 """
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 from json import loads
