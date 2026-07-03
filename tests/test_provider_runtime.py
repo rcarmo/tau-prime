@@ -1,9 +1,9 @@
 import pytest
 
-from tau_ai import OpenAICodexProvider
+from tau_ai import OpenAICodexProvider, OpenAICompatibleProvider
 from tau_coding import provider_runtime
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
-from tau_coding.provider_config import OpenAICodexProviderConfig
+from tau_coding.provider_config import OpenAICodexProviderConfig, ProviderSettings
 from tau_coding.provider_runtime import OpenAICodexCredentialResolver, create_model_provider
 
 
@@ -16,6 +16,30 @@ def test_create_model_provider_returns_openai_codex_provider(tmp_path) -> None:
     )
 
     assert isinstance(provider, OpenAICodexProvider)
+
+
+def test_create_model_provider_keeps_github_copilot_claude_openai_compatible(tmp_path) -> None:
+    store = FileCredentialStore(tmp_path / "credentials.json")
+    store.set_oauth(
+        "github-copilot",
+        OAuthCredential(
+            access="tid=1;proxy-ep=proxy.enterprise.test;token",
+            refresh="github-refresh",
+            expires=9999999999999,
+            account_id="github.com",
+        ),
+    )
+    provider_config = ProviderSettings().get_provider("github-copilot")
+
+    provider = create_model_provider(
+        provider_config,
+        credential_store=store,
+        model="claude-sonnet-5",
+    )
+
+    assert isinstance(provider, OpenAICompatibleProvider)
+    assert provider._config.base_url == "https://api.enterprise.test"
+    assert provider._config.headers["Copilot-Integration-Id"] == "vscode-chat"
 
 
 def test_create_model_provider_maps_codex_reasoning_effort_like_pi(tmp_path) -> None:
