@@ -161,7 +161,7 @@ def create_read_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
 
         mime_type = _detect_supported_image_mime_type(path)
         if mime_type is not None:
-            data = path.read_bytes()
+            data = await _read_bytes(path)
             return AgentToolResult(
                 tool_call_id="",
                 name="read",
@@ -175,7 +175,7 @@ def create_read_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
                 },
             )
 
-        text = path.read_text(encoding="utf-8")
+        text = await _read_text(path)
         all_lines = text.split("\n")
         start_line = 0 if offset is None or offset == 0 else offset - 1
         if start_line >= len(all_lines):
@@ -291,8 +291,7 @@ def create_write_tool_definition(*, cwd: str | Path | None = None) -> ToolDefini
         content = _str_arg(arguments, "content")
 
         async with _file_lock(path):
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8")
+            await _write_text(path, content)
 
         return AgentToolResult(
             tool_call_id="",
@@ -362,7 +361,7 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
             raise ToolInputError(f"Could not edit file: {path}. Path is a directory.")
 
         async with _file_lock(path):
-            raw_content = path.read_text(encoding="utf-8")
+            raw_content = await _read_text(path)
             bom, content = _strip_bom(raw_content)
             original_ending = detect_line_ending(content)
             normalized = normalize_to_lf(content)
@@ -370,7 +369,7 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
                 normalized, edits, str(path)
             )
             final_content = bom + restore_line_endings(new_content, original_ending)
-            path.write_text(final_content, encoding="utf-8")
+            await _write_text(path, final_content)
 
         diff_text, first_changed_line = generate_diff_string(base_content, new_content)
         patch = generate_unified_patch(str(path), base_content, new_content)
@@ -897,6 +896,22 @@ def format_size(bytes_count: int) -> str:
 def append_status_block(text: str, status: str) -> str:
     """Append command status text after a blank line when output already exists."""
     return f"{text}\n\n{status}" if text else status
+
+
+async def _read_text(path: Path) -> str:
+    return await asyncio.to_thread(path.read_text, encoding="utf-8")
+
+
+async def _read_bytes(path: Path) -> bytes:
+    return await asyncio.to_thread(path.read_bytes)
+
+
+async def _write_text(path: Path, content: str) -> None:
+    def write() -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    await asyncio.to_thread(write)
 
 
 def _max_python_processes() -> int:
