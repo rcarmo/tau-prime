@@ -118,8 +118,11 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
     )
     assert provider_thinking_unavailable_reason(anthropic, model="claude-sonnet-4-6") is None
     assert provider_thinking_levels(anthropic, model="claude-haiku-4-5") == ()
-    assert copilot.default_model == "gpt-5.4"
+    assert copilot.default_model == "gpt-5.5"
+    assert copilot.dynamic_models is True
+    assert "claude-sonnet-5" in copilot.models
     assert "claude-sonnet-4.6" in copilot.models
+    assert "gemini-3.5-flash" in copilot.models
     assert provider_thinking_levels(copilot, model="gpt-5.4") == (
         "off",
         "low",
@@ -127,6 +130,7 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
         "high",
         "xhigh",
     )
+    assert provider_thinking_levels(copilot, model="claude-sonnet-4.6") == ()
 
 
 def test_save_provider_settings_writes_backup_when_replacing(tmp_path: Path) -> None:
@@ -935,6 +939,57 @@ async def test_ensure_dynamic_provider_models_populates_nebius_at_build(
 
     reloaded = load_provider_settings(paths)
     assert reloaded.get_provider("nebius").models == nebius.models
+
+
+@pytest.mark.anyio
+async def test_ensure_dynamic_provider_models_uses_copilot_proxy_and_headers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GITHUB_COPILOT_TOKEN", raising=False)
+    paths = TauPaths(home=tmp_path / ".tau")
+    credential_store = FileCredentialStore(tmp_path / ".tau" / "credentials.json")
+    credential_store.set_oauth(
+        "github-copilot",
+        OAuthCredential(
+            access="tid=1;proxy-ep=proxy.enterprise.test;token",
+            refresh="github-refresh",
+            expires=9999999999999,
+            account_id="github.com",
+        ),
+    )
+    settings = load_provider_settings(paths)
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"id": "gpt-5.5", "context_window": 272000},
+                    {"id": "claude-sonnet-5", "context_window": 1000000},
+                    {"id": "gemini-3.5-flash"},
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        updated = await ensure_dynamic_provider_models(
+            settings,
+            provider_name="github-copilot",
+            paths=paths,
+            credential_store=credential_store,
+            client=client,
+        )
+
+    copilot = updated.get_provider("github-copilot")
+    assert requests[0].url == "https://api.enterprise.test/models?verbose=true"
+    assert requests[0].headers["authorization"] == "Bearer tid=1;proxy-ep=proxy.enterprise.test;token"
+    assert requests[0].headers["copilot-integration-id"] == "vscode-chat"
+    assert copilot.models == ("gpt-5.5", "claude-sonnet-5", "gemini-3.5-flash")
+    assert copilot.default_model == "gpt-5.5"
+    assert copilot.context_windows["claude-sonnet-5"] == 1000000
 
 
 @pytest.mark.anyio

@@ -25,6 +25,11 @@ from tau_ai import (
 )
 from tau_ai.env import DEFAULT_OPENAI_COMPATIBLE_BASE_URL, AnthropicThinkingType
 from tau_coding.credentials import FileCredentialStore, credentials_path
+from tau_coding.oauth import (
+    github_copilot_base_url,
+    oauth_credential_is_expired,
+    refresh_github_copilot_token,
+)
 from tau_coding.paths import TauPaths
 from tau_coding.provider_catalog import (
     BUILTIN_PROVIDER_CATALOG,
@@ -504,6 +509,20 @@ def upsert_provider(
     return updated
 
 
+def _replace_provider(settings: ProviderSettings, provider: ProviderConfig) -> ProviderSettings:
+    """Return settings with an exact provider replacement, without built-in model merging."""
+    providers_by_name = {item.name: item for item in settings.providers}
+    providers_by_name[provider.name] = provider
+    providers = tuple(providers_by_name[name] for name in sorted(providers_by_name))
+    updated = ProviderSettings(
+        default_provider=settings.default_provider,
+        providers=providers,
+        scoped_models=settings.scoped_models,
+    )
+    updated.get_provider(settings.default_provider)
+    return updated
+
+
 def _with_builtin_catalog_models(
     settings: ProviderSettings,
     *,
@@ -839,6 +858,11 @@ async def ensure_dynamic_provider_models(
         return settings
 
     try:
+        if provider.name == "github-copilot":
+            provider = await _github_copilot_provider_for_model_listing(
+                provider,
+                credential_store=store,
+            )
         runtime_config = openai_compatible_config_from_provider(
             provider, credential_reader=store
         )
@@ -867,9 +891,45 @@ async def ensure_dynamic_provider_models(
         default_model=default_model,
         context_windows=context_windows,
     )
-    updated = upsert_provider(settings, updated_provider)
+    updated = _replace_provider(settings, updated_provider)
     save_provider_settings(updated, paths)
     return updated
+
+
+async def _github_copilot_provider_for_model_listing(
+    provider: OpenAICompatibleProviderConfig,
+    *,
+    credential_store: FileCredentialStore,
+) -> OpenAICompatibleProviderConfig:
+    """Return a Copilot provider config suitable for calling its OpenAI-compatible API."""
+    headers = {**dict(provider.headers), **_github_copilot_headers()}
+    credential_name = provider.credential_name
+    if not credential_name:
+        return replace(provider, headers=headers)
+    credential = credential_store.get_oauth(credential_name)
+    if credential is None:
+        return replace(provider, headers=headers)
+    if oauth_credential_is_expired(credential):
+        credential = await refresh_github_copilot_token(
+            credential.refresh,
+            enterprise_domain=credential.account_id if credential.account_id != "github.com" else "",
+        )
+        credential_store.set_oauth(credential_name, credential)
+    return replace(
+        provider,
+        base_url=github_copilot_base_url(credential.access, credential.account_id),
+        headers=headers,
+    )
+
+
+def _github_copilot_headers() -> dict[str, str]:
+    return {
+        "User-Agent": "GitHubCopilotChat/0.35.0",
+        "Editor-Version": "vscode/1.107.0",
+        "Editor-Plugin-Version": "copilot-chat/0.35.0",
+        "Copilot-Integration-Id": "vscode-chat",
+        "openai-intent": "conversation-panel",
+    }
 
 
 def anthropic_config_from_provider(
