@@ -17,6 +17,18 @@ def test_tau_paths_user_locations(tmp_path: Path) -> None:
     assert paths.user_agents_prompts_dir == tmp_path / ".agents" / "prompts"
 
 
+def test_tau_paths_logs_dir_prefers_ios_documents_sibling(tmp_path: Path) -> None:
+    library = tmp_path / "Containers" / "Data" / "Application" / "APP" / "Library"
+    paths = TauPaths(home=library / ".tau", agents_home=library / ".agents")
+
+    assert paths.agent_calls_log_path == (
+        library.parent / "Documents" / ".tau" / "logs" / "agent-calls.jsonl"
+    )
+    assert paths.llm_observations_log_path == (
+        library.parent / "Documents" / ".tau" / "logs" / "llm-observations.jsonl"
+    )
+
+
 def test_tau_paths_logs_dir_can_be_overridden(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

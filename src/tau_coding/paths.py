@@ -32,12 +32,15 @@ class TauPaths:
         """Return Tau's user-level diagnostic log directory.
 
         Keep diagnostics in a visible directory by default. On a-Shell/iOS,
-        hidden directories such as ``~/.tau/logs`` are awkward to find after
-        exiting the TUI, so logs live next to Tau's hidden home as
-        ``~/tau-logs`` unless ``TAU_LOGS_DIR`` is set.
+        ``Path.home()`` may resolve inside the app sandbox's ``Library`` folder,
+        which is still awkward to find from Files. Prefer the sibling
+        ``Documents/.tau/logs`` directory when that sandbox layout is detected.
+        ``TAU_LOGS_DIR`` remains the explicit override.
         """
         if override := os.environ.get("TAU_LOGS_DIR"):
             return Path(override).expanduser()
+        if documents_logs := _sandbox_documents_logs_dir(self.home):
+            return documents_logs
         if self.home.name.startswith("."):
             return self.home.parent / "tau-logs"
         return self.home / "logs"
@@ -108,6 +111,23 @@ class TauPaths:
         path = self.project_session_dir(cwd) / "default.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
+
+
+def _sandbox_documents_logs_dir(home: Path) -> Path | None:
+    """Return an iOS/a-Shell visible Documents dotpath log dir for sandbox Library homes."""
+    expanded = home.expanduser()
+    if expanded.name.startswith("."):
+        library_dir = expanded.parent
+    else:
+        library_dir = expanded
+    if library_dir.name != "Library":
+        return None
+    documents_dir = library_dir.parent / "Documents"
+    try:
+        documents_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return documents_dir / ".tau" / "logs"
 
 
 def _default_user_dir(env_name: str, home_name: str, app_name: str) -> Path:
