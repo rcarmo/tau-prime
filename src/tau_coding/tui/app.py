@@ -1528,6 +1528,7 @@ class TauTuiApp(App[None]):
 
     #main-pane {
         width: 1fr;
+        min-width: 1;
         padding: 1 1 0 1;
     }
 
@@ -1551,8 +1552,9 @@ class TauTuiApp(App[None]):
     }
 
     #prompt-row {
+        width: 100%;
         height: auto;
-        margin: 0 1 1 1;
+        margin: 0 0 1 0;
     }
 
     #prompt-prefix {
@@ -1567,6 +1569,8 @@ class TauTuiApp(App[None]):
 
     #prompt {
         width: 1fr;
+        min-width: 1;
+        max-width: 100%;
         height: auto;
         background: $tau-prompt-background;
         color: $tau-prompt-text;
