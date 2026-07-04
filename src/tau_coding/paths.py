@@ -29,7 +29,17 @@ class TauPaths:
 
     @property
     def logs_dir(self) -> Path:
-        """Return Tau's user-level diagnostic log directory."""
+        """Return Tau's user-level diagnostic log directory.
+
+        Keep diagnostics in a visible directory by default. On a-Shell/iOS,
+        hidden directories such as ``~/.tau/logs`` are awkward to find after
+        exiting the TUI, so logs live next to Tau's hidden home as
+        ``~/tau-logs`` unless ``TAU_LOGS_DIR`` is set.
+        """
+        if override := os.environ.get("TAU_LOGS_DIR"):
+            return Path(override).expanduser()
+        if self.home.name.startswith("."):
+            return self.home.parent / "tau-logs"
         return self.home / "logs"
 
     @property

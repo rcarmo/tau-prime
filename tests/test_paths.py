@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from tau_coding.paths import TauPaths
 
 
@@ -7,12 +9,24 @@ def test_tau_paths_user_locations(tmp_path: Path) -> None:
     paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
 
     assert paths.sessions_dir == tmp_path / ".tau" / "sessions"
-    assert paths.agent_calls_log_path == tmp_path / ".tau" / "logs" / "agent-calls.jsonl"
-    assert paths.llm_observations_log_path == tmp_path / ".tau" / "logs" / "llm-observations.jsonl"
+    assert paths.agent_calls_log_path == tmp_path / "tau-logs" / "agent-calls.jsonl"
+    assert paths.llm_observations_log_path == tmp_path / "tau-logs" / "llm-observations.jsonl"
     assert paths.user_skills_dir == tmp_path / ".tau" / "skills"
     assert paths.user_prompts_dir == tmp_path / ".tau" / "prompts"
     assert paths.user_agents_skills_dir == tmp_path / ".agents" / "skills"
     assert paths.user_agents_prompts_dir == tmp_path / ".agents" / "prompts"
+
+
+def test_tau_paths_logs_dir_can_be_overridden(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("TAU_LOGS_DIR", str(tmp_path / "visible-logs"))
+    paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
+
+    assert paths.agent_calls_log_path == tmp_path / "visible-logs" / "agent-calls.jsonl"
+    assert paths.llm_observations_log_path == tmp_path / "visible-logs" / "llm-observations.jsonl"
+
 
 
 def test_tau_paths_project_locations(tmp_path: Path) -> None:
