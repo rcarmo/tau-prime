@@ -1476,6 +1476,8 @@ class TauTuiApp(App[None]):
     }
 
     Footer {
+        dock: bottom;
+        height: 1;
         background: $tau-chrome-background;
         color: $tau-chrome-text;
     }

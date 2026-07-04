@@ -2330,6 +2330,21 @@ async def test_tui_app_submits_multiline_prompt_with_enter() -> None:
 
 
 @pytest.mark.anyio
+async def test_tui_app_keeps_prompt_above_footer_on_narrow_terminals() -> None:
+    app = TauTuiApp(FakeSession())
+
+    async with app.run_test(size=(40, 18)) as pilot:
+        prompt = app.query_one("#prompt", PromptInput)
+        prompt_row = app.query_one("#prompt-row")
+        footer = app.query_one(Footer)
+        await pilot.pause()
+
+        assert prompt.region.y + prompt.region.height <= footer.region.y
+        assert prompt_row.region.y + prompt_row.region.height <= footer.region.y
+        assert prompt.region.x + prompt.region.width <= app.size.width
+
+
+@pytest.mark.anyio
 async def test_tui_app_ignores_empty_prompt_submission_without_rewriting_editor() -> None:
     session = FakeSession()
     app = TauTuiApp(session)
