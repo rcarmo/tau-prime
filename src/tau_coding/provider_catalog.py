@@ -196,7 +196,6 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
             "gemini-3.1-pro-preview",
             "gemini-3-flash-preview",
             "gemini-2.5-pro",
-            "mai-code-1-flash-picker",
         ),
         default_model="gpt-5.5",
         docs_url="https://docs.github.com/copilot",
