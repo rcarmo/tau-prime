@@ -18,7 +18,14 @@ def test_create_model_provider_returns_openai_codex_provider(tmp_path) -> None:
     assert isinstance(provider, OpenAICodexProvider)
 
 
-def test_create_model_provider_keeps_github_copilot_claude_openai_compatible(tmp_path) -> None:
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.5", "claude-sonnet-5", "gemini-3.5-flash"],
+)
+def test_create_model_provider_keeps_github_copilot_models_openai_compatible(
+    tmp_path,
+    model: str,
+) -> None:
     store = FileCredentialStore(tmp_path / "credentials.json")
     store.set_oauth(
         "github-copilot",
@@ -34,7 +41,7 @@ def test_create_model_provider_keeps_github_copilot_claude_openai_compatible(tmp
     provider = create_model_provider(
         provider_config,
         credential_store=store,
-        model="claude-sonnet-5",
+        model=model,
     )
 
     assert isinstance(provider, OpenAICompatibleProvider)

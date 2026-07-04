@@ -9,7 +9,6 @@ from typing import Protocol
 
 from tau_ai import (
     AnthropicProvider,
-    LLMObserver,
     ModelProvider,
     OpenAICodexConfig,
     OpenAICodexCredentials,
@@ -51,7 +50,6 @@ def create_model_provider(
     credential_store: FileCredentialStore | None = None,
     model: str | None = None,
     thinking_level: ThinkingLevel | None = None,
-    llm_observer: LLMObserver | None = None,
 ) -> ClosableModelProvider:
     """Create a runtime model provider from durable provider settings."""
     credentials = credential_store or FileCredentialStore()
@@ -59,7 +57,11 @@ def create_model_provider(
     if provider.name == "github-copilot":
         provider = _github_copilot_provider_config(provider, credential_store=credentials)
     override = catalog_model_override(provider.name, selected_model)
-    if override is not None and override.kind == "anthropic":
+    if (
+        provider.name != "github-copilot"
+        and override is not None
+        and override.kind == "anthropic"
+    ):
         provider = _anthropic_provider_config_for_model(provider, selected_model)
     if isinstance(provider, AnthropicProviderConfig):
         return AnthropicProvider(
@@ -68,8 +70,7 @@ def create_model_provider(
                 credential_reader=credentials,
                 model=selected_model,
                 thinking_level=thinking_level,
-            ),
-            observer=llm_observer,
+            )
         )
     if isinstance(provider, OpenAICodexProviderConfig):
         return OpenAICodexProvider(
@@ -88,8 +89,7 @@ def create_model_provider(
                     model=model,
                     thinking_level=thinking_level,
                 ),
-            ),
-            observer=llm_observer,
+            )
         )
     return OpenAICompatibleProvider(
         openai_compatible_config_from_provider(
@@ -97,8 +97,7 @@ def create_model_provider(
             credential_reader=credentials,
             model=selected_model,
             thinking_level=thinking_level,
-        ),
-        observer=llm_observer,
+        )
     )
 
 

@@ -23,6 +23,7 @@ from tau_ai.events import (
     ProviderToolCallEvent,
 )
 from tau_ai.fake import FakeProvider
+from tau_ai.models import ModelInfo, list_openai_compatible_models
 from tau_ai.openai_codex import (
     DEFAULT_OPENAI_CODEX_BASE_URL,
     OpenAICodexConfig,
@@ -42,6 +43,7 @@ __all__ = [
     "DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS",
     "DEFAULT_OPENAI_CODEX_BASE_URL",
     "FakeProvider",
+    "ModelInfo",
     "ModelProvider",
     "OpenAICodexConfig",
     "OpenAICodexCredentials",
@@ -56,5 +58,6 @@ __all__ = [
     "ProviderThinkingDeltaEvent",
     "ProviderTextDeltaEvent",
     "ProviderToolCallEvent",
+    "list_openai_compatible_models",
     "openai_compatible_config_from_env",
 ]
