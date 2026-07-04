@@ -1739,6 +1739,27 @@ async def test_tui_sidebar_toggle_shows_sidebar_and_persists_setting(
 
 
 @pytest.mark.anyio
+async def test_tui_resize_same_size_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
+    app = TauTuiApp(FakeSession(), tui_settings=TuiSettings(show_sidebar=True))
+    calls: list[tuple[bool, str]] = []
+    original_set_class = app.set_class
+
+    def recording_set_class(add: bool, class_name: str) -> None:
+        calls.append((add, class_name))
+        original_set_class(add, class_name)
+
+    monkeypatch.setattr(app, "set_class", recording_set_class)
+
+    async with app.run_test(size=(120, 30)):
+        calls.clear()
+        app._last_responsive_size = None
+        app.on_resize(type("ResizeEvent", (), {"size": type("Size", (), {"width": 120, "height": 30})()})())
+        app.on_resize(type("ResizeEvent", (), {"size": type("Size", (), {"width": 120, "height": 30})()})())
+
+    assert len(calls) <= 1
+
+
+@pytest.mark.anyio
 async def test_tui_sidebar_visibility_updates_on_resize() -> None:
     app = TauTuiApp(FakeSession(), tui_settings=TuiSettings(show_sidebar=True))
 

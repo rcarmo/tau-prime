@@ -1848,6 +1848,8 @@ class TauTuiApp(App[None]):
         self._completion_state = CompletionState()
         self._activity_frame = 0
         self._activity_timer: Timer | None = None
+        self._last_responsive_size: tuple[int, int] | None = None
+        self._last_hide_sidebar: bool | None = None
         self._active_notification_keys: set[tuple[str, str]] = set()
         self._supports_pyperclip: bool | None = None
 
@@ -1927,6 +1929,10 @@ class TauTuiApp(App[None]):
 
     def on_resize(self, event: Resize) -> None:
         """Update responsive chrome when the terminal changes size."""
+        size = (event.size.width, event.size.height)
+        if size == self._last_responsive_size:
+            return
+        self._last_responsive_size = size
         self._update_responsive_layout(event.size.width, event.size.height)
 
     def on_click(self, event: events.Click) -> None:
@@ -3051,7 +3057,11 @@ class TauTuiApp(App[None]):
     def _update_responsive_layout(self, width: int, height: int) -> None:
         enough_space = width >= SIDEBAR_MIN_WIDTH and height >= SIDEBAR_MIN_HEIGHT
         show_sidebar = self.tui_settings.show_sidebar and enough_space
-        self.set_class(not show_sidebar, "-hide-sidebar")
+        hide_sidebar = not show_sidebar
+        if hide_sidebar == self._last_hide_sidebar and self.has_class("-hide-sidebar") == hide_sidebar:
+            return
+        self._last_hide_sidebar = hide_sidebar
+        self.set_class(hide_sidebar, "-hide-sidebar")
 
     def _build_completion_state(self, text: str) -> CompletionState:
         registry = _session_command_registry(self.session)
