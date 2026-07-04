@@ -460,7 +460,6 @@ class CodingSession:
 
         await self._refresh_persisted_state(leaf_id=target_id)
         self._harness.replace_messages(self._state.messages)
-        self._harness.config.model = self._state.model or self._config.model
         self._thinking_level = _state_thinking_level(self._state, self._config.thinking_level)
         self._sync_thinking_level_to_active_model()
         self._refresh_runtime_provider()
@@ -1274,7 +1273,7 @@ class CodingSession:
             leaf = LeafEntry(parent_id=entry.id, entry_id=entry.id)
             await self._append_session_entry(leaf)
 
-        await self._refresh_persisted_state()
+        await self._refresh_persisted_state(leaf_id=self._last_parent_id)
         return persisted_count + len(new_messages)
 
     async def _refresh_persisted_state(

@@ -1019,7 +1019,7 @@ async def test_session_branches_to_before_selected_user_message_with_prefill(
 
 
 @pytest.mark.anyio
-async def test_session_branch_restores_model_from_selected_path(tmp_path: Path) -> None:
+async def test_session_branch_preserves_active_model_after_historical_model_change(tmp_path: Path) -> None:
     storage = JsonlSessionStorage(tmp_path / "session.jsonl")
     first_model = ModelChangeEntry(id="model-a", model="first-model")
     left = MessageEntry(
@@ -1049,7 +1049,7 @@ async def test_session_branch_restores_model_from_selected_path(tmp_path: Path) 
     await session.branch_to_entry("left")
 
     assert session.state.model == "first-model"
-    assert session.model == "first-model"
+    assert session.model == "second-model"
 
 
 @pytest.mark.anyio

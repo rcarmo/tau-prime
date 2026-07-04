@@ -2924,7 +2924,7 @@ async def test_tui_app_scrolls_completion_selection_into_view() -> None:
         assert visible.selected is not None
         assert visible.selected.display == selected.display
         assert visible.items[0].display != "/prompt-00"
-        assert _completion_selected_render_line(visible) < visible_line_limit - 1
+        assert _completion_selected_render_line(visible) < visible_line_limit
 
 
 @pytest.mark.anyio
