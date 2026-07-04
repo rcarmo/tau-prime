@@ -7,6 +7,10 @@
 </p>
 
 <p align="center">
+  <strong>This fork tracks the iOS/a-Shell port with GitHub Copilot support and mobile-friendly TUI defaults.</strong>
+</p>
+
+<p align="center">
   <a href="https://twotimespi.dev/">Documentation</a>
   ·
   <a href="https://twotimespi.dev/quickstart/">Quickstart</a>
@@ -78,15 +82,25 @@ python -m pip install .
 tau --version
 ```
 
-For local development:
+For this iOS/a-Shell fork:
+
+```sh
+git clone https://github.com/rcarmo/tau-a-shell.git
+cd tau-a-shell
+python3.13 -m pip install --user -r requirements.txt
+python3.13 -m pip install --user .
+tau --version
+```
+
+For local development on a regular desktop Python environment:
 
 ```bash
-git clone https://github.com/alejandro-ao/tau.git
-cd tau
+git clone https://github.com/rcarmo/tau-a-shell.git
+cd tau-a-shell
 python3.13 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-dev.txt
-python -m pip install -e .
+python -m pip install .
 tau --version
 ```
 
@@ -122,23 +136,32 @@ tau
 /login
 /login openai
 /login openai-codex
+/login github-copilot
 /model
 ```
 
-Tau ships with support for OpenAI, Anthropic, OpenAI Codex subscription auth,
-OpenRouter, Hugging Face, and custom OpenAI-compatible endpoints, including local
-models. See the [providers guide](https://twotimespi.dev/guides/providers-and-models/).
+This fork adds GitHub Copilot subscription auth and live Copilot model discovery
+alongside OpenAI, Anthropic, OpenAI Codex subscription auth, OpenRouter, Hugging
+Face, and custom OpenAI-compatible endpoints, including local models. See the
+[providers guide](https://twotimespi.dev/guides/providers-and-models/).
 
 ## What Tau can do
 
 - Interactive Textual TUI and non-interactive print mode.
-- Built-in coding tools: `read`, `write`, `edit`, and `bash`.
+- iOS/a-Shell-friendly TUI behavior, including `Ctrl+C`/`Cmd+.` cancellation,
+  responsive redraws, transcript auto-scroll, and a sidebar hidden by default
+  with `Ctrl+B` to toggle it.
+- Built-in coding tools: `read`, `write`, `edit`, `sh`, Python, and `pytest`,
+  with compatibility aliases for existing `bash` integrations.
 - Durable JSONL sessions under `~/.tau/sessions/` with resume and branching.
 - Slash commands for login, model selection, sessions, compaction, export, theme,
   and more.
 - Project instructions from `AGENTS.md`, `.tau/`, and `.agents/` resources.
 - User skills and prompt templates.
 - Context accounting, manual compaction, and optional automatic compaction.
+- GitHub Copilot provider support with device login, dynamic model discovery,
+  and Copilot-hosted Claude/Gemini/OpenAI models kept on the Copilot-compatible
+  runtime path.
 - Provider-neutral event rendering for Rich, plain text, JSON, transcripts, and
   custom frontends.
 
