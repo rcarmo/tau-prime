@@ -231,8 +231,28 @@ async def _execute_tool(
         )
 
     if result.tool_call_id != tool_call.id:
-        return result.model_copy(update={"tool_call_id": tool_call.id})
+        return _replace_tool_call_id(result, tool_call.id)
     return result
+
+
+def _replace_tool_call_id(result: AgentToolResult, tool_call_id: str) -> AgentToolResult:
+    """Return a copy of a tool result with a provider-issued tool call id.
+
+    Tau runs on constrained Python environments that may expose Pydantic v1-style
+    models or local shims. Prefer Pydantic v2's ``model_copy`` when present, but
+    fall back to constructing a new result from the public fields.
+    """
+    model_copy = getattr(result, "model_copy", None)
+    if callable(model_copy):
+        return model_copy(update={"tool_call_id": tool_call_id})
+    return AgentToolResult(
+        tool_call_id=tool_call_id,
+        name=result.name,
+        ok=result.ok,
+        content=result.content,
+        error=result.error,
+        data=result.data,
+    )
 
 
 def _unknown_tool_result(tool_call: ToolCall) -> AgentToolResult:

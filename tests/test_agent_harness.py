@@ -199,6 +199,60 @@ async def test_cancel_requests_cancellation_for_current_run() -> None:
 
 
 @pytest.mark.anyio
+async def test_tool_result_id_rewrite_works_without_model_copy() -> None:
+    class LegacyToolResult:
+        tool_call_id = "wrong-id"
+        name = "read"
+        ok = True
+        content = "ok"
+        error = None
+        data = {"path": "README.md"}
+
+    async def executor(
+        arguments: Mapping[str, JSONValue],
+        signal: object | None = None,
+    ) -> AgentToolResult:
+        del arguments, signal
+        return LegacyToolResult()  # type: ignore[return-value]
+
+    tool = AgentTool(
+        name="read",
+        description="Read a file.",
+        input_schema={"type": "object"},
+        executor=executor,
+    )
+    tool_call = ToolCall(id="call-1", name="read", arguments={"path": "README.md"})
+    provider = FakeProvider(
+        [
+            [
+                ProviderResponseStartEvent(model="fake"),
+                ProviderResponseEndEvent(
+                    message=AssistantMessage(content="I'll read it.", tool_calls=[tool_call])
+                ),
+            ],
+            [
+                ProviderResponseStartEvent(model="fake"),
+                ProviderResponseEndEvent(message=AssistantMessage(content="Done.")),
+            ],
+        ]
+    )
+    harness = AgentHarness(
+        AgentHarnessConfig(
+            provider=provider,
+            model="fake",
+            system="You are Tau.",
+            tools=[tool],
+        )
+    )
+
+    _events = [event async for event in harness.prompt("read")]
+
+    result = next(message for message in harness.messages if isinstance(message, ToolResultMessage))
+    assert result.tool_call_id == "call-1"
+    assert result.content == "ok"
+
+
+@pytest.mark.anyio
 async def test_cancelled_tool_run_repairs_transcript_before_next_prompt() -> None:
     async def executor(
         arguments: Mapping[str, JSONValue],
