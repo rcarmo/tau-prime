@@ -1,9 +1,7 @@
 name: Deploy documentation
 
+# Temporarily disabled: keep manual dispatch only while CI is paused.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:

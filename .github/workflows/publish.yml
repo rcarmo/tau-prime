@@ -1,9 +1,8 @@
 name: Publish Python package
 
+# Temporarily disabled: keep manual dispatch only while CI is paused.
 on:
-  release:
-    types:
-      - published
+  workflow_dispatch:
 
 permissions:
   contents: read
