@@ -912,6 +912,7 @@ class CodingSession:
 
         provider_name = self._provider_name
         runtime_provider_config = self._runtime_provider_config
+        restored_model = record.model or self.model
         if record.provider_name:
             if self._provider_settings is None:
                 raise ValueError(
@@ -925,11 +926,20 @@ class CodingSession:
                     f"Session provider is not configured: {record.provider_name}"
                 ) from exc
             provider_name = runtime_provider_config.name
+        else:
+            inferred = _infer_provider_for_model(
+                self._provider_settings,
+                restored_model,
+                current_provider_name=self._provider_name,
+            )
+            if inferred is not None:
+                provider_name = inferred.name
+                runtime_provider_config = inferred
 
         replacement = await type(self).load(
             CodingSessionConfig(
                 provider=self._harness.config.provider,
-                model=record.model or self.model,
+                model=restored_model,
                 cwd=record.cwd,
                 storage=jsonl_session_storage(record.path),
                 system=self._config.system,
@@ -1731,6 +1741,34 @@ def _session_export_title(session: CodingSession) -> str:
         if record is not None and record.title:
             return record.title
     return f"Tau session {session_id}" if session_id is not None else "Tau Session Export"
+
+
+def _infer_provider_for_model(
+    provider_settings: ProviderSettings | None,
+    model: str,
+    *,
+    current_provider_name: str,
+) -> ProviderConfig | None:
+    """Infer the provider for a restored session model when index metadata is stale.
+
+    Older session indexes did not always persist ``provider_name``. Resuming one
+    of those sessions after using another provider can otherwise combine the
+    restored model with the current runtime provider (for example
+    ``openai-codex:claude-opus-4.8``), which fails before the user can recover.
+    Only infer when provider settings identify a unique configured provider for
+    the model, and keep the current provider when it already advertises it.
+    """
+    if provider_settings is None or not model:
+        return None
+    matches = tuple(provider for provider in provider_settings.providers if model in provider.models)
+    if not matches:
+        return None
+    for provider in matches:
+        if provider.name == current_provider_name:
+            return provider
+    if len(matches) == 1:
+        return matches[0]
+    return None
 
 
 def _state_thinking_level(

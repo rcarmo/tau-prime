@@ -2782,6 +2782,80 @@ async def test_session_resume_uses_target_session_provider_model(
 
 
 @pytest.mark.anyio
+async def test_session_resume_infers_provider_for_legacy_index_without_provider_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    manager = SessionManager(TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents"))
+    first_record = manager.create_session(
+        cwd=tmp_path / "first",
+        model="gpt-5.5",
+        provider_name="openai-codex",
+        title="First",
+    )
+    second_cwd = tmp_path / "second"
+    second_cwd.mkdir(parents=True)
+    second_record = manager.create_session(
+        cwd=second_cwd,
+        model="claude-opus-4.8",
+        provider_name=None,
+        title="Legacy Copilot Claude",
+    )
+    assert second_record.provider_name is None
+    settings = ProviderSettings(
+        default_provider="openai-codex",
+        providers=(
+            OpenAICodexProviderConfig(models=("gpt-5.5",), default_model="gpt-5.5"),
+            OpenAICompatibleProviderConfig(
+                name="github-copilot",
+                base_url="https://api.githubcopilot.com",
+                api_key_env="GITHUB_COPILOT_TOKEN",
+                models=("claude-opus-4.8",),
+                default_model="claude-opus-4.8",
+            ),
+        ),
+    )
+    created: list[tuple[str, str | None]] = []
+
+    def create_provider(
+        provider_config: object,
+        *,
+        credential_store: FileCredentialStore | None = None,
+        model: str | None = None,
+        thinking_level: str | None = None,
+        llm_observer: object | None = None,
+    ) -> SwitchableFakeProvider:
+        del credential_store, thinking_level, llm_observer
+        created.append((provider_config.name, model))  # type: ignore[attr-defined]
+        return SwitchableFakeProvider(provider_config)
+
+    monkeypatch.setattr(coding_session_module, "create_model_provider", create_provider)
+    second_storage = JsonlSessionStorage(second_record.path)
+    await second_storage.append(SessionInfoEntry(cwd=str(second_record.cwd)))
+    await second_storage.append(ModelChangeEntry(model="claude-opus-4.8"))
+    session = await CodingSession.load(
+        CodingSessionConfig(
+            provider=FakeProvider([]),
+            model="gpt-5.5",
+            system="You are Tau.",
+            storage=JsonlSessionStorage(first_record.path),
+            cwd=first_record.cwd,
+            session_id=first_record.id,
+            session_manager=manager,
+            provider_name="openai-codex",
+            provider_settings=settings,
+            runtime_provider_config=settings.get_provider("openai-codex"),
+        )
+    )
+    created.clear()
+
+    await session.resume(second_record.id)
+
+    assert session.provider_name == "github-copilot"
+    assert session.model == "claude-opus-4.8"
+    assert created == [("github-copilot", "claude-opus-4.8")]
+
+
+@pytest.mark.anyio
 async def test_session_context_usage_recalculates_after_resume(tmp_path: Path) -> None:
     manager = SessionManager(TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents"))
     first_record = manager.create_session(cwd=tmp_path / "first", model="fake", title="First")
