@@ -762,6 +762,11 @@ class CodingSession:
         self._owned_providers.append(provider)
         self._harness.config.provider = provider
         self._provider_name = provider_config.name
+        self._diagnostic_logger.log_runtime_provider(
+            context=self._diagnostic_context(),
+            phase="set_provider_runtime",
+            provider=provider,
+        )
         self._runtime_provider_config = provider_config
         self._harness.config.model = model
         self._thinking_level = thinking_level
@@ -864,6 +869,11 @@ class CodingSession:
         self._owned_providers.append(provider)
         self._harness.config.provider = provider
         self._runtime_provider_config = provider_config
+        self._diagnostic_logger.log_runtime_provider(
+            context=self._diagnostic_context(),
+            phase="refresh_runtime_provider",
+            provider=provider,
+        )
 
     def reload(self) -> CodingReloadSummary:
         """Reload local coding resources and project context for future turns."""

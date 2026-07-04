@@ -57,6 +57,28 @@ class AgentCallDiagnosticLogger:
         self._append(entry)
         return self.path
 
+    def log_runtime_provider(
+        self,
+        *,
+        context: AgentCallDiagnosticContext,
+        phase: str,
+        provider: object,
+    ) -> Path:
+        """Log the concrete runtime provider object selected for a session phase."""
+        entry = _base_entry(context, phase=phase, kind="runtime_provider")
+        provider_type = type(provider)
+        entry["runtime_provider"] = {
+            "class": provider_type.__qualname__,
+            "module": provider_type.__module__,
+        }
+        inner = getattr(provider, "_inner", None)
+        if inner is not None:
+            inner_type = type(inner)
+            entry["runtime_provider"]["inner_class"] = inner_type.__qualname__
+            entry["runtime_provider"]["inner_module"] = inner_type.__module__
+        self._append(entry)
+        return self.path
+
     def log_error_event(
         self,
         *,
