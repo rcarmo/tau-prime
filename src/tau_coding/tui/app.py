@@ -1958,7 +1958,6 @@ class TauTuiApp(App[None]):
         self._completion_visible_line_budget = None
         self._completion_state = self._build_completion_state(event.text_area.text)
         self._refresh_completions()
-        self._scroll_transcript_to_bottom()
 
     async def action_submit_prompt(self) -> None:
         """Submit the current prompt text or slash command."""
