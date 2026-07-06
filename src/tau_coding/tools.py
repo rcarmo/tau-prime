@@ -30,6 +30,8 @@ from tau_agent.types import JSONValue
 DEFAULT_MAX_OUTPUT_BYTES = 50 * 1024
 DEFAULT_MAX_OUTPUT_LINES = 2_000
 MAX_EDIT_PATCH_SOURCE_CHARS = 512 * 1024
+STREAMING_EDIT_MIN_BYTES = 512 * 1024
+STREAMING_EDIT_CHUNK_BYTES = 64 * 1024
 SUPPORTED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 UTF8_BOM = "\ufeff"
 
@@ -362,18 +364,35 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
             raise ToolInputError(f"Could not edit file: {path}. Path is a directory.")
 
         async with _file_lock(path):
-            raw_content = await _read_text(path)
-            bom, content = _strip_bom(raw_content)
-            original_ending = detect_line_ending(content)
-            normalized = normalize_to_lf(content)
-            base_content, new_content = apply_edits_to_normalized_content(
-                normalized, edits, str(path)
-            )
-            final_content = bom + restore_line_endings(new_content, original_ending)
-            await _write_text(path, final_content)
+            streaming_result = await _try_streaming_edit(path, edits)
+            if streaming_result is None:
+                raw_content = await _read_text(path)
+                bom, content = _strip_bom(raw_content)
+                original_ending = detect_line_ending(content)
+                normalized = normalize_to_lf(content)
+                base_content, new_content, edit_spans = apply_edits_to_normalized_content(
+                    normalized, edits, str(path)
+                )
+                final_content = bom + restore_line_endings(new_content, original_ending)
+                await _write_text(path, final_content)
 
-        patch = generate_unified_patch(str(path), base_content, new_content)
-        diff_text, first_changed_line = generate_diff_string(base_content, new_content, patch=patch)
+                first_changed_line = _line_number_at_offset(base_content, edit_spans[0][0])
+                patch = generate_unified_patch(
+                    str(path),
+                    base_content,
+                    new_content,
+                    first_changed_line=first_changed_line,
+                )
+                diff_text, first_changed_line = generate_diff_string(
+                    base_content,
+                    new_content,
+                    patch=patch,
+                    first_changed_line=first_changed_line,
+                )
+            else:
+                first_changed_line = streaming_result["first_changed_line"]
+                patch = streaming_result["patch"]
+                diff_text = patch
         return AgentToolResult(
             tool_call_id="",
             name="edit",
@@ -1118,11 +1137,150 @@ def restore_line_endings(text: str, ending: str) -> str:
     return text.replace("\n", "\r\n") if ending == "\r\n" else text
 
 
+async def _try_streaming_edit(
+    path: Path,
+    edits: list[dict[str, str]],
+) -> dict[str, JSONValue] | None:
+    """Apply a simple large-file edit with bounded memory.
+
+    This is intentionally conservative: it handles the common large-file case of
+    one exact replacement whose texts are UTF-8 encodable and do not require the
+    LF-normalization compatibility path. Validation still happens before writing:
+    a first streaming pass counts matches and finds the first changed line, then a
+    second pass writes to a temporary file and atomically replaces the original.
+    """
+    if len(edits) != 1:
+        return None
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return None
+    if size < STREAMING_EDIT_MIN_BYTES:
+        return None
+
+    old_text = edits[0]["oldText"]
+    new_text = edits[0]["newText"]
+    if not old_text:
+        raise ToolInputError(_empty_old_text_error(str(path), 0, 1))
+    if "\r" in old_text or "\r" in new_text:
+        return None
+    old_bytes = old_text.encode("utf-8")
+    new_bytes = new_text.encode("utf-8")
+    if not old_bytes:
+        raise ToolInputError(_empty_old_text_error(str(path), 0, 1))
+
+    count, first_offset = await asyncio.to_thread(_count_streaming_matches, path, old_bytes)
+    if count == 0:
+        raise ToolInputError(_not_found_error(str(path), 0, 1))
+    if count > 1:
+        raise ToolInputError(_duplicate_error(str(path), 0, 1, count))
+    if old_bytes == new_bytes:
+        raise ToolInputError(_no_change_error(str(path), 1))
+
+    await asyncio.to_thread(_stream_replace_file, path, old_bytes, new_bytes)
+    first_changed_line = await asyncio.to_thread(_line_number_for_byte_offset, path, first_offset)
+    patch = (
+        f"Patch omitted for large streaming edit near line {first_changed_line}: "
+        f"processed {size:,} bytes with bounded memory."
+    )
+    return {"patch": patch, "first_changed_line": first_changed_line}
+
+
+def _count_streaming_matches(path: Path, needle: bytes) -> tuple[int, int]:
+    overlap = max(len(needle) - 1, 0)
+    tail = b""
+    count = 0
+    first_offset = -1
+    processed = 0
+    with path.open("rb") as handle:
+        while chunk := handle.read(STREAMING_EDIT_CHUNK_BYTES):
+            data = tail + chunk
+            search_start = 0
+            safe_end = len(data) if not overlap else max(0, len(data) - overlap)
+            while True:
+                index = data.find(needle, search_start)
+                if index < 0 or index >= safe_end:
+                    break
+                absolute = processed - len(tail) + index
+                if first_offset < 0:
+                    first_offset = absolute
+                count += 1
+                search_start = index + 1
+            processed += len(chunk)
+            tail = data[-overlap:] if overlap else b""
+    if tail:
+        search_start = 0
+        while True:
+            index = tail.find(needle, search_start)
+            if index < 0:
+                break
+            absolute = processed - len(tail) + index
+            if first_offset < 0:
+                first_offset = absolute
+            count += 1
+            search_start = index + 1
+    return count, first_offset
+
+
+def _stream_replace_file(path: Path, old_bytes: bytes, new_bytes: bytes) -> None:
+    overlap = max(len(old_bytes) - 1, 0)
+    replaced = False
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    tmp_path = Path(tmp_name)
+    try:
+        with path.open("rb") as source, os.fdopen(fd, "wb") as target:
+            tail = b""
+            while chunk := source.read(STREAMING_EDIT_CHUNK_BYTES):
+                data = tail + chunk
+                if not replaced:
+                    index = data.find(old_bytes)
+                    if index >= 0:
+                        target.write(data[:index])
+                        target.write(new_bytes)
+                        target.write(data[index + len(old_bytes) :])
+                        replaced = True
+                        tail = b""
+                        continue
+                safe_end = len(data) if not overlap else max(0, len(data) - overlap)
+                target.write(data[:safe_end])
+                tail = data[safe_end:]
+            if tail:
+                if not replaced:
+                    index = tail.find(old_bytes)
+                    if index >= 0:
+                        target.write(tail[:index])
+                        target.write(new_bytes)
+                        target.write(tail[index + len(old_bytes) :])
+                        replaced = True
+                    else:
+                        target.write(tail)
+                else:
+                    target.write(tail)
+        os.replace(tmp_path, path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def _line_number_for_byte_offset(path: Path, byte_offset: int) -> int:
+    remaining = max(0, byte_offset)
+    line = 1
+    with path.open("rb") as handle:
+        while remaining > 0:
+            chunk = handle.read(min(STREAMING_EDIT_CHUNK_BYTES, remaining))
+            if not chunk:
+                break
+            line += chunk.count(b"\n")
+            remaining -= len(chunk)
+    return line
+
+
+
 def apply_edits_to_normalized_content(
     normalized_content: str,
     edits: list[dict[str, str]],
     path: str,
-) -> tuple[str, str]:
+) -> tuple[str, str, list[tuple[int, int, str]]]:
     normalized_edits = [
         {"oldText": normalize_to_lf(edit["oldText"]), "newText": normalize_to_lf(edit["newText"])}
         for edit in edits
@@ -1142,10 +1300,11 @@ def apply_edits_to_normalized_content(
         matches.append((start, start + len(old_text), edit["newText"]))
 
     _validate_non_overlapping(matches)
-    new_content = _apply_replacements(normalized_content, sorted(matches))
+    sorted_matches = sorted(matches)
+    new_content = _apply_replacements(normalized_content, sorted_matches)
     if new_content == normalized_content:
         raise ToolInputError(_no_change_error(path, len(normalized_edits)))
-    return normalized_content, new_content
+    return normalized_content, new_content, sorted_matches
 
 
 def _apply_replacements(content: str, matches: list[tuple[int, int, str]]) -> str:
@@ -1159,7 +1318,13 @@ def _apply_replacements(content: str, matches: list[tuple[int, int, str]]) -> st
     return "".join(pieces)
 
 
-def generate_diff_string(old: str, new: str, *, patch: str | None = None) -> tuple[str, int | None]:
+def generate_diff_string(
+    old: str,
+    new: str,
+    *,
+    patch: str | None = None,
+    first_changed_line: int | None = None,
+) -> tuple[str, int | None]:
     """Return a compact diagnostic diff and the first changed line.
 
     Older versions used ``difflib.ndiff`` across the whole file, which can produce
@@ -1167,26 +1332,22 @@ def generate_diff_string(old: str, new: str, *, patch: str | None = None) -> tup
     large files. The TUI already displays the unified patch, so reuse that compact
     patch as the diagnostic diff and compute the first changed line cheaply.
     """
-    return patch if patch is not None else generate_unified_patch("before", old, new), _first_changed_line(
-        old, new
-    )
+    return patch if patch is not None else generate_unified_patch("before", old, new), first_changed_line
 
 
-def _first_changed_line(old: str, new: str) -> int | None:
-    old_lines = old.splitlines()
-    new_lines = new.splitlines()
-    for index, (old_line, new_line) in enumerate(zip(old_lines, new_lines), start=1):
-        if old_line != new_line:
-            return index
-    if len(old_lines) != len(new_lines):
-        return min(len(old_lines), len(new_lines)) + 1
-    return None
+def _line_number_at_offset(content: str, offset: int) -> int:
+    return content.count("\n", 0, max(0, offset)) + 1
 
 
-def generate_unified_patch(path: str, old: str, new: str) -> str:
+def generate_unified_patch(
+    path: str,
+    old: str,
+    new: str,
+    *,
+    first_changed_line: int | None = None,
+) -> str:
     source_chars = len(old) + len(new)
     if source_chars > MAX_EDIT_PATCH_SOURCE_CHARS:
-        first_changed_line = _first_changed_line(old, new)
         line_hint = f" near line {first_changed_line}" if first_changed_line is not None else ""
         return (
             f"Patch omitted for large file{line_hint}: generating a full diff would require "

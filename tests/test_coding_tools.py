@@ -160,9 +160,54 @@ async def test_edit_tool_requires_unique_matches(tmp_path: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_edit_tool_streams_large_single_replacement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("tau_coding.tools.STREAMING_EDIT_MIN_BYTES", 1)
+    path = tmp_path / "file.txt"
+    path.write_text("line 1\nline 2\nTARGET old\nline 4\nline 5\n")
+    tool = create_edit_tool(cwd=tmp_path)
+
+    result = await tool.execute(
+        {
+            "path": "file.txt",
+            "edits": [{"oldText": "TARGET old", "newText": "TARGET new"}],
+        }
+    )
+
+    assert path.read_text() == "line 1\nline 2\nTARGET new\nline 4\nline 5\n"
+    assert result.data is not None
+    assert result.data["first_changed_line"] == 3
+    assert result.data["patch"].startswith("Patch omitted for large streaming edit near line 3")
+    assert result.data["diff"] == result.data["patch"]
+
+
+@pytest.mark.anyio
+async def test_edit_tool_streaming_replacement_crosses_chunk_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("tau_coding.tools.STREAMING_EDIT_MIN_BYTES", 1)
+    monkeypatch.setattr("tau_coding.tools.STREAMING_EDIT_CHUNK_BYTES", 8)
+    path = tmp_path / "file.txt"
+    path.write_text("aaaaaaTARGET oldbbbbbb")
+    tool = create_edit_tool(cwd=tmp_path)
+
+    result = await tool.execute(
+        {
+            "path": "file.txt",
+            "edits": [{"oldText": "TARGET old", "newText": "TARGET new"}],
+        }
+    )
+
+    assert result.ok is True
+    assert path.read_text() == "aaaaaaTARGET newbbbbbb"
+
+
+@pytest.mark.anyio
 async def test_edit_tool_omits_expensive_patch_for_large_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr("tau_coding.tools.STREAMING_EDIT_MIN_BYTES", 10_000)
     monkeypatch.setattr("tau_coding.tools.MAX_EDIT_PATCH_SOURCE_CHARS", 60)
     path = tmp_path / "file.txt"
     path.write_text("line 1\nline 2\nTARGET old\nline 4\nline 5\n")
