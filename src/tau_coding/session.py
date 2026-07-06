@@ -845,6 +845,13 @@ class CodingSession:
             current=self._thinking_level,
         )
 
+    def _validate_provider_model(self, provider_name: str, model: str) -> None:
+        if self._provider_settings is None:
+            return
+        provider = self._provider_settings.get_provider(provider_name)
+        if model not in provider.models:
+            raise ProviderConfigError(f"Model is not configured: {provider_name}:{model}")
+
     def _persist_default_model_choice(self) -> None:
         if self._provider_settings is None:
             return
@@ -987,6 +994,7 @@ class CodingSession:
                 provider_name = inferred.name
                 runtime_provider_config = inferred
 
+        self._validate_provider_model(provider_name, restored_model)
         replacement = await type(self).load(
             CodingSessionConfig(
                 provider=self._harness.config.provider,
