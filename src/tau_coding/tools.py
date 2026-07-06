@@ -29,6 +29,7 @@ from tau_agent.types import JSONValue
 
 DEFAULT_MAX_OUTPUT_BYTES = 50 * 1024
 DEFAULT_MAX_OUTPUT_LINES = 2_000
+MAX_EDIT_PATCH_SOURCE_CHARS = 512 * 1024
 SUPPORTED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 UTF8_BOM = "\ufeff"
 
@@ -371,8 +372,8 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
             final_content = bom + restore_line_endings(new_content, original_ending)
             await _write_text(path, final_content)
 
-        diff_text, first_changed_line = generate_diff_string(base_content, new_content)
         patch = generate_unified_patch(str(path), base_content, new_content)
+        diff_text, first_changed_line = generate_diff_string(base_content, new_content, patch=patch)
         return AgentToolResult(
             tool_call_id="",
             name="edit",
@@ -1133,42 +1134,64 @@ def apply_edits_to_normalized_content(
     matches: list[tuple[int, int, str]] = []
     for index, edit in enumerate(normalized_edits):
         old_text = edit["oldText"]
-        occurrences = _count_occurrences(normalized_content, old_text)
-        if occurrences == 0:
+        start = normalized_content.find(old_text)
+        if start < 0:
             raise ToolInputError(_not_found_error(path, index, len(normalized_edits)))
-        if occurrences > 1:
-            raise ToolInputError(_duplicate_error(path, index, len(normalized_edits), occurrences))
-        start = normalized_content.index(old_text)
+        if normalized_content.find(old_text, start + 1) >= 0:
+            raise ToolInputError(_duplicate_error(path, index, len(normalized_edits), 2))
         matches.append((start, start + len(old_text), edit["newText"]))
 
     _validate_non_overlapping(matches)
-    new_content = normalized_content
-    for start, end, new_text in sorted(matches, reverse=True):
-        new_content = f"{new_content[:start]}{new_text}{new_content[end:]}"
+    new_content = _apply_replacements(normalized_content, sorted(matches))
     if new_content == normalized_content:
         raise ToolInputError(_no_change_error(path, len(normalized_edits)))
     return normalized_content, new_content
 
 
-def generate_diff_string(old: str, new: str) -> tuple[str, int | None]:
+def _apply_replacements(content: str, matches: list[tuple[int, int, str]]) -> str:
+    pieces: list[str] = []
+    cursor = 0
+    for start, end, new_text in matches:
+        pieces.append(content[cursor:start])
+        pieces.append(new_text)
+        cursor = end
+    pieces.append(content[cursor:])
+    return "".join(pieces)
+
+
+def generate_diff_string(old: str, new: str, *, patch: str | None = None) -> tuple[str, int | None]:
+    """Return a compact diagnostic diff and the first changed line.
+
+    Older versions used ``difflib.ndiff`` across the whole file, which can produce
+    a very large hidden payload and high transient memory use for small edits in
+    large files. The TUI already displays the unified patch, so reuse that compact
+    patch as the diagnostic diff and compute the first changed line cheaply.
+    """
+    return patch if patch is not None else generate_unified_patch("before", old, new), _first_changed_line(
+        old, new
+    )
+
+
+def _first_changed_line(old: str, new: str) -> int | None:
     old_lines = old.splitlines()
     new_lines = new.splitlines()
-    diff = "\n".join(difflib.ndiff(old_lines, new_lines))
-    first_changed_line: int | None = None
-    new_line_number = 0
-    for line in difflib.ndiff(old_lines, new_lines):
-        if line.startswith("  "):
-            new_line_number += 1
-        elif line.startswith("+"):
-            new_line_number += 1
-            if first_changed_line is None:
-                first_changed_line = new_line_number
-        elif line.startswith("-") and first_changed_line is None:
-            first_changed_line = max(new_line_number + 1, 1)
-    return diff, first_changed_line
+    for index, (old_line, new_line) in enumerate(zip(old_lines, new_lines), start=1):
+        if old_line != new_line:
+            return index
+    if len(old_lines) != len(new_lines):
+        return min(len(old_lines), len(new_lines)) + 1
+    return None
 
 
 def generate_unified_patch(path: str, old: str, new: str) -> str:
+    source_chars = len(old) + len(new)
+    if source_chars > MAX_EDIT_PATCH_SOURCE_CHARS:
+        first_changed_line = _first_changed_line(old, new)
+        line_hint = f" near line {first_changed_line}" if first_changed_line is not None else ""
+        return (
+            f"Patch omitted for large file{line_hint}: generating a full diff would require "
+            f"processing {source_chars:,} characters."
+        )
     return "".join(
         difflib.unified_diff(
             old.splitlines(keepends=True),
@@ -1305,17 +1328,6 @@ def _validate_non_overlapping(spans: list[tuple[int, int, str]]) -> None:
         if start < previous_end:
             raise ToolInputError("Edits must not overlap")
         previous_end = end
-
-
-def _count_occurrences(content: str, text: str) -> int:
-    count = 0
-    start = 0
-    while True:
-        index = content.find(text, start)
-        if index == -1:
-            return count
-        count += 1
-        start = index + len(text)
 
 
 def _strip_bom(content: str) -> tuple[str, str]:
