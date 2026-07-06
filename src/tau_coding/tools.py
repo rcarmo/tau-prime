@@ -10,7 +10,6 @@ filesystem/shell behavior outside the reusable `tau_agent` package.
 from __future__ import annotations
 
 import asyncio
-import difflib
 import importlib.util
 import json
 import mimetypes
@@ -29,7 +28,6 @@ from tau_agent.types import JSONValue
 
 DEFAULT_MAX_OUTPUT_BYTES = 50 * 1024
 DEFAULT_MAX_OUTPUT_LINES = 2_000
-MAX_EDIT_PATCH_SOURCE_CHARS = 512 * 1024
 STREAMING_EDIT_MIN_BYTES = 512 * 1024
 STREAMING_EDIT_CHUNK_BYTES = 64 * 1024
 SUPPORTED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -377,22 +375,8 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
                 await _write_text(path, final_content)
 
                 first_changed_line = _line_number_at_offset(base_content, edit_spans[0][0])
-                patch = generate_unified_patch(
-                    str(path),
-                    base_content,
-                    new_content,
-                    first_changed_line=first_changed_line,
-                )
-                diff_text, first_changed_line = generate_diff_string(
-                    base_content,
-                    new_content,
-                    patch=patch,
-                    first_changed_line=first_changed_line,
-                )
             else:
                 first_changed_line = streaming_result["first_changed_line"]
-                patch = streaming_result["patch"]
-                diff_text = patch
         return AgentToolResult(
             tool_call_id="",
             name="edit",
@@ -401,8 +385,6 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
             data={
                 "path": str(path),
                 "edits": len(edits),
-                "diff": diff_text,
-                "patch": patch,
                 "first_changed_line": first_changed_line,
             },
         )
@@ -1179,11 +1161,7 @@ async def _try_streaming_edit(
 
     await asyncio.to_thread(_stream_replace_file, path, old_bytes, new_bytes)
     first_changed_line = await asyncio.to_thread(_line_number_for_byte_offset, path, first_offset)
-    patch = (
-        f"Patch omitted for large streaming edit near line {first_changed_line}: "
-        f"processed {size:,} bytes with bounded memory."
-    )
-    return {"patch": patch, "first_changed_line": first_changed_line}
+    return {"first_changed_line": first_changed_line}
 
 
 def _count_streaming_matches(path: Path, needle: bytes) -> tuple[int, int]:
@@ -1318,50 +1296,8 @@ def _apply_replacements(content: str, matches: list[tuple[int, int, str]]) -> st
     return "".join(pieces)
 
 
-def generate_diff_string(
-    old: str,
-    new: str,
-    *,
-    patch: str | None = None,
-    first_changed_line: int | None = None,
-) -> tuple[str, int | None]:
-    """Return a compact diagnostic diff and the first changed line.
-
-    Older versions used ``difflib.ndiff`` across the whole file, which can produce
-    a very large hidden payload and high transient memory use for small edits in
-    large files. The TUI already displays the unified patch, so reuse that compact
-    patch as the diagnostic diff and compute the first changed line cheaply.
-    """
-    return patch if patch is not None else generate_unified_patch("before", old, new), first_changed_line
-
-
 def _line_number_at_offset(content: str, offset: int) -> int:
     return content.count("\n", 0, max(0, offset)) + 1
-
-
-def generate_unified_patch(
-    path: str,
-    old: str,
-    new: str,
-    *,
-    first_changed_line: int | None = None,
-) -> str:
-    source_chars = len(old) + len(new)
-    if source_chars > MAX_EDIT_PATCH_SOURCE_CHARS:
-        line_hint = f" near line {first_changed_line}" if first_changed_line is not None else ""
-        return (
-            f"Patch omitted for large file{line_hint}: generating a full diff would require "
-            f"processing {source_chars:,} characters."
-        )
-    return "".join(
-        difflib.unified_diff(
-            old.splitlines(keepends=True),
-            new.splitlines(keepends=True),
-            fromfile=path,
-            tofile=path,
-        )
-    )
-
 
 def _truncation_result(
     content: str,

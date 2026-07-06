@@ -176,10 +176,11 @@ async def test_edit_tool_streams_large_single_replacement(
     )
 
     assert path.read_text() == "line 1\nline 2\nTARGET new\nline 4\nline 5\n"
-    assert result.data is not None
-    assert result.data["first_changed_line"] == 3
-    assert result.data["patch"].startswith("Patch omitted for large streaming edit near line 3")
-    assert result.data["diff"] == result.data["patch"]
+    assert result.data == {
+        "path": str(path),
+        "edits": 1,
+        "first_changed_line": 3,
+    }
 
 
 @pytest.mark.anyio
@@ -204,11 +205,7 @@ async def test_edit_tool_streaming_replacement_crosses_chunk_boundary(
 
 
 @pytest.mark.anyio
-async def test_edit_tool_omits_expensive_patch_for_large_files(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr("tau_coding.tools.STREAMING_EDIT_MIN_BYTES", 10_000)
-    monkeypatch.setattr("tau_coding.tools.MAX_EDIT_PATCH_SOURCE_CHARS", 60)
+async def test_edit_tool_keeps_structured_result_data_small(tmp_path: Path) -> None:
     path = tmp_path / "file.txt"
     path.write_text("line 1\nline 2\nTARGET old\nline 4\nline 5\n")
     tool = create_edit_tool(cwd=tmp_path)
@@ -221,10 +218,13 @@ async def test_edit_tool_omits_expensive_patch_for_large_files(
     )
 
     assert path.read_text() == "line 1\nline 2\nTARGET new\nline 4\nline 5\n"
-    assert result.data is not None
-    assert result.data["first_changed_line"] == 3
-    assert result.data["patch"].startswith("Patch omitted for large file near line 3")
-    assert result.data["diff"] == result.data["patch"]
+    assert result.content == f"Successfully replaced 1 block(s) in {path}."
+    assert result.data == {
+        "path": str(path),
+        "edits": 1,
+        "first_changed_line": 3,
+    }
+    assert result.details is None
 
 
 @pytest.mark.anyio
