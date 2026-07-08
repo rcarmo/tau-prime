@@ -61,6 +61,17 @@ def test_tui_adapter_builds_user_items_from_streamed_messages() -> None:
     assert [(item.role, item.text) for item in state.items] == [("user", "Hello Tau")]
 
 
+def test_tui_state_ignores_blank_transcript_items() -> None:
+    state = TuiState()
+
+    state.add_item("user", "")
+    state.add_item("assistant", "   \n")
+    state.add_item("status", "\t")
+    state.add_item("assistant", "real text")
+
+    assert [(item.role, item.text) for item in state.items] == [("assistant", "real text")]
+
+
 def test_tui_adapter_compacts_streamed_skill_invocations() -> None:
     state = TuiState()
     adapter = TuiEventAdapter(state)

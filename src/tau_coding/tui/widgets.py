@@ -510,6 +510,8 @@ class TranscriptView(VerticalScroll):
         scroll_end: bool = False,
     ) -> None:
         """Append streamed assistant text to the active message widget."""
+        if not delta.strip() and self._active_assistant_widget is None:
+            return
         self._active_thinking_widget = None
         self._hidden_thinking_placeholder_visible = False
         should_follow = self._should_follow_output if not scroll_end else True
@@ -564,7 +566,7 @@ class TranscriptView(VerticalScroll):
         widget = self._active_assistant_widget
         should_follow = self._should_follow_output if not scroll_end else True
         if widget is None:
-            if text:
+            if text is not None and text.strip():
                 await self.append_item(
                     ChatItem(role="assistant", text=text),
                     theme=self._render_theme,
@@ -573,6 +575,8 @@ class TranscriptView(VerticalScroll):
             return
         if text is not None:
             await widget.replace_text(text)
+        if not widget.selection_text.strip():
+            await widget.remove()
         self._active_assistant_widget = None
         if should_follow:
             self._request_follow_scroll(force=scroll_end)

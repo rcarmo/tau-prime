@@ -64,6 +64,8 @@ class TuiState:
         always_show_tool_result: bool = False,
     ) -> None:
         """Append a transcript item."""
+        if not text.strip() and tool_result_text is None:
+            return
         self.items.append(
             ChatItem(
                 role=role,

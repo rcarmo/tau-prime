@@ -1135,6 +1135,52 @@ async def test_transcript_ignores_empty_live_thinking_deltas() -> None:
 
 
 @pytest.mark.anyio
+async def test_transcript_ignores_empty_live_assistant_deltas() -> None:
+    app = TauTuiApp(FakeSession(messages=[]))
+
+    async with app.run_test(size=(80, 24)) as pilot:
+        transcript = app.query_one("#transcript", TranscriptView)
+        await transcript.append_assistant_delta(
+            "",
+            theme=app.tui_settings.resolved_theme,
+        )
+        await transcript.append_assistant_delta(
+            "   \n",
+            theme=app.tui_settings.resolved_theme,
+        )
+        await transcript.finish_assistant_message("", scroll_end=True)
+        await pilot.pause()
+
+        widgets = [
+            child
+            for child in transcript.children
+            if isinstance(child, TranscriptMessageWidget | StreamingTranscriptMessageWidget)
+        ]
+        assert widgets == []
+
+
+@pytest.mark.anyio
+async def test_transcript_removes_whitespace_only_active_assistant_message() -> None:
+    app = TauTuiApp(FakeSession(messages=[]))
+
+    async with app.run_test(size=(80, 24)) as pilot:
+        transcript = app.query_one("#transcript", TranscriptView)
+        await transcript.append_assistant_delta(
+            "hello",
+            theme=app.tui_settings.resolved_theme,
+        )
+        await transcript.finish_assistant_message("   \n", scroll_end=True)
+        await pilot.pause()
+
+        widgets = [
+            child
+            for child in transcript.children
+            if isinstance(child, TranscriptMessageWidget | StreamingTranscriptMessageWidget)
+        ]
+        assert widgets == []
+
+
+@pytest.mark.anyio
 async def test_streaming_transcript_deltas_do_not_force_scroll_end_during_scrollback() -> None:
     app = TauTuiApp(
         FakeSession(
