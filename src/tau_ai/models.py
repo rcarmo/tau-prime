@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 
 from tau_ai.env import OpenAICompatibleConfig
+from tau_ai.http import create_async_client
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +50,7 @@ async def list_openai_compatible_models(
     url = f"{config.base_url.rstrip('/')}/models"
 
     owns_client = client is None
-    http_client = client or httpx.AsyncClient(timeout=config.timeout_seconds)
+    http_client = client or create_async_client(timeout=config.timeout_seconds)
     try:
         response = await http_client.get(url, headers=headers, params=params)
         response.raise_for_status()

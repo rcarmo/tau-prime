@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
 
+from tau_ai.http import create_async_client
 from tau_coding.credentials import OAuthCredential
 
 GITHUB_COPILOT_OAUTH_PROVIDER = "github-copilot"
@@ -344,7 +345,7 @@ async def _post_openai_codex_token(
     action: str,
 ) -> dict[str, Any]:
     owns_client = client is None
-    active_client = client or httpx.AsyncClient(timeout=60)
+    active_client = client or create_async_client(timeout=60)
     try:
         response = await active_client.post(
             OPENAI_CODEX_TOKEN_URL,
@@ -551,7 +552,7 @@ async def login_github_copilot(
     domain = enterprise_domain or "github.com"
 
     owns_client = client is None
-    http_client = client or httpx.AsyncClient(timeout=30)
+    http_client = client or create_async_client(timeout=30)
     try:
         device = await start_github_copilot_device_flow(domain, client=http_client)
         on_auth(
@@ -585,7 +586,7 @@ async def start_github_copilot_device_flow(
 ) -> GitHubCopilotDeviceFlow:
     """Start GitHub's device-code OAuth flow for Copilot."""
     owns_client = client is None
-    http_client = client or httpx.AsyncClient(timeout=30)
+    http_client = client or create_async_client(timeout=30)
     try:
         response = await http_client.post(
             f"https://{domain}/login/device/code",
@@ -618,7 +619,7 @@ async def poll_github_copilot_device_flow(
 ) -> str:
     """Poll GitHub's device-code endpoint until the GitHub token is available."""
     owns_client = client is None
-    http_client = client or httpx.AsyncClient(timeout=30)
+    http_client = client or create_async_client(timeout=30)
     interval = max(device.interval, 5)
     deadline = time.monotonic() + device.expires_in
     try:
@@ -666,7 +667,7 @@ async def refresh_github_copilot_token(
     """Exchange a GitHub OAuth token for a short-lived Copilot API token."""
     domain = enterprise_domain or "github.com"
     owns_client = client is None
-    http_client = client or httpx.AsyncClient(timeout=30)
+    http_client = client or create_async_client(timeout=30)
     try:
         response = await http_client.get(
             f"https://api.{domain}/copilot_internal/v2/token",
