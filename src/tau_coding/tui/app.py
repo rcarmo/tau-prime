@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from textual.binding import Binding, BindingsMap
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.events import Key, Resize
+from textual.geometry import Size
 from textual.screen import ModalScreen
 from textual.timer import Timer
 from textual.widgets import (
@@ -1872,6 +1874,8 @@ class TauTuiApp(App[None]):
         self._completion_state = CompletionState()
         self._activity_frame = 0
         self._activity_timer: Timer | None = None
+        self._terminal_resize_timer: Timer | None = None
+        self._last_polled_terminal_size: tuple[int, int] | None = None
         self._last_responsive_size: tuple[int, int] | None = None
         self._last_hide_sidebar: bool | None = None
         self._active_notification_keys: set[tuple[str, str]] = set()
@@ -1942,14 +1946,23 @@ class TauTuiApp(App[None]):
         self._refresh_completions()
         if self.startup_message:
             self._notify(self.startup_message, severity="warning")
+        self._last_polled_terminal_size = (self.size.width, self.size.height)
+        self._terminal_resize_timer = self.set_interval(
+            0.5,
+            self._poll_terminal_size,
+            name="terminal-resize-fallback",
+        )
         if self.initial_prompt and self.initial_prompt.strip():
             self._submit_prompt(self.initial_prompt.strip())
 
     def on_unmount(self) -> None:
-        """Stop the activity timer when the app is torn down."""
+        """Stop timers when the app is torn down."""
         if self._activity_timer is not None:
             self._activity_timer.stop()
             self._activity_timer = None
+        if self._terminal_resize_timer is not None:
+            self._terminal_resize_timer.stop()
+            self._terminal_resize_timer = None
 
     def on_resize(self, event: Resize) -> None:
         """Update responsive chrome and transcript layout when the terminal changes size."""
@@ -1957,7 +1970,31 @@ class TauTuiApp(App[None]):
         if size == self._last_responsive_size:
             return
         self._last_responsive_size = size
+        self._last_polled_terminal_size = size
         self._handle_terminal_resize(event.size.width, event.size.height)
+
+    def _poll_terminal_size(self) -> None:
+        """Detect terminal size changes when the terminal does not emit Resize events."""
+        terminal_size = shutil.get_terminal_size(fallback=(self.size.width, self.size.height))
+        size = (terminal_size.columns, terminal_size.lines)
+        if size == self._last_polled_terminal_size:
+            return
+        self._last_polled_terminal_size = size
+        if size == self._last_responsive_size:
+            return
+        self._last_responsive_size = size
+        self._set_textual_terminal_size(*size)
+        self._handle_terminal_resize(*size)
+
+    def _set_textual_terminal_size(self, width: int, height: int) -> None:
+        """Update Textual's cached terminal dimensions after fallback polling."""
+        size = Size(width, height)
+        self._size = size
+        driver = getattr(self, "_driver", None)
+        if driver is not None:
+            driver._size = (width, height)
+        if self.screen_stack:
+            self.screen._size = size
 
     def _handle_terminal_resize(self, width: int, height: int) -> None:
         """Force Tau's mounted widgets to reconcile after a terminal resize."""

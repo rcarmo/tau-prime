@@ -1931,6 +1931,24 @@ async def test_tui_resize_same_size_is_idempotent(monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.anyio
+async def test_tui_polls_terminal_size_when_resize_event_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = TauTuiApp(FakeSession(), tui_settings=TuiSettings(show_sidebar=True))
+
+    async with app.run_test(size=(120, 30)):
+        monkeypatch.setattr(
+            "tau_coding.tui.app.shutil.get_terminal_size",
+            lambda fallback: __import__("os").terminal_size((80, 24)),
+        )
+        app._poll_terminal_size()
+
+        assert app.size.width == 80
+        assert app.size.height == 24
+        assert app._last_responsive_size == (80, 24)
+
+
+@pytest.mark.anyio
 async def test_tui_refreshes_layout_on_resize_without_sidebar_breakpoint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
