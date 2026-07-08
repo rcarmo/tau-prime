@@ -352,6 +352,11 @@ class _ToolCallBuilder:
         if isinstance(name, str):
             self.name = name
 
+    @property
+    def has_name(self) -> bool:
+        """Return whether this builder has enough metadata to execute a tool."""
+        return bool(self.name.strip())
+
     def build(self) -> ToolCall:
         """Build a complete Tau tool call."""
         arguments_text = "".join(self.arguments_parts)
@@ -595,8 +600,10 @@ async def _codex_provider_events(
                 arguments = item.get("arguments")
                 if isinstance(arguments, str):
                     tool_builder.set_arguments(arguments)
-                tool_call = tool_builder.build()
-                tool_calls.append(tool_call)
+                if tool_builder.has_name:
+                    tool_call = tool_builder.build()
+                    tool_calls.append(tool_call)
+                    yield ProviderToolCallEvent(tool_call=tool_call)
                 _untrack_tool_builder(
                     tool_builder,
                     active_tools=active_tools,
@@ -604,7 +611,6 @@ async def _codex_provider_events(
                     by_call_id=tools_by_call_id,
                     by_output_index=tools_by_output_index,
                 )
-                yield ProviderToolCallEvent(tool_call=tool_call)
             elif isinstance(item, Mapping) and item.get("type") == "message" and not content_parts:
                 text = _text_from_done_message(item)
                 if text:

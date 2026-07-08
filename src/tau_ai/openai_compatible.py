@@ -402,6 +402,7 @@ class _ChatStreamParser:
         tool_calls = [
             builder.build(index)
             for index, builder in sorted(self._tool_call_builders.items())
+            if builder.has_name
         ]
         events: list[ProviderEvent] = [
             ProviderToolCallEvent(tool_call=tool_call) for tool_call in tool_calls
@@ -510,6 +511,7 @@ class _ResponsesStreamParser:
         tool_calls = [
             builder.build(index)
             for index, builder in enumerate(_ordered_builders(self._tool_call_builders))
+            if builder.has_name
         ]
         events: list[ProviderEvent] = [
             ProviderToolCallEvent(tool_call=tool_call) for tool_call in tool_calls
@@ -550,6 +552,10 @@ class _ToolCallBuilder:
         arguments = function.get("arguments")
         if isinstance(arguments, str):
             self.arguments_parts.append(arguments)
+
+    @property
+    def has_name(self) -> bool:
+        return bool(self.name.strip())
 
     def build(self, index: int) -> ToolCall:
         arguments_text = "".join(self.arguments_parts)
@@ -600,6 +606,10 @@ class _ResponsesToolCallBuilder:
             self.arguments_final = arguments
         if output_index is not None:
             self.output_index = output_index
+
+    @property
+    def has_name(self) -> bool:
+        return bool(self.name.strip())
 
     def build(self, index: int) -> ToolCall:
         arguments_text = (

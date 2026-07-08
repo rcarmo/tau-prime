@@ -1292,6 +1292,43 @@ async def test_responses_api_parses_streamed_tool_call() -> None:
 
 
 @pytest.mark.anyio
+async def test_responses_api_ignores_orphan_function_argument_events() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"response.function_call_arguments.delta",'
+                '"item_id":"orphan","delta":"{\\"path\\":"}\n\n'
+                'data: {"type":"response.function_call_arguments.done",'
+                '"item_id":"orphan","arguments":"{\\"path\\":\\"README.md\\"}"}\n\n'
+                'data: {"type":"response.completed","response":{"status":"completed"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = OpenAICompatibleProvider(
+            OpenAICompatibleConfig(api_key="test-key", base_url="https://example.test/v1"),
+            client=client,
+        )
+
+        events = await _collect(
+            provider.stream_response(
+                model="gpt-5.5",
+                system="You are Tau.",
+                messages=[UserMessage(content="read")],
+                tools=[_weather_tool()],
+            )
+        )
+
+    assert not [event for event in events if isinstance(event, ProviderToolCallEvent)]
+    end = events[-1]
+    assert isinstance(end, ProviderResponseEndEvent)
+    assert end.message.tool_calls == []
+    assert end.finish_reason == "stop"
+
+
+@pytest.mark.anyio
 async def test_responses_api_streams_reasoning_summary_as_thinking() -> None:
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
