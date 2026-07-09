@@ -1,4 +1,5 @@
 from pathlib import Path
+from threading import get_ident
 
 import pytest
 
@@ -77,6 +78,26 @@ async def test_jsonl_storage_appends_and_reads_entries(tmp_path: Path) -> None:
     await storage.append(second)
 
     assert await storage.read_all() == [first, second]
+
+
+@pytest.mark.anyio
+async def test_jsonl_storage_dispatches_disk_io_off_event_loop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    event_loop_thread = get_ident()
+    worker_threads: list[int] = []
+    original_append = storage._append_sync
+
+    def recording_append(entry: MessageEntry) -> None:
+        worker_threads.append(get_ident())
+        original_append(entry)
+
+    monkeypatch.setattr(storage, "_append_sync", recording_append)
+    await storage.append(MessageEntry(message=UserMessage(content="Hi")))
+
+    assert worker_threads
+    assert worker_threads[0] != event_loop_thread
 
 
 @pytest.mark.anyio

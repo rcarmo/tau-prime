@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from json import dumps
 from time import time
@@ -9,6 +10,7 @@ import pytest
 from tau_coding.oauth import (
     OPENAI_CODEX_ACCOUNT_CLAIM,
     OPENAI_CODEX_CLIENT_ID,
+    _wait_for_authorization_code,
     account_id_from_access_token,
     create_openai_codex_authorization_flow,
     github_copilot_base_url,
@@ -36,6 +38,62 @@ def test_create_openai_codex_authorization_flow_includes_pkce_and_codex_params()
     assert params["state"] == [flow.state]
     assert params["code_challenge"][0]
     assert flow.verifier
+
+
+@pytest.mark.anyio
+async def test_authorization_code_wait_awaits_cancelled_pending_task() -> None:
+    flow = create_openai_codex_authorization_flow(originator="tau-test")
+    pending_finished = asyncio.Event()
+
+    class WaitingServer:
+        async def wait_for_code(self) -> str | None:
+            try:
+                await asyncio.Event().wait()
+            finally:
+                pending_finished.set()
+            return None
+
+        def cancel_wait(self) -> None:
+            return
+
+    async def manual_code() -> str:
+        return f"code-1#{flow.state}"
+
+    result = await _wait_for_authorization_code(
+        flow=flow,
+        server=WaitingServer(),  # type: ignore[arg-type]
+        on_manual_code_input=manual_code,
+    )
+
+    assert result == "code-1"
+    assert pending_finished.is_set()
+
+
+@pytest.mark.anyio
+async def test_authorization_code_wait_cleans_up_when_cancelled() -> None:
+    flow = create_openai_codex_authorization_flow(originator="tau-test")
+    pending_finished = asyncio.Event()
+
+    async def manual_code() -> str:
+        try:
+            await asyncio.Event().wait()
+        finally:
+            pending_finished.set()
+        return "unreachable"
+
+    task = asyncio.create_task(
+        _wait_for_authorization_code(
+            flow=flow,
+            server=None,
+            on_manual_code_input=manual_code,
+        )
+    )
+    await asyncio.sleep(0)
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert pending_finished.is_set()
 
 
 def test_parse_authorization_input_accepts_redirect_url_query_and_raw_code() -> None:

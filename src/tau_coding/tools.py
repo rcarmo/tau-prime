@@ -1362,7 +1362,7 @@ def _optional_int_arg(arguments: Mapping[str, JSONValue], name: str) -> int | No
     value = arguments.get(name)
     if value is None:
         return None
-    if not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, int):
         raise ToolInputError(f"{name} must be an integer")
     return value
 
@@ -1371,7 +1371,7 @@ def _optional_float_arg(arguments: Mapping[str, JSONValue], name: str) -> float 
     value = arguments.get(name)
     if value is None:
         return None
-    if not isinstance(value, int | float):
+    if isinstance(value, bool) or not isinstance(value, int | float):
         raise ToolInputError(f"{name} must be a number")
     return float(value)
 

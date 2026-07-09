@@ -16,6 +16,7 @@ from tau_coding import (
     create_read_tool_definition,
     create_write_tool,
 )
+from tau_coding.tools import ToolInputError
 
 
 class FakeCancellationToken:
@@ -79,6 +80,16 @@ async def test_read_tool_reads_file_with_offset_and_limit(tmp_path: Path) -> Non
     assert result.data is not None
     assert result.data["path"] == str(path)
     assert isinstance(result.data["truncation"], dict)
+
+
+@pytest.mark.anyio
+async def test_read_tool_rejects_boolean_numeric_arguments(tmp_path: Path) -> None:
+    path = tmp_path / "notes.txt"
+    path.write_text("one\ntwo\n")
+    tool = create_read_tool(cwd=tmp_path)
+
+    with pytest.raises(ToolInputError, match="offset must be an integer"):
+        await tool.execute({"path": "notes.txt", "offset": True})
 
 
 @pytest.mark.anyio

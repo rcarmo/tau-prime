@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -227,6 +228,7 @@ class CodingSession:
         self._harness = harness
         self._last_parent_id = last_parent_id
         self._pending_initial_entries = pending_initial_entries
+        self._session_initialization_lock = asyncio.Lock()
         self._skills = skills
         self._prompt_templates = prompt_templates
         self._context_files = context_files
@@ -1326,11 +1328,14 @@ class CodingSession:
     async def _ensure_session_initialized(self) -> None:
         if not self._pending_initial_entries:
             return
-        for entry in self._pending_initial_entries:
-            await self._config.storage.append(entry)
-        self._pending_initial_entries = ()
-        if self._config.index_on_first_persist:
-            self._index_current_session()
+        async with self._session_initialization_lock:
+            initialized = bool(self._pending_initial_entries)
+            while self._pending_initial_entries:
+                entry = self._pending_initial_entries[0]
+                await self._config.storage.append(entry)
+                self._pending_initial_entries = self._pending_initial_entries[1:]
+            if initialized and self._config.index_on_first_persist:
+                self._index_current_session()
 
     def _index_current_session(self) -> None:
         if self._config.session_id is None or self._config.session_manager is None:

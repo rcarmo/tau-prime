@@ -414,13 +414,15 @@ async def _wait_for_authorization_code(
         return None
 
     try:
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        for task in pending:
-            task.cancel()
+        done, _pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         result = next(iter(done)).result()
     finally:
         if server is not None:
             server.cancel_wait()
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     if result is None:
         return None
