@@ -120,9 +120,18 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
     assert provider_thinking_levels(anthropic, model="claude-haiku-4-5") == ()
     assert copilot.default_model == "gpt-5.5"
     assert copilot.dynamic_models is True
+    assert copilot.models[:3] == ("gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra")
+    assert copilot.context_windows["gpt-5.6-sol"] == 1_050_000
     assert "claude-sonnet-5" in copilot.models
     assert "claude-sonnet-4.6" in copilot.models
     assert "gemini-3.5-flash" in copilot.models
+    assert provider_thinking_levels(copilot, model="gpt-5.6-luna") == (
+        "off",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    )
     assert provider_thinking_levels(copilot, model="gpt-5.4") == (
         "off",
         "low",
