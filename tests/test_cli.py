@@ -753,14 +753,16 @@ def test_tui_surfaces_bad_model_as_clean_error(
     ``ValueError`` subclass) raised while resolving the provider/model selection
     escaped the ``anyio`` event loop as an unhandled traceback.
     """
-    import tau_coding.tui.app as tui_app
+    del tmp_path
 
-    settings = _constrained_provider_settings()
+    async def fail_tui(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise ValueError(
+            "Model is not configured for provider local: llama. Available models: qwen"
+        )
 
-    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "_startup_update_notice", lambda: None)
-    monkeypatch.setattr(cli, "load_provider_settings", lambda *args, **kwargs: settings)
-    monkeypatch.setattr(tui_app, "load_provider_settings", lambda *args, **kwargs: settings)
+    monkeypatch.setattr(cli, "run_openai_tui", fail_tui)
 
     result = CliRunner().invoke(app, ["--model", "llama", "--provider", "local"])
 
@@ -782,14 +784,16 @@ def test_print_mode_surfaces_bad_model_as_clean_error(
     likewise only caught ``RuntimeError``, so it also dumped a
     ``ProviderConfigError`` traceback instead of a friendly message.
     """
-    import tau_coding.tui.app as tui_app
+    del tmp_path
 
-    settings = _constrained_provider_settings()
+    async def fail_print(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise ValueError(
+            "Model is not configured for provider local: llama. Available models: qwen"
+        )
 
-    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "_startup_update_notice", lambda: None)
-    monkeypatch.setattr(cli, "load_provider_settings", lambda *args, **kwargs: settings)
-    monkeypatch.setattr(tui_app, "load_provider_settings", lambda *args, **kwargs: settings)
+    monkeypatch.setattr(cli, "run_openai_print_mode", fail_print)
 
     result = CliRunner().invoke(app, ["--model", "llama", "--provider", "local", "-p", "hello"])
 
