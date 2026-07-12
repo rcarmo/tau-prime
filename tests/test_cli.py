@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import pytest
 from typer.testing import CliRunner
@@ -26,6 +27,12 @@ from tau_coding.resources import TauResourcePaths
 from tau_coding.system_prompt import BuildSystemPromptOptions, build_system_prompt
 from tau_coding.tools import create_coding_tools
 from tau_coding.update_check import UpdateNotice
+
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _strip_ansi(value: str) -> str:
+    return _ANSI_ESCAPE_RE.sub("", value)
 
 
 def _collapse_ws(value: str) -> str:
