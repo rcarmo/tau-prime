@@ -155,7 +155,7 @@ from tau_coding.tools import (
     create_write_tool_definition,
 )
 
-__version__ = "42.0.1"
+__version__ = "42.0.2"
 
 __all__ = [
     "__version__",
