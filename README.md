@@ -24,6 +24,8 @@ It is not intended to track the upstream user experience or branding.
 
 The a-Shell port has to work around terminal behaviour rather than control it. Resize polling is present because resize events are not dependable on iOS, but exact redraw behaviour can still vary with the a-Shell and iOS versions in use.
 
+On macOS, the command uses `/usr/bin/sandbox-exec`, which Apple has deprecated but still ships with current releases. Tau stops rather than silently running without the sandbox if that executable is unavailable; `--no-sandbox` is the explicit override.
+
 Local model servers normally run on another machine. Set LM Studio's provider URL to that machine's LAN address; `localhost` only works when the server is reachable from the same environment.
 
 The repository contains upstream documentation and development notes, but this README describes the supported fork. Some upstream pages may refer to features, commands or installation paths that have not been checked on a-Shell.
@@ -75,6 +77,25 @@ Run against the checkout's source tree with:
 ```sh
 PYTHONPATH=src tau
 ```
+
+## macOS sandbox
+
+macOS runs are sandboxed by default. Tau re-executes itself through the system `sandbox-exec` command, and the restriction is inherited by shell commands, Python, tests and their child processes.
+
+The sandbox permits reads and network access, but filesystem writes are limited to:
+
+* The starting directory, or the directory selected with `--cwd`.
+* Tau's resolved configuration and log directories.
+* The current `$TMPDIR`.
+* Terminal devices required by the CLI.
+
+Use `--no-sandbox` when unrestricted execution is intentional:
+
+```sh
+tau --no-sandbox
+```
+
+This behaviour is macOS-only. a-Shell and other platforms do not attempt to invoke `sandbox-exec`.
 
 ## Configure a provider
 

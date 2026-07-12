@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from os import environ
-from pathlib import Path
 import shutil
 import sys
+from os import environ
+from pathlib import Path
 from typing import Annotated
 
 import anyio
@@ -23,6 +23,11 @@ from tau_ai.env import DEFAULT_OPENAI_COMPATIBLE_BASE_URL
 from tau_coding import __version__
 from tau_coding.credentials import FileCredentialStore
 from tau_coding.diagnostics import llm_observer_from_env
+from tau_coding.macos_sandbox import (
+    MacOSSandboxError,
+    enter_macos_sandbox,
+    should_enter_macos_sandbox,
+)
 from tau_coding.provider_config import (
     DEFAULT_MODEL,
     DEFAULT_PROVIDER_NAME,
@@ -60,7 +65,7 @@ from tau_coding.update_check import UpdateNotice, startup_update_notice
 
 app = typer.Typer(
     name="tau",
-    help="Tau coding-agent harness.",
+    help="Terminal coding agent.",
     add_completion=False,
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
@@ -189,6 +194,13 @@ def main(
         int,
         typer.Option("--web-port", help="Port for Textual web server mode."),
     ] = 8000,
+    no_sandbox: Annotated[
+        bool,
+        typer.Option(
+            "--no-sandbox",
+            help="Disable the default macOS filesystem sandbox.",
+        ),
+    ] = False,
     version: Annotated[
         bool,
         typer.Option("--version", help="Show Tau's version and exit."),
@@ -198,6 +210,17 @@ def main(
     if version:
         typer.echo(f"tau {__version__}")
         raise typer.Exit()
+
+    if should_enter_macos_sandbox(disabled=no_sandbox):
+        try:
+            enter_macos_sandbox(argv=sys.argv, project_dir=(cwd or Path.cwd()).resolve())
+        except MacOSSandboxError as exc:
+            typer.echo(
+                f"Could not establish the required macOS sandbox: {exc}\n"
+                "Use --no-sandbox only if unsandboxed execution is intentional.",
+                err=True,
+            )
+            raise typer.Exit(code=1) from exc
 
     if ctx.invoked_subcommand is not None:
         return

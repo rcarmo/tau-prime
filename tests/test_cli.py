@@ -1042,3 +1042,40 @@ def test_textual_env_override_wins(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TAU_TEXTUAL", "1")
 
     assert cli._use_basic_repl() is False
+
+
+def test_macos_sandbox_failure_stops_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "should_enter_macos_sandbox", lambda *, disabled: not disabled)
+
+    def fail_sandbox(**kwargs: object) -> None:
+        del kwargs
+        raise cli.MacOSSandboxError("sandbox-exec is unavailable")
+
+    monkeypatch.setattr(cli, "enter_macos_sandbox", fail_sandbox)
+
+    result = CliRunner().invoke(cli.app, ["providers"])
+
+    assert result.exit_code == 1
+    assert "Could not establish the required macOS sandbox" in result.stderr
+    assert "--no-sandbox" in result.stderr
+
+
+def test_no_sandbox_option_bypasses_macos_reexec(monkeypatch: pytest.MonkeyPatch) -> None:
+    disabled_values: list[bool] = []
+
+    def should_enter(*, disabled: bool) -> bool:
+        disabled_values.append(disabled)
+        return not disabled
+
+    monkeypatch.setattr(cli, "should_enter_macos_sandbox", should_enter)
+    monkeypatch.setattr(
+        cli,
+        "enter_macos_sandbox",
+        lambda **kwargs: pytest.fail(f"unexpected sandbox re-exec: {kwargs}"),
+    )
+    monkeypatch.setattr(cli, "providers_command", lambda: None)
+
+    result = CliRunner().invoke(cli.app, ["--no-sandbox", "providers"])
+
+    assert result.exit_code == 0
+    assert disabled_values == [True]
