@@ -1,6 +1,6 @@
 # Tau release process
 
-Tau is published to PyPI as `tau-ai`. Publishing is intentionally tied to a
+Tau is published to PyPI as `tau-prime`. Publishing is intentionally tied to a
 release decision, not to every commit that lands on `main`.
 
 ## What runs on ordinary `main` commits
@@ -33,7 +33,7 @@ A production release starts by intentionally changing that value.
 4. Merge the PR to `main` after checks pass.
 5. The `Publish Python package` workflow detects that the version changed and
    attempts to publish the new package to PyPI.
-6. Verify the release at <https://pypi.org/project/tau-ai/>.
+6. Verify the release at <https://pypi.org/project/tau-prime/>.
 
 Maintainers may also publish from an explicit GitHub Release or by manually
 running the workflow. Those paths are reserved for intentional release actions,

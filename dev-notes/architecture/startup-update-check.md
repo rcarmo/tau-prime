@@ -4,7 +4,7 @@ Tau now performs a small, best-effort update check in CLI startup paths that lau
 
 ## What was added
 
-- `tau_coding.update_check` fetches PyPI metadata for the published package (`tau-ai`).
+- `tau_coding.update_check` fetches PyPI metadata for the published package (`tau-prime`).
 - Versions are compared with `packaging.version.Version` so PEP 440 releases sort correctly.
 - The result is cached under `~/.tau/cache/update-check.json` and refreshed at most once per day.
 - Failures are quiet no-ops: network errors, malformed JSON, missing fields, and invalid versions do not stop startup.

@@ -39,17 +39,17 @@ sdist:
 
 uvx-test: sdist
 	@version=`$(PYTHON) -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])'`; \
-	$(UVX) --refresh --from "$(DIST_DIR)/tau_ai-$$version.tar.gz" tau --help >/dev/null
+	$(UVX) --refresh --from "$(DIST_DIR)/tau_prime-$$version.tar.gz" tau --help >/dev/null
 
 package: test uvx-test
 	@version=`$(PYTHON) -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])'`; \
 	commit=`git rev-parse --short HEAD`; \
-	source="$(DIST_DIR)/tau_ai-$$version.tar.gz"; \
-	target="$(DIST_DIR)/tau-ai-$$commit-$$version.tar.gz"; \
+	source="$(DIST_DIR)/tau_prime-$$version.tar.gz"; \
+	target="$(DIST_DIR)/tau-prime-$$commit-$$version.tar.gz"; \
 	cp "$$source" "$$target"; \
 	tar -tzf "$$target" >/dev/null; \
 	if command -v sha256sum >/dev/null 2>&1; then sha256sum "$$target"; \
 	else shasum -a 256 "$$target"; fi
 
 clean:
-	rm -f $(DIST_DIR)/tau_ai-*.tar.gz $(DIST_DIR)/tau-ai-*.tar.gz
+	rm -f $(DIST_DIR)/tau_prime-*.tar.gz $(DIST_DIR)/tau-prime-*.tar.gz

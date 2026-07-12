@@ -4,9 +4,9 @@ build-backend = "build_backend"
 backend-path = ["."]
 
 [project]
-name = "tau-ai"
+name = "tau-prime"
 version = "42.0.1"
-description = "A Python implementation of a minimalist Pi-style coding-agent harness."
+description = "A Tau derivative for a-Shell and sandboxed macOS use."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -21,10 +21,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://twotimespi.dev"
-Documentation = "https://twotimespi.dev"
-Repository = "https://github.com/alejandro-ao/tau"
-Issues = "https://github.com/alejandro-ao/tau/issues"
+Homepage = "https://github.com/rcarmo/tau-a-shell"
+Repository = "https://github.com/rcarmo/tau-a-shell"
+Issues = "https://github.com/rcarmo/tau-a-shell/issues"
 
 [project.scripts]
 tau = "tau_coding.cli:app"

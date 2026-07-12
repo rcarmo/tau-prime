@@ -201,7 +201,7 @@ website/src/content/docs/
 
 ## Release process
 
-Tau is published to PyPI as `tau-ai`. Publishing is a production release action,
+Tau is published to PyPI as `tau-prime`. Publishing is a production release action,
 not a side effect of every commit merged to `main`.
 
 To prepare a release, intentionally bump `[project].version` in `pyproject.toml`

@@ -12,7 +12,7 @@ Tau is a Python 3.13+ tool. The fastest install path is
 [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
-uv tool install tau-ai
+uv tool install tau-prime
 ```
 
 You can also install with standard `pip`:
@@ -21,7 +21,7 @@ You can also install with standard `pip`:
 python3.13 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install tau-ai
+python -m pip install tau-prime
 ```
 
 Or, from a source checkout/tarball:

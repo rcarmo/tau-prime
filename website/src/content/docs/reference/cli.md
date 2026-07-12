@@ -15,7 +15,7 @@ tau [OPTIONS] [PROMPT] [COMMAND] [ARGS]
 - `-p/--prompt` runs a single prompt in [print mode](../guides/print-mode.md).
 
 On TUI and text print-mode startup, Tau may show a non-blocking notice when a
-newer `tau-ai` release is available on PyPI. Disable it with
+newer `tau-prime` release is available on PyPI. Disable it with
 `TAU_NO_UPDATE_CHECK=1`; utility commands such as `tau --version`, `tau sessions`,
 and `tau export` do not run the check.
 

@@ -1,8 +1,8 @@
-# Coding agent for a-Shell
+# Tau Prime
 
-This repository is a fork of [Tau](https://github.com/alejandro-ao/tau) maintained for running a terminal coding agent on iOS through [a-Shell](https://holzschu.github.io/a-Shell_iOS/).
+Tau Prime is a derivative of [Tau](https://github.com/alejandro-ao/tau) maintained for running a terminal coding agent on iOS through [a-Shell](https://holzschu.github.io/a-Shell_iOS/) and with native sandboxing on macOS. The command remains `tau`.
 
-The fork keeps the original Python agent architecture, but changes the parts that do not translate cleanly to a constrained mobile shell: terminal behaviour, command execution, provider support, installation and packaging. It also runs on ordinary Python 3.13 environments, which is useful for development and for testing changes before moving them to an iPhone or iPad.
+The project keeps Tau's original Python agent architecture, but changes the parts that do not translate cleanly to a constrained mobile shell: terminal behaviour, command execution, provider support, installation and packaging. It also runs on ordinary Python 3.13 environments, which is useful for development and for testing changes before moving them to an iPhone or iPad.
 
 It is not intended to track the upstream user experience or branding.
 
@@ -24,7 +24,7 @@ It is not intended to track the upstream user experience or branding.
 
 The a-Shell port has to work around terminal behaviour rather than control it. Resize polling is present because resize events are not dependable on iOS, but exact redraw behaviour can still vary with the a-Shell and iOS versions in use.
 
-On macOS, the command uses `/usr/bin/sandbox-exec`, which Apple has deprecated but still ships with current releases. Tau stops rather than silently running without the sandbox if that executable is unavailable; `--no-sandbox` is the explicit override.
+On macOS, the command uses `/usr/bin/sandbox-exec`, which Apple has deprecated but still ships with current releases. Tau Prime stops rather than silently running without the sandbox if that executable is unavailable; `--no-sandbox` is the explicit override.
 
 Local model servers normally run on another machine. Set LM Studio's provider URL to that machine's LAN address; `localhost` only works when the server is reachable from the same environment.
 
@@ -80,12 +80,12 @@ PYTHONPATH=src tau
 
 ## macOS sandbox
 
-macOS runs are sandboxed by default. Tau re-executes itself through the system `sandbox-exec` command, and the restriction is inherited by shell commands, Python, tests and their child processes.
+macOS runs are sandboxed by default. Tau Prime re-executes the `tau` command through the system `sandbox-exec` utility, and the restriction is inherited by shell commands, Python, tests and their child processes.
 
 The sandbox permits reads and network access, but filesystem writes are limited to:
 
 * The starting directory, or the directory selected with `--cwd`.
-* Tau's resolved configuration and log directories.
+* Tau Prime's resolved configuration and log directories.
 * The current `$TMPDIR`.
 * Terminal devices required by the CLI.
 
@@ -199,6 +199,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the package boundaries and testing ex
 
 ## Upstream and licence
 
-This fork is based on [alejandro-ao/tau](https://github.com/alejandro-ao/tau). Upstream remains the appropriate place for questions about the original project, its hosted documentation and its roadmap; fork-specific issues belong in [rcarmo/tau-a-shell](https://github.com/rcarmo/tau-a-shell/issues).
+Tau Prime is derived from [alejandro-ao/tau](https://github.com/alejandro-ao/tau). Upstream remains the appropriate place for questions about the original project, its hosted documentation and its roadmap; Tau Prime issues belong in [rcarmo/tau-a-shell](https://github.com/rcarmo/tau-a-shell/issues).
 
 The code remains available under the [MIT License](LICENSE).
