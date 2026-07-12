@@ -1,88 +1,45 @@
-<p align="center">
-  <img src="docs/assets/tau-header.svg" alt="Tau — a Python coding-agent harness inspired by Pi" width="100%" />
-</p>
+# Coding agent for a-Shell
 
-<p align="center">
-  <strong>A small, readable terminal coding agent — and a working example of how coding agents are built.</strong>
-</p>
+This repository is a fork of [Tau](https://github.com/alejandro-ao/tau) maintained for running a terminal coding agent on iOS through [a-Shell](https://holzschu.github.io/a-Shell_iOS/).
 
-<p align="center">
-  <strong>This fork tracks the iOS/a-Shell port with GitHub Copilot support and mobile-friendly TUI defaults.</strong>
-</p>
+The fork keeps the original Python agent architecture, but changes the parts that do not translate cleanly to a constrained mobile shell: terminal behaviour, command execution, provider support, installation and packaging. It also runs on ordinary Python 3.13 environments, which is useful for development and for testing changes before moving them to an iPhone or iPad.
 
-<p align="center">
-  <a href="https://twotimespi.dev/">Documentation</a>
-  ·
-  <a href="https://twotimespi.dev/quickstart/">Quickstart</a>
-  ·
-  <a href="https://twotimespi.dev/internals/architecture/">Architecture</a>
-  ·
-  <a href="https://pypi.org/project/tau-ai/">PyPI</a>
-  ·
-  <a href="https://github.com/alejandro-ao/tau/issues/1">Roadmap</a>
-</p>
+It is not intended to track the upstream user experience or branding.
 
----
+## What this fork changes
 
-## What is Tau?
+* The Textual interface uses mobile-friendly defaults: the sidebar starts hidden, `Ctrl+B` toggles it, transcript output follows new content, and terminal size is polled as a fallback when a-Shell does not deliver resize events.
 
-**Tau is a coding agent that lives in your terminal.** You type requests like
-"explain this repo", "add tests", or "fix this stack trace"; Tau can read files,
-edit code, run commands, and keep a durable session history while streaming what
-it is doing.
+* Shell tools work with a-Shell's constrained `sh` environment. The existing `bash` tool names remain available as compatibility aliases, so older sessions and prompts do not need to change.
 
-Tau is also meant to be read. It is a teaching project for understanding the
-shape of a coding-agent system without starting from a giant production
-codebase.
+* GitHub Copilot is a built-in provider. Device login, token refresh, live model discovery and Copilot-hosted OpenAI, Claude and Gemini models use the appropriate Copilot endpoint rather than being treated as generic OpenAI traffic.
 
-```text
-tau_coding  →  tau_agent  →  tau_ai
-```
+* LM Studio is a built-in, credential-free provider. It defaults to `http://localhost:1234/v1`, accepts a persistent LAN URL override, discovers loaded models with a 3-second timeout and always uses `/v1/chat/completions`. `/reload` refreshes the active LM Studio model list.
 
-- `tau_ai` translates model providers into Tau's provider-neutral stream.
-- `tau_agent` owns the portable brain: messages, tools, events, loop, harness,
-  and session primitives.
-- `tau_coding` wraps the brain as a real coding app: CLI, TUI, file/shell tools,
-  provider config, project instructions, skills, and on-disk sessions.
+* Session initialisation, OAuth polling and asynchronous cleanup have additional checks for the failure modes encountered on iOS and during interrupted logins.
 
-The important boundary is:
+* The source distribution has a repeatable Makefile workflow that runs the test suite, builds the package and checks it through an isolated `uvx` installation.
 
-```text
-AgentHarness = reusable brain
-CodingSession = coding-agent environment
-TUI = one possible frontend
-```
+## Current limitations
 
-The core does not know about Textual, Rich, local config paths, slash commands,
-or rendering. Frontends consume events.
+The a-Shell port has to work around terminal behaviour rather than control it. Resize polling is present because resize events are not dependable on iOS, but exact redraw behaviour can still vary with the a-Shell and iOS versions in use.
 
-## Install
+Local model servers normally run on another machine. Set LM Studio's provider URL to that machine's LAN address; `localhost` only works when the server is reachable from the same environment.
 
-Tau is published on PyPI as `tau-ai` and installs a `tau` command.
+The repository contains upstream documentation and development notes, but this README describes the supported fork. Some upstream pages may refer to features, commands or installation paths that have not been checked on a-Shell.
 
-```bash
-uv tool install tau-ai
-tau --version
-```
+## Requirements
 
-Prefer `pip`?
+* Python 3.13
+* a-Shell on iOS or iPadOS for the mobile target
+* Network access to at least one model provider
+* Git, if installing from a checkout
 
-```bash
-python3.13 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install tau-ai
-```
+A desktop Python 3.13 environment is recommended for development and package testing.
 
-To install from a source checkout or source tarball:
+## Install on a-Shell
 
-```bash
-python -m pip install -r requirements.txt
-python -m pip install .
-tau --version
-```
-
-For this iOS/a-Shell fork:
+Clone the fork and install it into a-Shell's user Python environment:
 
 ```sh
 git clone https://github.com/rcarmo/tau-a-shell.git
@@ -92,9 +49,18 @@ python3.13 -m pip install --user .
 tau --version
 ```
 
-For local development on a regular desktop Python environment:
+Run `tau` from the directory the agent should work on:
 
-```bash
+```sh
+cd ~/Documents/my-project
+tau
+```
+
+Use `Ctrl+B` if you want the sidebar. `Ctrl+C` or `Cmd+.` cancels the active operation without discarding the session.
+
+## Install for desktop development
+
+```sh
 git clone https://github.com/rcarmo/tau-a-shell.git
 cd tau-a-shell
 python3.13 -m venv .venv
@@ -104,150 +70,114 @@ python -m pip install .
 tau --version
 ```
 
-## Quickstart
+Run against the checkout's source tree with:
 
-Run Tau from the project you want it to work on:
-
-```bash
-cd my-project
-tau
+```sh
+PYTHONPATH=src tau
 ```
 
-Then type a request and press **Enter**:
+## Configure a provider
 
-```text
-explain what this project does
-```
-
-One-shot print mode is useful for scripts and quick prompts:
-
-```bash
-tau -p "summarize the architecture"
-tau --cwd /path/to/project -p "find the CLI entry point"
-```
-
-Tau needs a model provider. Start Tau and connect one with `/login`:
-
-```bash
-tau
-```
+Start the interface and use `/login` or `/model`:
 
 ```text
 /login
-/login openai
-/login openai-codex
-/login github-copilot
 /model
 ```
 
-This fork adds GitHub Copilot subscription auth and live Copilot model discovery
-alongside OpenAI, Anthropic, OpenAI Codex subscription auth, OpenRouter, Hugging
-Face, and custom OpenAI-compatible endpoints, including local models. See the
-[providers guide](https://twotimespi.dev/guides/providers-and-models/).
+The built-in provider catalogue includes:
 
-## What Tau can do
+* GitHub Copilot subscription authentication
+* OpenAI and OpenAI Codex subscription authentication
+* Anthropic
+* OpenRouter
+* Hugging Face
+* DeepSeek
+* Nebius
+* LM Studio
+* Custom OpenAI-compatible endpoints
 
-- Interactive Textual TUI and non-interactive print mode.
-- iOS/a-Shell-friendly TUI behavior, including `Ctrl+C`/`Cmd+.` cancellation,
-  responsive redraws, transcript auto-scroll, and a sidebar hidden by default
-  with `Ctrl+B` to toggle it.
-- Built-in coding tools: `read`, `write`, `edit`, `sh`, Python, and `pytest`,
-  with compatibility aliases for existing `bash` integrations.
-- Durable JSONL sessions under `~/.tau/sessions/` with resume and branching.
-- Slash commands for login, model selection, sessions, compaction, export, theme,
-  and more.
-- Project instructions from `AGENTS.md`, `.tau/`, and `.agents/` resources.
-- User skills and prompt templates.
-- Context accounting, manual compaction, and optional automatic compaction.
-- GitHub Copilot provider support with device login, dynamic model discovery,
-  and Copilot-hosted Claude/Gemini/OpenAI models kept on the Copilot-compatible
-  runtime path.
-- Provider-neutral event rendering for Rich, plain text, JSON, transcripts, and
-  custom frontends.
+Credentials are stored under `~/.tau/`. LM Studio does not request or store a credential and does not send an `Authorization` header.
 
-## Philosophy
+### LM Studio over the LAN
 
-Tau follows a few rules:
+LM Studio listens on `http://localhost:1234/v1` by default. For an iPhone or iPad, configure the provider with the address of the machine running LM Studio, for example:
 
-- **Small layers beat magic.** Each package has one job and can be read alone.
-- **Events are the contract.** Providers, renderers, the TUI, and custom
-  frontends meet at a typed event stream.
-- **The core stays portable.** The reusable harness does not depend on the CLI,
-  Textual, Rich, or Tau's file layout.
-- **Tools are ordinary typed functions.** A tool is a schema plus an async
-  executor returning a structured result.
-- **Sessions are durable and inspectable.** History is append-only JSONL; active
-  context can be compacted without rewriting the record.
-- **Documentation follows implementation.** The public docs explain the result;
-  `dev-notes/` preserves the phase-by-phase build journal.
-
-## Use Tau as a library
-
-```python
-from tau_agent import AgentHarness, AgentHarnessConfig
-
-harness = AgentHarness(
-    AgentHarnessConfig(
-        provider=provider,
-        model="my-model",
-        system="You are a helpful coding agent.",
-        tools=tools,
-    )
-)
-
-async for event in harness.prompt("Explain this package"):
-    print(event)
+```text
+http://192.168.1.50:1234/v1
 ```
 
-Because the harness emits events instead of rendering UI directly, the same core
-can drive the built-in TUI, print mode, or a frontend you build yourself.
+The URL is retained in `~/.tau/providers.json`. Selecting LM Studio discovers the currently loaded models; `/reload` repeats discovery. A failed connection or an empty model list leaves the application usable and reports that LM Studio is offline or has no loaded model.
 
-## Development
+### GitHub Copilot
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for project philosophy, layer boundaries, testing expectations, and pull request guidelines.
+Choose GitHub Copilot from `/login`, complete the device flow in a browser and return to the terminal. The fork refreshes the available model list from Copilot rather than relying only on a static catalogue.
 
-```bash
-uv sync --dev
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
+## Commands and tools
+
+Interactive sessions support file reads and writes, targeted edits, shell commands, Python, tests, session history, branching, compaction, provider switching and model switching.
+
+Useful commands include:
+
+```text
+/login
+/model
+/reload
+/sessions
+/compact
+/export
+/theme
 ```
 
-Run Tau from the checkout:
+Sessions are append-only JSONL files under `~/.tau/sessions/`. Project instructions can be supplied through `AGENTS.md`, `.tau/` and `.agents/` resources.
 
-```bash
-uv run tau
-uv run tau -p "explain this repo"
+One-shot mode is available for scripts and short queries:
+
+```sh
+tau -p "summarise this repository"
+tau --cwd /path/to/project -p "find the command-line entry point"
 ```
 
-Run the Astro/Starlight documentation site:
+## Code layout
 
-```bash
-cd website
-bun install
-bun run dev
+The separation between the reusable agent, the coding session and the terminal interface is deliberate:
+
+```text
+tau_ai      provider clients and provider-neutral events
+tau_agent   messages, tools, agent loop, harness and session primitives
+tau_coding  coding tools, persistence, provider configuration, CLI and TUI
 ```
 
-Open <http://localhost:4321/>. Build with `bun run build`.
+`AgentHarness` contains the reusable agent loop. `CodingSession` supplies the coding environment and durable state. The TUI consumes session events and is only one possible frontend.
 
-## Documentation
+## Test and package
 
-User docs are published at <https://twotimespi.dev/> and live in
-`website/src/content/docs/`.
+The default packaging target runs the complete test suite before building and smoke-testing the source distribution:
 
-Useful entry points:
+```sh
+make package
+```
 
-- [What is Tau?](https://twotimespi.dev/what-is-tau/)
-- [Quickstart](https://twotimespi.dev/quickstart/)
-- [Core concepts](https://twotimespi.dev/concepts/)
-- [Architecture overview](https://twotimespi.dev/internals/architecture/)
-- [The agent loop & events](https://twotimespi.dev/internals/agent-loop/)
-- [CLI reference](https://twotimespi.dev/reference/cli/)
+To supply explicit tools or use a pre-built virtual environment:
 
-Tau is under active development. The implementation roadmap is tracked in
-[GitHub issue #1](https://github.com/alejandro-ao/tau/issues/1).
+```sh
+make PYTHON=/path/to/python UVX=/path/to/uvx package
+```
 
-## License
+The resulting versioned archive and SHA-256 checksum are written to `dist/`.
 
-Tau is released under the [MIT License](LICENSE).
+Individual checks can be run with:
+
+```sh
+python -m pytest -q
+python -m compileall -q src tests
+git diff --check
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the package boundaries and testing expectations inherited from the upstream project.
+
+## Upstream and licence
+
+This fork is based on [alejandro-ao/tau](https://github.com/alejandro-ao/tau). Upstream remains the appropriate place for questions about the original project, its hosted documentation and its roadmap; fork-specific issues belong in [rcarmo/tau-a-shell](https://github.com/rcarmo/tau-a-shell/issues).
+
+The code remains available under the [MIT License](LICENSE).
