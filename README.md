@@ -44,8 +44,8 @@ A desktop Python 3.13 environment is recommended for development and package tes
 Clone the fork and install it into a-Shell's user Python environment:
 
 ```sh
-git clone https://github.com/rcarmo/tau-a-shell.git
-cd tau-a-shell
+git clone https://github.com/rcarmo/tau-prime.git
+cd tau-prime
 python3.13 -m pip install --user -r requirements.txt
 python3.13 -m pip install --user .
 tau --version
@@ -63,8 +63,8 @@ Use `Ctrl+B` if you want the sidebar. `Ctrl+C` or `Cmd+.` cancels the active ope
 ## Install for desktop development
 
 ```sh
-git clone https://github.com/rcarmo/tau-a-shell.git
-cd tau-a-shell
+git clone https://github.com/rcarmo/tau-prime.git
+cd tau-prime
 python3.13 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-dev.txt
@@ -199,6 +199,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the package boundaries and testing ex
 
 ## Upstream and licence
 
-Tau Prime is derived from [alejandro-ao/tau](https://github.com/alejandro-ao/tau). Upstream remains the appropriate place for questions about the original project, its hosted documentation and its roadmap; Tau Prime issues belong in [rcarmo/tau-a-shell](https://github.com/rcarmo/tau-a-shell/issues).
+Tau Prime is derived from [alejandro-ao/tau](https://github.com/alejandro-ao/tau). Upstream remains the appropriate place for questions about the original project, its hosted documentation and its roadmap; Tau Prime issues belong in [rcarmo/tau-prime](https://github.com/rcarmo/tau-prime/issues).
 
 The code remains available under the [MIT License](LICENSE).
