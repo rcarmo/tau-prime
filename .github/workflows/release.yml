@@ -35,7 +35,9 @@ jobs:
           enable-cache: false
 
       - name: Install development environment
-        run: uv sync --dev
+        # The in-tree backend intentionally builds sdists only and does not
+        # implement PEP 660 editable installs, so do not install the project.
+        run: uv sync --python 3.13 --dev --no-install-project
 
       - name: Check tag against package version
         if: github.event_name == 'push'
