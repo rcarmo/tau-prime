@@ -702,7 +702,7 @@ def test_default_tui_rejects_resume_with_new_session(
     )
 
     assert result.exit_code != 0
-    assert "--resume and --new-session cannot be used together" in result.output
+    assert "--resume and --new-session cannot be used together" in _panel_text(result.output)
 
 
 def _constrained_provider_settings() -> ProviderSettings:
