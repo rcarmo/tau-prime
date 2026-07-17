@@ -1037,12 +1037,15 @@ def test_kimi_and_zai_catalog_match_pi_ai_runtime_metadata() -> None:
     assert kimi.base_url == "https://api.kimi.com/coding"
     assert kimi.api_key_env == "KIMI_API_KEY"
     assert kimi.headers["User-Agent"] == "KimiCLI/1.5"
+    assert kimi.default_model == "kimi-k3"
+    assert kimi.context_windows["kimi-k3"] == 262_144
     assert kimi.context_windows["kimi-for-coding"] == 262_144
 
     zai = provider_config_from_catalog_entry("zai")
     assert zai.base_url == "https://api.z.ai/api/coding/paas/v4"
     assert zai.api_key_env == "ZAI_API_KEY"
-    assert zai.default_model == "glm-5-turbo"
+    assert zai.default_model == "glm-5.2"
+    assert zai.context_windows["glm-5.2"] == 1_000_000
     assert zai.context_windows["glm-4.7"] == 204_800
     assert getattr(zai, "dynamic_models", False) is True
 
