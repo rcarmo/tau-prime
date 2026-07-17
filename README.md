@@ -118,6 +118,7 @@ The built-in provider catalogue includes:
 * Anthropic
 * Kimi For Coding
 * ZAI/GLM coding models with live model refresh
+* OpenCode Zen and OpenCode Go with live model refresh
 * OpenRouter
 * Hugging Face
 * DeepSeek

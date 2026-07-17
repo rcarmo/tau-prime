@@ -45,6 +45,7 @@ def test_load_provider_settings_missing_file_uses_openai_default(tmp_path: Path)
         "openrouter",
         "huggingface",
         "deepseek",
+        "opencode",
         "opencode-go",
         "nebius",
     ]
@@ -289,6 +290,7 @@ def test_upsert_openai_compatible_provider_replaces_and_sets_default() -> None:
         "nebius",
         "openai",
         "openai-codex",
+        "opencode",
         "opencode-go",
         "openrouter",
         "zai",
@@ -1032,6 +1034,23 @@ async def test_ensure_dynamic_provider_models_uses_copilot_proxy_and_headers(
 
 
 @pytest.mark.anyio
+def test_opencode_catalog_matches_supported_pi_ai_protocol_subset() -> None:
+    zen = provider_config_from_catalog_entry("opencode")
+    assert zen.base_url == "https://opencode.ai/zen/v1"
+    assert zen.api_key_env == "OPENCODE_API_KEY"
+    assert zen.default_model == "big-pickle"
+    assert "gpt-5.5" in zen.models
+    assert "claude-sonnet-4-6" not in zen.models
+    assert zen.dynamic_models is True
+
+    go = provider_config_from_catalog_entry("opencode-go")
+    assert go.base_url == "https://opencode.ai/zen/go/v1"
+    assert go.api_key_env == "OPENCODE_API_KEY"
+    assert "glm-5.2" in go.models
+    assert "kimi-k3" in go.models
+    assert go.dynamic_models is True
+
+
 def test_kimi_and_zai_catalog_match_pi_ai_runtime_metadata() -> None:
     kimi = provider_config_from_catalog_entry("kimi-coding")
     assert kimi.base_url == "https://api.kimi.com/coding"
