@@ -103,11 +103,11 @@ def test_compaction_summary_prompt_uses_pi_format_and_custom_instructions() -> N
         custom_instructions="Focus on files changed.",
     )
 
-    assert "<conversation>" in prompt
+    assert "<conversation_source_data>" in prompt
     assert "Use this EXACT format:" in prompt
     assert "## Goal" in prompt
     assert "Preserve exact file paths" in prompt
-    assert "Additional focus: Focus on files changed." in prompt
+    assert "<trusted_operator_instructions>\nFocus on files changed." in prompt
     assert "Refactor src/app.py" in prompt
 
 
@@ -119,7 +119,10 @@ def test_compaction_summary_prompt_updates_previous_summary() -> None:
         )
     )
 
-    assert "<previous-summary>\n## Goal\nShip compaction.\n</previous-summary>" in prompt
+    assert (
+        "<previous_summary_source_data>\n## Goal\nShip compaction."
+        "\n</previous_summary_source_data>"
+    ) in prompt
     assert "NEW conversation messages" in prompt
     assert "Now add tests." in prompt
     assert "Previous conversation summary" not in serialize_messages_for_compaction(

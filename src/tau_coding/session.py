@@ -33,7 +33,14 @@ from tau_agent.session import (
 from tau_agent.session.entries import SessionEntry
 from tau_agent.session.tree import SessionTreeError, path_to_entry
 from tau_agent.tools import AgentTool
-from tau_ai import LLMObserver, ModelProvider
+from tau_agent.types import JSONValue
+from tau_ai import (
+    REMOTE_COMPACTION_SENTINEL,
+    LLMObserver,
+    ModelProvider,
+    RemoteCompactionProvider,
+    RemoteCompactionState,
+)
 from tau_ai.events import ProviderErrorEvent, ProviderResponseEndEvent, ProviderTextDeltaEvent
 from tau_coding.branch_summary import summarize_branch_messages_with_model
 from tau_coding.commands import CommandRegistry, CommandResult, create_default_command_registry
@@ -56,6 +63,7 @@ from tau_coding.diagnostics import (
     new_agent_call_run_id,
 )
 from tau_coding.paths import TauPaths
+from tau_coding.pipelined_compaction import build_pipelined_compaction_prompt
 from tau_coding.prompt_templates import (
     PromptTemplate,
     expand_prompt_template_command,
@@ -92,6 +100,7 @@ from tau_coding.session_export import (
 )
 from tau_coding.session_manager import SessionManager
 from tau_coding.skills import Skill, expand_skill_command, load_skills_with_diagnostics
+from tau_coding.smart_compaction import compaction_budget
 from tau_coding.system_prompt import (
     BuildSystemPromptOptions,
     ProjectContextFile,
@@ -195,6 +204,8 @@ class CodingSessionConfig:
     runtime_provider_config: ProviderConfig | None = None
     auto_compact_token_threshold: int | None = None
     auto_compact_enabled: bool = True
+    provider_compaction_enabled: bool = True
+    compaction_strategy: Literal["summary", "pipelined"] = "pipelined"
     thinking_level: ThinkingLevel = DEFAULT_THINKING_LEVEL
     index_on_first_persist: bool = False
     shell_command_prefix: str | None = None
@@ -241,7 +252,10 @@ class CodingSession:
         self._resource_paths = resource_paths_with_cwd(config.resource_paths, config.cwd)
         self._auto_compact_token_threshold = config.auto_compact_token_threshold
         self._auto_compact_enabled = config.auto_compact_enabled
+        self._provider_compaction_enabled = config.provider_compaction_enabled
+        self._compaction_strategy = config.compaction_strategy
         self._thinking_level = _state_thinking_level(state, config.thinking_level)
+        self._apply_remote_compaction_state(self._latest_remote_compaction_state())
         self._owned_providers: list[ClosableModelProvider] = []
         self._diagnostic_logger = AgentCallDiagnosticLogger.from_paths(self._resource_paths.paths)
         self._credential_store = FileCredentialStore(
@@ -596,6 +610,23 @@ class CodingSession:
         """Return the effective system prompt sent to the model."""
         return self._harness.config.system
 
+    def configure_compaction(
+        self,
+        *,
+        provider_enabled: bool,
+        strategy: Literal["summary", "pipelined"],
+    ) -> None:
+        """Update runtime compaction policy from durable TUI settings."""
+        remote = self._latest_remote_compaction_state()
+        if remote is not None and not provider_enabled:
+            raise RuntimeError(
+                "This branch depends on provider-native compaction state; "
+                "provider compaction cannot be disabled until an earlier branch is selected."
+            )
+        self._provider_compaction_enabled = provider_enabled
+        self._compaction_strategy = strategy
+        self._apply_remote_compaction_state(remote if provider_enabled else None)
+
     @property
     def auto_compact_token_threshold(self) -> int | None:
         """Return the effective automatic compaction threshold, if any."""
@@ -900,6 +931,15 @@ class CodingSession:
         self._owned_providers.append(provider)
         self._harness.config.provider = provider
         self._runtime_provider_config = provider_config
+        remote = self._latest_remote_compaction_state()
+        if remote is not None:
+            setter = getattr(provider, "set_remote_compaction_state", None)
+            if not callable(setter):
+                raise ProviderConfigError(
+                    "Active branch depends on provider-native compaction state that "
+                    "the selected provider cannot replay"
+                )
+            setter(remote)
         self._diagnostic_logger.log_runtime_provider(
             context=self._diagnostic_context(),
             phase="refresh_runtime_provider",
@@ -1034,6 +1074,8 @@ class CodingSession:
                 runtime_provider_config=runtime_provider_config,
                 auto_compact_token_threshold=self._auto_compact_token_threshold,
                 auto_compact_enabled=self._auto_compact_enabled,
+                provider_compaction_enabled=self._provider_compaction_enabled,
+                compaction_strategy=self._compaction_strategy,
                 thinking_level=self._thinking_level,
                 shell_command_prefix=self._config.shell_command_prefix,
                 llm_observer=self._llm_observer,
@@ -1055,6 +1097,8 @@ class CodingSession:
         self._resource_paths = replacement._resource_paths
         self._auto_compact_token_threshold = replacement._auto_compact_token_threshold
         self._auto_compact_enabled = replacement._auto_compact_enabled
+        self._provider_compaction_enabled = replacement._provider_compaction_enabled
+        self._compaction_strategy = replacement._compaction_strategy
         self._thinking_level = replacement._thinking_level
         return f"Resumed session: {record.id}"
 
@@ -1115,20 +1159,33 @@ class CodingSession:
         self._resource_paths = replacement._resource_paths
         self._auto_compact_token_threshold = replacement._auto_compact_token_threshold
         self._auto_compact_enabled = replacement._auto_compact_enabled
+        self._provider_compaction_enabled = replacement._provider_compaction_enabled
+        self._compaction_strategy = replacement._compaction_strategy
         self._thinking_level = replacement._thinking_level
         return f"Started new session: {record.id}"
 
     async def compact(self, instructions: str | None = None) -> str:
         """Generate a manual compaction summary and rebuild active context."""
+        if self._harness.is_running:
+            raise RuntimeError("Cannot compact while the agent is running")
         plan = self._manual_compaction_plan()
-        summary = await self._generate_compaction_summary(
-            plan.messages_to_summarize,
-            custom_instructions=instructions,
-        )
-        compaction = await self._append_compaction(
-            summary,
-            replace_entry_ids=plan.replace_entry_ids,
-        )
+        remote = await self._try_remote_compaction(plan.messages_to_summarize)
+        if remote is not None:
+            compaction = await self._append_compaction(
+                REMOTE_COMPACTION_SENTINEL,
+                replace_entry_ids=plan.replace_entry_ids,
+                details=remote.to_details(),
+            )
+            self._apply_remote_compaction_state(remote)
+        else:
+            summary = await self._generate_compaction_summary(
+                plan.messages_to_summarize,
+                custom_instructions=instructions,
+            )
+            compaction = await self._append_compaction(
+                summary,
+                replace_entry_ids=plan.replace_entry_ids,
+            )
         return f"Compacted {len(compaction.replaces_entry_ids)} context entries."
 
     async def aclose(self) -> None:
@@ -1471,16 +1528,64 @@ class CodingSession:
         threshold = self.auto_compact_token_threshold
         if threshold is None or threshold <= 0:
             return False
-        if len(self._state.context_entry_ids) < 2:
-            return False
-        if self.context_token_estimate <= threshold:
-            return False
-        plan = self._recent_preserving_compaction_plan()
-        if plan is None:
-            return False
-        summary = await self._generate_compaction_summary(plan.messages_to_summarize)
-        await self._append_compaction(summary, replace_entry_ids=plan.replace_entry_ids)
-        return True
+        compacted = False
+        previous_estimate = self.context_token_estimate + 1
+        for _pass in range(4):
+            estimate = self.context_token_estimate
+            if estimate <= threshold or estimate >= previous_estimate:
+                break
+            if len(self._state.context_entry_ids) < 2:
+                break
+            previous_estimate = estimate
+            plan = self._recent_preserving_compaction_plan()
+            if plan is None:
+                break
+            summary = await self._generate_compaction_summary(plan.messages_to_summarize)
+            await self._append_compaction(summary, replace_entry_ids=plan.replace_entry_ids)
+            compacted = True
+        return compacted
+
+    async def _try_remote_compaction(
+        self,
+        messages: tuple[AgentMessage, ...],
+    ) -> RemoteCompactionState | None:
+        provider = self._harness.config.provider
+        if not self._provider_compaction_enabled or not isinstance(
+            provider, RemoteCompactionProvider
+        ):
+            return None
+        previous = self._latest_remote_compaction_state()
+        if previous is not None and (
+            previous.model != self.model or previous.provider != self.provider_name
+        ):
+            return None
+        try:
+            return await provider.compact_context(
+                model=self.model,
+                system=self._harness.config.system,
+                messages=list(messages),
+                tools=list(self._harness.config.tools),
+                previous=previous,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            return None
+
+    def _latest_remote_compaction_state(self) -> RemoteCompactionState | None:
+        entries = getattr(self._state, "compaction_entries", ())
+        for entry in reversed(entries):
+            if entry.summary != REMOTE_COMPACTION_SENTINEL:
+                return None
+            return RemoteCompactionState.from_details(entry.details)
+        return None
+
+    def _apply_remote_compaction_state(self, state: RemoteCompactionState | None) -> None:
+        config = getattr(self._harness, "config", None)
+        provider = getattr(config, "provider", None)
+        setter = getattr(provider, "set_remote_compaction_state", None)
+        if callable(setter):
+            setter(state)
 
     async def _generate_compaction_summary(
         self,
@@ -1488,31 +1593,67 @@ class CodingSession:
         *,
         custom_instructions: str | None = None,
     ) -> str:
-        prompt = build_compaction_summary_prompt(
-            messages,
-            custom_instructions=custom_instructions,
-        )
+        if self._compaction_strategy == "pipelined":
+            previous_summary = None
+            new_messages = messages
+            if (
+                messages
+                and isinstance(messages[0], UserMessage)
+                and messages[0].content.startswith("Previous conversation summary:\n")
+            ):
+                previous_summary = messages[0].content.removeprefix(
+                    "Previous conversation summary:\n"
+                )
+                if previous_summary == REMOTE_COMPACTION_SENTINEL:
+                    raise RuntimeError(
+                        "Opaque provider-native compaction state cannot be summarized locally"
+                    )
+                new_messages = messages[1:]
+            prompt = build_pipelined_compaction_prompt(
+                new_messages,
+                previous_summary=previous_summary,
+                custom_instructions=custom_instructions,
+            )
+        else:
+            if any(
+                isinstance(message, UserMessage)
+                and message.content
+                == f"Previous conversation summary:\n{REMOTE_COMPACTION_SENTINEL}"
+                for message in messages
+            ):
+                raise RuntimeError(
+                    "Opaque provider-native compaction state cannot be summarized locally"
+                )
+            prompt = build_compaction_summary_prompt(
+                messages,
+                custom_instructions=custom_instructions,
+            )
         text_parts: list[str] = []
         final_text: str | None = None
         summary_messages: list[AgentMessage] = [UserMessage(content=prompt)]
-        async for event in self._harness.config.provider.stream_response(
-            model=self.model,
-            system=SUMMARIZATION_SYSTEM_PROMPT,
-            messages=summary_messages,
-            tools=[],
-        ):
-            if isinstance(event, ProviderTextDeltaEvent):
-                text_parts.append(event.delta)
-            elif isinstance(event, ProviderResponseEndEvent):
-                final_text = event.message.content
-            elif isinstance(event, ProviderErrorEvent):
-                details = f": {event.data}" if event.data is not None else ""
-                raise RuntimeError(f"Compaction summarization failed: {event.message}{details}")
+        try:
+            async for event in self._harness.config.provider.stream_response(
+                model=self.model,
+                system=SUMMARIZATION_SYSTEM_PROMPT,
+                messages=summary_messages,
+                tools=[],
+            ):
+                if isinstance(event, ProviderTextDeltaEvent):
+                    text_parts.append(event.delta)
+                elif isinstance(event, ProviderResponseEndEvent):
+                    final_text = event.message.content
+                elif isinstance(event, ProviderErrorEvent):
+                    details = f": {event.data}" if event.data is not None else ""
+                    raise RuntimeError(
+                        f"Compaction summarization failed: {event.message}{details}"
+                    )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            return summarize_messages_for_compaction(messages)
 
         summary = (final_text if final_text is not None else "".join(text_parts)).strip()
-        if not summary:
-            raise RuntimeError("Compaction summarization returned an empty summary")
-        return summary
+        return summary or summarize_messages_for_compaction(messages)
 
     async def _summarize_branch_messages(
         self,
@@ -1547,9 +1688,15 @@ class CodingSession:
         if len(rows) < 2:
             return None
 
+        usage = self.context_usage
+        budget = compaction_budget(
+            context_window_tokens=self.context_window_tokens,
+            fixed_tokens=usage.system_tokens + usage.tool_tokens,
+            requested_keep_recent_tokens=DEFAULT_COMPACTION_KEEP_RECENT_TOKENS,
+        )
         first_kept_index = _first_recent_context_index(
             rows,
-            keep_recent_tokens=DEFAULT_COMPACTION_KEEP_RECENT_TOKENS,
+            keep_recent_tokens=budget.keep_recent_tokens,
         )
         if first_kept_index <= 0:
             return None
@@ -1570,6 +1717,7 @@ class CodingSession:
         summary: str,
         *,
         replace_entry_ids: tuple[str, ...],
+        details: dict[str, JSONValue] | None = None,
     ) -> CompactionEntry:
         if not replace_entry_ids:
             raise ValueError("No active context messages to compact")
@@ -1578,6 +1726,7 @@ class CodingSession:
             parent_id=self._last_parent_id,
             summary=summary,
             replaces_entry_ids=list(replace_entry_ids),
+            details=details,
         )
         await self._append_session_entry(compaction)
         leaf = LeafEntry(parent_id=compaction.id, entry_id=compaction.id)

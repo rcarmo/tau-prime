@@ -99,6 +99,7 @@ from tau_coding.tui.autocomplete import (
 from tau_coding.tui.config import (
     BUILTIN_TUI_THEME_NAMES,
     TAU_DARK_THEME,
+    CompactionStrategy,
     TuiKeybindings,
     TuiSettings,
     TuiTheme,
@@ -1090,6 +1091,59 @@ class ThemePickerScreen(ModalScreen[TuiThemeName | None]):
         self.dismiss(None)
 
 
+class CompactionSettingsScreen(
+    ModalScreen[tuple[bool, CompactionStrategy] | None]
+):
+    """Picker for provider-native enablement and local strategy."""
+
+    OPTIONS: ClassVar[tuple[tuple[bool, CompactionStrategy, str], ...]] = (
+        (True, "pipelined", "Provider compaction: on · Local fallback: pipelined"),
+        (True, "summary", "Provider compaction: on · Local fallback: summary"),
+        (False, "pipelined", "Provider compaction: off · Local strategy: pipelined"),
+        (False, "summary", "Provider compaction: off · Local strategy: summary"),
+    )
+    BINDINGS: ClassVar[list[BindingEntry]] = [
+        Binding("escape,ctrl+c", "cancel", "Cancel", priority=True),
+    ]
+
+    def __init__(
+        self,
+        *,
+        provider_enabled: bool,
+        strategy: CompactionStrategy,
+        theme: TuiTheme,
+    ) -> None:
+        super().__init__()
+        self.provider_enabled = provider_enabled
+        self.strategy = strategy
+        self.theme = theme
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="theme-picker"):
+            yield Static("Context compaction", id="theme-picker-title")
+            yield ListView(
+                *[
+                    ListItem(Label(label, markup=False))
+                    for _enabled, _strategy, label in self.OPTIONS
+                ],
+                id="theme-picker-list",
+            )
+            yield Static("Enter selects - Escape closes", id="theme-picker-help")
+
+    def on_mount(self) -> None:
+        choices = [(enabled, strategy) for enabled, strategy, _label in self.OPTIONS]
+        view = self.query_one("#theme-picker-list", ListView)
+        view.index = choices.index((self.provider_enabled, self.strategy))
+        view.focus()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        enabled, strategy, _label = self.OPTIONS[event.index]
+        self.dismiss((enabled, strategy))
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 class ModelPickerSearchInput(Input):
     """Search input that keeps model-picker control keys local to the picker."""
 
@@ -1865,6 +1919,12 @@ class TauTuiApp(App[None]):
         super().__init__()
         self._bindings = BindingsMap(_app_bindings(self.tui_settings.keybindings))
         self.session = session
+        configure_compaction = getattr(session, "configure_compaction", None)
+        if callable(configure_compaction):
+            configure_compaction(
+                provider_enabled=self.tui_settings.provider_compaction_enabled,
+                strategy=self.tui_settings.compaction_strategy,
+            )
         self.state = TuiState(skills=session.skills)
         if startup_notice:
             self.state.add_item("status", startup_notice)
@@ -2172,6 +2232,8 @@ class TauTuiApp(App[None]):
                 self._open_scoped_models_picker()
             if command.theme_picker_requested:
                 self._open_theme_picker()
+            if command.compaction_settings_requested:
+                self._open_compaction_settings()
             if command.thinking_level is not None:
                 await self._set_thinking_level(command.thinking_level)
             if command.theme is not None:
@@ -2318,6 +2380,8 @@ class TauTuiApp(App[None]):
             theme=theme,
             auto_copy_selection=self.tui_settings.auto_copy_selection,
             show_sidebar=self.tui_settings.show_sidebar,
+            provider_compaction_enabled=self.tui_settings.provider_compaction_enabled,
+            compaction_strategy=self.tui_settings.compaction_strategy,
         )
         save_tui_settings(self.tui_settings)
         self.refresh_css(animate=False)
@@ -2638,6 +2702,8 @@ class TauTuiApp(App[None]):
             theme=self.tui_settings.theme,
             auto_copy_selection=self.tui_settings.auto_copy_selection,
             show_sidebar=not self.tui_settings.show_sidebar,
+            provider_compaction_enabled=self.tui_settings.provider_compaction_enabled,
+            compaction_strategy=self.tui_settings.compaction_strategy,
         )
         save_tui_settings(self.tui_settings)
         self._update_responsive_layout(self.size.width, self.size.height)
@@ -2877,7 +2943,8 @@ class TauTuiApp(App[None]):
         provider = updated.get_provider("lmstudio")
         if not provider.models:
             self._notify(
-                "LM Studio is offline or has no loaded models. Start LM Studio, load a model, then use /reload.",
+                "LM Studio is offline or has no loaded models. "
+                "Start LM Studio, load a model, then use /reload.",
                 severity="warning",
             )
             return
@@ -3058,6 +3125,38 @@ class TauTuiApp(App[None]):
             self._notify(f"Could not switch model: {exc}", severity="error")
             return
         self._refresh()
+
+    def _open_compaction_settings(self) -> None:
+        self.push_screen(
+            CompactionSettingsScreen(
+                provider_enabled=self.tui_settings.provider_compaction_enabled,
+                strategy=self.tui_settings.compaction_strategy,
+                theme=self.tui_settings.resolved_theme,
+            ),
+            callback=self._handle_compaction_settings_result,
+        )
+
+    def _handle_compaction_settings_result(
+        self,
+        result: tuple[bool, CompactionStrategy] | None,
+    ) -> None:
+        if result is None:
+            return
+        provider_enabled, strategy = result
+        self.tui_settings = TuiSettings(
+            keybindings=self.tui_settings.keybindings,
+            theme=self.tui_settings.theme,
+            auto_copy_selection=self.tui_settings.auto_copy_selection,
+            show_sidebar=self.tui_settings.show_sidebar,
+            provider_compaction_enabled=provider_enabled,
+            compaction_strategy=strategy,
+        )
+        save_tui_settings(self.tui_settings)
+        configure = getattr(self.session, "configure_compaction", None)
+        if callable(configure):
+            configure(provider_enabled=provider_enabled, strategy=strategy)
+        provider_label = "on" if provider_enabled else "off"
+        self._notify(f"Provider compaction {provider_label}; local strategy {strategy}.")
 
     def _open_theme_picker(self) -> None:
         self.push_screen(
@@ -4072,6 +4171,7 @@ async def run_tui_app(
         provider = LoginRequiredProvider(startup_message)
         runtime_provider_config = None
     session: CodingSession | None = None
+    tui_settings = load_tui_settings()
     try:
         index_on_first_persist = False
         if record is None:
@@ -4094,6 +4194,8 @@ async def run_tui_app(
                 provider_settings=provider_settings,
                 runtime_provider_config=runtime_provider_config,
                 auto_compact_token_threshold=auto_compact_token_threshold,
+                provider_compaction_enabled=tui_settings.provider_compaction_enabled,
+                compaction_strategy=tui_settings.compaction_strategy,
                 index_on_first_persist=index_on_first_persist,
                 shell_command_prefix=shell_settings.shell_command_prefix,
                 llm_observer=llm_observer,
@@ -4101,7 +4203,7 @@ async def run_tui_app(
         )
         app = TauTuiApp(
             session,
-            tui_settings=load_tui_settings(),
+            tui_settings=tui_settings,
             startup_message=startup_message,
             startup_notice=startup_notice,
             initial_prompt=initial_prompt,

@@ -36,6 +36,7 @@ from tau_ai.observability import (
     observe_llm_response,
 )
 from tau_ai.provider import CancellationToken
+from tau_ai.remote_compaction import REMOTE_COMPACTION_SENTINEL, RemoteCompactionState
 from tau_ai.retry import (
     is_transient_status,
     provider_retry_event,
@@ -86,6 +87,11 @@ class OpenAICodexProvider:
         self._client = client
         self._owns_client = client is None
         self._observer = observer
+        self._remote_compaction_state: RemoteCompactionState | None = None
+
+    def set_remote_compaction_state(self, state: RemoteCompactionState | None) -> None:
+        """Configure canonical state to inject into subsequent Codex requests."""
+        self._remote_compaction_state = state
 
     async def aclose(self) -> None:
         """Close the underlying HTTP client if this provider created it."""
@@ -114,6 +120,18 @@ class OpenAICodexProvider:
                 reasoning_effort=self._config.reasoning_effort,
                 reasoning_summary=self._config.reasoning_summary,
             )
+            state = self._remote_compaction_state
+            if state is not None:
+                if (
+                    state.provider != "openai-codex"
+                    or state.model != model
+                    or state.base_url != self._config.base_url.rstrip("/")
+                ):
+                    raise RuntimeError(
+                        "Persisted provider-native compaction state is incompatible with "
+                        "the active Codex model"
+                    )
+                payload["input"] = [*map(dict, state.output), *list(payload["input"])]  # type: ignore[arg-type]
             url = _resolve_codex_url(self._config.base_url)
 
             attempt = 0
@@ -306,6 +324,69 @@ class OpenAICodexProvider:
 
         return iterator()
 
+    async def compact_context(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: list[AgentMessage],
+        tools: list[AgentTool],
+        previous: RemoteCompactionState | None = None,
+        signal: CancellationToken | None = None,
+    ) -> RemoteCompactionState | None:
+        """Use the verified ChatGPT Codex compact endpoint."""
+        base_url = self._config.base_url.rstrip("/")
+        if base_url != DEFAULT_OPENAI_CODEX_BASE_URL:
+            return None
+        if previous is not None and (
+            previous.provider != "openai-codex"
+            or previous.model != model
+            or previous.base_url != base_url
+        ):
+            return None
+        if signal is not None and signal.is_cancelled():
+            return None
+        credentials = await self._config.credential_resolver()
+        headers = _build_codex_headers(
+            self._config.headers,
+            access_token=credentials.access_token,
+            account_id=credentials.account_id,
+            originator=self._config.originator,
+        )
+        payload = _build_codex_payload(
+            model=model,
+            system=system,
+            messages=messages,
+            tools=tools,
+            reasoning_effort=self._config.reasoning_effort,
+            reasoning_summary=self._config.reasoning_summary,
+        )
+        payload.pop("stream", None)
+        payload["input"] = [
+            *([dict(item) for item in previous.output] if previous is not None else []),
+            *list(payload["input"]),  # type: ignore[arg-type]
+        ]
+        response = await self._get_client().post(
+            f"{base_url}/codex/responses/compact",
+            json=payload,
+            headers=headers,
+        )
+        if response.status_code >= 400:
+            return None
+        data = response.json()
+        if not isinstance(data, dict) or not isinstance(data.get("output"), list):
+            return None
+        return RemoteCompactionState.from_details(
+            {
+                "kind": "tau.remote_compaction",
+                "version": 1,
+                "provider": "openai-codex",
+                "model": model,
+                "base_url": base_url,
+                "output": data["output"],
+            }
+        )
+
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
             self._client = create_async_client(timeout=self._config.timeout_seconds)
@@ -408,6 +489,8 @@ def _messages_to_responses_input(messages: list[AgentMessage]) -> list[JSONValue
     assistant_index = 0
     for message in messages:
         if isinstance(message, UserMessage):
+            if message.content == f"Previous conversation summary:\n{REMOTE_COMPACTION_SENTINEL}":
+                continue
             items.append(
                 {
                     "role": "user",

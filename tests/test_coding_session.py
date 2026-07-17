@@ -1935,7 +1935,7 @@ async def test_session_compact_persists_summary_and_rebuilds_context(tmp_path: P
     assert compactions[0].replaces_entry_ids == message_entries_before
     assert leaves[-1].entry_id == compactions[0].id
     assert provider.calls[1][1].startswith("You are a context summarization assistant.")
-    assert "Additional focus: Focus on session persistence." in provider.calls[1][2][0].content
+    assert "Focus on session persistence." in provider.calls[1][2][0].content
     assert provider.calls[2][2] == [
         UserMessage(content=("Previous conversation summary:\nGenerated session summary")),
         UserMessage(content="Continue."),

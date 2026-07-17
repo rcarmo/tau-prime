@@ -31,7 +31,11 @@ class ProviderModelOverride:
 
 @dataclass(frozen=True, slots=True)
 class ProviderCatalogEntry:
-    """A built-in provider Tau can present during login."""
+    """A built-in provider Tau can present during login.
+
+    Runtime-discovered model metadata may overlay these bootstrap defaults, but
+    endpoint capabilities remain explicit and are never inferred from model IDs.
+    """
 
     name: str
     display_name: str
@@ -102,6 +106,7 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
         ),
         thinking_default="medium",
         thinking_parameter="reasoning_effort",
+        dynamic_models=True,
     ),
     ProviderCatalogEntry(
         name="openai-codex",
@@ -139,6 +144,7 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
         ),
         thinking_default="medium",
         thinking_parameter="reasoning.effort",
+        dynamic_models=True,
     ),
     ProviderCatalogEntry(
         name="anthropic",

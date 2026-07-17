@@ -54,6 +54,7 @@ class TuiKeybindings:
 
 
 type TuiThemeName = Literal["tau-dark", "tau-light", "high-contrast"]
+type CompactionStrategy = Literal["summary", "pipelined"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -245,6 +246,8 @@ class TuiSettings:
     theme: TuiThemeName = "tau-dark"
     auto_copy_selection: bool = False
     show_sidebar: bool = False
+    provider_compaction_enabled: bool = True
+    compaction_strategy: CompactionStrategy = "pipelined"
 
     def to_json(self) -> dict[str, Any]:
         """Serialize these settings to JSON-compatible data."""
@@ -253,6 +256,8 @@ class TuiSettings:
             "keybindings": self.keybindings.to_json(),
             "show_sidebar": self.show_sidebar,
             "theme": self.theme,
+            "provider_compaction_enabled": self.provider_compaction_enabled,
+            "compaction_strategy": self.compaction_strategy,
         }
 
     @property
@@ -287,7 +292,14 @@ def save_tui_settings(settings: TuiSettings, paths: TauPaths | None = None) -> P
 
 def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
     """Parse TUI settings from JSON-compatible data."""
-    allowed_fields = {"auto_copy_selection", "keybindings", "show_sidebar", "theme"}
+    allowed_fields = {
+        "auto_copy_selection",
+        "keybindings",
+        "show_sidebar",
+        "theme",
+        "provider_compaction_enabled",
+        "compaction_strategy",
+    }
     unknown_fields = set(data) - allowed_fields
     if unknown_fields:
         raise TuiConfigError(f"Unknown TUI settings field: {sorted(unknown_fields)[0]}")
@@ -303,7 +315,18 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
             "auto_copy_selection",
         ),
         show_sidebar=_bool_setting(data.get("show_sidebar", False), "show_sidebar"),
+        provider_compaction_enabled=_bool_setting(
+            data.get("provider_compaction_enabled", True),
+            "provider_compaction_enabled",
+        ),
+        compaction_strategy=_compaction_strategy(data.get("compaction_strategy", "pipelined")),
     )
+
+
+def _compaction_strategy(value: object) -> CompactionStrategy:
+    if value == "summary" or value == "pipelined":
+        return value
+    raise TuiConfigError(f"Unknown compaction strategy: {value}")
 
 
 def _bool_setting(value: object, field_name: str) -> bool:

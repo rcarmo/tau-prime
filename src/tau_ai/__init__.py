@@ -41,6 +41,11 @@ from tau_ai.openai_codex import (
 )
 from tau_ai.openai_compatible import OpenAICompatibleProvider
 from tau_ai.provider import CancellationToken, ModelProvider
+from tau_ai.remote_compaction import (
+    REMOTE_COMPACTION_SENTINEL,
+    RemoteCompactionProvider,
+    RemoteCompactionState,
+)
 
 __all__ = [
     "CancellationToken",
@@ -69,6 +74,9 @@ __all__ = [
     "ProviderThinkingDeltaEvent",
     "ProviderTextDeltaEvent",
     "ProviderToolCallEvent",
+    "REMOTE_COMPACTION_SENTINEL",
+    "RemoteCompactionProvider",
+    "RemoteCompactionState",
     "list_openai_compatible_models",
     "observe_llm_error",
     "observe_llm_request",

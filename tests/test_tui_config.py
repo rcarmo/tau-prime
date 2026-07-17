@@ -79,6 +79,24 @@ def test_save_tui_settings_writes_json(tmp_path: Path) -> None:
     assert load_tui_settings(paths).theme == "tau-light"
 
 
+def test_tui_settings_persists_compaction_policy(tmp_path: Path) -> None:
+    paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
+    settings = TuiSettings(
+        provider_compaction_enabled=False,
+        compaction_strategy="summary",
+    )
+
+    save_tui_settings(settings, paths)
+
+    assert load_tui_settings(paths).provider_compaction_enabled is False
+    assert load_tui_settings(paths).compaction_strategy == "summary"
+
+
+def test_tui_settings_rejects_unknown_compaction_strategy() -> None:
+    with pytest.raises(TuiConfigError, match="Unknown compaction strategy"):
+        tui_settings_from_json({"compaction_strategy": "magic"})
+
+
 def test_tui_settings_ignores_removed_message_selection_keybindings() -> None:
     settings = tui_settings_from_json(
         {

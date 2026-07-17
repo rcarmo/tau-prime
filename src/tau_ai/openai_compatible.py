@@ -38,6 +38,7 @@ from tau_ai.observability import (
     observe_llm_response,
 )
 from tau_ai.provider import CancellationToken
+from tau_ai.remote_compaction import REMOTE_COMPACTION_SENTINEL, RemoteCompactionState
 from tau_ai.retry import (
     is_transient_status,
     provider_retry_event,
@@ -75,6 +76,11 @@ class OpenAICompatibleProvider:
         self._client = client
         self._owns_client = client is None
         self._observer = observer
+        self._remote_compaction_state: RemoteCompactionState | None = None
+
+    def set_remote_compaction_state(self, state: RemoteCompactionState | None) -> None:
+        """Configure canonical state to inject into subsequent Responses requests."""
+        self._remote_compaction_state = state
 
     async def aclose(self) -> None:
         """Close the underlying HTTP client if this provider created it."""
@@ -151,6 +157,18 @@ class OpenAICompatibleProvider:
             tools=tools,
             reasoning_effort=self._config.reasoning_effort,
         )
+        state = self._remote_compaction_state
+        if state is not None:
+            if (
+                state.provider != "openai"
+                or state.model != model
+                or state.base_url != self._config.base_url.rstrip("/")
+            ):
+                raise RuntimeError(
+                    "Persisted provider-native compaction state is incompatible with "
+                    "the active OpenAI model"
+                )
+            payload["input"] = [*map(dict, state.output), *list(payload["input"])]  # type: ignore[arg-type]
         return self._stream(
             model=model,
             url=f"{self._config.base_url.rstrip('/')}/responses",
@@ -319,6 +337,67 @@ class OpenAICompatibleProvider:
                     return
 
         return iterator()
+
+    async def compact_context(
+        self,
+        *,
+        model: str,
+        system: str,
+        messages: list[AgentMessage],
+        tools: list[AgentTool],
+        previous: RemoteCompactionState | None = None,
+        signal: CancellationToken | None = None,
+    ) -> RemoteCompactionState | None:
+        """Use OpenAI's verified Responses compact endpoint when available."""
+        if (
+            self._config.base_url.rstrip("/") != "https://api.openai.com/v1"
+            or self._config.force_chat_completions
+            or not _use_responses_api(model)
+            or not self._config.api_key
+        ):
+            return None
+        if previous is not None and (
+            previous.provider != "openai"
+            or previous.model != model
+            or previous.base_url != self._config.base_url.rstrip("/")
+        ):
+            return None
+        if signal is not None and signal.is_cancelled():
+            return None
+        payload = _build_responses_payload(
+            model=model,
+            system=system,
+            messages=messages,
+            tools=tools,
+            reasoning_effort=self._config.reasoning_effort,
+        )
+        payload.pop("stream", None)
+        payload["input"] = [
+            *([dict(item) for item in previous.output] if previous is not None else []),
+            *list(payload["input"]),  # type: ignore[arg-type]
+        ]
+        headers = {**dict(self._config.headers or {})}
+        headers["Authorization"] = f"Bearer {self._config.api_key}"
+        response = await self._get_client().post(
+            f"{self._config.base_url.rstrip('/')}/responses/compact",
+            json=payload,
+            headers=headers,
+        )
+        if response.status_code >= 400:
+            return None
+        data = response.json()
+        if not isinstance(data, dict) or not isinstance(data.get("output"), list):
+            return None
+        return RemoteCompactionState.from_details(
+            {
+                "kind": "tau.remote_compaction",
+                "version": 1,
+                "provider": "openai",
+                "model": model,
+                "base_url": self._config.base_url,
+                "output": data["output"],
+            }
+        )
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -701,6 +780,8 @@ def _messages_to_responses_input(
     invalid_tool_call_ids = _invalid_tool_call_ids(messages)
     for message in messages:
         if isinstance(message, UserMessage):
+            if message.content == f"Previous conversation summary:\n{REMOTE_COMPACTION_SENTINEL}":
+                continue
             items.append({"role": "user", "content": message.content})
         elif isinstance(message, AssistantMessage):
             if message.content:

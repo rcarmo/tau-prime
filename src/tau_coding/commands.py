@@ -109,6 +109,7 @@ class CommandResult:
     model_picker_requested: bool = False
     scoped_models_picker_requested: bool = False
     theme_picker_requested: bool = False
+    compaction_settings_requested: bool = False
     thinking_level: str | None = None
     theme: str | None = None
     message: str | None = None
@@ -222,6 +223,17 @@ def create_default_command_registry() -> CommandRegistry:
             usage="/compact [instructions]",
             description="Summarize and compact active context.",
             handler=_compact_command,
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="compaction",
+            usage="/compaction",
+            description="Configure provider compaction and local strategy.",
+            handler=lambda _context: CommandResult(
+                handled=True,
+                compaction_settings_requested=True,
+            ),
         )
     )
     registry.register(

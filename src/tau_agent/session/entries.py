@@ -7,7 +7,6 @@ from typing import Annotated, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from tau_agent.messages import AgentMessage
 from tau_agent.types import JSONValue
 
@@ -59,6 +58,7 @@ class CompactionEntry(BaseSessionEntry):
     type: Literal["compaction"] = "compaction"
     summary: str
     replaces_entry_ids: list[str] = Field(default_factory=list)
+    details: dict[str, JSONValue] | None = None
 
 
 class BranchSummaryEntry(BaseSessionEntry):
