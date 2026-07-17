@@ -47,6 +47,7 @@ class ProviderCatalogEntry:
     default_model: str
     docs_url: str
     context_windows: dict[str, int] | None = None
+    headers: dict[str, str] | None = None
     thinking_levels: tuple[ThinkingLevel, ...] | None = None
     thinking_models: tuple[str, ...] = ()
     thinking_default: ThinkingLevel | None = None
@@ -178,6 +179,61 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
         ),
         thinking_default="medium",
         thinking_parameter="anthropic.thinking",
+    ),
+    ProviderCatalogEntry(
+        name="kimi-coding",
+        display_name="Kimi For Coding",
+        kind="anthropic",
+        base_url="https://api.kimi.com/coding",
+        api_key_env="KIMI_API_KEY",
+        credential_name="kimi-coding",
+        models=("kimi-for-coding", "kimi-k2-thinking"),
+        default_model="kimi-for-coding",
+        docs_url="https://www.kimi.com/code/docs/en/",
+        context_windows={
+            "kimi-for-coding": 262_144,
+            "kimi-k2-thinking": 262_144,
+        },
+        headers={"User-Agent": "KimiCLI/1.5"},
+        thinking_levels=("low", "medium", "high"),
+        thinking_models=("kimi-for-coding", "kimi-k2-thinking"),
+        thinking_default="medium",
+        thinking_parameter="anthropic.thinking",
+    ),
+    ProviderCatalogEntry(
+        name="zai",
+        display_name="ZAI",
+        kind="openai-compatible",
+        base_url="https://api.z.ai/api/coding/paas/v4",
+        api_key_env="ZAI_API_KEY",
+        credential_name="zai",
+        models=(
+            "glm-5-turbo",
+            "glm-5.1",
+            "glm-5v-turbo",
+            "glm-4.7",
+            "glm-4.5-air",
+        ),
+        default_model="glm-5-turbo",
+        docs_url="https://docs.z.ai/guides/overview/quick-start",
+        context_windows={
+            "glm-5-turbo": 200_000,
+            "glm-5.1": 200_000,
+            "glm-5v-turbo": 200_000,
+            "glm-4.7": 204_800,
+            "glm-4.5-air": 131_072,
+        },
+        thinking_levels=("off", "low", "medium", "high"),
+        thinking_models=(
+            "glm-5-turbo",
+            "glm-5.1",
+            "glm-5v-turbo",
+            "glm-4.7",
+            "glm-4.5-air",
+        ),
+        thinking_default="medium",
+        thinking_parameter="reasoning_effort",
+        dynamic_models=True,
     ),
     ProviderCatalogEntry(
         name="github-copilot",

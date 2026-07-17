@@ -113,9 +113,11 @@ Start the interface and use `/login` or `/model`:
 
 The built-in provider catalogue includes:
 
-* GitHub Copilot subscription authentication
+* GitHub Copilot subscription authentication with live model refresh
 * OpenAI and OpenAI Codex subscription authentication
 * Anthropic
+* Kimi For Coding
+* ZAI/GLM coding models with live model refresh
 * OpenRouter
 * Hugging Face
 * DeepSeek

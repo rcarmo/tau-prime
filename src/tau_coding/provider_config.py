@@ -320,6 +320,7 @@ def provider_config_from_catalog_entry(name: str) -> ProviderConfig:
                 models=entry.models,
                 default_model=entry.default_model,
                 context_windows=context_windows,
+                headers=dict(entry.headers or {}),
                 timeout_seconds=entry.timeout_seconds,
                 thinking_levels=entry.thinking_levels,
                 thinking_models=entry.thinking_models,
@@ -335,6 +336,7 @@ def provider_config_from_catalog_entry(name: str) -> ProviderConfig:
                 models=entry.models,
                 default_model=entry.default_model,
                 context_windows=context_windows,
+                headers=dict(entry.headers or {}),
                 timeout_seconds=entry.timeout_seconds,
                 thinking_levels=entry.thinking_levels,
                 thinking_models=entry.thinking_models,
@@ -349,6 +351,7 @@ def provider_config_from_catalog_entry(name: str) -> ProviderConfig:
             models=entry.models,
             default_model=entry.default_model,
             context_windows=context_windows,
+            headers=dict(entry.headers or {}),
             timeout_seconds=entry.timeout_seconds,
             thinking_levels=entry.thinking_levels,
             thinking_models=entry.thinking_models,
@@ -920,7 +923,9 @@ async def _github_copilot_provider_for_model_listing(
     if oauth_credential_is_expired(credential):
         credential = await refresh_github_copilot_token(
             credential.refresh,
-            enterprise_domain=credential.account_id if credential.account_id != "github.com" else "",
+            enterprise_domain=(
+                credential.account_id if credential.account_id != "github.com" else ""
+            ),
         )
         credential_store.set_oauth(credential_name, credential)
     return replace(
@@ -1228,7 +1233,9 @@ def _api_key_from_provider(
         if get_oauth is not None:
             oauth_credential = get_oauth(provider.credential_name)
             if oauth_credential is not None:
-                return oauth_credential.access
+                access = getattr(oauth_credential, "access", None)
+                if isinstance(access, str):
+                    return access
 
     api_key = environ.get(provider.api_key_env)
     if api_key:

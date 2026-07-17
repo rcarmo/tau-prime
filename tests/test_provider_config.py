@@ -38,6 +38,8 @@ def test_load_provider_settings_missing_file_uses_openai_default(tmp_path: Path)
         "openai",
         "openai-codex",
         "anthropic",
+        "kimi-coding",
+        "zai",
         "github-copilot",
         "lmstudio",
         "openrouter",
@@ -281,6 +283,7 @@ def test_upsert_openai_compatible_provider_replaces_and_sets_default() -> None:
         "deepseek",
         "github-copilot",
         "huggingface",
+        "kimi-coding",
         "lmstudio",
         "local",
         "nebius",
@@ -288,6 +291,7 @@ def test_upsert_openai_compatible_provider_replaces_and_sets_default() -> None:
         "openai-codex",
         "opencode-go",
         "openrouter",
+        "zai",
     ]
     assert replaced.get_provider("local").default_model == "llama"
     assert replaced.scoped_models == settings.scoped_models
@@ -1018,11 +1022,59 @@ async def test_ensure_dynamic_provider_models_uses_copilot_proxy_and_headers(
 
     copilot = updated.get_provider("github-copilot")
     assert requests[0].url == "https://api.enterprise.test/models?verbose=true"
-    assert requests[0].headers["authorization"] == "Bearer tid=1;proxy-ep=proxy.enterprise.test;token"
+    assert requests[0].headers["authorization"] == (
+        "Bearer tid=1;proxy-ep=proxy.enterprise.test;token"
+    )
     assert requests[0].headers["copilot-integration-id"] == "vscode-chat"
     assert copilot.models == ("gpt-5.5", "claude-sonnet-5", "gemini-3.5-flash")
     assert copilot.default_model == "gpt-5.5"
     assert copilot.context_windows["claude-sonnet-5"] == 1000000
+
+
+@pytest.mark.anyio
+def test_kimi_and_zai_catalog_match_pi_ai_runtime_metadata() -> None:
+    kimi = provider_config_from_catalog_entry("kimi-coding")
+    assert kimi.base_url == "https://api.kimi.com/coding"
+    assert kimi.api_key_env == "KIMI_API_KEY"
+    assert kimi.headers["User-Agent"] == "KimiCLI/1.5"
+    assert kimi.context_windows["kimi-for-coding"] == 262_144
+
+    zai = provider_config_from_catalog_entry("zai")
+    assert zai.base_url == "https://api.z.ai/api/coding/paas/v4"
+    assert zai.api_key_env == "ZAI_API_KEY"
+    assert zai.default_model == "glm-5-turbo"
+    assert zai.context_windows["glm-4.7"] == 204_800
+    assert getattr(zai, "dynamic_models", False) is True
+
+
+@pytest.mark.anyio
+async def test_ensure_dynamic_provider_models_refreshes_zai(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ZAI_API_KEY", "zai-key")
+    paths = TauPaths(home=tmp_path / ".tau")
+    settings = load_provider_settings(paths)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == "https://api.z.ai/api/coding/paas/v4/models?verbose=true"
+        return httpx.Response(
+            200,
+            json={"data": [{"id": "glm-5.1", "context_window": 200000}]},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        updated = await ensure_dynamic_provider_models(
+            settings,
+            provider_name="zai",
+            paths=paths,
+            client=client,
+        )
+
+    zai = updated.get_provider("zai")
+    assert zai.models == ("glm-5.1",)
+    assert zai.default_model == "glm-5.1"
+    assert zai.context_windows["glm-5.1"] == 200_000
 
 
 @pytest.mark.anyio
