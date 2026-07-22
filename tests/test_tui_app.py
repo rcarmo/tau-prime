@@ -82,6 +82,7 @@ from tau_coding.tui.config import (
     tui_settings_path,
 )
 from tau_coding.tui.state import ChatItem
+from tau_coding.tui.terminal_notification import TerminalNotificationController
 from tau_coding.tui.widgets import (
     LeftAlignedMarkdownHeading,
     StreamingTranscriptMessageWidget,
@@ -1601,6 +1602,23 @@ async def test_transcript_state_refresh_mounts_bounded_recent_window() -> None:
         assert widgets[1].item.text == "message 60"
         assert widgets[-1].item.text == "message 259"
         assert len(app.state.items) == 260
+
+
+@pytest.mark.anyio
+async def test_tui_notifies_when_turn_finishes_without_focus() -> None:
+    app = TauTuiApp(FakeSession(messages=[]), tui_settings=TuiSettings(turn_notification="bell"))
+    output: list[str] = []
+
+    async with app.run_test(size=(80, 24)):
+        app._terminal_notification = TerminalNotificationController(
+            "bell",
+            enabled=True,
+            writer=output.append,
+        )
+        app.on_app_blur()
+        await app._apply_streaming_transcript_event(AgentEndEvent())
+
+    assert output == ["\a"]
 
 
 @pytest.mark.anyio

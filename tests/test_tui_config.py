@@ -79,6 +79,21 @@ def test_save_tui_settings_writes_json(tmp_path: Path) -> None:
     assert load_tui_settings(paths).theme == "tau-light"
 
 
+def test_tui_settings_persists_turn_notification(tmp_path: Path) -> None:
+    paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
+    settings = TuiSettings(turn_notification="desktop")
+
+    save_tui_settings(settings, paths)
+
+    assert load_tui_settings(paths).turn_notification == "desktop"
+    assert load_tui_settings(paths).to_json()["turn_notification"] == "desktop"
+
+
+def test_tui_settings_rejects_unknown_turn_notification() -> None:
+    with pytest.raises(TuiConfigError, match="Unknown turn notification mode"):
+        tui_settings_from_json({"turn_notification": "toast"})
+
+
 def test_tui_settings_persists_compaction_policy(tmp_path: Path) -> None:
     paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
     settings = TuiSettings(

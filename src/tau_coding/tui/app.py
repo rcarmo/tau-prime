@@ -109,6 +109,7 @@ from tau_coding.tui.config import (
 )
 from tau_coding.tui.file_drop import normalize_dropped_paths
 from tau_coding.tui.state import TuiState, format_terminal_command_result_block
+from tau_coding.tui.terminal_notification import TerminalNotificationController
 from tau_coding.tui.widgets import (
     CompactSessionInfo,
     SessionSidebar,
@@ -1942,6 +1943,10 @@ class TauTuiApp(App[None]):
         super().__init__()
         self._bindings = BindingsMap(_app_bindings(self.tui_settings.keybindings))
         self.session = session
+        self._terminal_notification = TerminalNotificationController(
+            self.tui_settings.turn_notification
+        )
+        self._app_has_focus = True
         configure_compaction = getattr(session, "configure_compaction", None)
         if callable(configure_compaction):
             configure_compaction(
@@ -1989,6 +1994,14 @@ class TauTuiApp(App[None]):
             with suppress(Exception):
                 pyperclip.copy(text)
         super().copy_to_clipboard(text)
+
+    def on_app_blur(self) -> None:
+        """Track terminal focus for background turn-finished notifications."""
+        self._app_has_focus = False
+
+    def on_app_focus(self) -> None:
+        """Track terminal focus for background turn-finished notifications."""
+        self._app_has_focus = True
 
     def get_theme_variable_defaults(self) -> dict[str, str]:
         """Return Tau-specific CSS variables for the selected TUI theme."""
@@ -2405,6 +2418,7 @@ class TauTuiApp(App[None]):
             show_sidebar=self.tui_settings.show_sidebar,
             provider_compaction_enabled=self.tui_settings.provider_compaction_enabled,
             compaction_strategy=self.tui_settings.compaction_strategy,
+            turn_notification=self.tui_settings.turn_notification,
         )
         save_tui_settings(self.tui_settings)
         self.refresh_css(animate=False)
@@ -2469,6 +2483,8 @@ class TauTuiApp(App[None]):
             await transcript.finish_assistant_message(scroll_end=True)
             self._refresh_chrome()
             self._scroll_transcript_to_bottom()
+            if not self._app_has_focus:
+                self._terminal_notification.notify_turn_finished()
             return
         if isinstance(event, MessageStartEvent):
             return
@@ -2727,6 +2743,7 @@ class TauTuiApp(App[None]):
             show_sidebar=not self.tui_settings.show_sidebar,
             provider_compaction_enabled=self.tui_settings.provider_compaction_enabled,
             compaction_strategy=self.tui_settings.compaction_strategy,
+            turn_notification=self.tui_settings.turn_notification,
         )
         save_tui_settings(self.tui_settings)
         self._update_responsive_layout(self.size.width, self.size.height)
@@ -3173,6 +3190,7 @@ class TauTuiApp(App[None]):
             show_sidebar=self.tui_settings.show_sidebar,
             provider_compaction_enabled=provider_enabled,
             compaction_strategy=strategy,
+            turn_notification=self.tui_settings.turn_notification,
         )
         save_tui_settings(self.tui_settings)
         configure = getattr(self.session, "configure_compaction", None)

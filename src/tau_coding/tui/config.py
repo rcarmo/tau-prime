@@ -55,6 +55,7 @@ class TuiKeybindings:
 
 type TuiThemeName = Literal["tau-dark", "tau-light", "high-contrast"]
 type CompactionStrategy = Literal["summary", "pipelined"]
+type TurnNotificationMode = Literal["off", "bell", "desktop"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,6 +249,7 @@ class TuiSettings:
     show_sidebar: bool = False
     provider_compaction_enabled: bool = True
     compaction_strategy: CompactionStrategy = "pipelined"
+    turn_notification: TurnNotificationMode = "off"
 
     def to_json(self) -> dict[str, Any]:
         """Serialize these settings to JSON-compatible data."""
@@ -258,6 +260,7 @@ class TuiSettings:
             "theme": self.theme,
             "provider_compaction_enabled": self.provider_compaction_enabled,
             "compaction_strategy": self.compaction_strategy,
+            "turn_notification": self.turn_notification,
         }
 
     @property
@@ -299,6 +302,7 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
         "theme",
         "provider_compaction_enabled",
         "compaction_strategy",
+        "turn_notification",
     }
     unknown_fields = set(data) - allowed_fields
     if unknown_fields:
@@ -320,6 +324,7 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
             "provider_compaction_enabled",
         ),
         compaction_strategy=_compaction_strategy(data.get("compaction_strategy", "pipelined")),
+        turn_notification=_turn_notification(data.get("turn_notification", "off")),
     )
 
 
@@ -327,6 +332,12 @@ def _compaction_strategy(value: object) -> CompactionStrategy:
     if value == "summary" or value == "pipelined":
         return value
     raise TuiConfigError(f"Unknown compaction strategy: {value}")
+
+
+def _turn_notification(value: object) -> TurnNotificationMode:
+    if value == "off" or value == "bell" or value == "desktop":
+        return value
+    raise TuiConfigError(f"Unknown turn notification mode: {value}")
 
 
 def _bool_setting(value: object, field_name: str) -> bool:
