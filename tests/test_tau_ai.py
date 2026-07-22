@@ -1736,6 +1736,66 @@ async def test_openai_compatible_provider_can_send_responses_reasoning_effort() 
 
 
 @pytest.mark.anyio
+async def test_openai_codex_provider_retries_transient_top_level_stream_error() -> None:
+    requests: list[httpx.Request] = []
+
+    async def credentials() -> OpenAICodexCredentials:
+        return OpenAICodexCredentials(access_token="access-token", account_id="account-1")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if len(requests) == 1:
+            return httpx.Response(
+                200,
+                text=(
+                    'data: {"type":"error","code":"server_is_overloaded",'
+                    '"message":"Our servers are currently overloaded."}\n\n'
+                ),
+                headers={"content-type": "text/event-stream"},
+            )
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"response.output_text.delta","delta":"ok"}\n\n'
+                'data: {"type":"response.completed","response":{"status":"completed"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = OpenAICodexProvider(
+            OpenAICodexConfig(
+                credential_resolver=credentials,
+                base_url="https://chatgpt.test/backend-api",
+                max_retries=1,
+                max_retry_delay_seconds=0,
+            ),
+            client=client,
+        )
+
+        events = await _collect(
+            provider.stream_response(
+                model="gpt-5.5",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+            )
+        )
+
+    assert len(requests) == 2
+    assert isinstance(events[1], ProviderRetryEvent)
+    assert events[1].data == {
+        "event": {
+            "type": "error",
+            "code": "server_is_overloaded",
+            "message": "Our servers are currently overloaded.",
+        }
+    }
+    assert isinstance(events[-1], ProviderResponseEndEvent)
+    assert events[-1].message.content == "ok"
+
+
+@pytest.mark.anyio
 async def test_openai_codex_provider_retries_transient_response_failed_event() -> None:
     requests: list[httpx.Request] = []
 

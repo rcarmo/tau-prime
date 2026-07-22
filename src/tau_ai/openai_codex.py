@@ -167,6 +167,7 @@ class OpenAICodexProvider:
             attempt = 0
             while True:
                 emitted_content = False
+                emitted_thinking = False
                 try:
                     credentials = await self._config.credential_resolver()
                     headers = _build_codex_headers(
@@ -264,11 +265,14 @@ class OpenAICodexProvider:
                                 ProviderTextDeltaEvent | ProviderToolCallEvent,
                             ):
                                 emitted_content = True
+                            if isinstance(event, ProviderThinkingDeltaEvent):
+                                emitted_thinking = True
                             if (
                                 isinstance(event, ProviderErrorEvent)
-                                and event.retryable
                                 and not emitted_content
-                                and self._should_retry(attempt, provider_error=event)
+                                and not emitted_thinking
+                                and self._should_retry(attempt)
+                                and (event.retryable or _retryable_stream_error_event(event))
                             ):
                                 delay = retry_delay_seconds(
                                     attempt,
@@ -276,12 +280,16 @@ class OpenAICodexProvider:
                                         self._config.max_retry_delay_seconds
                                     ),
                                 )
+                                stream_error = _stream_error_event_data(event) or {}
+                                details = _stream_error_details(stream_error)
                                 yield provider_retry_event(
                                     attempt=attempt,
                                     max_retries=self._config.max_retries,
                                     delay_seconds=delay,
-                                    reason=event.message,
-                                    data=event.data,
+                                    reason=(
+                                        f"stream error ({details['code'] or 'unknown'})"
+                                    ),
+                                    data={"event": stream_error},
                                 )
                                 attempt += 1
                                 if not await wait_for_retry(delay, signal=signal):
@@ -311,7 +319,7 @@ class OpenAICodexProvider:
                             "message": str(exc),
                         },
                     )
-                    if not emitted_content and self._should_retry(attempt):
+                    if not emitted_content and not emitted_thinking and self._should_retry(attempt):
                         delay = retry_delay_seconds(
                             attempt,
                             max_delay_seconds=self._config.max_retry_delay_seconds,
@@ -955,27 +963,78 @@ def _error_detail_from_mapping(value: Mapping[str, Any]) -> str:
 
 
 def _response_error_message(event: Mapping[str, Any]) -> str:
-    response = event.get("response")
-    if isinstance(response, Mapping):
-        error = response.get("error")
-        if isinstance(error, Mapping):
-            message = error.get("message")
-            code = error.get("code")
-            if isinstance(message, str) and message:
-                return message
-            if isinstance(code, str) and code:
-                return f"OpenAI Codex response failed: {code}"
+    details = _stream_error_details(event)
+    if details["message"]:
+        return details["message"]
+    if details["code"]:
+        return f"OpenAI Codex response failed: {details['code']}"
     return "OpenAI Codex response failed"
 
 
 def _error_message(event: Mapping[str, Any], *, fallback: str) -> str:
-    message = event.get("message")
-    if isinstance(message, str) and message:
-        return message
-    code = event.get("code")
-    if isinstance(code, str) and code:
-        return code
+    details = _stream_error_details(event)
+    if details["message"]:
+        return details["message"]
+    if details["code"]:
+        return details["code"]
     return fallback
+
+
+def _stream_error_details(event: Mapping[str, Any]) -> dict[str, str]:
+    """Extract a stable code/message pair from Codex error event shapes."""
+    sources: list[Mapping[str, Any]] = []
+    error = event.get("error")
+    if isinstance(error, Mapping):
+        sources.append(error)
+    response = event.get("response")
+    if isinstance(response, Mapping):
+        response_error = response.get("error")
+        if isinstance(response_error, Mapping):
+            sources.append(response_error)
+    sources.append(event)
+
+    code = ""
+    message = ""
+    for source in sources:
+        if not message:
+            value = source.get("message")
+            if isinstance(value, str):
+                message = value
+        if not code:
+            value = source.get("code") or source.get("type")
+            if isinstance(value, str):
+                code = value
+    return {"code": code, "message": message}
+
+
+_TRANSIENT_STREAM_ERROR_MARKERS = (
+    "overloaded",
+    "service_unavailable",
+    "temporarily_unavailable",
+    "rate_limit",
+    "internal_error",
+    "server_error",
+    "timeout",
+)
+
+
+def _stream_error_event_data(event: ProviderErrorEvent) -> dict[str, JSONValue] | None:
+    data = event.data
+    if not isinstance(data, dict):
+        return None
+    raw = data.get("event")
+    return raw if isinstance(raw, dict) else None
+
+
+def _retryable_stream_error_event(event: ProviderErrorEvent) -> bool:
+    raw = _stream_error_event_data(event)
+    if raw is None:
+        return False
+    details = _stream_error_details(raw)
+    haystack = " ".join(part for part in details.values() if part).lower()
+    if not haystack or _is_terminal_rate_limit(haystack):
+        return False
+    return any(marker in haystack for marker in _TRANSIENT_STREAM_ERROR_MARKERS)
 
 
 def _build_codex_headers(
