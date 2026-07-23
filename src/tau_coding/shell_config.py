@@ -48,10 +48,8 @@ def load_shell_settings(paths: TauPaths | None = None) -> ShellSettings:
 
 def shell_settings_from_json(data: dict[str, Any]) -> ShellSettings:
     """Parse shell settings from JSON-compatible data."""
-    allowed_fields = {"shellCommandPrefix", "shell_command_prefix"}
-    unknown_fields = set(data) - allowed_fields
-    if unknown_fields:
-        raise ShellConfigError(f"Unknown shell settings field: {sorted(unknown_fields)[0]}")
+    # Unknown fields are intentionally ignored so future config files remain
+    # usable in older clients. Recognized fields are still validated.
     if "shellCommandPrefix" in data and "shell_command_prefix" in data:
         raise ShellConfigError("Use only one of shellCommandPrefix or shell_command_prefix")
 

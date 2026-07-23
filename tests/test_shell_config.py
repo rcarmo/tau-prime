@@ -1,9 +1,6 @@
 from pathlib import Path
 
-import pytest
-
 from tau_coding import (
-    ShellConfigError,
     ShellSettings,
     TauPaths,
     load_shell_settings,
@@ -39,6 +36,5 @@ def test_shell_settings_accepts_tau_style_shell_command_prefix() -> None:
     assert settings.shell_command_prefix == "ll() { ls -la; }"
 
 
-def test_shell_settings_rejects_unknown_fields() -> None:
-    with pytest.raises(ShellConfigError, match="Unknown shell settings field"):
-        shell_settings_from_json({"shell": "bash"})
+def test_shell_settings_ignore_unknown_fields() -> None:
+    assert shell_settings_from_json({"shell": "bash"}) == ShellSettings()

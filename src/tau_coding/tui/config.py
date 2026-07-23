@@ -304,9 +304,9 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
         "compaction_strategy",
         "turn_notification",
     }
-    unknown_fields = set(data) - allowed_fields
-    if unknown_fields:
-        raise TuiConfigError(f"Unknown TUI settings field: {sorted(unknown_fields)[0]}")
+    # Unknown fields are intentionally ignored so newer Tau Prime config files
+    # remain usable in older clients while recognized settings are validated.
+    _ = allowed_fields
 
     keybindings_data = data.get("keybindings", {})
     if not isinstance(keybindings_data, dict):
@@ -348,12 +348,8 @@ def _bool_setting(value: object, field_name: str) -> bool:
 
 def _keybindings_from_json(data: dict[str, Any]) -> TuiKeybindings:
     defaults = TuiKeybindings()
-    allowed_fields = set(defaults.to_json())
-    legacy_fields = {"message_previous", "message_next"}
-    unknown_fields = set(data) - allowed_fields - legacy_fields
-    if unknown_fields:
-        raise TuiConfigError(f"Unknown TUI keybinding: {sorted(unknown_fields)[0]}")
-
+    # Unknown keybinding actions are intentionally ignored for forward
+    # compatibility; duplicates are checked among actions this client knows.
     values = {
         field_name: _key_string(data.get(field_name, default_value), field_name)
         for field_name, default_value in defaults.to_json().items()
