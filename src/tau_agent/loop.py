@@ -27,6 +27,12 @@ from tau_agent.provider_events import (
     AssistantDoneEvent,
     AssistantStartEvent,
     TextDeltaEvent,
+    TextEndEvent,
+    TextStartEvent,
+    ThinkingEndEvent,
+    ThinkingStartEvent,
+    ToolCallEndEvent,
+    ToolCallStartEvent,
 )
 from tau_agent.provider_events import (
     ThinkingDeltaEvent as AssistantThinkingDeltaEvent,
@@ -82,6 +88,9 @@ async def run_agent_loop(
         yield TurnStartEvent(turn=turn)
         assistant_message: AssistantMessage | None = None
         partial_assistant = AssistantMessage(content="")
+        text_started = False
+        thinking_started = False
+        thinking_parts: list[str] = []
         saw_provider_error = False
 
         async for provider_event in provider.stream_response(
@@ -98,6 +107,12 @@ async def run_agent_loop(
                     assistant_message_event=AssistantStartEvent(partial=partial_assistant),
                 )
             elif isinstance(provider_event, ProviderTextDeltaEvent):
+                if not text_started:
+                    text_started = True
+                    yield MessageUpdateEvent(
+                        message=partial_assistant,
+                        assistant_message_event=TextStartEvent(partial=partial_assistant),
+                    )
                 partial_assistant = partial_assistant.model_copy(
                     update={"content": partial_assistant.content + provider_event.delta}
                 )
@@ -110,6 +125,13 @@ async def run_agent_loop(
                 )
                 yield MessageDeltaEvent(delta=provider_event.delta)
             elif isinstance(provider_event, ProviderThinkingDeltaEvent):
+                if not thinking_started:
+                    thinking_started = True
+                    yield MessageUpdateEvent(
+                        message=partial_assistant,
+                        assistant_message_event=ThinkingStartEvent(partial=partial_assistant),
+                    )
+                thinking_parts.append(provider_event.delta)
                 yield MessageUpdateEvent(
                     message=partial_assistant,
                     assistant_message_event=AssistantThinkingDeltaEvent(
@@ -129,9 +151,44 @@ async def run_agent_loop(
             elif isinstance(provider_event, ProviderResponseEndEvent):
                 assistant_message = provider_event.message
                 messages.append(assistant_message)
+                if text_started:
+                    yield MessageUpdateEvent(
+                        message=assistant_message,
+                        assistant_message_event=TextEndEvent(
+                            content=assistant_message.content,
+                            partial=assistant_message,
+                        ),
+                    )
+                if thinking_started:
+                    yield MessageUpdateEvent(
+                        message=assistant_message,
+                        assistant_message_event=ThinkingEndEvent(
+                            content="".join(thinking_parts),
+                            partial=assistant_message,
+                        ),
+                    )
+                for index, tool_call in enumerate(assistant_message.tool_calls):
+                    yield MessageUpdateEvent(
+                        message=assistant_message,
+                        assistant_message_event=ToolCallStartEvent(
+                            content_index=index,
+                            partial=assistant_message,
+                        ),
+                    )
+                    yield MessageUpdateEvent(
+                        message=assistant_message,
+                        assistant_message_event=ToolCallEndEvent(
+                            content_index=index,
+                            tool_call=tool_call,
+                            partial=assistant_message,
+                        ),
+                    )
                 yield MessageUpdateEvent(
                     message=assistant_message,
-                    assistant_message_event=AssistantDoneEvent(message=assistant_message),
+                    assistant_message_event=AssistantDoneEvent(
+                        reason="toolUse" if assistant_message.tool_calls else "stop",
+                        message=assistant_message,
+                    ),
                 )
                 yield MessageEndEvent(message=assistant_message)
             elif isinstance(provider_event, ProviderErrorEvent):

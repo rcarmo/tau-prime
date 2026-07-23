@@ -16,6 +16,14 @@ class AssistantStartEvent(BaseModel):
     partial: AssistantMessage
 
 
+class TextStartEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["text_start"] = "text_start"
+    content_index: int = 0
+    partial: AssistantMessage
+
+
 class TextDeltaEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -25,11 +33,54 @@ class TextDeltaEvent(BaseModel):
     partial: AssistantMessage
 
 
+class TextEndEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["text_end"] = "text_end"
+    content_index: int = 0
+    content: str
+    partial: AssistantMessage
+
+
+class ThinkingStartEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["thinking_start"] = "thinking_start"
+    content_index: int = 0
+    partial: AssistantMessage
+
+
 class ThinkingDeltaEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["thinking_delta"] = "thinking_delta"
     content_index: int = 0
+    delta: str
+    partial: AssistantMessage
+
+
+class ThinkingEndEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["thinking_end"] = "thinking_end"
+    content_index: int = 0
+    content: str
+    partial: AssistantMessage
+
+
+class ToolCallStartEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["toolcall_start"] = "toolcall_start"
+    content_index: int
+    partial: AssistantMessage
+
+
+class ToolCallDeltaEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["toolcall_delta"] = "toolcall_delta"
+    content_index: int
     delta: str
     partial: AssistantMessage
 
@@ -61,8 +112,14 @@ class AssistantErrorEvent(BaseModel):
 
 type AssistantMessageEvent = Annotated[
     AssistantStartEvent
+    | TextStartEvent
     | TextDeltaEvent
+    | TextEndEvent
+    | ThinkingStartEvent
     | ThinkingDeltaEvent
+    | ThinkingEndEvent
+    | ToolCallStartEvent
+    | ToolCallDeltaEvent
     | ToolCallEndEvent
     | AssistantDoneEvent
     | AssistantErrorEvent,

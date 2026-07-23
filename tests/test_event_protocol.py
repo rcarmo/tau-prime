@@ -12,6 +12,8 @@ from tau_agent.provider_events import (
     AssistantDoneEvent,
     AssistantStartEvent,
     TextDeltaEvent,
+    TextEndEvent,
+    TextStartEvent,
 )
 from tau_ai import (
     FakeProvider,
@@ -50,5 +52,7 @@ async def test_agent_loop_emits_pi_shaped_message_updates_alongside_legacy_event
     assert any(isinstance(event, MessageEndEvent) for event in events)
     updates = [event for event in events if isinstance(event, MessageUpdateEvent)]
     assert isinstance(updates[0].assistant_message_event, AssistantStartEvent)
-    assert isinstance(updates[1].assistant_message_event, TextDeltaEvent)
+    assert isinstance(updates[1].assistant_message_event, TextStartEvent)
+    assert isinstance(updates[2].assistant_message_event, TextDeltaEvent)
+    assert isinstance(updates[-2].assistant_message_event, TextEndEvent)
     assert isinstance(updates[-1].assistant_message_event, AssistantDoneEvent)

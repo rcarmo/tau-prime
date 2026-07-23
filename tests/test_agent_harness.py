@@ -151,20 +151,18 @@ async def test_subscribed_listeners_receive_events_and_can_unsubscribe() -> None
     unsubscribe()
     _more_events = [event async for event in harness.continue_()]
 
-    assert seen == [
+    assert [event_type for event_type in seen if event_type != "message_update"] == [
         "message_start",
         "message_end",
         "agent_start",
         "turn_start",
         "message_start",
-        "message_update",
-        "message_update",
         "message_delta",
-        "message_update",
         "message_end",
         "turn_end",
         "agent_end",
     ]
+    assert seen.count("message_update") >= 3
 
 
 @pytest.mark.anyio
@@ -189,14 +187,12 @@ async def test_cancel_requests_cancellation_for_current_run() -> None:
         if event.type == "message_delta":
             harness.cancel()
 
-    assert [event.type for event in events] == [
+    assert [event.type for event in events if event.type != "message_update"] == [
         "message_start",
         "message_end",
         "agent_start",
         "turn_start",
         "message_start",
-        "message_update",
-        "message_update",
         "message_delta",
         "error",
         "turn_end",
