@@ -28,7 +28,15 @@ def setup(tau):
     def log_event(context, event):
         open(context.cwd / "events.log", "a").write(event.type + "\\n")
 
+    def log_lifecycle(context, reason):
+        open(context.cwd / "lifecycle.log", "a").write(reason + "\\n")
+
+    def tool_result(context, result):
+        return result.model_copy(update={"content": result.content + " hooked"})
+
     tau.on_agent_event(log_event)
+    tau.on_lifecycle(log_lifecycle)
+    tau.on_tool_result(tool_result)
     tau.register_command(
         "demo",
         lambda context, args: CommandResult(handled=True, message=f"demo {args.strip()}"),
@@ -55,12 +63,18 @@ def setup(tau):
 
     assert "demo_tool" in {tool.name for tool in session.tools}
     assert "Prefer concise answers." in session.system_prompt
+    assert "startup" in (tmp_path / "lifecycle.log").read_text(encoding="utf-8")
     assert session.handle_command("/demo works").message == "demo works"
 
     await _drain(session.prompt("before text"))
 
     assert session.messages[0] == UserMessage(content="after text")
     assert "message_update" in (tmp_path / "events.log").read_text(encoding="utf-8")
+    tool = next(tool for tool in session.tools if tool.name == "demo_tool")
+    result = await tool.execute({})
+    assert result.content == "tool ok hooked"
+    await session.aclose()
+    assert "shutdown" in (tmp_path / "lifecycle.log").read_text(encoding="utf-8")
 
 
 @pytest.mark.anyio

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Protocol
 
 from tau_agent.events import AgentEvent
-from tau_agent.tools import AgentTool
+from tau_agent.tools import AgentTool, AgentToolResult, ToolCall
 from tau_coding.commands import CommandResult
 
 
@@ -31,6 +31,22 @@ class ExtensionInputHook(Protocol):
 
 class ExtensionEventListener(Protocol):
     def __call__(self, context: ExtensionContext, event: AgentEvent) -> None: ...
+
+
+class ExtensionLifecycleListener(Protocol):
+    def __call__(self, context: ExtensionContext, reason: str) -> None: ...
+
+
+class ExtensionToolCallHook(Protocol):
+    def __call__(self, context: ExtensionContext, tool_call: ToolCall) -> ToolCall | None: ...
+
+
+class ExtensionToolResultHook(Protocol):
+    def __call__(
+        self,
+        context: ExtensionContext,
+        result: AgentToolResult,
+    ) -> AgentToolResult | None: ...
 
 
 class ExtensionAPI:
@@ -70,6 +86,15 @@ class ExtensionAPI:
     def on_agent_event(self, listener: ExtensionEventListener) -> None:
         self._runtime.register_event_listener(self._name, listener)
 
+    def on_lifecycle(self, listener: ExtensionLifecycleListener) -> None:
+        self._runtime.register_lifecycle_listener(self._name, listener)
+
+    def on_tool_call(self, hook: ExtensionToolCallHook) -> None:
+        self._runtime.register_tool_call_hook(self._name, hook)
+
+    def on_tool_result(self, hook: ExtensionToolResultHook) -> None:
+        self._runtime.register_tool_result_hook(self._name, hook)
+
 
 class ExtensionRuntimeProtocol(Protocol):
     def register_tool(self, extension_name: str, tool: AgentTool) -> None: ...
@@ -93,4 +118,22 @@ class ExtensionRuntimeProtocol(Protocol):
         self,
         extension_name: str,
         listener: ExtensionEventListener,
+    ) -> None: ...
+
+    def register_lifecycle_listener(
+        self,
+        extension_name: str,
+        listener: ExtensionLifecycleListener,
+    ) -> None: ...
+
+    def register_tool_call_hook(
+        self,
+        extension_name: str,
+        hook: ExtensionToolCallHook,
+    ) -> None: ...
+
+    def register_tool_result_hook(
+        self,
+        extension_name: str,
+        hook: ExtensionToolResultHook,
     ) -> None: ...

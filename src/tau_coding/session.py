@@ -311,6 +311,15 @@ class CodingSession:
         extension_runtime.load(resource_paths)
         if extension_runtime.tools:
             tools = [*tools, *extension_runtime.tools.values()]
+        tools = extension_runtime.wrap_tools(
+            tools,
+            lambda: ExtensionContext(
+                cwd=config.cwd,
+                model=config.model,
+                provider_name=config.provider_name,
+                session_id=config.session_id,
+            ),
+        )
         command_registry = extension_runtime.command_registry(
             config.command_registry or create_default_command_registry()
         )
@@ -358,6 +367,7 @@ class CodingSession:
             pending_initial_entries=pending_initial_entries,
         )
         session._extension_runtime = extension_runtime
+        session._dispatch_extension_lifecycle("startup")
         await session._persist_loaded_interrupted_tool_repairs()
         session._sync_thinking_level_to_active_model()
         session._refresh_runtime_provider()
@@ -1227,6 +1237,7 @@ class CodingSession:
 
     async def aclose(self) -> None:
         """Close runtime providers created by this coding session."""
+        self._dispatch_extension_lifecycle("shutdown")
         for provider in self._owned_providers:
             await provider.aclose()
         self._owned_providers.clear()
@@ -1425,6 +1436,15 @@ class CodingSession:
             session_id=self.session_id,
             run_id=new_agent_call_run_id(),
         )
+
+    def _dispatch_extension_lifecycle(self, reason: str) -> None:
+        context = ExtensionContext(
+            cwd=self.cwd,
+            model=self.model,
+            provider_name=self.provider_name,
+            session_id=self.session_id,
+        )
+        self._extension_runtime.dispatch_lifecycle(context, reason)
 
     def _dispatch_extension_event(self, event: AgentEvent) -> None:
         context = ExtensionContext(

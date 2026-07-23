@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from tau_agent.events import AgentEvent
-from tau_agent.tools import AgentTool
+from tau_agent.tools import AgentTool, AgentToolResult, ToolCall, ToolCancellationToken
+from tau_agent.types import JSONValue
 from tau_coding.commands import CommandContext, CommandRegistry, CommandResult, SlashCommand
 from tau_coding.extensions.api import (
     ExtensionAPI,
@@ -17,6 +18,9 @@ from tau_coding.extensions.api import (
     ExtensionContext,
     ExtensionEventListener,
     ExtensionInputHook,
+    ExtensionLifecycleListener,
+    ExtensionToolCallHook,
+    ExtensionToolResultHook,
 )
 from tau_coding.resources import ResourceDiagnostic, TauResourcePaths
 
@@ -40,6 +44,9 @@ class ExtensionRuntime:
         self.prompt_guidelines: list[str] = []
         self.input_hooks: list[ExtensionInputHook] = []
         self.event_listeners: list[ExtensionEventListener] = []
+        self.lifecycle_listeners: list[ExtensionLifecycleListener] = []
+        self.tool_call_hooks: list[ExtensionToolCallHook] = []
+        self.tool_result_hooks: list[ExtensionToolResultHook] = []
         self.diagnostics: list[ResourceDiagnostic] = []
         self._modules: list[str] = []
 
@@ -59,6 +66,9 @@ class ExtensionRuntime:
         self.prompt_guidelines.clear()
         self.input_hooks.clear()
         self.event_listeners.clear()
+        self.lifecycle_listeners.clear()
+        self.tool_call_hooks.clear()
+        self.tool_result_hooks.clear()
         self.diagnostics.clear()
 
     def command_registry(self, base: CommandRegistry) -> CommandRegistry:
@@ -177,18 +187,114 @@ class ExtensionRuntime:
         del extension_name
         self.event_listeners.append(listener)
 
+    def register_lifecycle_listener(
+        self,
+        extension_name: str,
+        listener: ExtensionLifecycleListener,
+    ) -> None:
+        del extension_name
+        self.lifecycle_listeners.append(listener)
+
+    def register_tool_call_hook(
+        self,
+        extension_name: str,
+        hook: ExtensionToolCallHook,
+    ) -> None:
+        del extension_name
+        self.tool_call_hooks.append(hook)
+
+    def register_tool_result_hook(
+        self,
+        extension_name: str,
+        hook: ExtensionToolResultHook,
+    ) -> None:
+        del extension_name
+        self.tool_result_hooks.append(hook)
+
+    def dispatch_lifecycle(self, context: ExtensionContext, reason: str) -> None:
+        for listener in self.lifecycle_listeners:
+            try:
+                listener(context, reason)
+            except Exception as exc:  # noqa: BLE001 - extension isolation boundary
+                self._record_runtime_error(f"lifecycle listener failed: {exc!r}")
+
     def dispatch_agent_event(self, context: ExtensionContext, event: AgentEvent) -> None:
         for listener in self.event_listeners:
             try:
                 listener(context, event)
             except Exception as exc:  # noqa: BLE001 - extension isolation boundary
-                self.diagnostics.append(
-                    ResourceDiagnostic(
-                        kind="extension",
-                        message=f"agent event listener failed: {exc!r}",
-                        severity="error",
-                    )
-                )
+                self._record_runtime_error(f"agent event listener failed: {exc!r}")
+
+    def transform_tool_call(self, context: ExtensionContext, tool_call: ToolCall) -> ToolCall:
+        current = tool_call
+        for hook in self.tool_call_hooks:
+            try:
+                updated = hook(context, current)
+            except Exception as exc:  # noqa: BLE001 - extension isolation boundary
+                self._record_runtime_error(f"tool call hook failed: {exc!r}")
+                continue
+            if updated is not None:
+                current = updated
+        return current
+
+    def transform_tool_result(
+        self,
+        context: ExtensionContext,
+        result: AgentToolResult,
+    ) -> AgentToolResult:
+        current = result
+        for hook in self.tool_result_hooks:
+            try:
+                updated = hook(context, current)
+            except Exception as exc:  # noqa: BLE001 - extension isolation boundary
+                self._record_runtime_error(f"tool result hook failed: {exc!r}")
+                continue
+            if updated is not None:
+                current = updated
+        return current
+
+    def wrap_tools(
+        self,
+        tools: list[AgentTool],
+        context_factory: Callable[[], ExtensionContext],
+    ) -> list[AgentTool]:
+        if not self.tool_call_hooks and not self.tool_result_hooks:
+            return tools
+        return [_wrap_tool(self, tool, context_factory) for tool in tools]
+
+    def _record_runtime_error(self, message: str) -> None:
+        self.diagnostics.append(
+            ResourceDiagnostic(
+                kind="extension",
+                message=message,
+                severity="error",
+            )
+        )
+
+
+def _wrap_tool(
+    runtime: ExtensionRuntime,
+    tool: AgentTool,
+    context_factory: Callable[[], ExtensionContext],
+) -> AgentTool:
+    async def execute(
+        arguments: Mapping[str, JSONValue],
+        signal: ToolCancellationToken | None = None,
+    ) -> AgentToolResult:
+        context = context_factory()
+        tool_call = ToolCall(id="extension-hook", name=tool.name, arguments=dict(arguments))
+        transformed_call = runtime.transform_tool_call(context, tool_call)
+        result = await tool.execute(transformed_call.arguments, signal=signal)
+        return runtime.transform_tool_result(context, result)
+
+    return AgentTool(
+        name=tool.name,
+        description=tool.description,
+        input_schema=tool.input_schema,
+        executor=execute,
+        prompt_snippet=tool.prompt_snippet,
+        prompt_guidelines=tool.prompt_guidelines,
+    )
 
 
 def _extension_dirs(paths: TauResourcePaths) -> tuple[Path, ...]:
