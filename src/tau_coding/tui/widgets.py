@@ -42,6 +42,7 @@ HIDDEN_THINKING_PLACEHOLDER = "Thinking… Press Ctrl+T to show thinking tokens.
 TRUNCATED_THINKING_PLACEHOLDER = "Earlier thinking hidden to keep the TUI responsive."
 MAX_VISIBLE_THINKING_ITEMS = 20
 MAX_VISIBLE_THINKING_CHARS = 20_000
+SIDEBAR_BULLET_LIST_LIMIT = 5
 TRANSCRIPT_WINDOW_ITEMS = 200
 TRANSCRIPT_WINDOW_OVERSCAN_ITEMS = 40
 
@@ -894,21 +895,29 @@ def render_session_sidebar(
     metadata.add_row("tools", str(len(session.tools)))
     metadata.add_row("skills", str(len(session.skills)))
 
-    tools = _bullet_list([tool.name for tool in session.tools], empty="No tools", theme=theme)
+    tools = _bullet_list(
+        [tool.name for tool in session.tools],
+        empty="No tools",
+        theme=theme,
+        limit=SIDEBAR_BULLET_LIST_LIMIT,
+    )
     skills = _bullet_list(
         [skill.name for skill in session.skills],
         empty="No skills loaded yet",
         theme=theme,
+        limit=SIDEBAR_BULLET_LIST_LIMIT,
     )
     prompts = _bullet_list(
         [template.name for template in session.prompt_templates],
         empty="No prompt templates",
         theme=theme,
+        limit=SIDEBAR_BULLET_LIST_LIMIT,
     )
     context = _bullet_list(
         _context_file_labels(session.context_files, cwd=session.cwd),
         empty="No context files",
         theme=theme,
+        limit=SIDEBAR_BULLET_LIST_LIMIT,
     )
     equation = Text(TAU_SIDEBAR_LOGO, style=f"bold {theme.prompt_text}")
 
@@ -1499,17 +1508,24 @@ def _bullet_list(
     *,
     empty: str,
     theme: TuiTheme,
+    limit: int | None = None,
 ) -> Text:
     text = Text()
     if not items:
         text.append(empty, style=theme.completion_description)
         return text
 
-    for index, item in enumerate(items):
+    visible_items = tuple(items[:limit]) if limit is not None else tuple(items)
+    for index, item in enumerate(visible_items):
         if index:
             text.append("\n")
         text.append("• ", style=theme.completion_description)
         text.append(item, style=theme.prompt_text)
+    hidden_count = len(items) - len(visible_items)
+    if hidden_count > 0:
+        if visible_items:
+            text.append("\n")
+        text.append(f"…({hidden_count} more)", style=theme.completion_description)
     return text
 
 

@@ -451,6 +451,25 @@ def test_session_sidebar_lists_multiple_context_files() -> None:
     assert "docs/AGENTS.md" in output
 
 
+def test_session_sidebar_limits_dense_lists() -> None:
+    class DenseSession(FakeSession):
+        def __init__(self) -> None:
+            super().__init__()
+            self.skills = tuple(
+                Skill(name=f"skill-{index}", path=Path(f"skill-{index}.md"), content="")
+                for index in range(8)
+            )
+
+    console = Console(record=True, width=120)
+    console.print(render_session_sidebar(DenseSession()))
+    output = console.export_text()
+
+    assert "skill-0" in output
+    assert "skill-4" in output
+    assert "skill-5" not in output
+    assert "…(3 more)" in output
+
+
 def test_compact_session_info_renders_sidebar_facts() -> None:
     console = Console(record=True, width=120)
 
