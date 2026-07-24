@@ -21,7 +21,9 @@ from tau_coding.extensions.api import (
     ExtensionLifecycleListener,
     ExtensionToolCallHook,
     ExtensionToolResultHook,
+    KeyInterceptor,
     MessageRenderer,
+    SlotWidgetContent,
     ToolCallRenderer,
     ToolResultRenderer,
 )
@@ -54,6 +56,8 @@ class ExtensionRuntime:
         self.message_renderers: dict[str, MessageRenderer] = {}
         self.tool_call_renderers: dict[str, ToolCallRenderer] = {}
         self.tool_result_renderers: dict[str, ToolResultRenderer] = {}
+        self.slot_widgets: dict[str, tuple[str, SlotWidgetContent]] = {}
+        self.key_interceptors: list[KeyInterceptor] = []
         self.diagnostics: list[ResourceDiagnostic] = []
         self._modules: list[str] = []
 
@@ -80,6 +84,8 @@ class ExtensionRuntime:
         self.message_renderers.clear()
         self.tool_call_renderers.clear()
         self.tool_result_renderers.clear()
+        self.slot_widgets.clear()
+        self.key_interceptors.clear()
         self.diagnostics.clear()
 
     def command_registry(self, base: CommandRegistry) -> CommandRegistry:
@@ -329,6 +335,34 @@ class ExtensionRuntime:
         except Exception as exc:  # noqa: BLE001 - extension isolation boundary
             self._record_runtime_error(f"message renderer failed: {exc!r}")
             return None
+
+    def set_slot_widget(
+        self,
+        extension_name: str,
+        key: str,
+        content: SlotWidgetContent | None,
+        *,
+        placement: str,
+    ) -> None:
+        slot_key = f"{extension_name}:{key.strip()}"
+        if content is None:
+            self.slot_widgets.pop(slot_key, None)
+            return
+        normalized = placement if placement in {"above_prompt", "below_prompt"} else "above_prompt"
+        self.slot_widgets[slot_key] = (normalized, content)
+
+    def register_key_interceptor(self, extension_name: str, handler: KeyInterceptor) -> None:
+        del extension_name
+        self.key_interceptors.append(handler)
+
+    def intercept_key(self, event: object, prompt_text: str) -> bool:
+        for handler in self.key_interceptors:
+            try:
+                if handler(event, prompt_text):
+                    return True
+            except Exception as exc:  # noqa: BLE001 - extension isolation boundary
+                self._record_runtime_error(f"key interceptor failed: {exc!r}")
+        return False
 
     def wrap_tools(
         self,

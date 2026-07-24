@@ -24,6 +24,7 @@ from textual.events import Key, Resize
 from textual.geometry import Size
 from textual.screen import ModalScreen
 from textual.timer import Timer
+from textual.widget import Widget
 from textual.widgets import (
     Button,
     Footer,
@@ -2205,6 +2206,34 @@ class TauTuiApp(App[None]):
         self.state.tool_call_renderer = runtime.render_tool_call
         self.state.tool_result_renderer = runtime.render_tool_result
 
+    def _sync_extension_slots(self) -> None:
+        runtime = getattr(self.session, "extension_runtime", None)
+        if runtime is None:
+            return
+        for placement, container_id in (
+            ("above_prompt", "#extension-slots-above"),
+            ("below_prompt", "#extension-slots-below"),
+        ):
+            container = self.query_one(container_id, Vertical)
+            container.remove_children()
+            for _key, (slot_placement, content) in runtime.slot_widgets.items():
+                if slot_placement != placement:
+                    continue
+                widget = _extension_slot_widget(content, self.tui_settings.resolved_theme)
+                container.mount(widget)
+
+    def on_key(self, event: Key) -> None:
+        runtime = getattr(self.session, "extension_runtime", None)
+        if runtime is None or not self.screen_stack:
+            return
+        try:
+            prompt_text = self.query_one("#prompt", PromptInput).text
+        except NoMatches:
+            prompt_text = ""
+        if runtime.intercept_key(event, prompt_text):
+            event.stop()
+            event.prevent_default()
+
     def on_app_blur(self) -> None:
         """Track terminal focus for background turn-finished notifications."""
         self._app_has_focus = False
@@ -2232,6 +2261,7 @@ class TauTuiApp(App[None]):
                     markup=False,
                 )
                 yield Static("", id="queued-messages")
+                yield Vertical(id="extension-slots-above")
                 with Horizontal(id="prompt-row"):
                     yield Static("τ", id="prompt-prefix")
                     yield PromptInput(
@@ -2240,6 +2270,7 @@ class TauTuiApp(App[None]):
                         tui_keybindings=self.tui_settings.keybindings,
                     )
                 yield CompactSessionInfo(id="compact-session-info")
+                yield Vertical(id="extension-slots-below")
                 yield Static("", id="autocomplete")
         yield Footer()
 
@@ -2253,6 +2284,7 @@ class TauTuiApp(App[None]):
         self._refresh()
         self._sync_text_selection_state()
         self._refresh_completions()
+        self._sync_extension_slots()
         if self.startup_message:
             self._notify(self.startup_message, severity="warning")
         self._last_polled_terminal_size = (self.size.width, self.size.height)
@@ -3900,6 +3932,16 @@ def _short_path(path: Path) -> str:
         return f"~/{path.relative_to(home)}"
     except ValueError:
         return str(path)
+
+
+def _extension_slot_widget(content: object, theme: TuiTheme) -> Widget:
+    if callable(content):
+        widget = content(theme)
+        if isinstance(widget, Widget):
+            return widget
+    if isinstance(content, Sequence) and not isinstance(content, str):
+        return Static("\n".join(str(line) for line in content), markup=True)
+    return Static(str(content), markup=True)
 
 
 def _tool_source_label(tool: AgentTool, extension_sources: Mapping[str, str]) -> str:

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from tau_agent.events import AgentEvent
 from tau_agent.tools import AgentTool, AgentToolResult, ToolCall
@@ -62,12 +63,37 @@ class ToolResultRenderer(Protocol):
     def __call__(self, result: AgentToolResult) -> str: ...
 
 
+SlotWidgetContent = Sequence[str] | Callable[[Any], Any]
+KeyInterceptor = Callable[[Any, str], bool]
+
+
+class ExtensionUiAPI:
+    """Host UI bridge exposed as ``tau.ui``."""
+
+    def __init__(self, runtime: "ExtensionRuntimeProtocol", name: str) -> None:
+        self._runtime = runtime
+        self._name = name
+
+    def set_slot_widget(
+        self,
+        key: str,
+        content: SlotWidgetContent | None,
+        *,
+        placement: str = "above_prompt",
+    ) -> None:
+        self._runtime.set_slot_widget(self._name, key, content, placement=placement)
+
+    def on_terminal_input(self, handler: KeyInterceptor) -> None:
+        self._runtime.register_key_interceptor(self._name, handler)
+
+
 class ExtensionAPI:
     """Registration API exposed to extension setup functions."""
 
     def __init__(self, runtime: ExtensionRuntimeProtocol, name: str) -> None:
         self._runtime = runtime
         self._name = name
+        self.ui = ExtensionUiAPI(runtime, name)
 
     def register_tool(self, tool: AgentTool) -> None:
         self._runtime.register_tool(self._name, tool)
@@ -179,4 +205,19 @@ class ExtensionRuntimeProtocol(Protocol):
         extension_name: str,
         tool_name: str,
         renderer: ToolResultRenderer,
+    ) -> None: ...
+
+    def set_slot_widget(
+        self,
+        extension_name: str,
+        key: str,
+        content: SlotWidgetContent | None,
+        *,
+        placement: str,
+    ) -> None: ...
+
+    def register_key_interceptor(
+        self,
+        extension_name: str,
+        handler: KeyInterceptor,
     ) -> None: ...
