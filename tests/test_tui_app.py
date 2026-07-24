@@ -8,7 +8,7 @@ import pytest
 from rich.console import Console
 from rich.panel import Panel
 from textual.color import Color
-from textual.containers import VerticalScroll
+from textual.containers import Vertical, VerticalScroll
 from textual.geometry import Offset
 from textual.selection import SELECT_ALL, Selection
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static, TextArea
@@ -33,6 +33,7 @@ from tau_agent import (
 )
 from tau_coding.commands import CommandResult
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
+from tau_coding.extensions.runtime import ExtensionRuntime
 from tau_coding.oauth import OAuthAuthInfo
 from tau_coding.prompt_templates import PromptTemplate
 from tau_coding.provider_config import (
@@ -2372,6 +2373,22 @@ async def test_tui_app_new_command_starts_new_visible_state() -> None:
         await pilot.pause()
 
         assert prompt.value == ""
+
+
+@pytest.mark.anyio
+async def test_tui_app_renders_extension_slot_widgets() -> None:
+    session = FakeSession(messages=[])
+    runtime = ExtensionRuntime()
+    runtime.set_slot_widget("demo", "status", ["Extension ready"], placement="above_prompt")
+    session.extension_runtime = runtime  # type: ignore[attr-defined]
+    app = TauTuiApp(session)
+
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        slot = app.query_one("#extension-slots-above", Vertical)
+        slot_text = "\n".join(str(child.render()) for child in slot.children)
+
+    assert "Extension ready" in slot_text
 
 
 @pytest.mark.anyio

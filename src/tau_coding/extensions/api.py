@@ -70,7 +70,7 @@ KeyInterceptor = Callable[[Any, str], bool]
 class ExtensionUiAPI:
     """Host UI bridge exposed as ``tau.ui``."""
 
-    def __init__(self, runtime: "ExtensionRuntimeProtocol", name: str) -> None:
+    def __init__(self, runtime: ExtensionRuntimeProtocol, name: str) -> None:
         self._runtime = runtime
         self._name = name
 

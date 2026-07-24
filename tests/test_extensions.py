@@ -35,7 +35,7 @@ def setup(tau):
         return result.model_copy(update={"content": result.content + " hooked"})
 
     tau.ui.set_slot_widget("status", ["extension ready"], placement="above_prompt")
-    tau.ui.on_terminal_input(lambda event, prompt: False)
+    tau.ui.on_terminal_input(lambda event, prompt: prompt == "take")
     tau.on_agent_event(log_event)
     tau.on_lifecycle(log_lifecycle)
     tau.on_tool_result(tool_result)
@@ -69,6 +69,8 @@ def setup(tau):
     assert "Prefer concise answers." in session.system_prompt
     assert session.extension_runtime.slot_widgets
     assert len(session.extension_runtime.key_interceptors) == 1
+    assert session.extension_runtime.intercept_key(object(), "take") is True
+    assert session.extension_runtime.intercept_key(object(), "pass") is False
     assert "startup" in (tmp_path / "lifecycle.log").read_text(encoding="utf-8")
     assert session.handle_command("/demo works").message == "demo works"
 
