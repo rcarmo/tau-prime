@@ -407,7 +407,7 @@ wheels = [
 
 [[package]]
 name = "tau-prime"
-version = "42.1.0"
+version = "42.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
