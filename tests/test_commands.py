@@ -117,6 +117,7 @@ def test_registered_commands_are_pi_aligned(tmp_path: Path) -> None:
         "thinking",
         "tools",
         "tree",
+        "update",
     ]
 
 
@@ -340,6 +341,14 @@ def test_non_pi_commands_pass_through_as_prompts(tmp_path: Path) -> None:
         result = registry.execute(session, command)
         assert result.handled is False
         assert result.message is None
+
+
+def test_update_command_returns_tau_prime_tarball_guidance(tmp_path: Path) -> None:
+    result = create_default_command_registry().execute(FakeSession(tmp_path), "/update")
+
+    assert result.message is not None
+    assert "tau-prime.tar.gz" in result.message
+    assert "pip install" in result.message
 
 
 def test_tools_command_requests_picker(tmp_path: Path) -> None:

@@ -151,6 +151,22 @@ def test_json_print_mode_suppresses_update_notice(monkeypatch: pytest.MonkeyPatc
     assert result.stderr == ""
 
 
+def test_update_command_prints_tau_prime_tarball_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        cli,
+        "_startup_update_notice",
+        lambda: (_ for _ in ()).throw(AssertionError("no update check")),
+    )
+
+    result = CliRunner().invoke(app, ["update"])
+
+    assert result.exit_code == 0
+    assert "tau-prime.tar.gz" in result.stdout
+    assert "pip install" in result.stdout
+
+
 def test_utility_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         cli,

@@ -16,6 +16,7 @@ from tau_coding.session_manager import CodingSessionRecord, SessionManager
 from tau_coding.skills import Skill
 from tau_coding.system_prompt import ProjectContextFile
 from tau_coding.thinking import normalize_thinking_level
+from tau_coding.update_check import tau_prime_update_instructions
 
 BUILTIN_TUI_THEME_NAMES = ("tau-dark", "tau-light", "high-contrast")
 
@@ -298,6 +299,17 @@ def create_default_command_registry() -> CommandRegistry:
             description="Show common keyboard shortcuts.",
             handler=_hotkeys_command,
             search_terms=("keys", "shortcuts", "bindings"),
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="update",
+            usage="/update",
+            description="Show Tau Prime update instructions.",
+            handler=lambda _context: CommandResult(
+                handled=True,
+                message=tau_prime_update_instructions(),
+            ),
         )
     )
     registry.register(

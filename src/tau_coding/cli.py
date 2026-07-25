@@ -61,7 +61,11 @@ from tau_coding.session_export import (
 from tau_coding.session_manager import CodingSessionRecord, SessionManager
 from tau_coding.shell_config import load_shell_settings
 from tau_coding.tui import run_tui_app
-from tau_coding.update_check import UpdateNotice, startup_update_notice
+from tau_coding.update_check import (
+    UpdateNotice,
+    startup_update_notice,
+    tau_prime_update_instructions,
+)
 
 app = typer.Typer(
     name="tau",
@@ -252,6 +256,10 @@ def main(
 
     if prompt_option is None and command == "providers" and len(positional_args) == 1:
         providers_command()
+        raise typer.Exit()
+
+    if prompt_option is None and command == "update" and len(positional_args) == 1:
+        typer.echo(tau_prime_update_instructions())
         raise typer.Exit()
 
     if prompt_option is None and command == "setup" and len(positional_args) == 1:

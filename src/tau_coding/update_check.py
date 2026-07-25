@@ -17,6 +17,9 @@ from tau_coding.paths import TauPaths
 
 PYPI_PACKAGE_NAME = "tau-prime"
 PYPI_JSON_URL = f"https://pypi.org/pypi/{PYPI_PACKAGE_NAME}/json"
+TAU_PRIME_RELEASE_TARBALL_URL = (
+    "https://github.com/rcarmo/tau-prime/releases/latest/download/tau-prime.tar.gz"
+)
 UPDATE_CHECK_INTERVAL = timedelta(days=1)
 UPDATE_CHECK_TIMEOUT_SECONDS = 1.5
 UPDATE_CHECK_ENV_DISABLE = "TAU_NO_UPDATE_CHECK"
@@ -38,7 +41,7 @@ class UpdateNotice:
         """Return concise update guidance."""
         return (
             f"Tau {self.latest_version} is available (installed: {self.current_version}). "
-            f"Update with: uv tool upgrade {self.package_name}"
+            "Run `tau update` for Tau Prime tarball install guidance."
         )
 
 
@@ -88,6 +91,21 @@ def startup_update_notice(
         return None
 
     return UpdateNotice(current_version=current_version, latest_version=latest_version)
+
+
+def tau_prime_update_instructions() -> str:
+    """Return Tau Prime's release-tarball update guidance."""
+    return "\n".join(
+        [
+            "Tau Prime updates are published as GitHub release tarballs.",
+            "",
+            "Recommended a-Shell/user install:",
+            f"python3.13 -m pip install --user --upgrade {TAU_PRIME_RELEASE_TARBALL_URL}",
+            "",
+            "Download manually:",
+            TAU_PRIME_RELEASE_TARBALL_URL,
+        ]
+    )
 
 
 def fetch_latest_pypi_version(*, fetcher: Fetcher | None = None) -> str | None:
