@@ -1744,6 +1744,28 @@ async def test_tui_app_mounts_sidebar_and_transcript() -> None:
         assert prompt.soft_wrap is True
 
 
+@pytest.mark.anyio
+async def test_tui_app_empty_extension_slots_do_not_split_main_layout() -> None:
+    app = TauTuiApp(
+        FakeSession(),
+        startup_notice=(
+            "I’m in ~/Documents on a mobile/a-Shell-style environment.\n"
+            "Ready—tell me which project/file to work on."
+        ),
+    )
+
+    async with app.run_test(size=(136, 40)):
+        transcript = app.query_one("#transcript")
+        above_slot = app.query_one("#extension-slots-above")
+        prompt_row = app.query_one("#prompt-row")
+        below_slot = app.query_one("#extension-slots-below")
+
+        assert above_slot.size.height == 0
+        assert below_slot.size.height == 0
+        assert transcript.region.y + transcript.region.height == prompt_row.region.y
+        assert prompt_row.region.y > app.size.height * 0.75
+
+
 def test_tau_markdown_block_is_not_selectable_until_mounted() -> None:
     markdown = TextualMarkdown("example")
     block = TauMarkdownBlock(

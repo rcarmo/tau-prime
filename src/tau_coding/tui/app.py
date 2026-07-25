@@ -1860,6 +1860,13 @@ class TauTuiApp(App[None]):
         color: $tau-muted-text;
     }
 
+    #extension-slots-above,
+    #extension-slots-below {
+        height: auto;
+        max-height: 8;
+        overflow-y: auto;
+    }
+
     #prompt-row {
         height: auto;
         margin: 0 1 1 1;
