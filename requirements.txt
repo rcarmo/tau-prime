@@ -1,5 +1,5 @@
 anyio>=4.0
-httpx>=0.27
+httpx[socks]>=0.27
 packaging>=24.0
 rich>=13.0
 textual>=1.0

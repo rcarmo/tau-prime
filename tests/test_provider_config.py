@@ -22,6 +22,8 @@ from tau_coding.provider_config import (
     provider_default_thinking_level,
     provider_has_usable_credentials,
     provider_settings_from_json,
+    provider_thinking_level_from_label,
+    provider_thinking_level_label,
     provider_thinking_levels,
     provider_thinking_unavailable_reason,
     resolve_provider_selection,
@@ -69,6 +71,16 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
     anthropic = settings.get_provider("anthropic")
     copilot = settings.get_provider("github-copilot")
 
+    assert openai.models[:4] == ("gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna")
+    assert openai.context_windows["gpt-5.6"] == 1_050_000
+    assert openai.context_windows["gpt-5.6-luna"] == 1_050_000
+    assert provider_thinking_levels(openai, model="gpt-5.6") == (
+        "off",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    )
     assert openai.context_windows["gpt-5.5"] == 272_000
     assert openai.context_windows["gpt-5.5-pro"] == 1_050_000
     assert settings.get_provider("anthropic").context_windows["claude-sonnet-4-6"] == 1_000_000
@@ -118,6 +130,7 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
         "xhigh",
     )
     assert provider_thinking_unavailable_reason(codex, model="gpt-5.5") is None
+    assert "gpt-5.6" not in codex.models
     assert provider_thinking_levels(anthropic, model="claude-sonnet-4-6") == (
         "off",
         "minimal",
@@ -127,6 +140,16 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
         "xhigh",
     )
     assert provider_thinking_unavailable_reason(anthropic, model="claude-sonnet-4-6") is None
+    assert anthropic.context_windows["claude-opus-5"] == 1_000_000
+    assert provider_thinking_levels(anthropic, model="claude-opus-5") == (
+        "off",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    )
+    assert provider_thinking_level_label(anthropic, "xhigh", model="claude-opus-5") == "max"
+    assert provider_thinking_level_from_label(anthropic, "max", model="claude-opus-5") == "xhigh"
     assert provider_thinking_levels(anthropic, model="claude-haiku-4-5") == ()
     assert copilot.default_model == "gpt-5.5"
     assert copilot.dynamic_models is True
@@ -573,6 +596,36 @@ def test_anthropic_config_from_provider_sets_thinking_budget(
 
     assert off_config.thinking_budget_tokens is None
     assert high_config.thinking_budget_tokens == 8192
+
+
+def test_anthropic_config_from_provider_maps_opus_5_adaptive_thinking(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    provider = provider_config_from_catalog_entry("anthropic")
+
+    off_config = anthropic_config_from_provider(
+        provider,
+        model="claude-opus-5",
+        thinking_level="off",
+    )
+    medium_config = anthropic_config_from_provider(
+        provider,
+        model="claude-opus-5",
+        thinking_level="medium",
+    )
+    max_config = anthropic_config_from_provider(
+        provider,
+        model="claude-opus-5",
+        thinking_level="xhigh",
+    )
+
+    assert off_config.thinking_type == "disabled"
+    assert off_config.thinking_budget_tokens is None
+    assert medium_config.thinking_type == "adaptive"
+    assert medium_config.thinking_budget_tokens is None
+    assert max_config.thinking_type == "adaptive"
+    assert max_config.thinking_budget_tokens is None
 
 
 @pytest.mark.parametrize(

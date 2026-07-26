@@ -2268,6 +2268,30 @@ def test_anthropic_messages_payload_sanitizes_foreign_tool_ids() -> None:
     assert ":" not in tool_use_id
 
 
+def test_anthropic_messages_payload_supports_adaptive_and_disabled_thinking() -> None:
+    from tau_ai.anthropic import _build_messages_payload
+
+    disabled_payload = _build_messages_payload(
+        model="claude-opus-5",
+        system="system",
+        messages=[UserMessage(content="hello")],
+        tools=[],
+        thinking_budget_tokens=None,
+        thinking_type="disabled",
+    )
+    adaptive_payload = _build_messages_payload(
+        model="claude-opus-5",
+        system="system",
+        messages=[UserMessage(content="hello")],
+        tools=[],
+        thinking_budget_tokens=None,
+        thinking_type="adaptive",
+    )
+
+    assert disabled_payload["thinking"] == {"type": "disabled"}
+    assert adaptive_payload["thinking"] == {"type": "adaptive"}
+
+
 @pytest.mark.anyio
 async def test_openai_chat_completions_drops_empty_tool_name_pairs() -> None:
     requests: list[httpx.Request] = []
