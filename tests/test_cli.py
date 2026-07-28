@@ -87,7 +87,7 @@ def test_version_command() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "tau 42.2.3"
+    assert result.stdout.strip() == "tau 42.2.4"
 
 
 def test_version_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,7 +100,7 @@ def test_version_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPa
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "tau 42.2.3"
+    assert result.stdout.strip() == "tau 42.2.4"
 
 
 def test_print_mode_writes_update_notice_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -149,6 +149,56 @@ def test_json_print_mode_suppresses_update_notice(monkeypatch: pytest.MonkeyPatc
 
     assert result.exit_code == 0
     assert result.stderr == ""
+
+
+@pytest.mark.parametrize("output", ["text", "json", "transcript"])
+def test_print_mode_passes_exact_session_id_without_changing_output(
+    monkeypatch: pytest.MonkeyPatch,
+    output: str,
+) -> None:
+    calls: list[tuple[str, PrintOutputMode, str | None]] = []
+
+    async def fake_run_openai_print_mode(
+        prompt: str,
+        model: str | None,
+        cwd: Path,
+        mode: PrintOutputMode,
+        provider_name: str | None,
+        session_id: str | None,
+    ) -> bool:
+        del model, cwd, provider_name
+        calls.append((prompt, mode, session_id))
+        return True
+
+    monkeypatch.setattr(cli, "_startup_update_notice", lambda: None)
+    monkeypatch.setattr(cli, "run_openai_print_mode", fake_run_openai_print_mode)
+
+    result = CliRunner().invoke(
+        app,
+        ["--prompt", "hello", "--output", output, "--session-id", "worker-499"],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [("hello", PrintOutputMode(output), "worker-499")]
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+@pytest.mark.parametrize("session_id", ["", "-bad", "bad id", "bad/", "index", "a" * 129])
+def test_print_mode_rejects_invalid_session_id(session_id: str) -> None:
+    result = CliRunner().invoke(app, ["-p", "hello", "--session-id", session_id])
+
+    assert result.exit_code == 2
+    assert _panel_text(result.stderr)
+
+
+def test_tui_mode_rejects_print_session_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "_startup_update_notice", lambda: None)
+
+    result = CliRunner().invoke(app, ["--session-id", "worker-499"])
+
+    assert result.exit_code == 2
+    assert "--session-id is only supported in print mode" in _panel_text(result.stderr)
 
 
 def test_update_command_prints_tau_prime_tarball_guidance(

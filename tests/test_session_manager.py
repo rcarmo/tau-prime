@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tau_coding.paths import TauPaths
-from tau_coding.session_manager import SessionManager
+from tau_coding.session_manager import SessionManager, validate_session_id
 
 
 def test_session_manager_creates_and_lists_sessions(tmp_path: Path) -> None:
@@ -27,6 +29,30 @@ def test_session_manager_creates_and_lists_sessions(tmp_path: Path) -> None:
     assert manager.get_session(record.id) == record
     assert manager.list_sessions() == [record]
     assert manager.list_sessions(cwd) == [record]
+
+
+def test_session_manager_create_session_exclusive_creates_transcript_file(tmp_path: Path) -> None:
+    manager = SessionManager(TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents"))
+    cwd = tmp_path / "project"
+    cwd.mkdir()
+
+    record = manager.create_session_exclusive(cwd=cwd, model="fake", session_id="worker-499")
+
+    assert record.id == "worker-499"
+    assert record.path.exists()
+    assert record.path.read_text(encoding="utf-8") == ""
+    assert manager.get_session("worker-499") == record
+
+    with pytest.raises(RuntimeError, match="Session already exists"):
+        manager.create_session_exclusive(cwd=cwd, model="fake", session_id="worker-499")
+
+
+def test_validate_session_id_rejects_unsafe_values() -> None:
+    for session_id in ("", "-bad", "bad id", "bad/", "index", "con", "aux.txt"):
+        with pytest.raises(ValueError):
+            validate_session_id(session_id)
+
+    validate_session_id("worker-499")
 
 
 def test_session_manager_prepares_unindexed_session(tmp_path: Path) -> None:

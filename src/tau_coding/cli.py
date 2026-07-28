@@ -58,7 +58,7 @@ from tau_coding.session_export import (
     export_session_artifact,
     normalize_export_format,
 )
-from tau_coding.session_manager import CodingSessionRecord, SessionManager
+from tau_coding.session_manager import CodingSessionRecord, SessionManager, validate_session_id
 from tau_coding.shell_config import load_shell_settings
 from tau_coding.tui import run_tui_app
 from tau_coding.update_check import (
@@ -175,6 +175,13 @@ def main(
         bool,
         typer.Option("--new-session", help="Create a new session in TUI mode (default)."),
     ] = False,
+    session_id: Annotated[
+        str | None,
+        typer.Option(
+            "--session-id",
+            help="Set the exact id for the newly created print-mode session.",
+        ),
+    ] = None,
     auto_compact_threshold: Annotated[
         int | None,
         typer.Option(
@@ -229,6 +236,12 @@ def main(
     if ctx.invoked_subcommand is not None:
         return
 
+    if session_id is not None:
+        try:
+            validate_session_id(session_id)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+
     positional_args = prompt_args or []
     command = positional_args[0] if positional_args else None
     initial_prompt = " ".join(positional_args) if positional_args else None
@@ -276,6 +289,8 @@ def main(
         raise typer.Exit()
 
     if prompt_option is None:
+        if session_id is not None:
+            raise typer.BadParameter("--session-id is only supported in print mode")
         notice = _startup_update_notice()
         if _use_basic_repl():
             run_basic_repl(
@@ -329,7 +344,25 @@ def main(
         typer.echo(notice.message, err=True)
 
     try:
-        ok = anyio.run(run_openai_print_mode, prompt, model, cwd or Path.cwd(), output, provider)
+        if session_id is None:
+            ok = anyio.run(
+                run_openai_print_mode,
+                prompt,
+                model,
+                cwd or Path.cwd(),
+                output,
+                provider,
+            )
+        else:
+            ok = anyio.run(
+                run_openai_print_mode,
+                prompt,
+                model,
+                cwd or Path.cwd(),
+                output,
+                provider,
+                session_id,
+            )
     except (RuntimeError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     if not ok:
@@ -637,6 +670,7 @@ async def run_openai_print_mode(
     cwd: Path,
     output: PrintOutputMode = PrintOutputMode.text,
     provider_name: str | None = None,
+    session_id: str | None = None,
     session_manager: SessionManager | None = None,
 ) -> bool:
     """Run print mode with the OpenAI-compatible provider configured from the environment."""
@@ -653,7 +687,7 @@ async def run_openai_print_mode(
         llm_observer=llm_observer,
     )
     manager = session_manager or SessionManager()
-    record = manager.create_session(cwd=cwd, model=selection.model)
+    record = _create_print_session(manager, cwd=cwd, model=selection.model, session_id=session_id)
     try:
         return await run_print_mode(
             prompt=prompt,
@@ -672,6 +706,17 @@ async def run_openai_print_mode(
         )
     finally:
         await provider.aclose()
+
+
+def _create_print_session(
+    manager: SessionManager,
+    *,
+    cwd: Path,
+    model: str,
+    session_id: str | None,
+) -> CodingSessionRecord:
+    """Create a print-mode session without risking transcript collisions."""
+    return manager.create_session_exclusive(cwd=cwd, model=model, session_id=session_id)
 
 
 async def run_print_mode(

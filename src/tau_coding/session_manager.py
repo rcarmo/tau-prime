@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from time import time
@@ -9,6 +10,34 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict
 from tau_coding.paths import TauPaths
+
+_MAX_SESSION_ID_BYTES = 128
+_RESERVED_SESSION_IDS = {"default", "index"}
+_WINDOWS_RESERVED_FILE_STEMS = {
+    "aux",
+    "con",
+    "nul",
+    "prn",
+    *(f"com{index}" for index in range(1, 10)),
+    *(f"lpt{index}" for index in range(1, 10)),
+}
+_SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$")
+
+
+def validate_session_id(session_id: str) -> None:
+    """Reject session ids that are unsafe as cross-platform transcript filenames."""
+    if not _SESSION_ID_PATTERN.fullmatch(session_id):
+        raise ValueError(
+            "Session id must be non-empty, start and end with a letter or digit, "
+            "and contain only letters, digits, '.', '_' or '-'"
+        )
+    if len(session_id.encode("utf-8")) > _MAX_SESSION_ID_BYTES:
+        raise ValueError(f"Session id must be at most {_MAX_SESSION_ID_BYTES} bytes")
+    normalized = session_id.casefold()
+    if normalized in _RESERVED_SESSION_IDS:
+        raise ValueError(f"Session id is reserved: {session_id}")
+    if normalized.split(".", 1)[0] in _WINDOWS_RESERVED_FILE_STEMS:
+        raise ValueError(f"Session id is not safe as a Windows filename: {session_id}")
 
 
 class SessionRecordModel(BaseModel):
@@ -124,6 +153,40 @@ class SessionManager:
         self.index_session(record)
         return record
 
+    def create_session_exclusive(
+        self,
+        *,
+        cwd: Path,
+        model: str,
+        provider_name: str | None = None,
+        title: str | None = None,
+        session_id: str | None = None,
+    ) -> CodingSessionRecord:
+        """Create and index a new session, failing if its transcript already exists."""
+        record = self.prepare_session(
+            cwd=cwd,
+            model=model,
+            provider_name=provider_name,
+            title=title,
+            session_id=session_id,
+        )
+        if self.get_session(record.id) is not None:
+            raise RuntimeError(f"Session already exists with id '{record.id}'")
+        try:
+            with record.path.open("x", encoding="utf-8"):
+                pass
+        except FileExistsError as exc:
+            raise RuntimeError(f"Session already exists with id '{record.id}'") from exc
+        except Exception:
+            record.path.unlink(missing_ok=True)
+            raise
+        try:
+            return self.index_session(record)
+        except Exception:
+            self._remove(record)
+            record.path.unlink(missing_ok=True)
+            raise
+
     def prepare_session(
         self,
         *,
@@ -137,6 +200,7 @@ class SessionManager:
         now = time()
         resolved_cwd = cwd.resolve()
         record_id = session_id or uuid4().hex
+        validate_session_id(record_id)
         path = self.paths.project_session_dir(resolved_cwd) / f"{record_id}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         return CodingSessionRecord(
@@ -244,6 +308,11 @@ class SessionManager:
         path = self.project_index_path(record.cwd)
         records = [item for item in self._read_index(path) if item.id != record.id]
         records.append(record)
+        self._write_index(path, records)
+
+    def _remove(self, record: CodingSessionRecord) -> None:
+        path = self.project_index_path(record.cwd)
+        records = [item for item in self._read_index(path) if item.id != record.id]
         self._write_index(path, records)
 
 

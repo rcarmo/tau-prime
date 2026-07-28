@@ -144,6 +144,18 @@ def test_expand_skill_command_includes_skill_and_user_request(tmp_path: Path) ->
     assert expanded.endswith("</skill>\n\nadd parser tests")
 
 
+def test_expand_skill_command_preserves_multiline_user_request(tmp_path: Path) -> None:
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "testing.md").write_text("# Testing\nRun pytest.", encoding="utf-8")
+    skills = load_skills(TauResourcePaths(root=tmp_path, agents_root=None))
+
+    expanded = expand_skill_command("/skill:testing\nadd parser tests\nkeep context", skills)
+
+    assert expanded is not None
+    assert expanded.endswith("</skill>\n\nadd parser tests\nkeep context")
+
+
 def test_format_skill_invocation_without_extra_instructions(tmp_path: Path) -> None:
     skill = Skill(
         name="testing",
