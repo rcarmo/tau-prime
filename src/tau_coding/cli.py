@@ -23,6 +23,11 @@ from tau_ai.env import DEFAULT_OPENAI_COMPATIBLE_BASE_URL
 from tau_coding import __version__
 from tau_coding.credentials import FileCredentialStore
 from tau_coding.diagnostics import llm_observer_from_env
+from tau_coding.linux_sandbox import (
+    LinuxSandboxError,
+    enter_linux_sandbox,
+    should_enter_linux_sandbox,
+)
 from tau_coding.macos_sandbox import (
     MacOSSandboxError,
     enter_macos_sandbox,
@@ -228,6 +233,17 @@ def main(
         except MacOSSandboxError as exc:
             typer.echo(
                 f"Could not establish the required macOS sandbox: {exc}\n"
+                "Use --no-sandbox only if unsandboxed execution is intentional.",
+                err=True,
+            )
+            raise typer.Exit(code=1) from exc
+
+    if should_enter_linux_sandbox(disabled=no_sandbox):
+        try:
+            enter_linux_sandbox(argv=sys.argv, project_dir=(cwd or Path.cwd()).resolve())
+        except LinuxSandboxError as exc:
+            typer.echo(
+                f"Could not establish the requested Linux sandbox: {exc}\n"
                 "Use --no-sandbox only if unsandboxed execution is intentional.",
                 err=True,
             )

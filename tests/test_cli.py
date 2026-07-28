@@ -87,7 +87,7 @@ def test_version_command() -> None:
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "tau 42.2.4"
+    assert result.stdout.strip() == "tau 42.3.0"
 
 
 def test_version_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,7 +100,7 @@ def test_version_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPa
     result = CliRunner().invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "tau 42.2.4"
+    assert result.stdout.strip() == "tau 42.3.0"
 
 
 def test_print_mode_writes_update_notice_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1292,6 +1292,45 @@ def test_macos_sandbox_failure_stops_cli(monkeypatch: pytest.MonkeyPatch) -> Non
     assert result.exit_code == 1
     assert "Could not establish the required macOS sandbox" in result.stderr
     assert "--no-sandbox" in result.stderr
+
+
+def test_linux_sandbox_failure_stops_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "should_enter_macos_sandbox", lambda *, disabled: False)
+    monkeypatch.setattr(cli, "should_enter_linux_sandbox", lambda *, disabled: not disabled)
+
+    def fail_sandbox(**kwargs: object) -> None:
+        del kwargs
+        raise cli.LinuxSandboxError("bwrap is unavailable")
+
+    monkeypatch.setattr(cli, "enter_linux_sandbox", fail_sandbox)
+
+    result = CliRunner().invoke(cli.app, ["providers"])
+
+    assert result.exit_code == 1
+    assert "Could not establish the requested Linux sandbox" in result.stderr
+    assert "--no-sandbox" in result.stderr
+
+
+def test_no_sandbox_option_bypasses_linux_reexec(monkeypatch: pytest.MonkeyPatch) -> None:
+    disabled_values: list[bool] = []
+
+    def should_enter(*, disabled: bool) -> bool:
+        disabled_values.append(disabled)
+        return not disabled
+
+    monkeypatch.setattr(cli, "should_enter_macos_sandbox", lambda *, disabled: False)
+    monkeypatch.setattr(cli, "should_enter_linux_sandbox", should_enter)
+    monkeypatch.setattr(
+        cli,
+        "enter_linux_sandbox",
+        lambda **kwargs: pytest.fail(f"unexpected sandbox re-exec: {kwargs}"),
+    )
+    monkeypatch.setattr(cli, "providers_command", lambda: None)
+
+    result = CliRunner().invoke(cli.app, ["--no-sandbox", "providers"])
+
+    assert result.exit_code == 0
+    assert disabled_values == [True]
 
 
 def test_no_sandbox_option_bypasses_macos_reexec(monkeypatch: pytest.MonkeyPatch) -> None:
