@@ -36,6 +36,7 @@ from tau_coding.paths import TauPaths
 from tau_coding.prompt_templates import (
     PromptTemplate,
     expand_prompt_template_command,
+    find_prompt_template,
     load_prompt_templates,
     load_prompt_templates_with_diagnostics,
     render_prompt_template,
@@ -155,7 +156,7 @@ from tau_coding.tools import (
     create_write_tool_definition,
 )
 
-__version__ = "42.2.2"
+__version__ = "42.2.3"
 
 __all__ = [
     "__version__",
@@ -211,6 +212,7 @@ __all__ = [
     "collect_prompt_guidelines",
     "CredentialStoreError",
     "expand_prompt_template_command",
+    "find_prompt_template",
     "create_bash_tool",
     "create_bash_tool_definition",
     "create_coding_tools",
