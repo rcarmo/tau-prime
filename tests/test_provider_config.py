@@ -49,6 +49,7 @@ def test_load_provider_settings_missing_file_uses_openai_default(tmp_path: Path)
         "deepseek",
         "opencode",
         "opencode-go",
+        "nvidia",
         "nebius",
     ]
     assert settings.providers[0].default_model == DEFAULT_MODEL
@@ -60,6 +61,7 @@ def test_load_provider_settings_missing_file_uses_openai_default(tmp_path: Path)
     assert lmstudio.credential_name is None
     assert settings.get_provider("openrouter").api_key_env == "OPENROUTER_API_KEY"
     assert settings.get_provider("huggingface").api_key_env == "HF_TOKEN"
+    assert settings.get_provider("nvidia").api_key_env == "NVIDIA_API_KEY"
 
 
 def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
@@ -70,6 +72,7 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
     codex = settings.get_provider("openai-codex")
     anthropic = settings.get_provider("anthropic")
     copilot = settings.get_provider("github-copilot")
+    nvidia = settings.get_provider("nvidia")
 
     assert openai.models[:4] == ("gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna")
     assert openai.context_windows["gpt-5.6"] == 1_050_000
@@ -121,6 +124,16 @@ def test_builtin_openai_declares_model_scoped_thinking_capabilities() -> None:
         "high",
     )
     assert provider_thinking_unavailable_reason(huggingface, model="openai/gpt-oss-120b") is None
+    assert nvidia.default_model == "nvidia/llama-3.3-nemotron-super-49b-v1.5"
+    assert nvidia.context_windows["deepseek-ai/deepseek-v4-pro"] == 1_000_000
+    assert provider_thinking_levels(nvidia, model="openai/gpt-oss-120b") == (
+        "off",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+    )
+    assert provider_thinking_unavailable_reason(nvidia, model="openai/gpt-oss-120b") is None
     assert provider_thinking_levels(codex, model="gpt-5.5") == (
         "off",
         "minimal",
@@ -311,6 +324,7 @@ def test_upsert_openai_compatible_provider_replaces_and_sets_default() -> None:
         "lmstudio",
         "local",
         "nebius",
+        "nvidia",
         "openai",
         "openai-codex",
         "opencode",
@@ -982,6 +996,19 @@ def test_openai_compatible_provider_config_rejects_invalid_retries() -> None:
         OpenAICompatibleProviderConfig(name="local", max_retries=-1)
     with pytest.raises(ProviderConfigError, match="0 or greater"):
         OpenAICompatibleProviderConfig(name="local", max_retry_delay_seconds=-1)
+
+
+def test_nvidia_builtin_entry_matches_nim_catalog() -> None:
+    settings = ProviderSettings()
+    nvidia = settings.get_provider("nvidia")
+
+    assert isinstance(nvidia, OpenAICompatibleProviderConfig)
+    assert nvidia.base_url == "https://integrate.api.nvidia.com/v1"
+    assert nvidia.api_key_env == "NVIDIA_API_KEY"
+    assert nvidia.credential_name == "nvidia"
+    assert nvidia.default_model == "nvidia/llama-3.3-nemotron-super-49b-v1.5"
+    assert "openai/gpt-oss-120b" in nvidia.models
+    assert nvidia.context_windows["qwen/qwen3.5-122b-a10b"] == 262_144
 
 
 def test_nebius_builtin_entry_is_dynamic_with_empty_catalog() -> None:

@@ -110,6 +110,7 @@ class CommandResult:
     model_picker_requested: bool = False
     scoped_models_picker_requested: bool = False
     skills_picker_requested: bool = False
+    prompts_picker_requested: bool = False
     tools_picker_requested: bool = False
     theme_picker_requested: bool = False
     compaction_settings_requested: bool = False
@@ -281,6 +282,15 @@ def create_default_command_registry() -> CommandRegistry:
             description="Browse and insert a loaded skill.",
             handler=_skills_command,
             search_terms=("skill", "picker"),
+        )
+    )
+    registry.register(
+        SlashCommand(
+            name="prompts",
+            usage="/prompts",
+            description="Browse and insert a loaded prompt template.",
+            handler=_prompts_command,
+            search_terms=("prompt", "templates", "picker"),
         )
     )
     registry.register(
@@ -501,6 +511,12 @@ def _skills_command(context: CommandContext) -> CommandResult:
     if context.args.strip():
         return CommandResult(handled=True, message="Usage: /skills")
     return CommandResult(handled=True, skills_picker_requested=True)
+
+
+def _prompts_command(context: CommandContext) -> CommandResult:
+    if context.args.strip():
+        return CommandResult(handled=True, message="Usage: /prompts")
+    return CommandResult(handled=True, prompts_picker_requested=True)
 
 
 def _skills_list_command(context: CommandContext) -> CommandResult:

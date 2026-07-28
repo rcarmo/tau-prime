@@ -105,6 +105,7 @@ def test_registered_commands_are_pi_aligned(tmp_path: Path) -> None:
         "model",
         "name",
         "new",
+        "prompts",
         "quit",
         "reload",
         "resume",
@@ -375,6 +376,19 @@ def test_skills_command_rejects_arguments(tmp_path: Path) -> None:
     result = create_default_command_registry().execute(FakeSession(tmp_path), "/skills review")
 
     assert result.message == "Usage: /skills"
+
+
+def test_prompts_command_requests_picker(tmp_path: Path) -> None:
+    result = create_default_command_registry().execute(FakeSession(tmp_path), "/prompts")
+
+    assert result.handled is True
+    assert result.prompts_picker_requested is True
+
+
+def test_prompts_command_rejects_arguments(tmp_path: Path) -> None:
+    result = create_default_command_registry().execute(FakeSession(tmp_path), "/prompts review")
+
+    assert result.message == "Usage: /prompts"
 
 
 def test_login_command_requests_provider_picker(tmp_path: Path) -> None:

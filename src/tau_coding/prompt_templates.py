@@ -130,15 +130,23 @@ def _template_references_arguments(content: str) -> bool:
     )
 
 
-def _find_prompt_template(
+def find_prompt_template(
     name: str,
     templates: Sequence[PromptTemplate],
 ) -> PromptTemplate | None:
+    """Return a prompt template by slash-command name."""
     normalized_name = name.strip().removeprefix("/").lower()
     for template in templates:
         if template.name.lower() == normalized_name:
             return template
     return None
+
+
+def _find_prompt_template(
+    name: str,
+    templates: Sequence[PromptTemplate],
+) -> PromptTemplate | None:
+    return find_prompt_template(name, templates)
 
 
 def _parse_prompt_template_command(text: str) -> tuple[str, str]:

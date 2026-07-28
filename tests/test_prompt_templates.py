@@ -9,7 +9,7 @@ from tau_coding import (
     load_prompt_templates_with_diagnostics,
     render_prompt_template,
 )
-from tau_coding.prompt_templates import PromptTemplate
+from tau_coding.prompt_templates import PromptTemplate, find_prompt_template
 from tau_coding.resources import ResourceError
 
 
@@ -107,6 +107,14 @@ def test_render_prompt_template_rejects_missing_variables() -> None:
 
     with pytest.raises(ResourceError, match="Missing prompt template variable"):
         render_prompt_template(template, {})
+
+
+def test_find_prompt_template_matches_case_insensitive_slash_names() -> None:
+    template = PromptTemplate(name="Review", path=Path("review.md"), content="Review code.")
+
+    assert find_prompt_template("/review", [template]) is template
+    assert find_prompt_template("REVIEW", [template]) is template
+    assert find_prompt_template("missing", [template]) is None
 
 
 def test_expand_prompt_template_command_replaces_slash_command() -> None:

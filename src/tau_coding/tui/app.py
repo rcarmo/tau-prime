@@ -61,6 +61,7 @@ from tau_coding.commands import CommandRegistry, create_default_command_registry
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
 from tau_coding.diagnostics import llm_observer_from_env
 from tau_coding.oauth import OAuthAuthInfo, OAuthPrompt, login_github_copilot, login_openai_codex
+from tau_coding.prompt_templates import PromptTemplate
 from tau_coding.provider_catalog import (
     BUILTIN_PROVIDER_CATALOG,
     ProviderCatalogEntry,
@@ -675,6 +676,96 @@ class ToolsReferenceScreen(ModalScreen[None]):
 class SkillPickerResult:
     skill: Skill
     action: Literal["insert", "transcript"] = "insert"
+
+
+class PromptTemplatePickerScreen(ModalScreen[PromptTemplate | None]):
+    """Searchable modal containing every loaded prompt template."""
+
+    BINDINGS: ClassVar[list[BindingEntry]] = [
+        Binding("escape,ctrl+c", "cancel", "Cancel", priority=True),
+        Binding("up", "cursor_up", "Up", show=False, priority=True),
+        Binding("down", "cursor_down", "Down", show=False, priority=True),
+        Binding("enter", "select_cursor", "Insert", show=False, priority=True),
+    ]
+
+    def __init__(self, templates: Sequence[PromptTemplate], *, theme: TuiTheme) -> None:
+        super().__init__()
+        self.templates = tuple(sorted(templates, key=lambda template: template.name.casefold()))
+        self.visible_templates = self.templates
+        self.theme = theme
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="prompt-template-picker"):
+            yield Static("Prompt templates", id="prompt-template-picker-title")
+            yield Input(placeholder="Search prompt templates", id="prompt-template-picker-search")
+            yield ListView(id="prompt-template-picker-list")
+            yield Static("", id="prompt-template-picker-help")
+
+    def on_mount(self) -> None:
+        self.query_one("#prompt-template-picker-search", Input).focus()
+        self._refresh_template_list("")
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "prompt-template-picker-search":
+            event.stop()
+            self._refresh_template_list(event.value)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "prompt-template-picker-search":
+            event.stop()
+            self.action_select_cursor()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        event.stop()
+        self.action_select_cursor()
+
+    def action_cursor_up(self) -> None:
+        template_list = self.query_one("#prompt-template-picker-list", ListView)
+        if template_list.index is not None:
+            template_list.index = max(0, template_list.index - 1)
+
+    def action_cursor_down(self) -> None:
+        template_list = self.query_one("#prompt-template-picker-list", ListView)
+        if template_list.index is not None:
+            template_list.index = min(len(self.visible_templates) - 1, template_list.index + 1)
+
+    def action_select_cursor(self) -> None:
+        template = self._selected_template()
+        if template is not None:
+            self.dismiss(template)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    def _selected_template(self) -> PromptTemplate | None:
+        index = self.query_one("#prompt-template-picker-list", ListView).index
+        if index is None or not self.visible_templates:
+            return None
+        return self.visible_templates[index]
+
+    def _refresh_template_list(self, search: str) -> None:
+        query = search.casefold().strip()
+        self.visible_templates = tuple(
+            template
+            for template in self.templates
+            if not query
+            or query in template.name.casefold()
+            or query in (template.description or "").casefold()
+        )
+        template_list = self.query_one("#prompt-template-picker-list", ListView)
+        template_list.clear()
+        template_list.extend(
+            ListItem(Label(_prompt_template_picker_label(template), markup=False))
+            for template in self.visible_templates
+        )
+        template_list.index = 0 if self.visible_templates else None
+        if not self.templates:
+            help_text = "No prompt templates loaded - Escape closes"
+        elif not self.visible_templates:
+            help_text = "No matching prompt templates - Escape closes"
+        else:
+            help_text = "Enter inserts template command"
+        self.query_one("#prompt-template-picker-help", Static).update(help_text)
 
 
 class SkillPickerScreen(ModalScreen[SkillPickerResult | None]):
@@ -2518,6 +2609,8 @@ class TauTuiApp(App[None]):
                 self._open_scoped_models_picker()
             if command.skills_picker_requested:
                 self._open_skills_picker(raw_text)
+            if command.prompts_picker_requested:
+                self._open_prompts_picker(raw_text)
             if command.tools_picker_requested:
                 self._open_tools_reference()
             if command.theme_picker_requested:
@@ -3471,6 +3564,32 @@ class TauTuiApp(App[None]):
             callback=lambda result: self._handle_skills_picker_result(result, original_text),
         )
 
+    def _open_prompts_picker(self, original_text: str) -> None:
+        if not self.session.prompt_templates:
+            self._notify("No prompt templates loaded.", severity="warning")
+            return
+        self.push_screen(
+            PromptTemplatePickerScreen(
+                self.session.prompt_templates,
+                theme=self.tui_settings.resolved_theme,
+            ),
+            callback=lambda result: self._handle_prompts_picker_result(result, original_text),
+        )
+
+    def _handle_prompts_picker_result(
+        self,
+        template: PromptTemplate | None,
+        original_text: str,
+    ) -> None:
+        prompt = self.query_one("#prompt", PromptInput)
+        if template is None:
+            if prompt.text.strip() == original_text.strip():
+                prompt.text = ""
+            return
+        prompt.text = f"/{template.name} "
+        prompt.move_cursor(_text_end_location(prompt.text))
+        prompt.focus()
+
     def _handle_skills_picker_result(
         self,
         result: SkillPickerResult | None,
@@ -3974,6 +4093,11 @@ def _tool_reference_label(tool: AgentTool, extension_sources: Mapping[str, str])
 def _skill_picker_label(skill: Skill) -> str:
     description = skill.description or "No description"
     return f"{skill.name} - {description}"
+
+
+def _prompt_template_picker_label(template: PromptTemplate) -> str:
+    description = template.description or "No description"
+    return f"{template.name} - {description}"
 
 
 def _session_picker_label(record: SessionCompletionRecord) -> str:
