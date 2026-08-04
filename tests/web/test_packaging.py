@@ -3,12 +3,15 @@ from __future__ import annotations
 import build_backend
 
 
-def test_wheel_metadata_includes_web_extra() -> None:
+def test_wheel_metadata_includes_core_and_web_dependencies() -> None:
     metadata = build_backend._metadata_text()
 
     assert "Provides-Extra: web" in metadata
+    assert "Requires-Dist: aiosqlite>=0.22,<1" in metadata
+    assert 'Requires-Dist: aiosqlite>=0.22,<1; extra == "web"' not in metadata
     assert 'Requires-Dist: aiohttp>=3.13,<4; extra == "web"' in metadata
-    assert 'Requires-Dist: aiosqlite>=0.22,<1; extra == "web"' in metadata
+    assert 'Requires-Dist: pillow>=12,<13; extra == "web"' in metadata
+    assert 'Requires-Dist: watchfiles>=1.1,<2; extra == "web"' in metadata
 
 
 def test_wheel_includes_optional_runtime_packages() -> None:

@@ -12,6 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [
+    "aiosqlite>=0.22,<1",
     "anyio>=4.0",
     "httpx[socks]>=0.27",
     "packaging>=24.0",
@@ -23,7 +24,6 @@ dependencies = [
 [project.optional-dependencies]
 web = [
     "aiohttp>=3.13,<4",
-    "aiosqlite>=0.22,<1",
     "pillow>=12,<13",
     "watchfiles>=1.1,<2",
 ]
