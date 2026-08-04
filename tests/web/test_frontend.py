@@ -34,6 +34,7 @@ FRONTEND_ASSETS = (
     ("/static/app.css", "text/css"),
     ("/static/app.js", "application/javascript"),
     ("/static/live-ui.js", "application/javascript"),
+    ("/static/extension-ui.js", "application/javascript"),
 )
 
 
@@ -94,6 +95,19 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     assert '<link rel="stylesheet" href="/static/app.css" />' in root_html
     assert '<script type="module" src="/static/app.js"></script>' in root_html
     assert '<script type="module" src="/static/live-ui.js"></script>' in root_html
+    assert '<script type="module" src="/static/extension-ui.js"></script>' in root_html
+    assert {
+        match.group(1)
+        for match in re.finditer(r'data-extension-slot="([^"]+)"', root_html)
+    } == {
+        "compose_above",
+        "compose_below",
+        "sidebar",
+        "timeline_before",
+        "timeline_after",
+        "dashboard",
+    }
+    assert root_html.count('data-extension-slot="') == 6
     assert re.search(r"<header\b", root_html) is not None
     assert re.search(r'<main\b[^>]*id="timeline-main"', root_html) is not None
     assert re.search(r"<footer\b", root_html) is not None
@@ -173,6 +187,46 @@ async def test_live_ui_wires_runtime_controls_and_stream_events(web_config: WebC
 
 
 @pytest.mark.anyio
+async def test_extension_ui_script_exposes_safe_extension_view_renderer(
+    web_config: WebConfig,
+) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+
+    try:
+        async with client.get("/static/extension-ui.js") as response:
+            script = await response.text()
+    finally:
+        await client.close()
+
+    assert "tau:extension-view" in script
+    assert "tau:extension-action" in script
+    assert "window.tauExtensionUI" in script
+    assert ".innerHTML" not in script
+    assert "eval(" not in script
+    for name in (
+        "buildText",
+        "buildButton",
+        "buildMetric",
+        "buildProgress",
+        "buildField",
+        "buildTable",
+        "buildStack",
+    ):
+        assert name in script
+    for limit in (
+        "viewBytes: 64 * 1024",
+        "payloadBytes: 8 * 1024",
+        "depth: 12",
+        "nodes: 256",
+        "textBytes: 16 * 1024",
+        "tableRows: 50",
+        "tableColumns: 20",
+    ):
+        assert limit in script
+
+
+@pytest.mark.anyio
 async def test_app_css_contains_responsive_media_queries(web_config: WebConfig) -> None:
     app = create_app(web_config)
     client = await _start_client(app)
@@ -187,6 +241,12 @@ async def test_app_css_contains_responsive_media_queries(web_config: WebConfig) 
     assert "@media (max-width: 720px)" in stylesheet
     assert ".shell-layout" in stylesheet
     assert ".mobile-only" in stylesheet
+    assert ".extension-slot" in stylesheet
+    assert ".tau-extension-view" in stylesheet
+    assert ".tau-extension-stack" in stylesheet
+    assert '[data-extension-slot="dashboard"]' in stylesheet
+    assert '[data-extension-slot="compose_above"]' in stylesheet
+    assert '[data-extension-slot="compose_below"]' in stylesheet
 
 
 @pytest.mark.anyio
@@ -225,6 +285,7 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "/static/app.css",
         "/static/app.js",
         "/static/live-ui.js",
+        "/static/extension-ui.js",
     ):
         assert f'"{asset_path}"' in worker
 

@@ -667,6 +667,237 @@ button.danger-button {
   box-shadow: var(--shadow);
 }
 
+.extension-slot {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.extension-slot:empty {
+  display: none;
+}
+
+.extension-slot[data-extension-slot="dashboard"] {
+  grid-column: 1 / -1;
+}
+
+.composer-shell > .extension-slot[data-extension-slot="compose_above"],
+.composer-shell > .extension-slot[data-extension-slot="compose_below"] {
+  margin-bottom: 0.75rem;
+}
+
+.composer-shell > .extension-slot[data-extension-slot="compose_below"] {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+
+.tau-extension-view {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(103, 232, 249, 0.12);
+  border-radius: var(--radius);
+  background: rgba(9, 17, 31, 0.88);
+}
+
+.tau-extension-view-detail {
+  background: rgba(12, 20, 34, 0.88);
+}
+
+.tau-extension-view-form {
+  background: rgba(18, 26, 43, 0.92);
+}
+
+.tau-extension-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tau-extension-title {
+  font-size: 1rem;
+}
+
+.tau-extension-body,
+.tau-extension-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tau-extension-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.tau-extension-text-muted {
+  color: var(--muted);
+}
+
+.tau-extension-text-code {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(18, 26, 43, 0.82);
+  border: 1px solid rgba(103, 232, 249, 0.08);
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    monospace;
+}
+
+.tau-extension-text-live {
+  padding-left: 0.7rem;
+  border-left: 2px solid rgba(103, 232, 249, 0.65);
+}
+
+.tau-extension-button,
+.tau-extension-field-control {
+  width: 100%;
+}
+
+.tau-extension-button {
+  justify-self: start;
+  min-width: 8rem;
+}
+
+.tau-extension-button[data-variant="primary"] {
+  background: rgba(8, 145, 178, 0.35);
+  border-color: rgba(103, 232, 249, 0.45);
+}
+
+.tau-extension-button[data-variant="secondary"] {
+  background: rgba(51, 65, 85, 0.88);
+}
+
+.tau-extension-button[data-variant="danger"] {
+  background: rgba(127, 29, 29, 0.5);
+  border-color: rgba(252, 165, 165, 0.35);
+}
+
+.tau-extension-button[data-variant="ghost"] {
+  background: transparent;
+}
+
+.tau-extension-button[data-icon-only="true"] {
+  min-width: 3rem;
+  width: auto;
+  padding-inline: 0.8rem;
+}
+
+.tau-extension-button-icon,
+.tau-extension-button-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tau-extension-metric {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(103, 232, 249, 0.08);
+  background: rgba(18, 26, 43, 0.72);
+}
+
+.tau-extension-metric dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tau-extension-metric dd {
+  overflow-wrap: anywhere;
+}
+
+.tau-extension-progress {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.tau-extension-progress-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tau-extension-progress-value,
+.tau-extension-progress-label {
+  overflow-wrap: anywhere;
+}
+
+.tau-extension-progress-bar {
+  width: 100%;
+  height: 0.9rem;
+  accent-color: var(--accent-strong);
+}
+
+.tau-extension-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.tau-extension-field-label {
+  font-weight: 600;
+}
+
+.tau-extension-table-wrap {
+  overflow-x: auto;
+}
+
+.tau-extension-table {
+  width: 100%;
+  min-width: 30rem;
+  border-collapse: collapse;
+}
+
+.tau-extension-table caption {
+  margin-bottom: 0.55rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+.tau-extension-table th,
+.tau-extension-table td {
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid rgba(103, 232, 249, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tau-extension-table th {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tau-extension-table td {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tau-extension-stack {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tau-extension-stack-column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.tau-extension-stack-row {
+  align-items: start;
+}
+
 .compose-row {
   align-items: stretch;
 }
@@ -732,6 +963,19 @@ button.danger-button {
     grid-template-columns: 1fr;
   }
 
+  .extension-slot[data-extension-slot="dashboard"] {
+    grid-column: auto;
+  }
+
+  .tau-extension-stack-row,
+  .tau-extension-progress-header {
+    flex-direction: column;
+  }
+
+  .tau-extension-button {
+    width: 100%;
+  }
+
   .panel-nav,
   .panel-side {
     position: fixed;
@@ -789,8 +1033,13 @@ button.danger-button {
   }
 
   .panel,
-  .compose-form {
+  .compose-form,
+  .tau-extension-view {
     padding: 0.85rem;
+  }
+
+  .tau-extension-table {
+    min-width: 24rem;
   }
 
   .compose-row,

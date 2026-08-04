@@ -17,6 +17,7 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/static/app.css",
         "/static/app.js",
         "/static/live-ui.js",
+        "/static/extension-ui.js",
     }
 )
 
@@ -73,6 +74,12 @@ _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
     ),
     "live-ui.js": FrontendAsset(
         resource_name="live-ui.js",
+        content_type="application/javascript",
+        charset="utf-8",
+        cache_control="public, max-age=3600, must-revalidate",
+    ),
+    "extension-ui.js": FrontendAsset(
+        resource_name="extension-ui.js",
         content_type="application/javascript",
         charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",

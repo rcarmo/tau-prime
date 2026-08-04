@@ -107,6 +107,7 @@
           </section>
 
           <section id="session-overview" class="session-overview" aria-label="Live session overview">
+            <div class="extension-slot" data-extension-slot="dashboard"></div>
             <article class="overview-card" aria-labelledby="context-summary-title">
               <div class="overview-card-header">
                 <div>
@@ -168,7 +169,9 @@
             </article>
           </section>
 
+          <div class="extension-slot" data-extension-slot="timeline_before"></div>
           <ol id="timeline-list" class="timeline-list" aria-live="polite"></ol>
+          <div class="extension-slot" data-extension-slot="timeline_after"></div>
         </main>
 
         <aside id="side-panel" class="panel panel-side" aria-label="Workspace search and settings">
@@ -328,11 +331,13 @@
               Live streaming, queue controls, and persisted timeline playback are rendered with safe
               DOM updates only.
             </p>
+            <div class="extension-slot" data-extension-slot="sidebar"></div>
           </section>
         </aside>
       </div>
 
       <footer class="composer-shell">
+        <div class="extension-slot" data-extension-slot="compose_above"></div>
         <form id="compose-form" class="compose-form">
           <label for="compose-input">Send a prompt to Tau</label>
           <div class="compose-row">
@@ -349,6 +354,7 @@
             <p id="app-status" class="small-text" aria-live="polite">Loading Tau shell…</p>
           </div>
         </form>
+        <div class="extension-slot" data-extension-slot="compose_below"></div>
       </footer>
     </div>
 
@@ -365,5 +371,6 @@
     </noscript>
     <script type="module" src="/static/app.js"></script>
     <script type="module" src="/static/live-ui.js"></script>
+    <script type="module" src="/static/extension-ui.js"></script>
   </body>
 </html>

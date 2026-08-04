@@ -1,4 +1,4 @@
-const CACHE_NAME = "tau-web-shell-v2";
+const CACHE_NAME = "tau-web-shell-v3";
 const SHELL_URLS = Object.freeze([
   "/",
   "/index.html",
@@ -6,6 +6,7 @@ const SHELL_URLS = Object.freeze([
   "/static/app.css",
   "/static/app.js",
   "/static/live-ui.js",
+  "/static/extension-ui.js",
 ]);
 
 self.addEventListener("install", (event) => {

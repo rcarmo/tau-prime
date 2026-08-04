@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Iterator
 
@@ -85,6 +86,36 @@ def test_initial_schema_contains_all_runtime_entities(database: sqlite3.Connecti
     }
     assert {("table", name) for name in expected_tables} <= objects
     assert ("table", "search_fts") in objects
+
+
+def test_structured_json_columns_require_json_valid_checks(
+    database: sqlite3.Connection,
+) -> None:
+    table_sql = {
+        str(row[0]): str(row[1])
+        for row in database.execute(
+            "SELECT name, sql FROM sqlite_master WHERE type = 'table' AND sql IS NOT NULL"
+        )
+    }
+
+    json_columns: list[tuple[str, str]] = []
+    for table_name in table_sql:
+        pragma_name = table_name.replace("'", "''")
+        rows = database.execute(f"PRAGMA table_info('{pragma_name}')")
+        json_columns.extend(
+            (table_name, str(row[1])) for row in rows if str(row[1]).endswith("_json")
+        )
+
+    assert json_columns
+    for table_name, column_name in json_columns:
+        pattern = (
+            rf"\b{re.escape(column_name)}\b[^,]*CHECK\("
+            rf"(?:{re.escape(column_name)}\s+IS\s+NULL\s+OR\s+)?"
+            rf"json_valid\({re.escape(column_name)}\)\)"
+        )
+        assert re.search(pattern, table_sql[table_name], flags=re.IGNORECASE | re.DOTALL), (
+            f"{table_name}.{column_name} must enforce json_valid()"
+        )
 
 
 def test_active_session_aliases_are_case_insensitively_unique(

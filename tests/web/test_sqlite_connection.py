@@ -36,16 +36,23 @@ async def test_database_open_applies_migrations_and_pragmas(tmp_path: Path) -> N
     async with SqliteDatabase(database_path, read_pool_size=2) as database:
         assert database.opened
 
-        async def inspect(reader: SqliteReader) -> tuple[int, int, int]:
+        async def inspect(reader: SqliteReader) -> tuple[int, int, int, str]:
             version = await reader.fetch_one("PRAGMA user_version")
             foreign_keys = await reader.fetch_one("PRAGMA foreign_keys")
             query_only = await reader.fetch_one("PRAGMA query_only")
+            journal_mode = await reader.fetch_one("PRAGMA journal_mode")
             assert version is not None
             assert foreign_keys is not None
             assert query_only is not None
-            return int(version[0]), int(foreign_keys[0]), int(query_only[0])
+            assert journal_mode is not None
+            return (
+                int(version[0]),
+                int(foreign_keys[0]),
+                int(query_only[0]),
+                str(journal_mode[0]).lower(),
+            )
 
-        assert await database.read(inspect) == (LATEST_SCHEMA_VERSION, 1, 1)
+        assert await database.read(inspect) == (LATEST_SCHEMA_VERSION, 1, 1, "wal")
 
     assert stat.S_IMODE(database_path.stat().st_mode) == 0o600
     assert not database.opened

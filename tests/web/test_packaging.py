@@ -31,5 +31,6 @@ def test_wheel_includes_frontend_static_assets() -> None:
     assert "tau_web/static/index.html" in archive_names
     assert "tau_web/static/app.css" in archive_names
     assert "tau_web/static/app.js" in archive_names
+    assert "tau_web/static/extension-ui.js" in archive_names
     assert "tau_web/static/manifest.webmanifest" in archive_names
     assert "tau_web/static/sw.js" in archive_names
