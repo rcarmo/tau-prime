@@ -830,6 +830,42 @@ class DeliveryRepository(SqliteRepository):
 
         return await self.database.read(read)
 
+    async def resolve_target(
+        self,
+        delivery_id: str,
+        target_session_id: str,
+    ) -> DeliveryRecord:
+        delivery_key = _require_identifier(delivery_id, field="Delivery id")
+        target_key = _require_identifier(target_session_id, field="Target session id")
+
+        async def write(transaction: SqliteTransaction) -> DeliveryRecord:
+            current_row = await transaction.fetch_one(
+                "SELECT * FROM chat_deliveries WHERE delivery_id = ?",
+                (delivery_key,),
+            )
+            if current_row is None:
+                raise RecordNotFoundError(f"Unknown delivery: {delivery_key}")
+            current = _delivery_from_row(current_row)
+            if current.completed_at is not None and current.target_session_id is None:
+                raise RepositoryError(
+                    "Terminal deliveries without a resolved target cannot be resolved"
+                )
+            if current.target_session_id is not None and current.target_session_id != target_key:
+                raise RepositoryError("Delivery target session has already been resolved")
+            await transaction.execute(
+                "UPDATE chat_deliveries SET target_session_id = ? WHERE delivery_id = ?",
+                (target_key, delivery_key),
+            )
+            updated_row = await transaction.fetch_one(
+                "SELECT * FROM chat_deliveries WHERE delivery_id = ?",
+                (delivery_key,),
+            )
+            if updated_row is None:
+                raise RuntimeError("Delivery target resolution did not return a record")
+            return _delivery_from_row(updated_row)
+
+        return await self.database.write(write)
+
     async def update_status(
         self,
         delivery_id: str,

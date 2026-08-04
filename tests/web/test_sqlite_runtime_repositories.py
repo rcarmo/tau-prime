@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from tau_web.sqlite.repositories import (
     MediaCleanupResult,
     MediaRepository,
     QueueRepository,
+    RecordNotFoundError,
     RepositoryError,
     RevisionConflictError,
     RunRepository,
@@ -153,6 +155,67 @@ async def test_delivery_repository_is_idempotent_and_tracks_receipts(tmp_path: P
         with pytest.raises(RepositoryError, match="Terminal"):
             await deliveries.update_status(created.delivery_id, status="pending")
         assert await deliveries.purge_terminal_before(_FUTURE) == 1
+
+
+@pytest.mark.anyio
+async def test_delivery_repository_resolve_target_rules(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        deliveries = DeliveryRepository(database)
+
+        unresolved = await deliveries.create(
+            source_session_id=first,
+            target_address="@second",
+            mode="queue",
+            content="needs resolution",
+        )
+        resolved = await deliveries.resolve_target(unresolved.delivery_id, second)
+
+        assert resolved.target_session_id == second
+        assert resolved.target_address == "@second"
+
+        terminal_same_target = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            mode="queue",
+            content="done",
+            status="completed",
+        )
+        assert (
+            await deliveries.resolve_target(terminal_same_target.delivery_id, second)
+            == terminal_same_target
+        )
+
+        replacement = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            mode="queue",
+            content="replacement",
+        )
+        with pytest.raises(RepositoryError, match="already been resolved"):
+            await deliveries.resolve_target(replacement.delivery_id, first)
+
+        with pytest.raises(RecordNotFoundError, match="Unknown delivery"):
+            await deliveries.resolve_target("missing", second)
+
+        missing_target = await deliveries.create(
+            source_session_id=first,
+            target_address="@missing",
+            mode="queue",
+            content="missing target",
+        )
+        with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
+            await deliveries.resolve_target(missing_target.delivery_id, "missing")
+
+        terminal_unresolved = await deliveries.create(
+            source_session_id=first,
+            target_address="@second",
+            mode="queue",
+            content="terminal unresolved",
+            status="completed",
+        )
+        with pytest.raises(RepositoryError, match="Terminal"):
+            await deliveries.resolve_target(terminal_unresolved.delivery_id, second)
 
 
 @pytest.mark.anyio
