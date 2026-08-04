@@ -10,6 +10,7 @@ from tau_web.sqlite.repositories import RecordNotFoundError, RepositoryError
 from tau_web.sqlite.sessions import (
     AgentNameConflictError,
     InvalidAgentNameError,
+    SessionMetadataConflictError,
     SessionRepository,
     validate_agent_name,
     workspace_id_for_path,
@@ -74,6 +75,41 @@ async def test_explicit_agent_names_are_case_insensitively_unique(tmp_path: Path
                 model="model",
                 agent_name="review",
             )
+
+
+@pytest.mark.anyio
+async def test_session_metadata_updates_use_snapshot_conflict_checks(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        sessions = SessionRepository(database)
+        created = await sessions.create(
+            workspace_root=tmp_path,
+            provider_name="test",
+            model="model",
+            title="Original",
+            session_id="worker-1",
+        )
+
+        updated = await sessions.update_metadata(
+            created.session_id,
+            provider_name="updated-provider",
+            model="updated-model",
+            title="Updated",
+            expected_updated_at=created.updated_at,
+        )
+
+        assert updated.provider_name == "updated-provider"
+        assert updated.model == "updated-model"
+        assert updated.title == "Updated"
+        assert updated.updated_at >= created.updated_at
+
+        with pytest.raises(SessionMetadataConflictError):
+            await sessions.update_metadata(
+                created.session_id,
+                title="Stale",
+                expected_updated_at=created.updated_at,
+            )
+
+        assert await sessions.get(created.session_id) == updated
 
 
 @pytest.mark.anyio

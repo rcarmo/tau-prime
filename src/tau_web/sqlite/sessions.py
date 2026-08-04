@@ -30,6 +30,26 @@ class AgentNameConflictError(RepositoryError):
     """Raised when an active session already owns an alias."""
 
 
+class SessionMetadataConflictError(RepositoryError):
+    """Raised when a session metadata update uses a stale snapshot."""
+
+    def __init__(
+        self,
+        session_id: str,
+        *,
+        expected_updated_at: str,
+        actual_updated_at: str | None,
+    ) -> None:
+        self.session_id = session_id
+        self.expected_updated_at = expected_updated_at
+        self.actual_updated_at = actual_updated_at
+        super().__init__(
+            "Session metadata conflict for "
+            f"{session_id}: expected updated_at {expected_updated_at!r}, "
+            f"actual {actual_updated_at!r}"
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class WorkspaceRecord:
     workspace_id: str
@@ -192,6 +212,67 @@ class SessionRepository(SqliteRepository):
 
         return await self.database.read(read)
 
+    async def update_metadata(
+        self,
+        session_id: str,
+        *,
+        provider_name: str | None = None,
+        model: str | None = None,
+        title: str | None = None,
+        expected_updated_at: str | None = None,
+    ) -> SessionRecord:
+        normalized_provider_name = provider_name.strip() if provider_name is not None else None
+        if normalized_provider_name is not None and not normalized_provider_name:
+            raise ValueError("Provider name must not be empty")
+        normalized_model = model.strip() if model is not None else None
+        if normalized_model is not None and not normalized_model:
+            raise ValueError("Model must not be empty")
+        timestamp = _timestamp()
+
+        async def write(transaction: SqliteTransaction) -> SessionRecord:
+            current = _session_from_row(await _require_session(transaction, session_id))
+            if expected_updated_at is not None and current.updated_at != expected_updated_at:
+                raise SessionMetadataConflictError(
+                    session_id,
+                    expected_updated_at=expected_updated_at,
+                    actual_updated_at=current.updated_at,
+                )
+            changed = await transaction.execute(
+                """
+                UPDATE sessions
+                SET title = ?, provider_name = ?, model = ?, updated_at = ?
+                WHERE session_id = ? AND updated_at = ?
+                """,
+                (
+                    title if title is not None else current.title,
+                    normalized_provider_name
+                    if normalized_provider_name is not None
+                    else current.provider_name,
+                    normalized_model if normalized_model is not None else current.model,
+                    timestamp,
+                    session_id,
+                    current.updated_at,
+                ),
+            )
+            if changed != 1:
+                row = await transaction.fetch_one(
+                    "SELECT updated_at FROM sessions WHERE session_id = ?",
+                    (session_id,),
+                )
+                actual_updated_at = (
+                    str(row["updated_at"])
+                    if row is not None and row["updated_at"] is not None
+                    else None
+                )
+                raise SessionMetadataConflictError(
+                    session_id,
+                    expected_updated_at=current.updated_at,
+                    actual_updated_at=actual_updated_at,
+                )
+            return _session_from_row(await _require_session(transaction, session_id))
+
+        return await self.database.write(write)
+
     async def rename(self, session_id: str, agent_name: str) -> SessionRecord:
         selected_name = validate_agent_name(agent_name)
         timestamp = _timestamp()
@@ -208,9 +289,7 @@ class SessionRepository(SqliteRepository):
                 (selected_name,),
             )
             if owner is not None and str(owner["session_id"]) != session_id:
-                raise AgentNameConflictError(
-                    f"Active agent name already exists: @{selected_name}"
-                )
+                raise AgentNameConflictError(f"Active agent name already exists: @{selected_name}")
             await transaction.execute(
                 "UPDATE sessions SET agent_name = ?, updated_at = ? WHERE session_id = ?",
                 (selected_name, timestamp, session_id),
@@ -314,9 +393,7 @@ def validate_agent_name(agent_name: str) -> str:
             "letters, digits, '.', '_' or '-'"
         )
     if len(normalized.encode("utf-8")) > _MAX_AGENT_NAME_BYTES:
-        raise InvalidAgentNameError(
-            f"Agent name must be at most {_MAX_AGENT_NAME_BYTES} bytes"
-        )
+        raise InvalidAgentNameError(f"Agent name must be at most {_MAX_AGENT_NAME_BYTES} bytes")
     return normalized
 
 
@@ -336,9 +413,7 @@ async def _require_session(transaction: SqliteTransaction, session_id: str) -> R
     return row
 
 
-async def _active_agent_name_exists(
-    transaction: SqliteTransaction, agent_name: str
-) -> bool:
+async def _active_agent_name_exists(transaction: SqliteTransaction, agent_name: str) -> bool:
     row = await transaction.fetch_one(
         """
         SELECT 1 FROM sessions
@@ -372,9 +447,7 @@ def _workspace_from_row(row: Row) -> WorkspaceRecord:
 
 def _session_from_row(row: Row) -> SessionRecord:
     raw_metadata = json.loads(str(row["metadata_json"]))
-    if not isinstance(raw_metadata, dict) or not all(
-        isinstance(key, str) for key in raw_metadata
-    ):
+    if not isinstance(raw_metadata, dict) or not all(isinstance(key, str) for key in raw_metadata):
         raise RuntimeError("Session metadata is not a JSON object")
     metadata = cast(dict[str, JSONValue], raw_metadata)
     return SessionRecord(
@@ -384,13 +457,9 @@ def _session_from_row(row: Row) -> SessionRecord:
         title=str(row["title"]) if row["title"] is not None else None,
         provider_name=str(row["provider_name"]),
         model=str(row["model"]),
-        thinking_level=(
-            str(row["thinking_level"]) if row["thinking_level"] is not None else None
-        ),
+        thinking_level=(str(row["thinking_level"]) if row["thinking_level"] is not None else None),
         active_leaf_entry_id=(
-            str(row["active_leaf_entry_id"])
-            if row["active_leaf_entry_id"] is not None
-            else None
+            str(row["active_leaf_entry_id"]) if row["active_leaf_entry_id"] is not None else None
         ),
         created_at=str(row["created_at"]),
         updated_at=str(row["updated_at"]),
