@@ -10,9 +10,10 @@ from dataclasses import dataclass
 import pytest
 
 import tau_coding as tau_coding_package
-from tau_agent import AgentEndEvent, AgentEvent, AgentStartEvent, ErrorEvent
+from tau_agent import AgentEndEvent, AgentEvent, AgentStartEvent, ErrorEvent, QueueUpdateEvent
 from tau_coding.agent_pool import (
     AsyncAgentPool,
+    DuplicateRunIdError,
     PoolClosedError,
     PoolSessionState,
     RunHandle,
@@ -53,14 +54,22 @@ class _FakeSession:
         *,
         prompt_scripts: Sequence[_Script] = (),
         continue_scripts: Sequence[_Script] = (),
+        queue_message_scripts: Sequence[_Script] = (),
     ) -> None:
         self._prompt_scripts: deque[_Script] = deque(prompt_scripts)
         self._continue_scripts: deque[_Script] = deque(continue_scripts)
+        self._queue_message_scripts: deque[_Script] = deque(queue_message_scripts)
         self.prompt_calls: list[str] = []
         self.continue_calls = 0
+        self.queue_message_calls: list[tuple[str, str]] = []
         self.cancel_calls = 0
         self.close_calls = 0
+        self.queued_steering: tuple[str, ...] = ()
+        self.queued_follow_up: tuple[str, ...] = ()
         self._active_release: asyncio.Event | None = None
+        self._active_run_token: int | None = None
+        self._next_run_token = 0
+        self._running = False
 
     def prompt(
         self,
@@ -75,6 +84,31 @@ class _FakeSession:
     def continue_(self) -> AsyncIterator[AgentEvent]:
         self.continue_calls += 1
         return self._run_script(self._next_continue_script())
+
+    async def queue_message(self, content: str, *, behavior: str) -> QueueUpdateEvent:
+        active_run_token = self._active_run_token
+        if active_run_token is None:
+            raise RuntimeError("Session is idle; cannot queue a message.")
+        self.queue_message_calls.append((content, behavior))
+        script = self._queue_message_scripts.popleft() if self._queue_message_scripts else _Script()
+        if script.started is not None:
+            script.started.set()
+        if script.release is not None:
+            await script.release.wait()
+        if script.exception is not None:
+            raise script.exception
+        if self._active_run_token != active_run_token:
+            raise RuntimeError("Session active run changed while queueing a message.")
+        if behavior == "steer":
+            self.queued_steering = (*self.queued_steering, content)
+        elif behavior == "follow_up":
+            self.queued_follow_up = (*self.queued_follow_up, content)
+        else:
+            raise AssertionError(f"Unexpected queue behavior: {behavior!r}")
+        return QueueUpdateEvent(
+            steering=self.queued_steering,
+            follow_up=self.queued_follow_up,
+        )
 
     def cancel(self) -> None:
         self.cancel_calls += 1
@@ -96,6 +130,9 @@ class _FakeSession:
 
     async def _run_script(self, script: _Script) -> AsyncIterator[AgentEvent]:
         self._active_release = script.release
+        self._next_run_token += 1
+        self._active_run_token = self._next_run_token
+        self._running = True
         try:
             if script.started is not None:
                 script.started.set()
@@ -110,6 +147,8 @@ class _FakeSession:
             if script.exception is not None:
                 raise script.exception
         finally:
+            self._active_run_token = None
+            self._running = False
             self._active_release = None
             if script.completed is not None:
                 script.completed.set()
@@ -132,8 +171,172 @@ async def _assert_pool_drained(pool: AsyncAgentPool, *session_ids: str) -> None:
 
 def test_package_root_exports_agent_pool_types() -> None:
     assert tau_coding_package.AsyncAgentPool is AsyncAgentPool
+    assert tau_coding_package.DuplicateRunIdError is DuplicateRunIdError
     assert tau_coding_package.PoolSessionState is PoolSessionState
     assert tau_coding_package.RunStatus is RunStatus
+
+
+def test_agent_pool_rejects_blank_explicit_run_id() -> None:
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", _FakeSession())
+
+    with pytest.raises(ValueError, match="non-blank"):
+        pool.submit_prompt("alpha", "hello", run_id="   ")
+
+    with pytest.raises(ValueError, match="non-blank"):
+        pool.submit_continue("alpha", run_id="")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_accepts_explicit_prompt_run_id() -> None:
+    session = _FakeSession(prompt_scripts=(_Script(events=(AgentStartEvent(), AgentEndEvent())),))
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    handle = pool.submit_prompt("alpha", "hello", run_id="prompt-1")
+    result = await handle.wait()
+
+    assert handle.run_id == "prompt-1"
+    assert result.run_id == "prompt-1"
+    assert result.status is RunStatus.COMPLETED
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_accepts_explicit_continue_run_id() -> None:
+    session = _FakeSession(continue_scripts=(_Script(events=(AgentStartEvent(), AgentEndEvent())),))
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    handle = pool.submit_continue("alpha", run_id="continue-1")
+    result = await handle.wait()
+
+    assert handle.run_id == "continue-1"
+    assert result.run_id == "continue-1"
+    assert result.status is RunStatus.COMPLETED
+    assert session.continue_calls == 1
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_rejects_duplicate_explicit_run_id_for_session_lifetime() -> None:
+    session = _FakeSession(prompt_scripts=(_Script(events=(AgentStartEvent(), AgentEndEvent())),))
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    first = pool.submit_prompt("alpha", "hello", run_id="fixed-run")
+    assert (await first.wait()).status is RunStatus.COMPLETED
+
+    with pytest.raises(DuplicateRunIdError, match="fixed-run"):
+        pool.submit_prompt("alpha", "again", run_id="fixed-run")
+
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_rejects_duplicate_explicit_run_id_after_many_other_runs() -> None:
+    extra_runs = 1_024
+    session = _FakeSession(prompt_scripts=tuple(_Script() for _ in range(extra_runs + 1)))
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    first = pool.submit_prompt("alpha", "hello", run_id="fixed-run")
+    assert (await first.wait()).status is RunStatus.COMPLETED
+
+    for index in range(extra_runs):
+        handle = pool.submit_prompt("alpha", f"run-{index}", run_id=f"run-{index}")
+        assert (await handle.wait()).status is RunStatus.COMPLETED
+
+    with pytest.raises(DuplicateRunIdError, match="fixed-run"):
+        pool.submit_prompt("alpha", "again", run_id="fixed-run")
+
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_steer_queues_message_for_current_run() -> None:
+    started = asyncio.Event()
+    release = asyncio.Event()
+    session = _FakeSession(prompt_scripts=(_Script(started=started, release=release),))
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    handle = pool.submit_prompt("alpha", "hello", run_id="prompt-1")
+    await asyncio.wait_for(started.wait(), timeout=1.0)
+
+    queue_update = await pool.steer("alpha", "adjust", current_run_id=handle.run_id)
+
+    assert queue_update == QueueUpdateEvent(steering=("adjust",), follow_up=())
+    assert session.queue_message_calls == [("adjust", "steer")]
+    assert pool.snapshot("alpha").current_run_id == handle.run_id
+
+    release.set()
+    assert (await handle.wait()).status is RunStatus.COMPLETED
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_rejects_follow_up_for_stale_run_id() -> None:
+    started = asyncio.Event()
+    release = asyncio.Event()
+    session = _FakeSession(prompt_scripts=(_Script(started=started, release=release),))
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    handle = pool.submit_prompt("alpha", "hello", run_id="prompt-1")
+    await asyncio.wait_for(started.wait(), timeout=1.0)
+
+    with pytest.raises(RuntimeError, match="active run changed"):
+        await pool.follow_up("alpha", "later", current_run_id="prompt-0")
+
+    assert session.queue_message_calls == []
+
+    release.set()
+    assert (await handle.wait()).status is RunStatus.COMPLETED
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_rejects_queue_message_if_active_run_changes_during_session_queueing() -> (
+    None
+):
+    first_started = asyncio.Event()
+    first_release = asyncio.Event()
+    second_started = asyncio.Event()
+    second_release = asyncio.Event()
+    queue_started = asyncio.Event()
+    queue_release = asyncio.Event()
+    session = _FakeSession(
+        prompt_scripts=(
+            _Script(started=first_started, release=first_release),
+            _Script(started=second_started, release=second_release),
+        ),
+        queue_message_scripts=(_Script(started=queue_started, release=queue_release),),
+    )
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+
+    first = pool.submit_prompt("alpha", "hello", run_id="prompt-1")
+    second = pool.submit_prompt("alpha", "again", run_id="prompt-2")
+    await asyncio.wait_for(first_started.wait(), timeout=1.0)
+
+    queue_task = asyncio.create_task(pool.steer("alpha", "adjust", current_run_id=first.run_id))
+    await asyncio.wait_for(queue_started.wait(), timeout=1.0)
+
+    first_release.set()
+    assert (await first.wait()).status is RunStatus.COMPLETED
+    await asyncio.wait_for(second_started.wait(), timeout=1.0)
+    assert pool.snapshot("alpha").current_run_id == second.run_id
+
+    queue_release.set()
+    with pytest.raises(RuntimeError, match="active run changed"):
+        await queue_task
+
+    assert session.queued_steering == ()
+
+    second_release.set()
+    assert (await second.wait()).status is RunStatus.COMPLETED
+    await _assert_pool_drained(pool, "alpha")
 
 
 @pytest.mark.anyio

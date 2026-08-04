@@ -10,7 +10,7 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import uuid4
 
-from tau_agent import AgentEvent, ErrorEvent
+from tau_agent import AgentEvent, ErrorEvent, QueueUpdateEvent
 
 _TERMINAL_SENTINEL = object()
 
@@ -29,6 +29,10 @@ class PoolClosedError(AgentPoolError):
 
 class SessionAlreadyRegisteredError(AgentPoolError):
     """Raised when attempting to register one duplicate session id."""
+
+
+class DuplicateRunIdError(AgentPoolError):
+    """Raised when one session run id is submitted more than once."""
 
 
 class UnknownSessionError(AgentPoolError):
@@ -52,6 +56,9 @@ class CodingSessionLike(Protocol):
 
     def continue_(self) -> AsyncIterator[AgentEvent]:
         """Continue one restored or interrupted run."""
+
+    async def queue_message(self, content: str, *, behavior: str) -> QueueUpdateEvent:
+        """Queue one message for the currently active run."""
 
     def cancel(self) -> None:
         """Request cooperative cancellation of the current run."""
@@ -205,6 +212,7 @@ class _RegisteredSession:
     owned: bool
     turn_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     run_tasks: dict[str, asyncio.Task[RunResult]] = field(default_factory=dict)
+    seen_run_ids: set[str] = field(default_factory=set)
     state: PoolSessionState = PoolSessionState.IDLE
     pending_runs: int = 0
     current_run_id: str | None = None
@@ -268,13 +276,49 @@ class AsyncAgentPool:
         """Return immutable snapshots for all registered sessions."""
         return tuple(entry.snapshot() for entry in self._sessions.values())
 
-    def submit_prompt(self, session_id: str, content: str) -> RunHandle:
+    def submit_prompt(
+        self,
+        session_id: str,
+        content: str,
+        *,
+        run_id: str | None = None,
+    ) -> RunHandle:
         """Submit one prompt run for one registered session."""
-        return self._submit(session_id, lambda session: session.prompt(content))
+        return self._submit(session_id, lambda session: session.prompt(content), run_id=run_id)
 
-    def submit_continue(self, session_id: str) -> RunHandle:
+    def submit_continue(self, session_id: str, *, run_id: str | None = None) -> RunHandle:
         """Submit one continue run for one registered session."""
-        return self._submit(session_id, lambda session: session.continue_())
+        return self._submit(session_id, lambda session: session.continue_(), run_id=run_id)
+
+    async def steer(
+        self,
+        session_id: str,
+        content: str,
+        *,
+        current_run_id: str,
+    ) -> QueueUpdateEvent:
+        """Queue one steering message for the specified active run."""
+        return await self._queue_message(
+            session_id,
+            content,
+            behavior="steer",
+            current_run_id=current_run_id,
+        )
+
+    async def follow_up(
+        self,
+        session_id: str,
+        content: str,
+        *,
+        current_run_id: str,
+    ) -> QueueUpdateEvent:
+        """Queue one follow-up message for the specified active run."""
+        return await self._queue_message(
+            session_id,
+            content,
+            behavior="follow_up",
+            current_run_id=current_run_id,
+        )
 
     def cancel_current_run(self, session_id: str) -> bool:
         """Request cooperative cancellation for the active run, if any."""
@@ -334,31 +378,68 @@ class AsyncAgentPool:
                 self._refresh_state(entry)
             self._shutdown_complete = True
 
+    async def _queue_message(
+        self,
+        session_id: str,
+        content: str,
+        *,
+        behavior: str,
+        current_run_id: str,
+    ) -> QueueUpdateEvent:
+        if not current_run_id.strip():
+            raise ValueError("current_run_id must be non-blank.")
+        if not self._accepting_new_work:
+            raise PoolClosedError("AsyncAgentPool is shut down.")
+        entry = self._require_session(session_id)
+        if entry.disposed or not entry.accepting_new_work:
+            raise SessionClosedError(f"Session {session_id!r} is closed.")
+        active_run_id = entry.current_run_id
+        behavior_label = behavior.replace("_", " ")
+        if active_run_id is None:
+            raise RuntimeError(
+                f"Session {session_id!r} has no active run; cannot queue {behavior_label}."
+            )
+        if active_run_id != current_run_id:
+            raise RuntimeError(
+                f"Session {session_id!r} active run changed from {current_run_id!r} "
+                f"to {active_run_id!r}; refusing to queue {behavior_label}."
+            )
+        return await entry.session.queue_message(content, behavior=behavior)
+
     def _submit(
         self,
         session_id: str,
         factory: Callable[[CodingSessionLike], AsyncIterator[AgentEvent]],
+        *,
+        run_id: str | None = None,
     ) -> RunHandle:
         if not self._accepting_new_work:
             raise PoolClosedError("AsyncAgentPool is shut down.")
         entry = self._require_session(session_id)
         if entry.disposed or not entry.accepting_new_work:
             raise SessionClosedError(f"Session {session_id!r} is closed.")
-        run_id = _new_run_id()
+        claimed_run_id = self._claim_run_id(entry, session_id, run_id)
         entry.pending_runs += 1
-        entry.last_run_id = run_id
+        entry.last_run_id = claimed_run_id
         entry.last_error = None
         entry.last_exception = None
         self._refresh_state(entry)
         stream = _EventStream(self._event_queue_size)
         task = asyncio.create_task(
-            self._run(entry, run_id, stream, factory),
-            name=f"tau-pool:{session_id}:{run_id}",
+            self._run(entry, claimed_run_id, stream, factory),
+            name=f"tau-pool:{session_id}:{claimed_run_id}",
         )
-        entry.run_tasks[run_id] = task
+        entry.run_tasks[claimed_run_id] = task
         self._tasks.add(task)
-        task.add_done_callback(lambda done_task: self._on_task_done(entry, run_id, done_task))
-        return RunHandle(run_id=run_id, session_id=session_id, task=task, _stream=stream)
+        task.add_done_callback(
+            lambda done_task: self._on_task_done(entry, claimed_run_id, done_task)
+        )
+        return RunHandle(
+            run_id=claimed_run_id,
+            session_id=session_id,
+            task=task,
+            _stream=stream,
+        )
 
     async def _run(
         self,
@@ -462,6 +543,22 @@ class AsyncAgentPool:
         self._tasks.discard(task)
         self._refresh_state(entry)
 
+    def _claim_run_id(
+        self,
+        entry: _RegisteredSession,
+        session_id: str,
+        run_id: str | None,
+    ) -> str:
+        claimed_run_id = _new_run_id() if run_id is None else run_id
+        if run_id is not None and not claimed_run_id.strip():
+            raise ValueError("run_id must be non-blank when provided.")
+        if claimed_run_id in entry.run_tasks or claimed_run_id in entry.seen_run_ids:
+            raise DuplicateRunIdError(
+                f"Run id {claimed_run_id!r} has already been submitted for session {session_id!r}."
+            )
+        entry.seen_run_ids.add(claimed_run_id)
+        return claimed_run_id
+
     def _request_cancel(self, entry: _RegisteredSession) -> None:
         if entry.current_run_id is None:
             return
@@ -500,6 +597,7 @@ __all__ = [
     "AgentPoolError",
     "AsyncAgentPool",
     "CodingSessionLike",
+    "DuplicateRunIdError",
     "PoolClosedError",
     "PoolSessionSnapshot",
     "PoolSessionState",

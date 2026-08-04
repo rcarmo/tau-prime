@@ -1322,6 +1322,57 @@ class CodingSession:
         expanded_skill = expand_skill_command(text, self._skills)
         return expanded_skill if expanded_skill is not None else text
 
+    async def _prepare_prompt_content(self, content: str) -> tuple[AgentCallDiagnosticContext, str]:
+        context = self._diagnostic_context()
+        try:
+            extension_context = self._extension_runtime.extension_context(
+                CommandContext(
+                    session=self,
+                    registry=self._command_registry,
+                    text=content,
+                    name="prompt",
+                    args="",
+                )
+            )
+            content = self._extension_runtime.transform_input(extension_context, content)
+            expanded_content = self.expand_prompt_text(content)
+        except ResourceError:
+            raise
+        except Exception as exc:
+            self._last_diagnostic_log_path = self._diagnostic_logger.log_exception(
+                context=context,
+                phase="expand_prompt",
+                exc=exc,
+            )
+            raise
+
+        await self._flush_pending_session_manager_metadata()
+        await self._refresh_runtime_model_limits()
+        return context, expanded_content
+
+    def _queue_active_run_message(
+        self,
+        content: str,
+        *,
+        behavior: StreamingBehavior,
+        expected_run_token: int | None = None,
+    ) -> QueueUpdateEvent:
+        active_run_token = self._harness.active_run_token
+        if active_run_token is None:
+            raise RuntimeError(
+                "CodingSession is idle; cannot queue a message because no run is active."
+            )
+        if expected_run_token is not None and active_run_token != expected_run_token:
+            raise RuntimeError(
+                "CodingSession active run changed while queueing a message; "
+                "refusing to queue on a different run."
+            )
+        if behavior == "steer":
+            return self._harness.steer(content)
+        if behavior == "follow_up":
+            return self._harness.follow_up(content)
+        raise AssertionError(f"Unsupported streaming behavior: {behavior!r}")
+
     async def run_terminal_command(
         self,
         command: str,
@@ -1363,6 +1414,25 @@ class CodingSession:
             added_to_context=add_to_context,
         )
 
+    async def queue_message(
+        self,
+        content: str,
+        *,
+        behavior: StreamingBehavior,
+    ) -> QueueUpdateEvent:
+        """Queue one message for the active run without ever starting a new prompt."""
+        active_run_token = self._harness.active_run_token
+        if active_run_token is None:
+            raise RuntimeError(
+                "CodingSession is idle; cannot queue a message because no run is active."
+            )
+        _context, expanded_content = await self._prepare_prompt_content(content)
+        return self._queue_active_run_message(
+            expanded_content,
+            behavior=behavior,
+            expected_run_token=active_run_token,
+        )
+
     async def prompt(
         self,
         content: str,
@@ -1370,37 +1440,10 @@ class CodingSession:
         streaming_behavior: StreamingBehavior | None = None,
     ) -> AsyncIterator[AgentEvent]:
         """Append a user prompt, run the agent, and persist new messages."""
-        context = self._diagnostic_context()
-        try:
-            extension_context = self._extension_runtime.extension_context(
-                CommandContext(
-                    session=self,
-                    registry=self._command_registry,
-                    text=content,
-                    name="prompt",
-                    args="",
-                )
-            )
-            content = self._extension_runtime.transform_input(extension_context, content)
-            expanded_content = self.expand_prompt_text(content)
-        except ResourceError:
-            raise
-        except Exception as exc:
-            self._last_diagnostic_log_path = self._diagnostic_logger.log_exception(
-                context=context,
-                phase="expand_prompt",
-                exc=exc,
-            )
-            raise
-
-        await self._flush_pending_session_manager_metadata()
-        await self._refresh_runtime_model_limits()
+        context, expanded_content = await self._prepare_prompt_content(content)
         if self._harness.is_running:
-            if streaming_behavior == "steer":
-                yield self._harness.steer(expanded_content)
-                return
-            if streaming_behavior == "follow_up":
-                yield self._harness.follow_up(expanded_content)
+            if streaming_behavior is not None:
+                yield self._queue_active_run_message(expanded_content, behavior=streaming_behavior)
                 return
             raise RuntimeError(
                 "CodingSession is already running; pass streaming_behavior to queue a message."

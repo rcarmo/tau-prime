@@ -3,6 +3,7 @@ import json
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -584,6 +585,120 @@ def test_parse_terminal_command_prefixes() -> None:
     assert hidden_request.command == "pwd"
     assert hidden_request.add_to_context is False
     assert parse_terminal_command("hello") is None
+
+
+@pytest.mark.anyio
+async def test_queue_message_rejects_idle_session(tmp_path: Path) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    session = await CodingSession.load(_config(tmp_path, FakeProvider([]), storage))
+
+    with pytest.raises(RuntimeError, match="idle"):
+        await session.queue_message("Queued steering", behavior="steer")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("behavior", "expected_event", "expected_steering", "expected_follow_up"),
+    [
+        pytest.param(
+            "steer",
+            QueueUpdateEvent(steering=("expanded::transformed::Queued note",)),
+            ("expanded::transformed::Queued note",),
+            (),
+            id="steer",
+        ),
+        pytest.param(
+            "follow_up",
+            QueueUpdateEvent(follow_up=("expanded::transformed::Queued note",)),
+            (),
+            ("expanded::transformed::Queued note",),
+            id="follow-up",
+        ),
+    ],
+)
+async def test_queue_message_transforms_and_expands_once_for_active_run(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    behavior: Literal["steer", "follow_up"],
+    expected_event: QueueUpdateEvent,
+    expected_steering: tuple[str, ...],
+    expected_follow_up: tuple[str, ...],
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    provider = WaitingProvider()
+    session = await CodingSession.load(_config(tmp_path, provider, storage))
+    transform_calls: list[str] = []
+    expand_calls: list[str] = []
+
+    def transform_input(_context: object, text: str) -> str:
+        transform_calls.append(text)
+        return f"transformed::{text}"
+
+    def expand_prompt_text(text: str) -> str:
+        expand_calls.append(text)
+        return f"expanded::{text}"
+
+    async def run_prompt() -> None:
+        async for _event in session.prompt("Hello"):
+            pass
+
+    task = asyncio.create_task(run_prompt())
+    await provider.started.wait()
+    monkeypatch.setattr(session.extension_runtime, "transform_input", transform_input)
+    monkeypatch.setattr(session, "expand_prompt_text", expand_prompt_text)
+
+    queue_event = await session.queue_message("Queued note", behavior=behavior)
+
+    assert queue_event == expected_event
+    assert transform_calls == ["Queued note"]
+    assert expand_calls == ["transformed::Queued note"]
+    assert session.queued_steering_messages == expected_steering
+    assert session.queued_follow_up_messages == expected_follow_up
+
+    provider.release.set()
+    await task
+
+    assert session.messages == (
+        UserMessage(content="Hello"),
+        AssistantMessage(content="First"),
+        UserMessage(content="expanded::transformed::Queued note"),
+        AssistantMessage(content="Second"),
+    )
+    assert provider.calls[1] == list(session.messages[:3])
+
+
+@pytest.mark.anyio
+async def test_queue_message_rejects_if_active_run_changes_during_preparation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    provider = WaitingProvider()
+    session = await CodingSession.load(_config(tmp_path, provider, storage))
+    original_prepare_prompt_content = session._prepare_prompt_content
+
+    async def run_prompt() -> None:
+        async for _event in session.prompt("Hello"):
+            pass
+
+    async def prepare_prompt_content(content: str) -> tuple[object, str]:
+        prepared = await original_prepare_prompt_content(content)
+        active_run_token = session._harness.active_run_token
+        assert active_run_token is not None
+        session._harness._active_run_token = active_run_token + 1
+        return prepared
+
+    task = asyncio.create_task(run_prompt())
+    await provider.started.wait()
+    monkeypatch.setattr(session, "_prepare_prompt_content", prepare_prompt_content)
+
+    with pytest.raises(RuntimeError, match="active run changed"):
+        await session.queue_message("Queued follow-up", behavior="follow_up")
+
+    assert session.queue_update_event() == QueueUpdateEvent()
+
+    provider.release.set()
+    await task
 
 
 @pytest.mark.anyio

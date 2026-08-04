@@ -5,6 +5,7 @@ from __future__ import annotations
 from tau_coding.agent_pool import (
     AgentPoolError,
     AsyncAgentPool,
+    DuplicateRunIdError,
     PoolClosedError,
     PoolSessionSnapshot,
     PoolSessionState,
@@ -184,6 +185,7 @@ __all__ = [
     "AgentPoolError",
     "AsyncAgentPool",
     "CodingSession",
+    "DuplicateRunIdError",
     "CodingSessionCompactionConfig",
     "CodingSessionConfig",
     "CodingSessionFactory",

@@ -78,6 +78,8 @@ class AgentHarness:
         self._listeners: list[EventListener] = []
         self._current_signal: SimpleCancellationToken | None = None
         self._running = False
+        self._next_run_token = 0
+        self._active_run_token: int | None = None
         self._steering_queue: deque[AgentMessage] = deque()
         self._follow_up_queue: deque[AgentMessage] = deque()
 
@@ -95,6 +97,11 @@ class AgentHarness:
     def is_running(self) -> bool:
         """Return whether a prompt or continuation is currently active."""
         return self._running
+
+    @property
+    def active_run_token(self) -> int | None:
+        """Return one opaque token for the currently active run, if any."""
+        return self._active_run_token
 
     @property
     def queued_messages(self) -> QueuedMessages:
@@ -178,7 +185,7 @@ class AgentHarness:
         """Append a user message and run the agent loop."""
         self._ensure_not_running()
         self._append_interrupted_tool_results()
-        self._running = True
+        self._activate_run()
         message = UserMessage(content=content)
         self._messages.append(message)
         return self._run(prompt_message=message)
@@ -187,7 +194,7 @@ class AgentHarness:
         """Continue the agent loop without appending a new user message."""
         self._ensure_not_running()
         self._append_interrupted_tool_results()
-        self._running = True
+        self._activate_run()
         return self._run()
 
     async def _run(self, *, prompt_message: UserMessage | None = None) -> AsyncIterator[AgentEvent]:
@@ -222,6 +229,7 @@ class AgentHarness:
                 self._append_interrupted_tool_results()
             if self._current_signal is signal:
                 self._current_signal = None
+            self._active_run_token = None
             self._running = False
 
     async def _notify(self, event: AgentEvent) -> None:
@@ -235,6 +243,11 @@ class AgentHarness:
             raise RuntimeError(
                 "AgentHarness is already running; use steer() or follow_up() to queue messages."
             )
+
+    def _activate_run(self) -> None:
+        self._next_run_token += 1
+        self._active_run_token = self._next_run_token
+        self._running = True
 
     def _drain_steering_messages(self) -> tuple[AgentMessage, ...]:
         return self._drain_queue(self._steering_queue)
