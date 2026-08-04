@@ -96,6 +96,37 @@ async def manager_create_session(
     return await manager_result(manager.create_session(**kwargs))
 
 
+async def manager_create_session_exclusive(
+    manager: CodingSessionManager,
+    *,
+    cwd: Path,
+    model: str,
+    provider_name: str,
+    title: str | None = None,
+    session_id: str | None = None,
+) -> CodingSessionRecordLike:
+    """Create one persisted session with exclusive transcript semantics when supported."""
+    create_session_exclusive = getattr(manager, "create_session_exclusive", None)
+    if create_session_exclusive is None:
+        return await manager_create_session(
+            manager,
+            cwd=cwd,
+            model=model,
+            provider_name=provider_name,
+            title=title,
+            session_id=session_id,
+        )
+    kwargs: dict[str, str | Path | None] = {
+        "cwd": cwd,
+        "model": model,
+        "title": title,
+        "session_id": session_id,
+    }
+    if _manager_supports_parameter(create_session_exclusive, "provider_name"):
+        kwargs["provider_name"] = provider_name
+    return await manager_result(create_session_exclusive(**kwargs))
+
+
 async def manager_touch_session(
     manager: CodingSessionManager,
     session_id: str,
@@ -124,6 +155,14 @@ def session_storage_for_record(
             raise RuntimeError(f"SQLite session record requires a SQLite manager: {record.id}")
         return manager.session_storage(record.id)
     return JsonlSessionStorage(record.path)
+
+
+def manager_session_storage(
+    manager: CodingSessionManager,
+    record: CodingSessionRecordLike,
+) -> SessionStorage:
+    """Return the durable storage backing one manager-owned record."""
+    return session_storage_for_record(manager, record)
 
 
 @asynccontextmanager

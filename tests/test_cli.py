@@ -6,6 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 import tau_coding.live_session_manager as live_session_manager
+import tau_coding.session as session_module
 from tau_agent import AssistantMessage, UserMessage
 from tau_agent.session import JsonlSessionStorage, MessageEntry
 from tau_ai import (
@@ -774,6 +775,100 @@ async def test_run_print_mode_can_emit_live_transcript(
     assert ok is True
     assert captured.out == "Hello\n"
     assert captured.err == ""
+
+
+@pytest.mark.anyio
+async def test_run_openai_print_mode_persists_default_sessions_in_sqlite(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    class _ClosableFakeProvider(FakeProvider):
+        def __init__(self) -> None:
+            super().__init__(
+                [
+                    [
+                        ProviderResponseStartEvent(model="fake-model"),
+                        ProviderResponseEndEvent(message=AssistantMessage(content="Done")),
+                    ]
+                ]
+            )
+            self.closed = False
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    tau_home = tmp_path / ".tau"
+    agents_home = tmp_path / ".agents"
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    monkeypatch.setenv("TAU_HOME", str(tau_home))
+    monkeypatch.setenv("TAU_AGENTS_HOME", str(agents_home))
+
+    settings = ProviderSettings(
+        default_provider="fake-provider",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="fake-provider",
+                models=("fake-model",),
+                default_model="fake-model",
+            ),
+        ),
+    )
+    provider = _ClosableFakeProvider()
+
+    async def fake_ensure_dynamic_provider_models(
+        current: ProviderSettings, *, provider_name: str | None = None
+    ) -> ProviderSettings:
+        del provider_name
+        return current
+
+    def fake_create_model_provider(*args: object, **kwargs: object) -> _ClosableFakeProvider:
+        del args, kwargs
+        return provider
+
+    monkeypatch.setattr(cli, "load_provider_settings", lambda: settings)
+    monkeypatch.setattr(
+        cli,
+        "ensure_dynamic_provider_models",
+        fake_ensure_dynamic_provider_models,
+    )
+    monkeypatch.setattr(cli, "create_model_provider", fake_create_model_provider)
+    monkeypatch.setattr(session_module, "create_model_provider", fake_create_model_provider)
+
+    ok = await cli.run_openai_print_mode(
+        "Say hello",
+        "fake-model",
+        workspace_root,
+        provider_name="fake-provider",
+    )
+
+    captured = capsys.readouterr()
+    paths = TauPaths(home=tau_home, agents_home=agents_home)
+
+    assert ok is True
+    assert captured.out == "Done\n"
+    assert captured.err == ""
+    assert provider.closed is True
+    assert (tau_home / "tau.sqlite3").exists()
+
+    async with SqliteCodingSessionManager(paths=paths) as manager:
+        records = await manager.list_sessions(workspace_root)
+        assert len(records) == 1
+        record = records[0]
+        assert record.cwd == workspace_root.resolve()
+        assert record.model == "fake-model"
+        assert record.provider_name == "fake-provider"
+
+        entries = await manager.session_storage(record.id).read_all()
+
+    messages = [entry.message for entry in entries if isinstance(entry, MessageEntry)]
+
+    assert [message.role for message in messages] == ["user", "assistant"]
+    assert messages[0].content == "Say hello"
+    assert messages[1].content == "Done"
+    assert list(paths.home.rglob("*.jsonl")) == []
+    assert not paths.sessions_dir.exists()
 
 
 def test_cli_exits_nonzero_when_print_mode_fails(monkeypatch: pytest.MonkeyPatch) -> None:

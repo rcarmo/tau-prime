@@ -9,6 +9,7 @@ from tau_agent.session import JsonlSessionStorage
 from tau_coding.live_session_manager import (
     live_session_manager_context,
     manager_create_session,
+    manager_create_session_exclusive,
     manager_list_sessions,
     manager_prepare_session,
     manager_touch_session,
@@ -71,6 +72,19 @@ class _LegacyManager:
 
     async def close(self) -> None:
         self.close_calls += 1
+
+
+class _AsyncExclusiveLegacyManager(_LegacyManager):
+    async def create_session_exclusive(
+        self,
+        *,
+        cwd: Path,
+        model: str,
+        title: str | None = None,
+        session_id: str | None = None,
+    ) -> CodingSessionRecord:
+        self.calls.append(("create_session_exclusive", cwd, model, title, session_id))
+        return self.record
 
 
 @pytest.mark.anyio
@@ -161,6 +175,36 @@ async def test_live_session_manager_storage_dispatches_by_record_type(tmp_path: 
 
         assert type(sqlite_storage).__name__ == "SqliteSessionStorage"
         assert sqlite_storage.session_id == sqlite_record.id
+
+
+@pytest.mark.anyio
+async def test_live_session_manager_create_session_exclusive_supports_awaitable_legacy_manager(
+    tmp_path: Path,
+) -> None:
+    record = CodingSessionRecord(
+        id="legacy-session",
+        path=tmp_path / "legacy.jsonl",
+        cwd=tmp_path,
+        model="fake-model",
+        title="Legacy",
+        created_at=1.0,
+        updated_at=1.0,
+    )
+    manager = _AsyncExclusiveLegacyManager(record)
+
+    created = await manager_create_session_exclusive(
+        manager,
+        cwd=tmp_path,
+        model="fake-model",
+        provider_name="legacy-provider",
+        title="Created",
+        session_id="created-session",
+    )
+
+    assert created == record
+    assert manager.calls == [
+        ("create_session_exclusive", tmp_path, "fake-model", "Created", "created-session")
+    ]
 
 
 @pytest.mark.anyio

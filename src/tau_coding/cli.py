@@ -30,6 +30,13 @@ from tau_coding.linux_sandbox import (
     enter_linux_sandbox,
     should_enter_linux_sandbox,
 )
+from tau_coding.live_session_manager import (
+    CodingSessionManager,
+    CodingSessionRecordLike,
+    live_session_manager_context,
+    manager_create_session_exclusive,
+    manager_session_storage,
+)
 from tau_coding.macos_sandbox import (
     MacOSSandboxError,
     enter_macos_sandbox,
@@ -58,7 +65,6 @@ from tau_coding.session import (
     CodingSession,
     CodingSessionConfig,
     TerminalCommandResult,
-    jsonl_session_storage,
     parse_terminal_command,
 )
 from tau_coding.session_export import (
@@ -66,7 +72,7 @@ from tau_coding.session_export import (
     export_session_artifact,
     normalize_export_format,
 )
-from tau_coding.session_manager import CodingSessionRecord, SessionManager, validate_session_id
+from tau_coding.session_manager import SessionManager, validate_session_id
 from tau_coding.shell_config import load_shell_settings
 from tau_coding.tui import run_tui_app
 from tau_coding.update_check import (
@@ -1004,7 +1010,7 @@ async def run_openai_print_mode(
     output: PrintOutputMode = PrintOutputMode.text,
     provider_name: str | None = None,
     session_id: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
 ) -> bool:
     """Run print mode with the OpenAI-compatible provider configured from the environment."""
     settings = load_provider_settings()
@@ -1019,37 +1025,50 @@ async def run_openai_print_mode(
         thinking_level=provider_default_thinking_level(selection.provider, model=selection.model),
         llm_observer=llm_observer,
     )
-    manager = session_manager or SessionManager()
-    record = _create_print_session(manager, cwd=cwd, model=selection.model, session_id=session_id)
     try:
-        return await run_print_mode(
-            prompt=prompt,
-            model=selection.model,
-            cwd=record.cwd,
-            provider=provider,
-            output=output,
-            storage=jsonl_session_storage(record.path),
-            session_id=record.id,
-            session_manager=manager,
-            provider_name=selection.provider.name,
-            provider_settings=settings,
-            runtime_provider_config=selection.provider,
-            shell_command_prefix=shell_settings.shell_command_prefix,
-            llm_observer=llm_observer,
-        )
+        async with live_session_manager_context(session_manager) as manager:
+            record = await _create_print_session(
+                manager,
+                cwd=cwd,
+                model=selection.model,
+                provider_name=selection.provider.name,
+                session_id=session_id,
+            )
+            return await run_print_mode(
+                prompt=prompt,
+                model=selection.model,
+                cwd=record.cwd,
+                provider=provider,
+                output=output,
+                storage=manager_session_storage(manager, record),
+                session_id=record.id,
+                session_manager=manager,
+                provider_name=selection.provider.name,
+                provider_settings=settings,
+                runtime_provider_config=selection.provider,
+                shell_command_prefix=shell_settings.shell_command_prefix,
+                llm_observer=llm_observer,
+            )
     finally:
         await provider.aclose()
 
 
-def _create_print_session(
-    manager: SessionManager,
+async def _create_print_session(
+    manager: CodingSessionManager,
     *,
     cwd: Path,
     model: str,
+    provider_name: str,
     session_id: str | None,
-) -> CodingSessionRecord:
-    """Create a print-mode session without risking transcript collisions."""
-    return manager.create_session_exclusive(cwd=cwd, model=model, session_id=session_id)
+) -> CodingSessionRecordLike:
+    """Create a durable print-mode session without risking transcript collisions."""
+    return await manager_create_session_exclusive(
+        manager,
+        cwd=cwd,
+        model=model,
+        provider_name=provider_name,
+        session_id=session_id,
+    )
 
 
 async def run_print_mode(
@@ -1062,7 +1081,7 @@ async def run_print_mode(
     resource_paths: TauResourcePaths | None = None,
     storage: SessionStorage | None = None,
     session_id: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
     provider_name: str = DEFAULT_PROVIDER_NAME,
     provider_settings: ProviderSettings | None = None,
     runtime_provider_config: ProviderConfig | None = None,
