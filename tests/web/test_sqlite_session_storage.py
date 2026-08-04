@@ -10,6 +10,7 @@ from tau_agent.session import (
     CustomEntry,
     LeafEntry,
     MessageEntry,
+    SessionEntry,
     SessionInfoEntry,
 )
 from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
@@ -63,7 +64,7 @@ async def test_session_storage_round_trips_entries_and_leaf(tmp_path: Path) -> N
             data={"preserved": True},
         )
         leaf = LeafEntry(id="leaf", parent_id="custom", entry_id="custom")
-        entries = [info, user, compaction, custom, leaf]
+        entries: list[SessionEntry] = [info, user, compaction, custom, leaf]
 
         await storage.append_many(entries)
 
@@ -156,3 +157,105 @@ async def test_session_storage_detects_column_payload_mismatch(tmp_path: Path) -
 
         with pytest.raises(SqliteSessionStorageError, match="disagree"):
             await storage.read_all()
+
+
+@pytest.mark.anyio
+async def test_coding_session_load_persists_interrupted_tail_tool_repair_once_in_sqlite(
+    tmp_path: Path,
+) -> None:
+    from tau_agent import AssistantMessage, ToolCall, ToolResultMessage, UserMessage
+    from tau_agent.session import LeafEntry, MessageEntry
+    from tau_ai import FakeProvider, ProviderResponseEndEvent, ProviderResponseStartEvent
+    from tau_coding import CodingSession, CodingSessionConfig
+    from tau_web.sqlite.sessions import SessionRepository
+
+    database_path = tmp_path / "tau.sqlite3"
+    session_id = "worker-1"
+    user_entry = MessageEntry(
+        id="user",
+        message=UserMessage(content="Read README.md"),
+    )
+    tool_call = ToolCall(id="call-1", name="read", arguments={"path": "README.md"})
+    assistant_entry = MessageEntry(
+        id="assistant",
+        parent_id=user_entry.id,
+        message=AssistantMessage(content="I'll read it.", tool_calls=[tool_call]),
+    )
+    expected_repair = ToolResultMessage(
+        tool_call_id="call-1",
+        name="read",
+        content="Tool call interrupted by user",
+        ok=False,
+        error="Tool call interrupted by user",
+    )
+    expected_messages = (
+        user_entry.message,
+        assistant_entry.message,
+        expected_repair,
+    )
+
+    async with SqliteDatabase(database_path) as database:
+        record = await SessionRepository(database).create(
+            workspace_root=tmp_path,
+            provider_name="test",
+            model="fake",
+            agent_name=session_id,
+            session_id=session_id,
+        )
+        storage = SqliteSessionStorage(database, record.session_id)
+        await storage.append(user_entry)
+        await storage.append(assistant_entry)
+        await storage.append(
+            LeafEntry(
+                id="assistant-leaf",
+                parent_id=assistant_entry.id,
+                entry_id=assistant_entry.id,
+            )
+        )
+
+        provider = FakeProvider(
+            [
+                [
+                    ProviderResponseStartEvent(model="fake"),
+                    ProviderResponseEndEvent(message=AssistantMessage(content="Recovered.")),
+                ]
+            ]
+        )
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model="fake",
+                system="You are Tau.",
+                storage=storage,
+                cwd=tmp_path,
+            )
+        )
+
+        assert provider.calls == []
+        assert session.messages == expected_messages
+
+        repaired_entries = await SqliteSessionStorage(database, record.session_id).read_all()
+        message_entries = [entry for entry in repaired_entries if entry.type == "message"]
+        leaf_entries = [entry for entry in repaired_entries if entry.type == "leaf"]
+        assert [entry.message for entry in message_entries] == list(expected_messages)
+        assert len(repaired_entries) == 5
+        assert len(leaf_entries) == 2
+        assert leaf_entries[-1].entry_id == message_entries[-1].id
+
+    async with SqliteDatabase(database_path) as database:
+        fresh_storage = SqliteSessionStorage(database, session_id)
+
+        assert await fresh_storage.read_all() == repaired_entries
+
+        restored = await CodingSession.load(
+            CodingSessionConfig(
+                provider=FakeProvider([]),
+                model="fake",
+                system="You are Tau.",
+                storage=fresh_storage,
+                cwd=tmp_path,
+            )
+        )
+
+        assert restored.messages == expected_messages
+        assert await fresh_storage.read_all() == repaired_entries

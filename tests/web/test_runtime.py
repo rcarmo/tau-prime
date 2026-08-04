@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from tau_agent import AgentEndEvent, AgentEvent, AgentStartEvent, ErrorEvent, QueueUpdateEvent
-from tau_coding.agent_pool import AsyncAgentPool, UnknownSessionError
+from tau_coding.agent_pool import AsyncAgentPool, PoolSessionState, UnknownSessionError
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
@@ -187,6 +187,155 @@ async def _transition_statuses(harness: _RuntimeHarness) -> list[str]:
         for record in records
         if record.event_type == "run.transition"
     ]
+
+
+@pytest.mark.anyio
+async def test_runtime_run_repository_list_is_session_isolated_for_overlapping_sessions(
+    tmp_path: Path,
+) -> None:
+    alpha_started = asyncio.Event()
+    alpha_release = asyncio.Event()
+    beta_started = asyncio.Event()
+    beta_release = asyncio.Event()
+    alpha = _FakeSession(
+        prompt_scripts=(
+            _Script(
+                events=(AgentStartEvent(), AgentEndEvent()),
+                started=alpha_started,
+                release=alpha_release,
+            ),
+        )
+    )
+    beta = _FakeSession(
+        prompt_scripts=(
+            _Script(
+                events=(AgentStartEvent(), QueueUpdateEvent(follow_up=("beta-done",))),
+                started=beta_started,
+                release=beta_release,
+            ),
+        )
+    )
+    database = SqliteDatabase(tmp_path / "tau.sqlite3")
+    await database.open()
+    sessions = SessionRepository(database)
+    await sessions.create(
+        workspace_root=tmp_path,
+        provider_name="test",
+        model="model",
+        agent_name="alpha",
+        session_id="alpha",
+    )
+    await sessions.create(
+        workspace_root=tmp_path,
+        provider_name="test",
+        model="model",
+        agent_name="beta",
+        session_id="beta",
+    )
+    runs = RunRepository(database)
+    queues = QueueRepository(database)
+    audit = AuditRepository(database)
+    pool = AsyncAgentPool(max_concurrency=2)
+    runtime = DurableAgentRuntime(pool, runs, queues, audit)
+    runtime.register_session("alpha", alpha)
+    runtime.register_session("beta", beta)
+
+    try:
+        alpha_handle = await runtime.submit_prompt("alpha", "first")
+        beta_handle = await runtime.submit_prompt("beta", "second")
+
+        await asyncio.wait_for(alpha_started.wait(), timeout=1.0)
+        await asyncio.wait_for(beta_started.wait(), timeout=1.0)
+
+        alpha_snapshot = pool.snapshot("alpha")
+        beta_snapshot = pool.snapshot("beta")
+        assert alpha_snapshot.state is PoolSessionState.RUNNING
+        assert beta_snapshot.state is PoolSessionState.RUNNING
+        assert alpha_snapshot.current_run_id == alpha_handle.run_id
+        assert beta_snapshot.current_run_id == beta_handle.run_id
+
+        alpha_active = await runs.list(session_id="alpha")
+        beta_active = await runs.list(session_id="beta")
+        assert [
+            (
+                record.run_id,
+                record.session_id,
+                record.status,
+                record.last_status,
+                record.last_event_type,
+            )
+            for record in alpha_active
+        ] == [(alpha_handle.run_id, "alpha", "pending", {"phase": "pending"}, None)]
+        assert [
+            (
+                record.run_id,
+                record.session_id,
+                record.status,
+                record.last_status,
+                record.last_event_type,
+            )
+            for record in beta_active
+        ] == [(beta_handle.run_id, "beta", "pending", {"phase": "pending"}, None)]
+        assert beta_handle.run_id not in {record.run_id for record in alpha_active}
+        assert alpha_handle.run_id not in {record.run_id for record in beta_active}
+
+        alpha_release.set()
+        beta_release.set()
+        alpha_record, beta_record = await asyncio.wait_for(
+            asyncio.gather(alpha_handle.wait(), beta_handle.wait()),
+            timeout=1.0,
+        )
+
+        assert alpha_record.status == "completed"
+        assert alpha_record.last_event_type == "agent_end"
+        assert alpha_record.last_status == {"phase": "completed"}
+        assert beta_record.status == "completed"
+        assert beta_record.last_event_type == "queue_update"
+        assert beta_record.last_status == {"phase": "completed"}
+
+        alpha_completed = await runs.list(session_id="alpha")
+        beta_completed = await runs.list(session_id="beta")
+        assert [
+            (
+                record.run_id,
+                record.session_id,
+                record.status,
+                record.last_status,
+                record.last_event_type,
+            )
+            for record in alpha_completed
+        ] == [(alpha_handle.run_id, "alpha", "completed", {"phase": "completed"}, "agent_end")]
+        assert [
+            (
+                record.run_id,
+                record.session_id,
+                record.status,
+                record.last_status,
+                record.last_event_type,
+            )
+            for record in beta_completed
+        ] == [
+            (
+                beta_handle.run_id,
+                "beta",
+                "completed",
+                {"phase": "completed"},
+                "queue_update",
+            )
+        ]
+        assert beta_handle.run_id not in {record.run_id for record in alpha_completed}
+        assert alpha_handle.run_id not in {record.run_id for record in beta_completed}
+
+        await runtime.shutdown()
+
+        await asyncio.sleep(0)
+        assert not runtime._driver_tasks
+        assert not pool._tasks
+    finally:
+        alpha_release.set()
+        beta_release.set()
+        await runtime.shutdown()
+        await database.close()
 
 
 @pytest.mark.anyio
