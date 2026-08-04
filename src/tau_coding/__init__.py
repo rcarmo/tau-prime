@@ -2,6 +2,19 @@
 
 from __future__ import annotations
 
+from tau_coding.agent_pool import (
+    AgentPoolError,
+    AsyncAgentPool,
+    PoolClosedError,
+    PoolSessionSnapshot,
+    PoolSessionState,
+    RunHandle,
+    RunResult,
+    RunStatus,
+    SessionAlreadyRegisteredError,
+    SessionClosedError,
+    UnknownSessionError,
+)
 from tau_coding.coding_session_factory import (
     CodingSessionCompactionConfig,
     CodingSessionFactory,
@@ -168,6 +181,8 @@ __version__ = "42.3.0"
 
 __all__ = [
     "__version__",
+    "AgentPoolError",
+    "AsyncAgentPool",
     "CodingSession",
     "CodingSessionCompactionConfig",
     "CodingSessionConfig",
@@ -194,6 +209,9 @@ __all__ = [
     "OpenAICompatibleProviderConfig",
     "OpenAICodexProviderConfig",
     "OAuthCredential",
+    "PoolClosedError",
+    "PoolSessionSnapshot",
+    "PoolSessionState",
     "PrintOutputMode",
     "ProjectContextFile",
     "PromptTemplate",
@@ -207,6 +225,8 @@ __all__ = [
     "ResourceError",
     "SessionManager",
     "SessionExportError",
+    "SessionAlreadyRegisteredError",
+    "SessionClosedError",
     "ShellConfigError",
     "ShellSettings",
     "Skill",
@@ -216,8 +236,12 @@ __all__ = [
     "ToolDefinition",
     "TranscriptRenderer",
     "ThinkingLevel",
+    "UnknownSessionError",
     "ThinkingParameter",
     "ReasoningEffort",
+    "RunHandle",
+    "RunResult",
+    "RunStatus",
     "anthropic_config_from_provider",
     "build_skill_index",
     "build_system_prompt",
