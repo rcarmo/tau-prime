@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import cast
+from typing import Final, cast
 from uuid import uuid4
 
 from aiosqlite import Row
@@ -20,6 +20,7 @@ from tau_web.sqlite.writer import SqliteTransaction
 
 _AGENT_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _MAX_AGENT_NAME_BYTES = 128
+_MISSING: Final[object] = object()
 
 
 class InvalidAgentNameError(RepositoryError):
@@ -322,7 +323,9 @@ class SessionRepository(SqliteRepository):
         provider_name: str | None = None,
         model: str | None = None,
         title: str | None = None,
+        thinking_level: str | None | object = _MISSING,
         expected_updated_at: str | None = None,
+        transaction: SqliteTransaction | None = None,
     ) -> SessionRecord:
         normalized_provider_name = provider_name.strip() if provider_name is not None else None
         if normalized_provider_name is not None and not normalized_provider_name:
@@ -330,53 +333,81 @@ class SessionRepository(SqliteRepository):
         normalized_model = model.strip() if model is not None else None
         if normalized_model is not None and not normalized_model:
             raise ValueError("Model must not be empty")
+        normalized_thinking_level = _normalize_optional_text_field(
+            thinking_level,
+            field="Thinking level",
+        )
         timestamp = _timestamp()
 
-        async def write(transaction: SqliteTransaction) -> SessionRecord:
-            current = _session_from_row(await _require_session(transaction, session_id))
-            if current.archived_at is not None:
-                raise RepositoryError("Archived sessions must be restored before updating")
-            if expected_updated_at is not None and current.updated_at != expected_updated_at:
-                raise SessionMetadataConflictError(
-                    session_id,
-                    expected_updated_at=expected_updated_at,
-                    actual_updated_at=current.updated_at,
-                )
-            changed = await transaction.execute(
-                """
-                UPDATE sessions
-                SET title = ?, provider_name = ?, model = ?, updated_at = ?
-                WHERE session_id = ? AND updated_at = ?
-                """,
-                (
-                    title if title is not None else current.title,
-                    normalized_provider_name
-                    if normalized_provider_name is not None
-                    else current.provider_name,
-                    normalized_model if normalized_model is not None else current.model,
-                    timestamp,
-                    session_id,
-                    current.updated_at,
-                ),
+        async def write(active_transaction: SqliteTransaction) -> SessionRecord:
+            return await self._update_metadata_in_transaction(
+                active_transaction,
+                session_id,
+                provider_name=normalized_provider_name,
+                model=normalized_model,
+                title=title,
+                thinking_level=normalized_thinking_level,
+                expected_updated_at=expected_updated_at,
+                timestamp=timestamp,
             )
-            if changed != 1:
-                row = await transaction.fetch_one(
-                    "SELECT updated_at FROM sessions WHERE session_id = ?",
-                    (session_id,),
-                )
-                actual_updated_at = (
-                    str(row["updated_at"])
-                    if row is not None and row["updated_at"] is not None
-                    else None
-                )
-                raise SessionMetadataConflictError(
-                    session_id,
-                    expected_updated_at=current.updated_at,
-                    actual_updated_at=actual_updated_at,
-                )
-            return _session_from_row(await _require_session(transaction, session_id))
 
+        if transaction is not None:
+            return await write(transaction)
         return await self.database.write(write)
+
+    async def _update_metadata_in_transaction(
+        self,
+        transaction: SqliteTransaction,
+        session_id: str,
+        *,
+        provider_name: str | None,
+        model: str | None,
+        title: str | None,
+        thinking_level: str | None | object,
+        expected_updated_at: str | None,
+        timestamp: str,
+    ) -> SessionRecord:
+        current = _session_from_row(await _require_session(transaction, session_id))
+        if current.archived_at is not None:
+            raise RepositoryError("Archived sessions must be restored before updating")
+        if expected_updated_at is not None and current.updated_at != expected_updated_at:
+            raise SessionMetadataConflictError(
+                session_id,
+                expected_updated_at=expected_updated_at,
+                actual_updated_at=current.updated_at,
+            )
+        changed = await transaction.execute(
+            """
+            UPDATE sessions
+            SET title = ?, provider_name = ?, model = ?, thinking_level = ?, updated_at = ?
+            WHERE session_id = ? AND updated_at = ?
+            """,
+            (
+                title if title is not None else current.title,
+                provider_name if provider_name is not None else current.provider_name,
+                model if model is not None else current.model,
+                thinking_level if thinking_level is not _MISSING else current.thinking_level,
+                timestamp,
+                session_id,
+                current.updated_at,
+            ),
+        )
+        if changed != 1:
+            row = await transaction.fetch_one(
+                "SELECT updated_at FROM sessions WHERE session_id = ?",
+                (session_id,),
+            )
+            actual_updated_at = (
+                str(row["updated_at"])
+                if row is not None and row["updated_at"] is not None
+                else None
+            )
+            raise SessionMetadataConflictError(
+                session_id,
+                expected_updated_at=current.updated_at,
+                actual_updated_at=actual_updated_at,
+            )
+        return _session_from_row(await _require_session(transaction, session_id))
 
     async def rename(self, session_id: str, agent_name: str) -> SessionRecord:
         selected_name = validate_agent_name(agent_name)
@@ -509,6 +540,23 @@ def workspace_id_for_path(root_path: Path) -> str:
 
 def _timestamp() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _normalize_optional_text_field(
+    value: str | None | object,
+    *,
+    field: str,
+) -> str | None | object:
+    if value is _MISSING:
+        return _MISSING
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError(f"{field} must be a string, null, or the internal missing sentinel")
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{field} must not be empty")
+    return normalized
 
 
 async def _require_session(transaction: SqliteTransaction, session_id: str) -> Row:

@@ -15,8 +15,11 @@ from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
     AuditRepository,
     DeliveryRepository,
+    PlanRepository,
     QueueRepository,
     RunRepository,
+    SearchRepository,
+    UsageRepository,
 )
 from tau_web.sqlite.session_storage import SqliteSessionStorage
 from tau_web.sqlite.sessions import SessionRepository
@@ -33,6 +36,9 @@ class TauWebServices:
     queues: QueueRepository
     deliveries: DeliveryRepository
     audit: AuditRepository
+    plans: PlanRepository
+    usage: UsageRepository
+    fts: SearchRepository
     pool: AsyncAgentPool
     runtime: DurableAgentRuntime
     router: ChatRouter
@@ -56,6 +62,9 @@ class TauWebServices:
             queues = QueueRepository(database)
             deliveries = DeliveryRepository(database)
             audit = AuditRepository(database)
+            plans = PlanRepository(database)
+            usage = UsageRepository(database)
+            fts = SearchRepository(database)
             pool = AsyncAgentPool(max_concurrency=config.max_active_runs)
             runtime = DurableAgentRuntime(pool, runs, queues, audit)
             router = ChatRouter(sessions, deliveries, runtime, pool)
@@ -67,6 +76,9 @@ class TauWebServices:
                 queues=queues,
                 deliveries=deliveries,
                 audit=audit,
+                plans=plans,
+                usage=usage,
+                fts=fts,
                 pool=pool,
                 runtime=runtime,
                 router=router,
