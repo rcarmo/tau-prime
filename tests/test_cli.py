@@ -1,9 +1,11 @@
+import asyncio
 import re
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
+import tau_coding.live_session_manager as live_session_manager
 from tau_agent import AssistantMessage, UserMessage
 from tau_agent.session import JsonlSessionStorage, MessageEntry
 from tau_ai import (
@@ -13,7 +15,7 @@ from tau_ai import (
     ProviderResponseStartEvent,
     ProviderTextDeltaEvent,
 )
-from tau_coding import CodingSessionRecord, SessionManager, cli
+from tau_coding import SessionManager, cli
 from tau_coding.cli import app, run_print_mode
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
 from tau_coding.paths import TauPaths
@@ -25,6 +27,7 @@ from tau_coding.provider_config import (
 from tau_coding.rendering import PrintOutputMode
 from tau_coding.resources import TauResourcePaths
 from tau_coding.self_knowledge import bundled_self_knowledge_context
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 from tau_coding.system_prompt import BuildSystemPromptOptions, build_system_prompt
 from tau_coding.tools import create_coding_tools
 from tau_coding.update_check import UpdateNotice
@@ -53,6 +56,26 @@ def _panel_text(value: str) -> str:
     no_ansi = _strip_ansi(value)
     borders = str.maketrans({ch: " " for ch in "│╭╮╰╯─"})
     return _collapse_ws(no_ansi.translate(borders))
+
+
+def _seed_sqlite_session(
+    paths: TauPaths,
+    *,
+    cwd: Path,
+    session_id: str = "session-1",
+    title: str = "Test session",
+) -> None:
+    async def seed() -> None:
+        async with SqliteCodingSessionManager(paths=paths) as manager:
+            await manager.create_session(
+                cwd=cwd,
+                model="fake",
+                provider_name="provider",
+                title=title,
+                session_id=session_id,
+            )
+
+    asyncio.run(seed())
 
 
 def test_tui_prints_resume_hint_after_exit(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -217,18 +240,61 @@ def test_update_command_prints_tau_prime_tarball_guidance(
     assert "pip install" in result.stdout
 
 
-def test_utility_command_does_not_check_for_updates(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_utility_command_does_not_check_for_updates(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(
         cli,
         "_startup_update_notice",
         lambda: (_ for _ in ()).throw(AssertionError("no update check")),
     )
-    monkeypatch.setattr(cli.SessionManager, "list_sessions", lambda self: [])
+    monkeypatch.setenv("TAU_HOME", str(tmp_path / ".tau"))
+    monkeypatch.setenv("TAU_AGENTS_HOME", str(tmp_path / ".agents"))
 
     result = CliRunner().invoke(app, ["sessions"])
 
     assert result.exit_code == 0
     assert "No sessions found." in result.stdout
+
+
+def test_list_live_sessions_uses_default_live_session_manager_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, object | None]] = []
+    manager = object()
+    records = [object()]
+
+    class _ManagerContext:
+        async def __aenter__(self) -> object:
+            calls.append(("enter", manager))
+            return manager
+
+        async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+            del exc, tb
+            calls.append(("exit", exc_type))
+
+    def fake_live_session_manager_context(session_manager: object | None) -> _ManagerContext:
+        calls.append(("context", session_manager))
+        return _ManagerContext()
+
+    async def fake_manager_list_sessions(received_manager: object) -> list[object]:
+        calls.append(("list", received_manager))
+        return records
+
+    monkeypatch.setattr(
+        live_session_manager,
+        "live_session_manager_context",
+        fake_live_session_manager_context,
+    )
+    monkeypatch.setattr(live_session_manager, "manager_list_sessions", fake_manager_list_sessions)
+
+    assert asyncio.run(cli._list_live_sessions()) == records
+    assert calls == [
+        ("context", None),
+        ("enter", manager),
+        ("list", manager),
+        ("exit", None),
+    ]
 
 
 def test_cli_without_prompt_invokes_tui_runner(
@@ -913,43 +979,51 @@ def test_print_mode_surfaces_bad_model_as_clean_error(
     assert "Available models: qwen" in out
 
 
-def test_sessions_command_lists_indexed_sessions(
+def test_sessions_command_lists_sessions_from_default_sqlite_database(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    record = CodingSessionRecord(
-        id="session-1",
-        path=tmp_path / "session.jsonl",
-        cwd=tmp_path,
-        model="fake",
-        title="Test session",
-        created_at=1.0,
-        updated_at=2.0,
+    tau_home = tmp_path / ".tau"
+    agents_home = tmp_path / ".agents"
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    monkeypatch.setenv("TAU_HOME", str(tau_home))
+    monkeypatch.setenv("TAU_AGENTS_HOME", str(agents_home))
+    _seed_sqlite_session(
+        TauPaths(home=tau_home, agents_home=agents_home),
+        cwd=workspace_root,
     )
 
-    class FakeSessionManager:
-        def list_sessions(self) -> list[CodingSessionRecord]:
-            return [record]
-
-    monkeypatch.setattr(cli, "SessionManager", FakeSessionManager)
-
     result = CliRunner().invoke(app, ["sessions"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "session-1" in result.stdout
     assert "Test session" in result.stdout
+    assert str(workspace_root) in result.stdout
 
 
-def test_sessions_command_handles_empty_index(monkeypatch: pytest.MonkeyPatch) -> None:
-    class FakeSessionManager:
-        def list_sessions(self) -> list[CodingSessionRecord]:
-            return []
+def test_sessions_command_does_not_read_jsonl_indexes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    tau_home = tmp_path / ".tau"
+    agents_home = tmp_path / ".agents"
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    monkeypatch.setenv("TAU_HOME", str(tau_home))
+    monkeypatch.setenv("TAU_AGENTS_HOME", str(agents_home))
+    paths = TauPaths(home=tau_home, agents_home=agents_home)
+    _seed_sqlite_session(paths, cwd=workspace_root, title="SQLite session")
 
-    monkeypatch.setattr(cli, "SessionManager", FakeSessionManager)
+    paths.sessions_dir.mkdir(parents=True, exist_ok=True)
+    (paths.sessions_dir / "index.jsonl").write_text("{not json}\n", encoding="utf-8")
+    project_index = paths.project_session_dir(workspace_root) / "index.jsonl"
+    project_index.parent.mkdir(parents=True, exist_ok=True)
+    project_index.write_text("{still not json}\n", encoding="utf-8")
 
     result = CliRunner().invoke(app, ["sessions"])
 
-    assert result.exit_code == 0
-    assert "No sessions found." in result.stdout
+    assert result.exit_code == 0, result.output
+    assert "session-1" in result.stdout
+    assert "SQLite session" in result.stdout
 
 
 @pytest.mark.anyio

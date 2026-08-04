@@ -6,7 +6,7 @@ import shutil
 import sys
 from os import environ
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Protocol
 
 import anyio
 import typer
@@ -104,6 +104,21 @@ app = typer.Typer(
     add_completion=False,
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
+
+
+class _RenderableSessionRecord(Protocol):
+    id: str
+    title: str | None
+    model: str
+    cwd: Path
+
+
+async def _list_live_sessions() -> list[_RenderableSessionRecord]:
+    """Load stored sessions through the default live session manager."""
+    from tau_coding.live_session_manager import live_session_manager_context, manager_list_sessions
+
+    async with live_session_manager_context(None) as manager:
+        return await manager_list_sessions(manager)
 
 
 def providers_command() -> None:
@@ -438,7 +453,7 @@ def main(
         raise typer.Exit()
 
     if prompt_option is None and command == "sessions" and len(positional_args) == 1:
-        render_session_list(SessionManager().list_sessions())
+        render_session_list(anyio.run(_list_live_sessions))
         raise typer.Exit()
 
     if prompt_option is None and command == "export":
@@ -712,7 +727,7 @@ def run_basic_repl(
         run_one(prompt)
 
 
-def render_session_list(records: list[CodingSessionRecord]) -> None:
+def render_session_list(records: list[_RenderableSessionRecord]) -> None:
     """Render indexed sessions for the CLI."""
     if not records:
         typer.echo("No sessions found.")
