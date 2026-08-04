@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from tau_coding.coding_session_factory import (
+    CodingSessionCompactionConfig,
+    CodingSessionFactory,
+    CodingSessionFactoryBinding,
+    CodingSessionFactoryConfig,
+    CodingSessionFactoryRequest,
+    CodingSessionPromptConfig,
+)
 from tau_coding.commands import (
     CommandRegistry,
     CommandResult,
@@ -161,7 +169,13 @@ __version__ = "42.3.0"
 __all__ = [
     "__version__",
     "CodingSession",
+    "CodingSessionCompactionConfig",
     "CodingSessionConfig",
+    "CodingSessionFactory",
+    "CodingSessionFactoryBinding",
+    "CodingSessionFactoryConfig",
+    "CodingSessionFactoryRequest",
+    "CodingSessionPromptConfig",
     "CodingSessionRecord",
     "CommandRegistry",
     "CommandResult",
