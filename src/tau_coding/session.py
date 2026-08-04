@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 from tau_agent import (
     AgentEvent,
@@ -72,6 +71,14 @@ from tau_coding.diagnostics import (
 )
 from tau_coding.extensions.api import ExtensionContext
 from tau_coding.extensions.runtime import ExtensionRuntime
+from tau_coding.live_session_manager import CodingSessionManager
+from tau_coding.live_session_manager import manager_create_session as _manager_create_session
+from tau_coding.live_session_manager import manager_get_session as _manager_get_session
+from tau_coding.live_session_manager import manager_prepare_session as _manager_prepare_session
+from tau_coding.live_session_manager import manager_touch_session as _manager_touch_session
+from tau_coding.live_session_manager import (
+    session_storage_for_record as _session_storage_for_record,
+)
 from tau_coding.paths import TauPaths
 from tau_coding.pipelined_compaction import build_pipelined_compaction_prompt
 from tau_coding.prompt_templates import (
@@ -109,13 +116,10 @@ from tau_coding.session_export import (
     export_session_artifact,
     normalize_export_format,
 )
-from tau_coding.session_manager import CodingSessionRecord, SessionManager
+from tau_coding.session_manager import SessionManager
 from tau_coding.skills import Skill, expand_skill_command, load_skills_with_diagnostics
 from tau_coding.smart_compaction import compaction_budget
-from tau_coding.sqlite_session_manager import (
-    SqliteCodingSessionManager,
-    SqliteCodingSessionRecord,
-)
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 from tau_coding.system_prompt import (
     BuildSystemPromptOptions,
     ProjectContextFile,
@@ -132,9 +136,6 @@ from tau_coding.tools import create_bash_tool, create_coding_tools
 
 StreamingBehavior = Literal["steer", "follow_up"]
 TREE_RUNNING_MESSAGE = "Tau is still working. Press Escape to interrupt before using /tree."
-
-type CodingSessionManager = SessionManager | SqliteCodingSessionManager
-type CodingSessionRecordLike = CodingSessionRecord | SqliteCodingSessionRecord
 
 
 @dataclass(frozen=True, slots=True)
@@ -737,6 +738,11 @@ class CodingSession:
         """Return the legacy session manager, if available."""
         manager = self._config.session_manager
         return manager if isinstance(manager, SessionManager) else None
+
+    @property
+    def live_session_manager(self) -> CodingSessionManager | None:
+        """Return the configured live session manager, if available."""
+        return self._config.session_manager
 
     @property
     def is_running(self) -> bool:
@@ -2392,88 +2398,6 @@ def _interrupted_tool_repair_plan(
 def default_session_path(cwd: Path) -> Path:
     """Return Tau's default user-home session path for a project cwd."""
     return TauPaths().default_session_path(cwd)
-
-
-async def _manager_result[T](result: T | Awaitable[T]) -> T:
-    if inspect.isawaitable(result):
-        return await cast(Awaitable[T], result)
-    return result
-
-
-async def _manager_get_session(
-    manager: CodingSessionManager,
-    session_id: str,
-) -> CodingSessionRecordLike | None:
-    return await _manager_result(manager.get_session(session_id))
-
-
-async def _manager_prepare_session(
-    manager: CodingSessionManager,
-    *,
-    cwd: Path,
-    model: str,
-    provider_name: str,
-    title: str | None = None,
-    session_id: str | None = None,
-) -> CodingSessionRecordLike:
-    return await _manager_result(
-        manager.prepare_session(
-            cwd=cwd,
-            model=model,
-            provider_name=provider_name,
-            title=title,
-            session_id=session_id,
-        )
-    )
-
-
-async def _manager_create_session(
-    manager: CodingSessionManager,
-    *,
-    cwd: Path,
-    model: str,
-    provider_name: str,
-    title: str | None = None,
-    session_id: str | None = None,
-) -> CodingSessionRecordLike:
-    return await _manager_result(
-        manager.create_session(
-            cwd=cwd,
-            model=model,
-            provider_name=provider_name,
-            title=title,
-            session_id=session_id,
-        )
-    )
-
-
-async def _manager_touch_session(
-    manager: CodingSessionManager,
-    session_id: str,
-    *,
-    model: str | None = None,
-    provider_name: str | None = None,
-    title: str | None = None,
-) -> CodingSessionRecordLike | None:
-    return await _manager_result(
-        manager.touch_session(
-            session_id,
-            model=model,
-            provider_name=provider_name,
-            title=title,
-        )
-    )
-
-
-def _session_storage_for_record(
-    manager: CodingSessionManager,
-    record: CodingSessionRecordLike,
-) -> SessionStorage:
-    if isinstance(record, SqliteCodingSessionRecord):
-        if not isinstance(manager, SqliteCodingSessionManager):
-            raise RuntimeError(f"SQLite session record requires a SQLite manager: {record.id}")
-        return manager.session_storage(record.id)
-    return jsonl_session_storage(record.path)
 
 
 def jsonl_session_storage(path: str | Path) -> JsonlSessionStorage:
