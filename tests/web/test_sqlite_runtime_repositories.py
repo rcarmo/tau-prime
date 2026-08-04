@@ -1,0 +1,301 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from tau_web.sqlite.connection import SqliteDatabase
+from tau_web.sqlite.repositories import (
+    AuditRepository,
+    DeliveryRepository,
+    ExtensionStateRepository,
+    MediaCleanupResult,
+    MediaRepository,
+    QueueRepository,
+    RepositoryError,
+    RevisionConflictError,
+    RunRepository,
+    SearchRepository,
+    UsageRepository,
+)
+from tau_web.sqlite.writer import SqliteTransaction
+
+_FUTURE = "9999-12-31T23:59:59+00:00"
+
+
+async def _seed_sessions(database: SqliteDatabase) -> tuple[str, str]:
+    async def seed(transaction: SqliteTransaction) -> None:
+        await transaction.execute(
+            """
+            INSERT INTO workspaces(workspace_id, root_path, created_at, updated_at)
+            VALUES ('workspace', '/workspace', 'now', 'now')
+            """
+        )
+        for session_id, agent_name in (("first", "first"), ("second", "second")):
+            await transaction.execute(
+                """
+                INSERT INTO sessions(
+                    session_id, workspace_id, agent_name, provider_name, model,
+                    created_at, updated_at
+                ) VALUES (?, 'workspace', ?, 'test', 'model', 'now', 'now')
+                """,
+                (session_id, agent_name),
+            )
+
+    await database.write(seed)
+    return "first", "second"
+
+
+@pytest.mark.anyio
+async def test_run_repository_lifecycle_and_retention(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, _ = await _seed_sessions(database)
+        runs = RunRepository(database)
+
+        created = await runs.create(first, run_id="run", last_status={"phase": "queued"})
+        running = await runs.update_status(
+            created.run_id,
+            status="running",
+            last_event_type="agent_start",
+        )
+        completed = await runs.update_status(running.run_id, status="completed")
+
+        assert created.status == "pending"
+        assert running.last_event_type == "agent_start"
+        assert completed.ended_at is not None
+        assert await runs.list(session_id=first, statuses=["completed"]) == [completed]
+        with pytest.raises(RepositoryError, match="Terminal"):
+            await runs.update_status(completed.run_id, status="running")
+        assert await runs.purge_terminal_before(_FUTURE) == 1
+        assert await runs.get("run") is None
+
+
+@pytest.mark.anyio
+async def test_queue_repository_orders_consumes_and_prunes(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        queue = QueueRepository(database)
+
+        one = await queue.enqueue(
+            first,
+            queue_kind="follow_up",
+            content={"text": "one"},
+            source_session_id=second,
+        )
+        two = await queue.enqueue(first, queue_kind="follow_up", content={"text": "two"})
+
+        assert (one.position, two.position) == (0, 1)
+        consumed = await queue.consume_next(first, "follow_up")
+        assert consumed is not None and consumed.queue_id == one.queue_id
+        assert await queue.list(session_id=first) == [two]
+        assert len(await queue.list(session_id=first, include_consumed=True)) == 2
+        assert await queue.purge_consumed_before(_FUTURE) == 1
+
+
+@pytest.mark.anyio
+async def test_delivery_repository_is_idempotent_and_tracks_receipts(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        deliveries = DeliveryRepository(database)
+
+        created = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            target_address="@second",
+            mode="queue",
+            content="hello",
+            idempotency_key="stable",
+            ancestry=["root"],
+        )
+        duplicate = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            mode="queue",
+            content="ignored",
+            idempotency_key="stable",
+        )
+        completed = await deliveries.update_status(created.delivery_id, status="completed")
+
+        assert duplicate == created
+        assert completed.accepted_at is not None
+        assert completed.completed_at is not None
+        assert completed.ancestry == ("root",)
+        with pytest.raises(RepositoryError, match="Terminal"):
+            await deliveries.update_status(created.delivery_id, status="pending")
+        assert await deliveries.purge_terminal_before(_FUTURE) == 1
+
+
+@pytest.mark.anyio
+async def test_usage_repository_preserves_details_and_retention(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, _ = await _seed_sessions(database)
+        usage = UsageRepository(database)
+
+        recorded = await usage.record(
+            first,
+            provider_name="provider",
+            model="model",
+            input_tokens=10,
+            output_tokens=4,
+            cached_input_tokens=2,
+            cost_microunits=25,
+            details={"cache": True},
+        )
+
+        assert recorded.details == {"cache": True}
+        assert await usage.list(session_id=first) == [recorded]
+        with pytest.raises(ValueError, match="negative"):
+            await usage.record(
+                first,
+                provider_name="provider",
+                model="model",
+                input_tokens=-1,
+            )
+        assert await usage.purge_before(_FUTURE) == 1
+
+
+@pytest.mark.anyio
+async def test_media_repository_deduplicates_and_cleans_unreferenced_blobs(
+    tmp_path: Path,
+) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, _ = await _seed_sessions(database)
+        media = MediaRepository(database)
+
+        blob = await media.store_blob(b"same bytes", blob_id="blob")
+        duplicate = await media.store_blob(b"same bytes", blob_id="ignored")
+        item = await media.create_item(
+            blob_id=blob.blob_id,
+            session_id=first,
+            filename="note.txt",
+            media_type="text/plain",
+            metadata={"origin": "test"},
+        )
+        reference = await media.add_reference(item.media_id, "message", "message-1")
+        repeated = await media.add_reference(item.media_id, "message", "message-1")
+
+        assert duplicate == blob
+        assert repeated == reference
+        assert await media.list_references(item.media_id) == [reference]
+        assert (await media.mark_deleted(item.media_id)).deleted_at is not None
+        assert await media.purge_deleted_before(_FUTURE) == MediaCleanupResult(
+            items_deleted=1,
+            blobs_deleted=1,
+        )
+        assert await media.get_blob(blob.blob_id) is None
+
+
+@pytest.mark.anyio
+async def test_extension_state_uses_revisions_and_connection_policy(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        await _seed_sessions(database)
+        state = ExtensionStateRepository(database)
+
+        created = await state.save(
+            "extension",
+            scope="session",
+            scope_id="first",
+            key="setting",
+            value={"enabled": True},
+            expected_revision=None,
+        )
+        updated = await state.save(
+            "extension",
+            scope="session",
+            scope_id="first",
+            key="setting",
+            value={"enabled": False},
+            expected_revision=created.revision,
+        )
+
+        assert updated.revision == 2
+        assert await state.get("extension", "session", "first", "setting") == updated
+        with pytest.raises(RevisionConflictError):
+            await state.save(
+                "extension",
+                scope="session",
+                scope_id="first",
+                key="setting",
+                value=None,
+                expected_revision=1,
+            )
+        with pytest.raises(RepositoryError, match="connection-scope"):
+            await state.list_scope("connection", "browser")
+        assert await state.delete(
+            "extension",
+            scope="session",
+            scope_id="first",
+            key="setting",
+            expected_revision=2,
+        ) == updated
+
+        connection_state = ExtensionStateRepository(
+            database,
+            allow_persisted_connection_scope=True,
+        )
+        await connection_state.save(
+            "extension",
+            scope="connection",
+            scope_id="browser",
+            key="temporary",
+            value=1,
+            expected_revision=0,
+        )
+        assert await connection_state.purge_connection_scope_before(_FUTURE) == 1
+
+
+@pytest.mark.anyio
+async def test_audit_repository_is_append_only_and_prunable(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, _ = await _seed_sessions(database)
+        audits = AuditRepository(database)
+
+        record = await audits.append(
+            event_type="session.created",
+            actor_type="user",
+            workspace_id="workspace",
+            session_id=first,
+            details={"safe": True},
+        )
+
+        assert await audits.list(session_id=first) == [record]
+        assert await audits.purge_before(_FUTURE) == 1
+        assert await audits.list() == []
+
+
+@pytest.mark.anyio
+async def test_search_repository_updates_filters_and_removes_stale_rows(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, _ = await _seed_sessions(database)
+        search = SearchRepository(database)
+
+        await search.upsert(
+            entity_type="message",
+            entity_id="one",
+            session_id=first,
+            text="hello durable world",
+        )
+        assert [result.entity_id for result in await search.search("durable")] == ["one"]
+        assert await search.search("durable", session_id="second") == []
+
+        await search.upsert(
+            entity_type="message",
+            entity_id="one",
+            session_id=first,
+            text="replacement text",
+        )
+        assert await search.search("durable") == []
+        assert await search.remove("message", "one") == 1
+
+        await search.upsert(
+            entity_type="session",
+            entity_id="stale",
+            session_id=first,
+            text="stale session",
+        )
+
+        async def remove_session(transaction: SqliteTransaction) -> None:
+            await transaction.execute("DELETE FROM sessions WHERE session_id = ?", (first,))
+
+        await database.write(remove_session)
+        assert await search.purge_missing_sessions() == 1
