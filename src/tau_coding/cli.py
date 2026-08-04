@@ -85,6 +85,16 @@ def providers_command() -> None:
     render_provider_settings(load_provider_settings(), credential_reader=FileCredentialStore())
 
 
+def run_tau_web_server(
+    *, cwd: Path, host: str, port: int, database_path: Path | None = None
+) -> None:
+    """Load and run the optional Tau Web server."""
+    from tau_web.app import run
+    from tau_web.config import WebConfig
+
+    run(WebConfig(cwd=cwd, host=host, port=port, database_path=database_path))
+
+
 def setup_command(
     *,
     provider_name: str = DEFAULT_PROVIDER_NAME,
@@ -203,13 +213,22 @@ def main(
         typer.Option(
             "--web-host",
             "--web-address",
-            help="Host/address for Textual web server mode.",
+            "--host",
+            help="Host/address for Textual or Tau web server mode.",
         ),
     ] = "127.0.0.1",
     web_port: Annotated[
         int,
         typer.Option("--web-port", help="Port for Textual web server mode."),
     ] = 8000,
+    tau_web_port: Annotated[
+        int,
+        typer.Option("--port", help="Port for `tau web`."),
+    ] = 8080,
+    web_database: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database path for `tau web`."),
+    ] = None,
     no_sandbox: Annotated[
         bool,
         typer.Option(
@@ -261,6 +280,26 @@ def main(
     positional_args = prompt_args or []
     command = positional_args[0] if positional_args else None
     initial_prompt = " ".join(positional_args) if positional_args else None
+
+    if prompt_option is None and command == "web":
+        try:
+            web_cwd, host, port, database_path = _parse_web_cli_args(
+                positional_args[1:],
+                cwd=cwd or Path.cwd(),
+                host=web_host,
+                port=tau_web_port,
+                database_path=web_database,
+            )
+            run_tau_web_server(
+                cwd=web_cwd,
+                host=host,
+                port=port,
+                database_path=database_path,
+            )
+        except (RuntimeError, ValueError) as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=1) from exc
+        raise typer.Exit()
 
     if prompt_option is None and command == "sessions" and len(positional_args) == 1:
         render_session_list(SessionManager().list_sessions())
@@ -572,6 +611,38 @@ async def export_session_command(
         source=str(session_path),
         format=normalized_format,
     )
+
+
+def _parse_web_cli_args(
+    args: list[str],
+    *,
+    cwd: Path,
+    host: str,
+    port: int,
+    database_path: Path | None,
+) -> tuple[Path, str, int, Path | None]:
+    """Parse options following the callback-style ``tau web`` command token."""
+    values: dict[str, str] = {}
+    index = 0
+    option_names = {"--cwd", "--host", "--port", "--database"}
+    while index < len(args):
+        option = args[index]
+        if option not in option_names:
+            raise RuntimeError(f"Unknown `tau web` argument: {option}")
+        if index + 1 >= len(args):
+            raise RuntimeError(f"Missing value for `tau web` option: {option}")
+        values[option] = args[index + 1]
+        index += 2
+
+    selected_cwd = Path(values["--cwd"]) if "--cwd" in values else cwd
+    selected_database = (
+        Path(values["--database"]) if "--database" in values else database_path
+    )
+    try:
+        selected_port = int(values["--port"]) if "--port" in values else port
+    except ValueError as exc:
+        raise RuntimeError("`tau web --port` must be an integer") from exc
+    return selected_cwd, values.get("--host", host), selected_port, selected_database
 
 
 def _parse_export_cli_args(args: list[str]) -> tuple[str, Path | None, str | None]:

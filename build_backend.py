@@ -59,6 +59,11 @@ def _metadata_text() -> str:
         lines.append(f"Project-URL: {label}, {url}")
     for dependency in project.get("dependencies", []):
         lines.append(f"Requires-Dist: {dependency}")
+    for extra, dependencies in project.get("optional-dependencies", {}).items():
+        lines.append(f"Provides-Extra: {extra}")
+        for dependency in dependencies:
+            separator = " and " if ";" in dependency else "; "
+            lines.append(f'Requires-Dist: {dependency}{separator}extra == "{extra}"')
     readme = ROOT / str(project.get("readme", "README.md"))
     if readme.exists():
         lines.append("Description-Content-Type: text/markdown")
@@ -129,7 +134,7 @@ def _package_files() -> list[tuple[Path, str]]:
     if shim.exists():
         files.append((shim, "pydantic.py"))
     package_data_suffixes = {".md"}
-    for package in ("tau_ai", "tau_agent", "tau_coding"):
+    for package in ("tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"):
         package_root = src / package
         for path in package_root.rglob("*"):
             if not path.is_file():

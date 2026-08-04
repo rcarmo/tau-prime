@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+import build_backend
+
+
+def test_wheel_metadata_includes_web_extra() -> None:
+    metadata = build_backend._metadata_text()
+
+    assert "Provides-Extra: web" in metadata
+    assert 'Requires-Dist: aiohttp>=3.13,<4; extra == "web"' in metadata
+    assert 'Requires-Dist: aiosqlite>=0.22,<1; extra == "web"' in metadata
+
+
+def test_wheel_includes_optional_runtime_packages() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    assert "tau_extensions/__init__.py" in archive_names
+    assert "tau_extensions/web/__init__.py" in archive_names
+    assert "tau_web/__init__.py" in archive_names
+    assert "tau_web/app.py" in archive_names
+    assert "tau_web/config.py" in archive_names

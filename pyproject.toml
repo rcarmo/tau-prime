@@ -20,6 +20,14 @@ dependencies = [
     "typer>=0.12",
 ]
 
+[project.optional-dependencies]
+web = [
+    "aiohttp>=3.13,<4",
+    "aiosqlite>=0.22,<1",
+    "pillow>=12,<13",
+    "watchfiles>=1.1,<2",
+]
+
 [project.urls]
 Homepage = "https://github.com/rcarmo/tau-prime"
 Repository = "https://github.com/rcarmo/tau-prime"
@@ -51,7 +59,7 @@ indent-style = "space"
 [tool.mypy]
 python_version = "3.13"
 strict = true
-packages = ["tau_ai", "tau_agent", "tau_coding"]
+packages = ["tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
