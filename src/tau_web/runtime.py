@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from tau_agent import AgentEvent
 from tau_agent.types import JSONObject, JSONValue
 from tau_coding.agent_pool import (
     AgentPoolError,
@@ -20,6 +18,7 @@ from tau_coding.agent_pool import (
 from tau_coding.agent_pool import (
     RunStatus as PoolRunStatus,
 )
+from tau_web.events import EventProjectorCallback, canonical_agent_event_type
 from tau_web.sqlite.repositories import (
     AuditRepository,
     QueueKind,
@@ -33,8 +32,6 @@ from tau_web.sqlite.repositories import (
 
 _TERMINAL_RUN_STATUSES = frozenset({"completed", "cancelled", "failed", "interrupted"})
 _QUEUEABLE_RUN_STATUSES = frozenset({"pending", "running"})
-_CAMEL_BOUNDARY_1 = re.compile(r"(.)([A-Z][a-z]+)")
-_CAMEL_BOUNDARY_2 = re.compile(r"([a-z0-9])([A-Z])")
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,11 +61,13 @@ class DurableAgentRuntime:
         runs: RunRepository,
         queues: QueueRepository,
         audit: AuditRepository,
+        event_projector: EventProjectorCallback | None = None,
     ) -> None:
         self._pool = pool
         self._runs = runs
         self._queues = queues
         self._audit = audit
+        self._event_projector = event_projector
         self._abort_run_ids: set[str] = set()
         self._driver_tasks: set[asyncio.Task[RunRecord]] = set()
         self._queue_locks: dict[str, asyncio.Lock] = {}
@@ -288,27 +287,29 @@ class DurableAgentRuntime:
         current = created
         last_event_type = created.last_event_type
         running_marked = False
+        sequence = 0
         try:
             async for event in handle.events():
-                event_type = _event_type_name(event)
+                sequence += 1
+                event_type = canonical_agent_event_type(event)
                 last_event_type = event_type
-                if not running_marked:
-                    updated = await self._runs.update_status(
-                        handle.run_id,
-                        status="running",
-                        last_event_type=event_type,
-                        last_status={"phase": "running"},
-                    )
-                    await self._append_transition(updated, previous_status=current.status)
-                    current = updated
-                    running_marked = True
-                    continue
+                previous_status = current.status
                 current = await self._runs.update_status(
                     handle.run_id,
                     status="running",
                     last_event_type=event_type,
                     last_status={"phase": "running"},
                 )
+                if not running_marked:
+                    await self._append_transition(current, previous_status=previous_status)
+                    running_marked = True
+                if self._event_projector is not None:
+                    await self._event_projector(
+                        current.session_id,
+                        handle.run_id,
+                        sequence,
+                        event,
+                    )
             result = await handle.wait()
             final_status = _terminal_status_for_result(
                 result,
@@ -508,18 +509,6 @@ class DurableAgentRuntime:
     def _require_queueable_run(self, record: RunRecord) -> None:
         if record.status not in _QUEUEABLE_RUN_STATUSES:
             raise ValueError("Only pending or running runs can accept queued messages.")
-
-
-def _event_type_name(event: AgentEvent) -> str:
-    discriminator = getattr(event, "type", None)
-    if isinstance(discriminator, str) and discriminator.strip():
-        return discriminator
-    return _camel_to_snake(event.__class__.__name__)
-
-
-def _camel_to_snake(name: str) -> str:
-    first_pass = _CAMEL_BOUNDARY_1.sub(r"\1_\2", name)
-    return _CAMEL_BOUNDARY_2.sub(r"\1_\2", first_pass).casefold()
 
 
 def _terminal_status_for_result(result: RunResult, *, interrupted: bool) -> RunStatus:

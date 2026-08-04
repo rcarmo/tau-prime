@@ -8,8 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from tau_agent import AgentEndEvent, AgentEvent, AgentStartEvent, ErrorEvent, QueueUpdateEvent
+from tau_agent import (
+    AgentEndEvent,
+    AgentEvent,
+    AgentStartEvent,
+    ErrorEvent,
+    MessageDeltaEvent,
+    QueueUpdateEvent,
+)
 from tau_coding.agent_pool import AsyncAgentPool, PoolSessionState, UnknownSessionError
+from tau_web.events import EventProjectorCallback
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
@@ -154,6 +162,7 @@ async def _open_runtime(
     *,
     session_id: str = "alpha",
     owned: bool = False,
+    event_projector: EventProjectorCallback | None = None,
 ) -> _RuntimeHarness:
     database = SqliteDatabase(tmp_path / "tau.sqlite3")
     await database.open()
@@ -167,7 +176,13 @@ async def _open_runtime(
     runs = RunRepository(database)
     queues = QueueRepository(database)
     audit = AuditRepository(database)
-    runtime = DurableAgentRuntime(AsyncAgentPool(max_concurrency=1), runs, queues, audit)
+    runtime = DurableAgentRuntime(
+        AsyncAgentPool(max_concurrency=1),
+        runs,
+        queues,
+        audit,
+        event_projector=event_projector,
+    )
     runtime.register_session(session_id, session, owned=owned)
     return _RuntimeHarness(
         database=database,
@@ -187,6 +202,45 @@ async def _transition_statuses(harness: _RuntimeHarness) -> list[str]:
         for record in records
         if record.event_type == "run.transition"
     ]
+
+
+@pytest.mark.anyio
+async def test_runtime_invokes_event_projector_once_per_emitted_event_in_sequence(
+    tmp_path: Path,
+) -> None:
+    events = (
+        AgentStartEvent(),
+        MessageDeltaEvent(delta="hello"),
+        AgentEndEvent(),
+    )
+    projected: list[tuple[str, str, int, str]] = []
+
+    async def event_projector(
+        session_id: str,
+        run_id: str,
+        sequence: int,
+        event: AgentEvent,
+    ) -> None:
+        projected.append((session_id, run_id, sequence, event.type))
+
+    harness = await _open_runtime(
+        tmp_path,
+        _FakeSession(prompt_scripts=(_Script(events=events),)),
+        event_projector=event_projector,
+    )
+
+    try:
+        handle = await harness.runtime.submit_prompt(harness.session_id, "project me")
+        record = await handle.wait()
+
+        assert record.status == "completed"
+        assert projected == [
+            (harness.session_id, handle.run_id, 1, "agent_start"),
+            (harness.session_id, handle.run_id, 2, "message_delta"),
+            (harness.session_id, handle.run_id, 3, "agent_end"),
+        ]
+    finally:
+        await harness.aclose()
 
 
 @pytest.mark.anyio

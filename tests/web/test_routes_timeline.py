@@ -6,7 +6,7 @@ import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
-from tau_agent import AssistantMessage, UserMessage
+from tau_agent import AssistantMessage, MessageEndEvent, UserMessage
 from tau_agent.session import (
     CompactionEntry,
     LeafEntry,
@@ -285,6 +285,77 @@ async def test_timeline_routes_handle_empty_sessions(
         "model": "empty-model",
         "thinking_level": "minimal",
     }
+
+
+@pytest.mark.anyio
+async def test_timeline_route_supports_after_cursor_and_validates_pagination_queries(
+    app_client: TestClient,
+    services: TauWebServices,
+) -> None:
+    session_id = await _create_durable_session(services, session_id="timeline-route")
+    for sequence, content in enumerate(("one", "two", "three"), start=1):
+        await services.projector.project(
+            session_id,
+            "timeline-run",
+            sequence,
+            MessageEndEvent(message=AssistantMessage(content=content)),
+        )
+
+    async with app_client.get(
+        f"/api/sessions/{session_id}/timeline",
+        params={"limit": "2"},
+    ) as response:
+        assert response.status == 200
+        payload = await response.json()
+
+    assert [item["content"] for item in payload["timeline"]] == ["one", "two"]
+    assert [item["session_id"] for item in payload["timeline"]] == [session_id, session_id]
+    cursor = str(payload["timeline"][-1]["message_id"])
+
+    async with app_client.get(
+        f"/api/sessions/{session_id}/timeline",
+        params={"after": cursor, "limit": "2"},
+    ) as response:
+        assert response.status == 200
+        payload = await response.json()
+
+    assert [item["content"] for item in payload["timeline"]] == ["three"]
+
+    async with app_client.get(
+        f"/api/sessions/{session_id}/timeline",
+        params={"after": "oops"},
+    ) as response:
+        assert response.status == 400
+        payload = await response.json()
+
+    assert payload["error"]["message"] == "Query parameter 'after' must be an integer."
+
+    async with app_client.get(
+        f"/api/sessions/{session_id}/timeline",
+        params={"after": "-1"},
+    ) as response:
+        assert response.status == 400
+        payload = await response.json()
+
+    assert payload["error"]["message"] == "Query parameter 'after' must not be negative."
+
+    async with app_client.get(
+        f"/api/sessions/{session_id}/timeline",
+        params={"limit": "oops"},
+    ) as response:
+        assert response.status == 400
+        payload = await response.json()
+
+    assert payload["error"]["message"] == "Query parameter 'limit' must be an integer."
+
+    async with app_client.get(
+        f"/api/sessions/{session_id}/timeline",
+        params={"limit": "0"},
+    ) as response:
+        assert response.status == 400
+        payload = await response.json()
+
+    assert payload["error"]["message"] == "Query parameter 'limit' must be positive."
 
 
 @pytest.mark.anyio

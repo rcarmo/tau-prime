@@ -10,6 +10,7 @@ from typing import Self
 from tau_coding.agent_pool import AsyncAgentPool
 from tau_web.chat_routing import ChatRouter
 from tau_web.config import WebConfig
+from tau_web.events import EventProjector
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
@@ -20,6 +21,7 @@ from tau_web.sqlite.repositories import (
     QueueRepository,
     RunRepository,
     SearchRepository,
+    TimelineMessageRepository,
     UsageRepository,
 )
 from tau_web.sqlite.session_storage import SqliteSessionStorage
@@ -41,6 +43,8 @@ class TauWebServices:
     plans: PlanRepository
     usage: UsageRepository
     fts: SearchRepository
+    timeline: TimelineMessageRepository
+    projector: EventProjector
     pool: AsyncAgentPool
     runtime: DurableAgentRuntime
     router: ChatRouter
@@ -68,8 +72,16 @@ class TauWebServices:
             plans = PlanRepository(database)
             usage = UsageRepository(database)
             fts = SearchRepository(database)
+            timeline = TimelineMessageRepository(database)
+            projector = EventProjector(timeline)
             pool = AsyncAgentPool(max_concurrency=config.max_active_runs)
-            runtime = DurableAgentRuntime(pool, runs, queues, audit)
+            runtime = DurableAgentRuntime(
+                pool,
+                runs,
+                queues,
+                audit,
+                event_projector=projector.project,
+            )
             router = ChatRouter(sessions, deliveries, runtime, pool)
             return cls(
                 config=config,
@@ -83,6 +95,8 @@ class TauWebServices:
                 plans=plans,
                 usage=usage,
                 fts=fts,
+                timeline=timeline,
+                projector=projector,
                 pool=pool,
                 runtime=runtime,
                 router=router,

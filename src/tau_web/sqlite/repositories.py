@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from aiosqlite import Row
 
+from tau_agent.messages import AgentMessage
 from tau_agent.types import JSONObject, JSONValue
 from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
 from tau_web.sqlite.writer import SqliteTransaction
@@ -140,6 +141,18 @@ class DeliveryRecord:
     accepted_at: str | None
     completed_at: str | None
     error: JSONObject | None
+
+
+@dataclass(frozen=True, slots=True)
+class TimelineMessageRecord:
+    message_id: int
+    public_id: str
+    session_id: str
+    role: str
+    content: str
+    content_blocks_json: JSONObject | None
+    created_at: str
+    updated_at: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -978,6 +991,89 @@ class DeliveryRepository(SqliteRepository):
             return count
 
         return await self.database.write(write)
+
+
+class TimelineMessageRepository(SqliteRepository):
+    """Persist durable timeline message projections without introducing new schema."""
+
+    async def project_message_end(
+        self,
+        session_id: str,
+        *,
+        run_id: str,
+        sequence: int,
+        message: AgentMessage,
+        created_at: str,
+    ) -> TimelineMessageRecord:
+        session_key = _require_identifier(session_id, field="Session id")
+        run_key = _require_identifier(run_id, field="Run id")
+        if sequence <= 0:
+            raise ValueError("Sequence must be positive")
+        timestamp = _require_non_empty_text(created_at, field="Created at")
+        public_id = _timeline_public_id(session_key, run_key, sequence)
+        message_json = _message_json(message)
+
+        async def write(transaction: SqliteTransaction) -> TimelineMessageRecord:
+            await transaction.execute(
+                """
+                INSERT OR IGNORE INTO timeline_messages(
+                    public_id, session_id, role, content, content_blocks_json,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    public_id,
+                    session_key,
+                    message.role,
+                    message.content,
+                    _dump_json(message_json),
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            row = await transaction.fetch_one(
+                "SELECT * FROM timeline_messages WHERE public_id = ? AND session_id = ?",
+                (public_id, session_key),
+            )
+            if row is None:
+                raise RuntimeError("Timeline message projection did not return a record")
+            return _timeline_message_from_row(row)
+
+        return await self.database.write(write)
+
+    async def list(
+        self,
+        *,
+        session_id: str,
+        after: int | None = None,
+        limit: int = 100,
+    ) -> list[TimelineMessageRecord]:
+        session_key = _require_identifier(session_id, field="Session id")
+        if after is not None and after < 0:
+            raise ValueError("After cursor must not be negative")
+        if limit <= 0:
+            raise ValueError("Limit must be positive")
+
+        clauses = ["session_id = ?", "deleted_at IS NULL"]
+        parameters: list[object] = [session_key]
+        if after is not None:
+            clauses.append("message_id > ?")
+            parameters.append(after)
+        parameters.append(limit)
+        where = f"WHERE {' AND '.join(clauses)}"
+
+        async def read(reader: SqliteReader) -> list[TimelineMessageRecord]:
+            rows = await reader.fetch_all(
+                f"""
+                SELECT * FROM timeline_messages {where}
+                ORDER BY message_id
+                LIMIT ?
+                """,
+                parameters,
+            )
+            return [_timeline_message_from_row(row) for row in rows]
+
+        return await self.database.read(read)
 
 
 class UsageRepository(SqliteRepository):
@@ -2046,6 +2142,23 @@ def _delivery_from_row(row: Row) -> DeliveryRecord:
     )
 
 
+def _timeline_message_from_row(row: Row) -> TimelineMessageRecord:
+    return TimelineMessageRecord(
+        message_id=int(row["message_id"]),
+        public_id=str(row["public_id"]),
+        session_id=str(row["session_id"]),
+        role=str(row["role"]),
+        content=str(row["content"]),
+        content_blocks_json=(
+            _load_json_object(row["content_blocks_json"])
+            if row["content_blocks_json"] is not None
+            else None
+        ),
+        created_at=str(row["created_at"]),
+        updated_at=str(row["updated_at"]),
+    )
+
+
 def _usage_from_row(row: Row) -> UsageRecord:
     return UsageRecord(
         usage_id=int(row["usage_id"]),
@@ -2062,6 +2175,17 @@ def _usage_from_row(row: Row) -> UsageRecord:
         details=_load_json_object(row["details_json"]),
         recorded_at=str(row["recorded_at"]),
     )
+
+
+def _message_json(message: AgentMessage) -> JSONObject:
+    payload = message.model_dump(mode="json")
+    if not isinstance(payload, dict) or not all(isinstance(key, str) for key in payload):
+        raise TypeError("Message payload must be a JSON object")
+    return cast(JSONObject, payload)
+
+
+def _timeline_public_id(session_id: str, run_id: str, sequence: int) -> str:
+    return f"{session_id}:{run_id}:{sequence}"
 
 
 def _media_blob_from_row(row: Row) -> MediaBlobRecord:

@@ -44,6 +44,12 @@ class MessagesResponse(BaseModel):
     messages: list[JSONObject]
 
 
+class TimelineProjectionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timeline: list[JSONObject]
+
+
 class BranchResource(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -123,6 +129,20 @@ async def get_messages(request: web.Request) -> web.Response:
         MessagesResponse(
             leaf_entry_id=resolved_leaf_entry_id,
             messages=messages,
+        ).model_dump(mode="json")
+    )
+
+
+async def get_timeline(request: web.Request) -> web.Response:
+    services = services_for(request)
+    session_id = request.match_info["session_id"]
+    await _require_session(services, session_id)
+    after = _optional_after_query(request)
+    limit = _timeline_limit_query(request)
+    timeline = await services.timeline.list(session_id=session_id, after=after, limit=limit)
+    return json_response(
+        TimelineProjectionResponse(
+            timeline=[record_json(record) for record in timeline]
         ).model_dump(mode="json")
     )
 
@@ -247,6 +267,32 @@ def _optional_leaf_entry_id_query(request: web.Request) -> str | None:
     return leaf_entry_id
 
 
+def _optional_after_query(request: web.Request) -> int | None:
+    raw_after = request.query.get("after")
+    if raw_after is None or not raw_after.strip():
+        return None
+    try:
+        after = int(raw_after)
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason="Query parameter 'after' must be an integer.") from exc
+    if after < 0:
+        raise web.HTTPBadRequest(reason="Query parameter 'after' must not be negative.")
+    return after
+
+
+def _timeline_limit_query(request: web.Request, *, default: int = 50) -> int:
+    raw_limit = request.query.get("limit")
+    if raw_limit is None or not raw_limit.strip():
+        return default
+    try:
+        limit = int(raw_limit)
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason="Query parameter 'limit' must be an integer.") from exc
+    if limit <= 0:
+        raise web.HTTPBadRequest(reason="Query parameter 'limit' must be positive.")
+    return limit
+
+
 def _nullable_leaf_entry_id_field(body: Mapping[str, JSONValue], field: str) -> str | None:
     value = body[field]
     if value is None:
@@ -302,6 +348,7 @@ def _entry_depth(entries: list[SessionEntry], leaf_entry_id: str) -> int:
 def setup_routes(app: web.Application) -> None:
     app.router.add_get("/api/sessions/{session_id}/entries", get_entries)
     app.router.add_get("/api/sessions/{session_id}/messages", get_messages)
+    app.router.add_get("/api/sessions/{session_id}/timeline", get_timeline)
     app.router.add_get("/api/sessions/{session_id}/branches", get_branches)
     app.router.add_post("/api/sessions/{session_id}/branches/select", select_branch)
     app.router.add_get("/api/sessions/{session_id}/context", get_context)
