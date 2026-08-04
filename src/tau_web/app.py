@@ -36,6 +36,7 @@ def create_app(config: WebConfig | None = None) -> Any:
         ) from exc
 
     from tau_web.middleware import build_middlewares
+    from tau_web.routes import setup_routes
 
     active_config = config or WebConfig()
     app = web.Application(
@@ -54,6 +55,7 @@ def create_app(config: WebConfig | None = None) -> Any:
         return web.json_response(payload)
 
     app.router.add_get("/api/health", health)
+    setup_routes(app)
     return app
 
 
