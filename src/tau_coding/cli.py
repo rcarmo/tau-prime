@@ -35,6 +35,7 @@ from tau_coding.live_session_manager import (
     CodingSessionRecordLike,
     live_session_manager_context,
     manager_create_session_exclusive,
+    manager_get_session,
     manager_session_storage,
 )
 from tau_coding.macos_sandbox import (
@@ -72,7 +73,7 @@ from tau_coding.session_export import (
     export_session_artifact,
     normalize_export_format,
 )
-from tau_coding.session_manager import SessionManager, validate_session_id
+from tau_coding.session_manager import validate_session_id
 from tau_coding.shell_config import load_shell_settings
 from tau_coding.tui import run_tui_app
 from tau_coding.update_check import (
@@ -748,24 +749,26 @@ async def export_session_command(
     session_ref: str,
     output_path: Path | None = None,
     export_format: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
 ) -> Path:
-    """Export an indexed session id or JSONL file path."""
-    session_path, title = _resolve_export_source(session_ref, session_manager)
-    entries = await JsonlSessionStorage(session_path).read_all()
+    """Export a live session id or explicit JSONL file path."""
+    entries, title, source, artifact_name = await _read_export_source(
+        session_ref,
+        session_manager=session_manager,
+    )
     normalized_format = normalize_export_format(
         export_format or (output_path.suffix.removeprefix(".") if output_path else "html")
     )
     destination = _resolve_export_destination(
         output_path,
-        session_path=session_path,
+        artifact_name=artifact_name,
         format=normalized_format,
     )
     return export_session_artifact(
         entries,
         destination,
         title=title,
-        source=str(session_path),
+        source=source,
         format=normalized_format,
     )
 
@@ -930,41 +933,61 @@ def _parse_export_cli_args(args: list[str]) -> tuple[str, Path | None, str | Non
 def _resolve_export_destination(
     output_path: Path | None,
     *,
-    session_path: Path,
+    artifact_name: str,
     format: str,
 ) -> Path:
+    export_name = Path(artifact_name)
     if output_path is None:
         return default_session_export_artifact_path(
-            session_path,
+            export_name,
             destination_dir=Path.cwd(),
             format=format,
         )
     if output_path.suffix:
         return output_path
     return default_session_export_artifact_path(
-        session_path,
+        export_name,
         destination_dir=output_path,
         format=format,
     )
 
 
-def _resolve_export_source(
+async def _read_export_source(
     session_ref: str,
-    session_manager: SessionManager | None = None,
-) -> tuple[Path, str]:
+    *,
+    session_manager: CodingSessionManager | None = None,
+) -> tuple[list[SessionEntry], str, str, str]:
+    session_path = _resolve_explicit_export_source_path(session_ref)
+    if session_path is not None:
+        return (
+            await JsonlSessionStorage(session_path).read_all(),
+            f"Tau session {session_path.stem}",
+            str(session_path),
+            session_path.stem,
+        )
+
+    async with live_session_manager_context(session_manager) as manager:
+        record = await manager_get_session(manager, session_ref)
+        if record is None:
+            raise RuntimeError(f"Unknown session: {session_ref}")
+        record_path = getattr(record, "path", None)
+        source = str(record_path) if record_path is not None else record.id
+        artifact_name = Path(record_path).stem if record_path is not None else record.id
+        return (
+            await manager_session_storage(manager, record).read_all(),
+            record.title or f"Tau session {record.id}",
+            source,
+            artifact_name,
+        )
+
+
+def _resolve_explicit_export_source_path(session_ref: str) -> Path | None:
     candidate_path = Path(session_ref).expanduser()
-    if candidate_path.exists():
-        if candidate_path.is_dir():
-            raise RuntimeError(f"Session export source is a directory: {candidate_path}")
-        return candidate_path, f"Tau session {candidate_path.stem}"
-
-    manager = session_manager or SessionManager()
-    record = manager.get_session(session_ref)
-    if record is None:
-        raise RuntimeError(f"Unknown session or file: {session_ref}")
-
-    title = record.title or f"Tau session {record.id}"
-    return record.path, title
+    if not candidate_path.exists():
+        return None
+    if candidate_path.is_dir():
+        raise RuntimeError(f"Session export source is a directory: {candidate_path}")
+    return candidate_path
 
 
 def render_provider_settings(

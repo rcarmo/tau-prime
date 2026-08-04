@@ -1148,6 +1148,34 @@ async def test_export_session_command_writes_html_for_indexed_session(tmp_path: 
 
 
 @pytest.mark.anyio
+async def test_export_session_command_writes_html_for_sqlite_session(tmp_path: Path) -> None:
+    paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
+    async with SqliteCodingSessionManager(paths=paths) as manager:
+        record = await manager.create_session(
+            cwd=tmp_path,
+            model="fake",
+            provider_name="provider",
+            title="SQLite Export",
+            session_id="sqlite-session",
+        )
+        await manager.session_storage(record.id).append(
+            MessageEntry(id="root", message=UserMessage(content="SQLite export"))
+        )
+
+        output_path = await cli.export_session_command(
+            "sqlite-session",
+            tmp_path / "sqlite-session.html",
+            session_manager=manager,
+        )
+
+    html = output_path.read_text(encoding="utf-8")
+    assert output_path == tmp_path / "sqlite-session.html"
+    assert "<title>SQLite Export</title>" in html
+    assert "SQLite export" in html
+    assert "Source: <code>sqlite-session</code>" in html
+
+
+@pytest.mark.anyio
 async def test_export_session_command_writes_html_for_jsonl_path(tmp_path: Path) -> None:
     session_path = tmp_path / "session.jsonl"
     cwd = Path.cwd()
