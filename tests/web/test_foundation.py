@@ -37,7 +37,8 @@ def test_web_package_import_does_not_load_optional_dependencies() -> None:
             (
                 "import sys; import tau_web; "
                 "print('aiohttp' in sys.modules, 'aiosqlite' in sys.modules, "
-                "'PIL' in sys.modules)"
+                "'PIL' in sys.modules, 'pi_client' in sys.modules, "
+                "'acp_client' in sys.modules)"
             ),
         ],
         check=True,
@@ -45,4 +46,4 @@ def test_web_package_import_does_not_load_optional_dependencies() -> None:
         text=True,
     )
 
-    assert result.stdout.strip() == "False False False"
+    assert result.stdout.strip() == "False False False False False"
