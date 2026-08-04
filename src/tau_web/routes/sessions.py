@@ -56,7 +56,7 @@ async def list_sessions(request: web.Request) -> web.Response:
     )
     services = services_for(request)
     records = await services.sessions.list(include_archived=include_archived)
-    resources = tuple([await _session_resource(services, record) for record in records])
+    resources = tuple([await session_resource(services, record) for record in records])
     return json_response(SessionListResource(sessions=resources))
 
 
@@ -98,7 +98,7 @@ async def create_session(request: web.Request) -> web.Response:
     except Exception as exc:
         raise_for_repository_error(exc)
 
-    return json_response(await _session_resource(services, record), status=201)
+    return json_response(await session_resource(services, record), status=201)
 
 
 async def get_session(request: web.Request) -> web.Response:
@@ -109,7 +109,7 @@ async def get_session(request: web.Request) -> web.Response:
         resource="session",
         identifier=session_id,
     )
-    return json_response(await _session_resource(services, record))
+    return json_response(await session_resource(services, record))
 
 
 async def patch_session(request: web.Request) -> web.Response:
@@ -145,7 +145,7 @@ async def patch_session(request: web.Request) -> web.Response:
     except Exception as exc:
         raise_for_repository_error(exc)
 
-    return json_response(await _session_resource(services, record))
+    return json_response(await session_resource(services, record))
 
 
 async def archive_session(request: web.Request) -> web.Response:
@@ -157,7 +157,7 @@ async def archive_session(request: web.Request) -> web.Response:
     except Exception as exc:
         raise_for_repository_error(exc)
 
-    return json_response(await _session_resource(services, record))
+    return json_response(await session_resource(services, record))
 
 
 async def restore_session(request: web.Request) -> web.Response:
@@ -175,7 +175,7 @@ async def restore_session(request: web.Request) -> web.Response:
     except Exception as exc:
         raise_for_repository_error(exc)
 
-    return json_response(await _session_resource(services, record))
+    return json_response(await session_resource(services, record))
 
 
 async def resolve_alias(request: web.Request) -> web.Response:
@@ -186,10 +186,10 @@ async def resolve_alias(request: web.Request) -> web.Response:
         resource="session alias",
         identifier=address,
     )
-    return json_response(await _session_resource(services, record))
+    return json_response(await session_resource(services, record))
 
 
-async def _session_resource(services: TauWebServices, record: SessionRecord) -> SessionResource:
+async def session_resource(services: TauWebServices, record: SessionRecord) -> SessionResource:
     workspace = await services.sessions.get_workspace(record.workspace_id)
     if workspace is None:
         raise RuntimeError(

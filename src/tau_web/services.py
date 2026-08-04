@@ -18,6 +18,7 @@ from tau_web.sqlite.repositories import (
     QueueRepository,
     RunRepository,
 )
+from tau_web.sqlite.session_storage import SqliteSessionStorage
 from tau_web.sqlite.sessions import SessionRepository
 
 
@@ -79,6 +80,10 @@ class TauWebServices:
             with suppress(BaseException):
                 await database.close()
             raise
+
+    def session_storage(self, session_id: str) -> SqliteSessionStorage:
+        """Return append-only entry storage bound to one durable session."""
+        return SqliteSessionStorage(self.database, session_id)
 
     async def close(self) -> None:
         """Shut down runtime, receipt tasks, and database resources."""
