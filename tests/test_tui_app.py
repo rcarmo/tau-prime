@@ -5466,6 +5466,144 @@ async def test_run_tui_app_does_not_start_new_session_from_scoped_model(
 
 
 @pytest.mark.anyio
+async def test_run_tui_app_uses_default_live_session_manager_context_and_storage_dispatch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+    storage = object()
+    record = CodingSessionRecord(
+        id="persisted-session",
+        path=tmp_path / "persisted-session.jsonl",
+        cwd=tmp_path,
+        model="local-model",
+        title="Persisted session",
+        created_at=1.0,
+        updated_at=1.0,
+        provider_name="local",
+    )
+
+    class FakeProvider:
+        async def aclose(self) -> None:
+            calls.append("provider_closed")
+
+    class FakeManager:
+        async def create_session(
+            self,
+            *,
+            cwd: Path,
+            model: str,
+            provider_name: str | None = None,
+        ) -> CodingSessionRecord:
+            calls.append(f"create:{cwd}:{model}:{provider_name}")
+            return record
+
+        async def get_session(self, session_id: str) -> CodingSessionRecord | None:
+            calls.append(f"get:{session_id}")
+            return record if session_id == record.id else None
+
+        async def list_sessions(self, cwd: Path | None = None) -> list[CodingSessionRecord]:
+            calls.append(f"list:{cwd}")
+            return [record]
+
+    manager = FakeManager()
+
+    class _ManagerContext:
+        async def __aenter__(self) -> FakeManager:
+            calls.append("context_enter")
+            return manager
+
+        async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+            del exc, tb
+            calls.append(f"context_exit:{exc_type}")
+
+    class FakeLoadedSession:
+        session_id = record.id
+
+        async def aclose(self) -> None:
+            calls.append("session_closed")
+
+    class FakeCodingSession:
+        @classmethod
+        async def load(cls, config: object) -> FakeLoadedSession:
+            assert config.storage is storage  # type: ignore[attr-defined]
+            assert config.session_manager is manager  # type: ignore[attr-defined]
+            assert config.index_on_first_persist is False  # type: ignore[attr-defined]
+            calls.append("load")
+            return FakeLoadedSession()
+
+    class FakeApp:
+        def __init__(self, session: FakeLoadedSession, **kwargs: object) -> None:
+            assert isinstance(session, FakeLoadedSession)
+            assert kwargs["session_records"] == (record,)
+
+        async def run_async(self) -> None:
+            calls.append("run")
+
+    settings = ProviderSettings(
+        default_provider="local",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="local",
+                base_url="http://localhost:11434/v1",
+                api_key_env="LOCAL_API_KEY",
+                models=("local-model",),
+                default_model="local-model",
+            ),
+        ),
+    )
+
+    monkeypatch.setattr(tui_app, "load_provider_settings", lambda: settings)
+    monkeypatch.setattr(tui_app, "load_tui_settings", lambda: TuiSettings())
+    monkeypatch.setattr(
+        tui_app,
+        "live_session_manager_context",
+        lambda session_manager=None: (
+            calls.append(f"context:{session_manager}") or _ManagerContext()
+        ),
+    )
+    monkeypatch.setattr(
+        tui_app,
+        "manager_requires_persisted_session_record",
+        lambda active_manager: active_manager is manager,
+    )
+    monkeypatch.setattr(
+        tui_app,
+        "manager_session_storage",
+        lambda active_manager, active_record: (
+            calls.append(f"storage:{active_record.id}") or storage
+        ),
+    )
+    monkeypatch.setattr(
+        tui_app,
+        "create_model_provider",
+        lambda provider, **kwargs: (
+            calls.append(f"provider:{provider.name}:{kwargs['model']}") or FakeProvider()
+        ),
+    )
+    monkeypatch.setattr(tui_app, "CodingSession", FakeCodingSession)
+    monkeypatch.setattr(tui_app, "TauTuiApp", FakeApp)
+
+    session_id = await tui_app.run_tui_app(cwd=tmp_path, model=None)
+
+    assert session_id == record.id
+    assert calls == [
+        "context:None",
+        "context_enter",
+        "provider:local:local-model",
+        f"create:{tmp_path}:local-model:local",
+        "get:persisted-session",
+        f"list:{tmp_path}",
+        "storage:persisted-session",
+        "load",
+        "run",
+        "get:persisted-session",
+        "session_closed",
+        "provider_closed",
+        "context_exit:None",
+    ]
+
+
+@pytest.mark.anyio
 async def test_run_tui_app_creates_new_session_by_default(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

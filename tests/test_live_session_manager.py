@@ -87,6 +87,42 @@ class _AsyncExclusiveLegacyManager(_LegacyManager):
         return self.record
 
 
+class _ProviderOnlyManager:
+    def __init__(self, record: CodingSessionRecord) -> None:
+        self.record = record
+        self.calls: list[tuple[object, ...]] = []
+
+    def prepare_session(
+        self,
+        *,
+        cwd: Path,
+        model: str,
+        provider_name: str | None = None,
+    ) -> CodingSessionRecord:
+        self.calls.append(("prepare_session", cwd, model, provider_name))
+        return self.record
+
+    def create_session(
+        self,
+        *,
+        cwd: Path,
+        model: str,
+        provider_name: str | None = None,
+    ) -> CodingSessionRecord:
+        self.calls.append(("create_session", cwd, model, provider_name))
+        return self.record
+
+    def touch_session(
+        self,
+        session_id: str,
+        *,
+        model: str | None = None,
+        provider_name: str | None = None,
+    ) -> CodingSessionRecord | None:
+        self.calls.append(("touch_session", session_id, model, provider_name))
+        return self.record if session_id == self.record.id else None
+
+
 @pytest.mark.anyio
 async def test_live_session_manager_context_owns_and_closes_default_sqlite_manager(
     monkeypatch: pytest.MonkeyPatch,
@@ -256,4 +292,53 @@ async def test_live_session_manager_helpers_support_legacy_manager_signatures(
         ("prepare_session", tmp_path, "fake-model", "Prepared", "prepared-session"),
         ("create_session", tmp_path, "fake-model", "Created", "created-session"),
         ("touch_session", record.id, "updated-model", "Updated"),
+    ]
+
+
+@pytest.mark.anyio
+async def test_live_session_manager_helpers_filter_unsupported_optional_kwargs(
+    tmp_path: Path,
+) -> None:
+    record = CodingSessionRecord(
+        id="provider-only-session",
+        path=tmp_path / "provider-only.jsonl",
+        cwd=tmp_path,
+        model="fake-model",
+        title="Provider only",
+        created_at=1.0,
+        updated_at=1.0,
+    )
+    manager = _ProviderOnlyManager(record)
+
+    prepared = await manager_prepare_session(
+        manager,
+        cwd=tmp_path,
+        model="fake-model",
+        provider_name="provider-only",
+        title="Ignored title",
+        session_id="ignored-session-id",
+    )
+    created = await manager_create_session(
+        manager,
+        cwd=tmp_path,
+        model="fake-model",
+        provider_name="provider-only",
+        title="Ignored title",
+        session_id="ignored-session-id",
+    )
+    touched = await manager_touch_session(
+        manager,
+        record.id,
+        model="updated-model",
+        provider_name="provider-only",
+        title="Ignored title",
+    )
+
+    assert prepared == record
+    assert created == record
+    assert touched == record
+    assert manager.calls == [
+        ("prepare_session", tmp_path, "fake-model", "provider-only"),
+        ("create_session", tmp_path, "fake-model", "provider-only"),
+        ("touch_session", record.id, "updated-model", "provider-only"),
     ]

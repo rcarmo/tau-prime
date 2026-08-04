@@ -60,6 +60,16 @@ from tau_ai.provider import CancellationToken
 from tau_coding.commands import CommandRegistry, create_default_command_registry
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
 from tau_coding.diagnostics import llm_observer_from_env
+from tau_coding.live_session_manager import (
+    CodingSessionManager,
+    CodingSessionRecordLike,
+    live_session_manager_context,
+    manager_get_session,
+    manager_list_sessions,
+    manager_prepare_or_create_session,
+    manager_requires_persisted_session_record,
+    manager_session_storage,
+)
 from tau_coding.oauth import OAuthAuthInfo, OAuthPrompt, login_github_copilot, login_openai_codex
 from tau_coding.prompt_templates import PromptTemplate
 from tau_coding.provider_catalog import (
@@ -86,10 +96,8 @@ from tau_coding.session import (
     ModelChoice,
     SessionTreeBranchResult,
     SessionTreeChoice,
-    jsonl_session_storage,
     parse_terminal_command,
 )
-from tau_coding.session_manager import CodingSessionRecord, SessionManager
 from tau_coding.shell_config import load_shell_settings
 from tau_coding.skills import Skill
 from tau_coding.tui.adapter import TuiEventAdapter
@@ -1409,9 +1417,7 @@ class ThemePickerScreen(ModalScreen[TuiThemeName | None]):
         self.dismiss(None)
 
 
-class CompactionSettingsScreen(
-    ModalScreen[tuple[bool, CompactionStrategy] | None]
-):
+class CompactionSettingsScreen(ModalScreen[tuple[bool, CompactionStrategy] | None]):
     """Picker for provider-native enablement and local strategy."""
 
     OPTIONS: ClassVar[tuple[tuple[bool, CompactionStrategy, str], ...]] = (
@@ -2236,6 +2242,7 @@ class TauTuiApp(App[None]):
         startup_message: str | None = None,
         startup_notice: str | None = None,
         initial_prompt: str | None = None,
+        session_records: Sequence[SessionCompletionRecord] = (),
     ) -> None:
         self.tui_settings = tui_settings or TuiSettings()
         self.startup_message = startup_message
@@ -2264,6 +2271,8 @@ class TauTuiApp(App[None]):
         self._prompt_worker: Worker[None] | None = None
         self._compaction_worker: Worker[None] | None = None
         self._prompt_run_id = 0
+        initial_records = tuple(session_records) or _legacy_session_records(session)
+        self._session_options = _session_options_from_records(initial_records)
         self._completion_state = CompletionState()
         self._activity_frame = 0
         self._activity_timer: Timer | None = None
@@ -3055,7 +3064,15 @@ class TauTuiApp(App[None]):
         if self.state.running:
             self._notify("Tau is already working. Press Escape to cancel.")
             return
-        records = _session_records(self.session)
+        self.run_worker(self._open_session_picker(), exclusive=False)
+
+    async def _open_session_picker(self) -> None:
+        try:
+            records = await _load_session_records(self.session)
+        except Exception as exc:  # noqa: BLE001 - surface command failures in the TUI
+            self._notify(f"Error: {exc}", severity="error")
+            return
+        self._session_options = _session_options_from_records(records)
         if not records:
             self._notify("No sessions found.")
             return
@@ -3143,12 +3160,17 @@ class TauTuiApp(App[None]):
             return
         self.run_worker(self._resume_session(session_id), exclusive=False)
 
+    async def _refresh_session_options(self) -> None:
+        records = await _load_session_records(self.session)
+        self._session_options = _session_options_from_records(records)
+
     async def _resume_session(self, session_id: str) -> None:
         try:
             resume_message = await self.session.resume(session_id)
             self.state.clear()
             self.state.set_skills(self.session.skills)
             self._load_session_messages_from_session()
+            await self._refresh_session_options()
             self._follow_transcript_output()
             self._notify(resume_message)
         except Exception as exc:  # noqa: BLE001 - surface command failures in the TUI
@@ -3244,6 +3266,7 @@ class TauTuiApp(App[None]):
             self.state.clear()
             self.state.set_skills(self.session.skills)
             self._load_session_messages_from_session()
+            await self._refresh_session_options()
             self._follow_transcript_output()
         except Exception as exc:  # noqa: BLE001 - surface command failures in the TUI
             self._notify(f"Error: {exc}", severity="error")
@@ -3803,7 +3826,7 @@ class TauTuiApp(App[None]):
             provider_names=self.session.available_providers,
             thinking_levels=getattr(self.session, "available_thinking_levels", ()),
             theme_names=BUILTIN_TUI_THEME_NAMES,
-            session_options=_session_options(self.session),
+            session_options=self._session_options,
             cwd=self.session.cwd,
         )
 
@@ -4041,18 +4064,58 @@ def _session_command_registry(session: CodingSession) -> CommandRegistry:
 
 
 def _session_options(session: CodingSession) -> tuple[CompletionOption, ...]:
-    return tuple(_session_option(record) for record in _session_records(session))
+    return _session_options_from_records(_legacy_session_records(session))
+
+
+def _session_options_from_records(
+    records: Sequence[SessionCompletionRecord],
+) -> tuple[CompletionOption, ...]:
+    return tuple(_session_option(record) for record in records)
+
+
+def _session_record_manager(session: CodingSession) -> CodingSessionManager | object | None:
+    manager = getattr(session, "live_session_manager", None)
+    if manager is not None:
+        return manager
+    return getattr(session, "session_manager", None)
+
+
+def _legacy_session_records(session: CodingSession) -> tuple[SessionCompletionRecord, ...]:
+    manager = _session_record_manager(session)
+    if manager is None:
+        return ()
+    list_sessions = getattr(manager, "list_sessions", None)
+    if not callable(list_sessions):
+        return ()
+    try:
+        records = list_sessions(session.cwd)
+    except TypeError:
+        records = list_sessions()
+    if isawaitable(records):
+        return ()
+    return tuple(cast(Sequence[SessionCompletionRecord], records))
+
+
+async def _load_session_records(session: CodingSession) -> tuple[SessionCompletionRecord, ...]:
+    manager = _session_record_manager(session)
+    if manager is None:
+        return ()
+    return await _list_session_records_for_manager(manager, cwd=session.cwd)
+
+
+async def _list_session_records_for_manager(
+    manager: CodingSessionManager | object,
+    *,
+    cwd: Path,
+) -> tuple[SessionCompletionRecord, ...]:
+    if not callable(getattr(manager, "list_sessions", None)):
+        return ()
+    records = await manager_list_sessions(cast(CodingSessionManager, manager), cwd)
+    return tuple(cast(Sequence[SessionCompletionRecord], records))
 
 
 def _session_records(session: CodingSession) -> tuple[SessionCompletionRecord, ...]:
-    manager = getattr(session, "session_manager", None)
-    if manager is None:
-        return ()
-    try:
-        records = manager.list_sessions(session.cwd)
-    except TypeError:
-        records = manager.list_sessions()
-    return tuple(records)
+    return _legacy_session_records(session)
 
 
 def _session_option(record: SessionCompletionRecord) -> CompletionOption:
@@ -4452,11 +4515,7 @@ def _hidden_prompt_bindings(
     *,
     visible_bindings: Sequence[Binding],
 ) -> list[Binding]:
-    visible_keys = {
-        key.strip()
-        for binding in visible_bindings
-        for key in binding.key.split(",")
-    }
+    visible_keys = {key.strip() for binding in visible_bindings for key in binding.key.split(",")}
     candidates = (
         (keybindings.command_palette, "open_command_palette"),
         (keybindings.session_picker, "open_session_picker"),
@@ -4511,33 +4570,35 @@ def _attach_diagnostic_log_path_to_error(state: TuiState, session: CodingSession
     state.add_item("error", message)
 
 
-def _explicit_resume_record(
-    manager: SessionManager,
+async def _explicit_resume_record(
+    manager: CodingSessionManager | object,
     *,
     session_id: str | None,
-) -> CodingSessionRecord | None:
+) -> CodingSessionRecordLike | None:
     if session_id is None:
         return None
-    record = manager.get_session(session_id)
+    record = await manager_get_session(cast(CodingSessionManager, manager), session_id)
     if record is None:
         raise RuntimeError(f"Unknown session: {session_id}")
     return record
 
 
-def _create_startup_session_record(
-    manager: SessionManager,
+async def _create_startup_session_record(
+    manager: CodingSessionManager | object,
     *,
     cwd: Path,
     selection: ProviderSelection,
-) -> CodingSessionRecord:
-    try:
-        return manager.prepare_session(
-            cwd=cwd,
-            model=selection.model,
-            provider_name=selection.provider.name,
-        )
-    except TypeError:
-        return manager.prepare_session(cwd=cwd, model=selection.model)
+    persist: bool | None = None,
+) -> CodingSessionRecordLike:
+    return await manager_prepare_or_create_session(
+        cast(CodingSessionManager, manager),
+        cwd=cwd,
+        model=selection.model,
+        provider_name=selection.provider.name,
+        persist=(
+            manager_requires_persisted_session_record(manager) if persist is None else persist
+        ),
+    )
 
 
 def _resolve_tui_startup_selection(
@@ -4632,7 +4693,7 @@ async def run_tui_app(
     provider_name: str | None = None,
     auto_compact_token_threshold: int | None = None,
     initial_prompt: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
     startup_notice: str | None = None,
 ) -> str | None:
     """Create the default provider/session and run the Textual app."""
@@ -4641,94 +4702,96 @@ async def run_tui_app(
 
     provider_settings = load_provider_settings()
     shell_settings = load_shell_settings()
-    manager = session_manager or SessionManager()
-    record = _explicit_resume_record(
-        manager,
-        session_id=session_id,
-    )
-    target_provider = provider_name or (
-        record.provider_name if record is not None else provider_settings.default_provider
-    )
-    provider_settings = await ensure_dynamic_provider_models(
-        provider_settings,
-        provider_name=target_provider,
-    )
-    selection = _resolve_tui_startup_selection(
-        provider_settings,
-        record=record,
-        provider_name=provider_name,
-        model=model,
-        explicit_resume=session_id is not None,
-    )
-    startup_message: str | None = None
-    runtime_provider_config: ProviderConfig | None = selection.provider
-    llm_observer = llm_observer_from_env()
-    try:
-        startup_thinking_level = provider_default_thinking_level(
-            selection.provider, model=selection.model
+    async with live_session_manager_context(session_manager) as manager:
+        record = await _explicit_resume_record(
+            manager,
+            session_id=session_id,
         )
-        provider = create_model_provider(
-            selection.provider,
-            model=selection.model,
-            thinking_level=startup_thinking_level,
-            llm_observer=llm_observer,
+        target_provider = provider_name or (
+            record.provider_name if record is not None else provider_settings.default_provider
         )
-    except RuntimeError:
-        login_required_message = (
-            "Login required. Run /login to choose a provider, "
-            f"or /login {selection.provider.name} to continue with the current provider."
+        provider_settings = await ensure_dynamic_provider_models(
+            provider_settings,
+            provider_name=target_provider,
         )
-        startup_message = login_required_message
-        provider = LoginRequiredProvider(startup_message)
-        runtime_provider_config = None
-    session: CodingSession | None = None
-    tui_settings = load_tui_settings()
-    try:
-        index_on_first_persist = False
-        if record is None:
-            record = _create_startup_session_record(
-                manager,
-                cwd=cwd,
-                selection=selection,
+        selection = _resolve_tui_startup_selection(
+            provider_settings,
+            record=record,
+            provider_name=provider_name,
+            model=model,
+            explicit_resume=session_id is not None,
+        )
+        startup_message: str | None = None
+        runtime_provider_config: ProviderConfig | None = selection.provider
+        llm_observer = llm_observer_from_env()
+        try:
+            startup_thinking_level = provider_default_thinking_level(
+                selection.provider, model=selection.model
             )
-            index_on_first_persist = manager.get_session(record.id) is None
-
-        session = await CodingSession.load(
-            CodingSessionConfig(
-                provider=provider,
-                model=record.model or selection.model,
-                cwd=record.cwd,
-                storage=jsonl_session_storage(record.path),
-                session_id=record.id,
-                session_manager=manager,
-                provider_name=selection.provider.name,
-                provider_settings=provider_settings,
-                runtime_provider_config=runtime_provider_config,
-                auto_compact_token_threshold=auto_compact_token_threshold,
-                provider_compaction_enabled=tui_settings.provider_compaction_enabled,
-                compaction_strategy=tui_settings.compaction_strategy,
-                index_on_first_persist=index_on_first_persist,
-                shell_command_prefix=shell_settings.shell_command_prefix,
+            provider = create_model_provider(
+                selection.provider,
+                model=selection.model,
+                thinking_level=startup_thinking_level,
                 llm_observer=llm_observer,
             )
-        )
-        app = TauTuiApp(
-            session,
-            tui_settings=tui_settings,
-            startup_message=startup_message,
-            startup_notice=startup_notice,
-            initial_prompt=initial_prompt,
-        )
-        await app.run_async()
-        active_session_id = getattr(session, "session_id", None)
-        if not isinstance(active_session_id, str):
-            return None
-        if manager.get_session(active_session_id) is None:
-            return None
-        return active_session_id
-    finally:
-        if session is not None:
-            close_session = getattr(session, "aclose", None)
-            if close_session is not None:
-                await close_session()
-        await provider.aclose()
+        except RuntimeError:
+            login_required_message = (
+                "Login required. Run /login to choose a provider, "
+                f"or /login {selection.provider.name} to continue with the current provider."
+            )
+            startup_message = login_required_message
+            provider = LoginRequiredProvider(startup_message)
+            runtime_provider_config = None
+        session: CodingSession | None = None
+        tui_settings = load_tui_settings()
+        try:
+            index_on_first_persist = False
+            if record is None:
+                record = await _create_startup_session_record(
+                    manager,
+                    cwd=cwd,
+                    selection=selection,
+                )
+                index_on_first_persist = await manager_get_session(manager, record.id) is None
+
+            session_records = await _list_session_records_for_manager(manager, cwd=cwd)
+            session = await CodingSession.load(
+                CodingSessionConfig(
+                    provider=provider,
+                    model=record.model or selection.model,
+                    cwd=record.cwd,
+                    storage=manager_session_storage(manager, record),
+                    session_id=record.id,
+                    session_manager=manager,
+                    provider_name=selection.provider.name,
+                    provider_settings=provider_settings,
+                    runtime_provider_config=runtime_provider_config,
+                    auto_compact_token_threshold=auto_compact_token_threshold,
+                    provider_compaction_enabled=tui_settings.provider_compaction_enabled,
+                    compaction_strategy=tui_settings.compaction_strategy,
+                    index_on_first_persist=index_on_first_persist,
+                    shell_command_prefix=shell_settings.shell_command_prefix,
+                    llm_observer=llm_observer,
+                )
+            )
+            app = TauTuiApp(
+                session,
+                tui_settings=tui_settings,
+                startup_message=startup_message,
+                startup_notice=startup_notice,
+                initial_prompt=initial_prompt,
+                session_records=session_records,
+            )
+            await app.run_async()
+            active_session_id = getattr(session, "session_id", None)
+            if not isinstance(active_session_id, str):
+                return None
+            if await manager_get_session(manager, active_session_id) is None:
+                return None
+            return active_session_id
+        finally:
+            if session is not None:
+                close_session = getattr(session, "aclose", None)
+                if close_session is not None:
+                    await close_session()
+            await provider.aclose()

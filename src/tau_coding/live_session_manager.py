@@ -16,6 +16,11 @@ type CodingSessionManager = SessionManager | SqliteCodingSessionManager
 type CodingSessionRecordLike = CodingSessionRecord | SqliteCodingSessionRecord
 
 
+def manager_requires_persisted_session_record(manager: object) -> bool:
+    """Return whether new sessions must be created durably before first append."""
+    return isinstance(manager, SqliteCodingSessionManager)
+
+
 async def manager_result[T](result: T | Awaitable[T]) -> T:
     """Await sync-or-async manager results behind one call shape."""
     if inspect.isawaitable(result):
@@ -33,6 +38,26 @@ def _manager_supports_parameter(manager_call: object, parameter_name: str) -> bo
         parameter.kind is inspect.Parameter.VAR_KEYWORD or parameter.name == parameter_name
         for parameter in signature.parameters.values()
     )
+
+
+def _manager_keyword_arguments(manager_call: object, **kwargs: object) -> dict[str, object]:
+    """Filter kwargs down to those accepted by one manager call."""
+    try:
+        signature = inspect.signature(manager_call)
+    except (TypeError, ValueError):
+        return kwargs
+    if any(
+        parameter.kind is inspect.Parameter.VAR_KEYWORD
+        for parameter in signature.parameters.values()
+    ):
+        return kwargs
+    supported = {
+        parameter.name
+        for parameter in signature.parameters.values()
+        if parameter.kind
+        in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+    }
+    return {name: value for name, value in kwargs.items() if name in supported}
 
 
 async def manager_list_sessions(
@@ -64,15 +89,45 @@ async def manager_prepare_session(
     session_id: str | None = None,
 ) -> CodingSessionRecordLike:
     """Prepare one unpersisted session record from sync or async managers."""
-    kwargs: dict[str, str | Path | None] = {
-        "cwd": cwd,
-        "model": model,
-        "title": title,
-        "session_id": session_id,
-    }
-    if _manager_supports_parameter(manager.prepare_session, "provider_name"):
-        kwargs["provider_name"] = provider_name
+    kwargs = _manager_keyword_arguments(
+        manager.prepare_session,
+        cwd=cwd,
+        model=model,
+        provider_name=provider_name,
+        title=title,
+        session_id=session_id,
+    )
     return await manager_result(manager.prepare_session(**kwargs))
+
+
+async def manager_prepare_or_create_session(
+    manager: CodingSessionManager,
+    *,
+    cwd: Path,
+    model: str,
+    provider_name: str,
+    title: str | None = None,
+    session_id: str | None = None,
+    persist: bool = False,
+) -> CodingSessionRecordLike:
+    """Prepare or create one record depending on whether storage must already exist."""
+    if persist:
+        return await manager_create_session(
+            manager,
+            cwd=cwd,
+            model=model,
+            provider_name=provider_name,
+            title=title,
+            session_id=session_id,
+        )
+    return await manager_prepare_session(
+        manager,
+        cwd=cwd,
+        model=model,
+        provider_name=provider_name,
+        title=title,
+        session_id=session_id,
+    )
 
 
 async def manager_create_session(
@@ -85,14 +140,14 @@ async def manager_create_session(
     session_id: str | None = None,
 ) -> CodingSessionRecordLike:
     """Create one persisted session record from sync or async managers."""
-    kwargs: dict[str, str | Path | None] = {
-        "cwd": cwd,
-        "model": model,
-        "title": title,
-        "session_id": session_id,
-    }
-    if _manager_supports_parameter(manager.create_session, "provider_name"):
-        kwargs["provider_name"] = provider_name
+    kwargs = _manager_keyword_arguments(
+        manager.create_session,
+        cwd=cwd,
+        model=model,
+        provider_name=provider_name,
+        title=title,
+        session_id=session_id,
+    )
     return await manager_result(manager.create_session(**kwargs))
 
 
@@ -116,14 +171,14 @@ async def manager_create_session_exclusive(
             title=title,
             session_id=session_id,
         )
-    kwargs: dict[str, str | Path | None] = {
-        "cwd": cwd,
-        "model": model,
-        "title": title,
-        "session_id": session_id,
-    }
-    if _manager_supports_parameter(create_session_exclusive, "provider_name"):
-        kwargs["provider_name"] = provider_name
+    kwargs = _manager_keyword_arguments(
+        create_session_exclusive,
+        cwd=cwd,
+        model=model,
+        provider_name=provider_name,
+        title=title,
+        session_id=session_id,
+    )
     return await manager_result(create_session_exclusive(**kwargs))
 
 
@@ -136,12 +191,12 @@ async def manager_touch_session(
     title: str | None = None,
 ) -> CodingSessionRecordLike | None:
     """Update one session record from sync or async managers."""
-    kwargs: dict[str, str | None] = {
-        "model": model,
-        "title": title,
-    }
-    if _manager_supports_parameter(manager.touch_session, "provider_name"):
-        kwargs["provider_name"] = provider_name
+    kwargs = _manager_keyword_arguments(
+        manager.touch_session,
+        model=model,
+        provider_name=provider_name,
+        title=title,
+    )
     return await manager_result(manager.touch_session(session_id, **kwargs))
 
 
