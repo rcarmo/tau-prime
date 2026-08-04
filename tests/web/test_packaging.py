@@ -22,3 +22,4 @@ def test_wheel_includes_optional_runtime_packages() -> None:
     assert "tau_web/__init__.py" in archive_names
     assert "tau_web/app.py" in archive_names
     assert "tau_web/config.py" in archive_names
+    assert "tau_web/middleware.py" in archive_names

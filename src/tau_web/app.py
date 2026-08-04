@@ -35,8 +35,13 @@ def create_app(config: WebConfig | None = None) -> Any:
             "Tau Web dependencies are not installed; install 'tau-prime[web]'"
         ) from exc
 
+    from tau_web.middleware import build_middlewares
+
     active_config = config or WebConfig()
-    app = web.Application(client_max_size=active_config.max_request_bytes)
+    app = web.Application(
+        client_max_size=active_config.max_request_bytes,
+        middlewares=build_middlewares(active_config),
+    )
     app._state[CONFIG_KEY] = active_config
     app.cleanup_ctx.append(_services_context)
 
