@@ -130,18 +130,27 @@ async def test_delivery_repository_is_idempotent_and_tracks_receipts(tmp_path: P
         first, second = await _seed_sessions(database)
         deliveries = DeliveryRepository(database)
 
-        created = await deliveries.create(
+        parent = await deliveries.create(
             source_session_id=first,
             target_session_id=second,
             target_address="@second",
             mode="queue",
             content="hello",
+        )
+        created = await deliveries.create(
+            source_session_id=second,
+            target_session_id=first,
+            target_address="@first",
+            mode="queue",
+            content="reply",
             idempotency_key="stable",
-            ancestry=["root"],
+            in_reply_to=parent.delivery_id,
+            ancestry=[parent.delivery_id],
+            hop_count=1,
         )
         duplicate = await deliveries.create(
-            source_session_id=first,
-            target_session_id=second,
+            source_session_id=second,
+            target_session_id=first,
             mode="queue",
             content="ignored",
             idempotency_key="stable",
@@ -149,12 +158,121 @@ async def test_delivery_repository_is_idempotent_and_tracks_receipts(tmp_path: P
         completed = await deliveries.update_status(created.delivery_id, status="completed")
 
         assert duplicate == created
+        assert await deliveries.find_by_idempotency("local", "stable") == completed
         assert completed.accepted_at is not None
         assert completed.completed_at is not None
-        assert completed.ancestry == ("root",)
+        assert completed.in_reply_to == parent.delivery_id
+        assert completed.ancestry == (parent.delivery_id,)
         with pytest.raises(RepositoryError, match="Terminal"):
             await deliveries.update_status(created.delivery_id, status="pending")
         assert await deliveries.purge_terminal_before(_FUTURE) == 1
+
+
+@pytest.mark.anyio
+async def test_delivery_repository_create_validates_reply_lineage_and_source(
+    tmp_path: Path,
+) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        deliveries = DeliveryRepository(database)
+
+        root = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            target_address="@second",
+            mode="queue",
+            content="hello",
+        )
+        reply = await deliveries.create(
+            source_session_id=second,
+            target_session_id=first,
+            target_address="@first",
+            mode="queue",
+            content="reply",
+            in_reply_to=root.delivery_id,
+            ancestry=[root.delivery_id],
+            hop_count=1,
+        )
+
+        assert reply.in_reply_to == root.delivery_id
+        assert reply.ancestry == (root.delivery_id,)
+        assert reply.hop_count == 1
+
+        with pytest.raises(ValueError, match="Reply source session must match"):
+            await deliveries.create(
+                source_session_id=first,
+                target_session_id=second,
+                mode="queue",
+                content="wrong source",
+                in_reply_to=root.delivery_id,
+                ancestry=[root.delivery_id],
+                hop_count=1,
+            )
+        with pytest.raises(ValueError, match="Reply ancestry delivery does not exist"):
+            await deliveries.create(
+                source_session_id=second,
+                target_session_id=first,
+                mode="queue",
+                content="missing ancestor",
+                in_reply_to=root.delivery_id,
+                ancestry=["missing"],
+                hop_count=1,
+            )
+        with pytest.raises(ValueError, match="Reply ancestry chain is malformed"):
+            await deliveries.create(
+                source_session_id=first,
+                target_session_id=second,
+                mode="queue",
+                content="malformed chain",
+                in_reply_to=reply.delivery_id,
+                ancestry=[reply.delivery_id],
+                hop_count=1,
+            )
+        with pytest.raises(ValueError, match="Hop count must equal ancestry length"):
+            await deliveries.create(
+                source_session_id=second,
+                target_session_id=first,
+                mode="queue",
+                content="wrong hops",
+                in_reply_to=root.delivery_id,
+                ancestry=[root.delivery_id],
+                hop_count=2,
+            )
+
+
+@pytest.mark.anyio
+async def test_delivery_repository_find_by_idempotency_validates_and_scopes_transport(
+    tmp_path: Path,
+) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        deliveries = DeliveryRepository(database)
+
+        local = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            target_address="@second",
+            mode="queue",
+            content="hello",
+            idempotency_key="stable",
+        )
+        remote = await deliveries.create(
+            source_session_id=first,
+            target_address="xmpp!@second",
+            transport="xmpp",
+            mode="queue",
+            content="remote",
+            idempotency_key="stable",
+        )
+
+        assert await deliveries.find_by_idempotency(" local ", " stable ") == local
+        assert await deliveries.find_by_idempotency("xmpp", "stable") == remote
+        assert await deliveries.find_by_idempotency("local", "missing") is None
+
+        with pytest.raises(ValueError, match="Transport must not be empty"):
+            await deliveries.find_by_idempotency(" ", "stable")
+        with pytest.raises(ValueError, match="Idempotency key must not be empty"):
+            await deliveries.find_by_idempotency("local", " ")
 
 
 @pytest.mark.anyio

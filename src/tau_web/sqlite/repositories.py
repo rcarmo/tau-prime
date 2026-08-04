@@ -730,6 +730,16 @@ class DeliveryRepository(SqliteRepository):
         selected_status = _validate_delivery_status(status)
         delivery_key = delivery_id or uuid4().hex
         transport_name = _require_non_empty_text(transport, field="Transport")
+        dedupe_key = (
+            _require_non_empty_text(idempotency_key, field="Idempotency key")
+            if idempotency_key is not None
+            else None
+        )
+        reply_delivery_id = (
+            _require_identifier(in_reply_to, field="Reply delivery id")
+            if in_reply_to is not None
+            else None
+        )
         message = _require_non_empty_text(content, field="Content")
         lineage = tuple(_require_identifier(item, field="Ancestry entry") for item in ancestry)
         hops = len(lineage) if hop_count is None else hop_count
@@ -741,16 +751,23 @@ class DeliveryRepository(SqliteRepository):
         error_json = _dump_optional_object(error)
 
         async def write(transaction: SqliteTransaction) -> DeliveryRecord:
-            if idempotency_key is not None:
+            if dedupe_key is not None:
                 existing = await transaction.fetch_one(
                     """
                     SELECT * FROM chat_deliveries
                     WHERE transport = ? AND idempotency_key = ?
                     """,
-                    (transport_name, idempotency_key),
+                    (transport_name, dedupe_key),
                 )
                 if existing is not None:
                     return _delivery_from_row(existing)
+            await _validate_delivery_reply_lineage(
+                transaction,
+                source_session_id=source_key,
+                in_reply_to=reply_delivery_id,
+                ancestry=lineage,
+                hop_count=hops,
+            )
             await transaction.execute(
                 """
                 INSERT INTO chat_deliveries(
@@ -768,8 +785,8 @@ class DeliveryRepository(SqliteRepository):
                     target_address,
                     selected_mode,
                     message,
-                    idempotency_key,
-                    in_reply_to,
+                    dedupe_key,
+                    reply_delivery_id,
                     _dump_json(list(lineage)),
                     hops,
                     selected_status,
@@ -788,6 +805,26 @@ class DeliveryRepository(SqliteRepository):
             return _delivery_from_row(row)
 
         return await self.database.write(write)
+
+    async def find_by_idempotency(
+        self,
+        transport: str,
+        idempotency_key: str,
+    ) -> DeliveryRecord | None:
+        transport_name = _require_non_empty_text(transport, field="Transport")
+        dedupe_key = _require_non_empty_text(idempotency_key, field="Idempotency key")
+
+        async def read(reader: SqliteReader) -> DeliveryRecord | None:
+            row = await reader.fetch_one(
+                """
+                SELECT * FROM chat_deliveries
+                WHERE transport = ? AND idempotency_key = ?
+                """,
+                (transport_name, dedupe_key),
+            )
+            return _delivery_from_row(row) if row is not None else None
+
+        return await self.database.read(read)
 
     async def get(self, delivery_id: str) -> DeliveryRecord | None:
         async def read(reader: SqliteReader) -> DeliveryRecord | None:
@@ -1769,6 +1806,44 @@ class SearchRepository(SqliteRepository):
             return count
 
         return await self.database.write(write)
+
+
+async def _validate_delivery_reply_lineage(
+    transaction: SqliteTransaction,
+    *,
+    source_session_id: str,
+    in_reply_to: str | None,
+    ancestry: Sequence[str],
+    hop_count: int,
+) -> None:
+    if hop_count != len(ancestry):
+        raise ValueError("Hop count must equal ancestry length")
+    if in_reply_to is None:
+        if ancestry:
+            raise ValueError("Root deliveries must not include reply ancestry")
+        return
+    if not ancestry:
+        raise ValueError("Reply deliveries must include the parent delivery in ancestry")
+
+    expected_ancestry: tuple[str, ...] = ()
+    parent: DeliveryRecord | None = None
+    for ancestor_delivery_id in ancestry:
+        ancestor_row = await transaction.fetch_one(
+            "SELECT * FROM chat_deliveries WHERE delivery_id = ?",
+            (ancestor_delivery_id,),
+        )
+        if ancestor_row is None:
+            raise ValueError(f"Reply ancestry delivery does not exist: {ancestor_delivery_id}")
+        ancestor = _delivery_from_row(ancestor_row)
+        if ancestor.ancestry != expected_ancestry:
+            raise ValueError("Reply ancestry chain is malformed")
+        expected_ancestry = (*expected_ancestry, ancestor.delivery_id)
+        parent = ancestor
+
+    if parent is None or parent.delivery_id != in_reply_to:
+        raise ValueError("Reply ancestry must end with the parent delivery")
+    if parent.target_session_id != source_session_id:
+        raise ValueError("Reply source session must match the parent delivery target session")
 
 
 def _timestamp() -> str:
