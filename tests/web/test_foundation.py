@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,13 +30,19 @@ def test_web_config_rejects_empty_host(tmp_path: Path) -> None:
 
 
 def test_web_package_import_does_not_load_optional_dependencies() -> None:
-    import sys
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import tau_web; "
+                "print('aiohttp' in sys.modules, 'aiosqlite' in sys.modules, "
+                "'PIL' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
-    sys.modules.pop("tau_web", None)
-    sys.modules.pop("tau_web.app", None)
-
-    import tau_web  # noqa: F401, PLC0415
-
-    assert "aiohttp" not in sys.modules
-    assert "aiosqlite" not in sys.modules
-    assert "PIL" not in sys.modules
+    assert result.stdout.strip() == "False False False"
