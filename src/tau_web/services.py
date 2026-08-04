@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Self
@@ -10,7 +11,7 @@ from typing import Self
 from tau_coding.agent_pool import AsyncAgentPool
 from tau_web.chat_routing import ChatRouter
 from tau_web.config import WebConfig
-from tau_web.events import EventProjector
+from tau_web.events import EventProjector, WebEventEnvelope
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
@@ -26,6 +27,7 @@ from tau_web.sqlite.repositories import (
 )
 from tau_web.sqlite.session_storage import SqliteSessionStorage
 from tau_web.sqlite.sessions import SessionRepository
+from tau_web.sse import EventBroker
 
 
 @dataclass(slots=True)
@@ -45,9 +47,11 @@ class TauWebServices:
     fts: SearchRepository
     timeline: TimelineMessageRepository
     projector: EventProjector
+    broker: EventBroker
     pool: AsyncAgentPool
     runtime: DurableAgentRuntime
     router: ChatRouter
+    _unsubscribe: Callable[[], None] = field(repr=False)
     closed: bool = False
     _close_lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False, repr=False)
 
@@ -61,6 +65,8 @@ class TauWebServices:
         database = SqliteDatabase(database_path)
         pool: AsyncAgentPool | None = None
         runtime: DurableAgentRuntime | None = None
+        broker: EventBroker | None = None
+        unsubscribe: Callable[[], None] | None = None
         try:
             await database.open()
             sessions = SessionRepository(database)
@@ -74,6 +80,15 @@ class TauWebServices:
             fts = SearchRepository(database)
             timeline = TimelineMessageRepository(database)
             projector = EventProjector(timeline)
+            broker = EventBroker(
+                replay_capacity=config.sse_replay_capacity,
+                subscriber_capacity=config.sse_client_capacity,
+            )
+
+            async def publish_event(envelope: WebEventEnvelope) -> None:
+                await broker.publish(envelope)
+
+            unsubscribe = projector.subscribe(publish_event)
             pool = AsyncAgentPool(max_concurrency=config.max_active_runs)
             runtime = DurableAgentRuntime(
                 pool,
@@ -97,9 +112,11 @@ class TauWebServices:
                 fts=fts,
                 timeline=timeline,
                 projector=projector,
+                broker=broker,
                 pool=pool,
                 runtime=runtime,
                 router=router,
+                _unsubscribe=unsubscribe,
             )
         except BaseException:
             with suppress(BaseException):
@@ -107,6 +124,12 @@ class TauWebServices:
                     await runtime.shutdown()
                 elif pool is not None:
                     await pool.shutdown()
+            with suppress(BaseException):
+                if unsubscribe is not None:
+                    unsubscribe()
+            with suppress(BaseException):
+                if broker is not None:
+                    broker.close()
             with suppress(BaseException):
                 await database.close()
             raise
@@ -139,6 +162,20 @@ class TauWebServices:
             else:
                 if first_error is None and receipt_errors:
                     first_error = receipt_errors[0]
+
+            try:
+                self._unsubscribe()
+            except BaseException as exc:
+                cleanup_failed = True
+                if first_error is None:
+                    first_error = exc
+
+            try:
+                self.broker.close()
+            except BaseException as exc:
+                cleanup_failed = True
+                if first_error is None:
+                    first_error = exc
 
             try:
                 await self.database.close()

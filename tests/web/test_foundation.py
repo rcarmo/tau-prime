@@ -72,6 +72,20 @@ def test_web_config_rejects_invalid_allowed_origin(
         WebConfig(cwd=tmp_path, allowed_origins=(origin,))
 
 
+@pytest.mark.parametrize(
+    "field",
+    ["sse_replay_capacity", "sse_client_capacity", "sse_heartbeat_seconds"],
+)
+@pytest.mark.parametrize("value", [0, float("inf")])
+def test_web_config_rejects_non_finite_or_non_positive_sse_limits(
+    tmp_path: Path,
+    field: str,
+    value: float,
+) -> None:
+    with pytest.raises(ValueError, match="positive and finite"):
+        WebConfig(cwd=tmp_path, **{field: value})
+
+
 def test_web_package_import_does_not_load_optional_dependencies() -> None:
     result = subprocess.run(
         [

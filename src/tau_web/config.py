@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -72,6 +73,9 @@ class WebConfig:
     allowed_origins: tuple[str, ...] = ()
     max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES
     max_active_runs: int = 4
+    sse_replay_capacity: int = 512
+    sse_client_capacity: int = 64
+    sse_heartbeat_seconds: float = 15.0
 
     def __post_init__(self) -> None:
         cwd = self.cwd.expanduser().resolve()
@@ -91,6 +95,12 @@ class WebConfig:
             raise ValueError("Maximum request size must be positive")
         if self.max_active_runs <= 0:
             raise ValueError("Maximum active runs must be positive")
+        if not isfinite(self.sse_replay_capacity) or self.sse_replay_capacity <= 0:
+            raise ValueError("SSE replay capacity must be positive and finite")
+        if not isfinite(self.sse_client_capacity) or self.sse_client_capacity <= 0:
+            raise ValueError("SSE client capacity must be positive and finite")
+        if not isfinite(self.sse_heartbeat_seconds) or self.sse_heartbeat_seconds <= 0:
+            raise ValueError("SSE heartbeat seconds must be positive and finite")
 
         object.__setattr__(self, "cwd", cwd)
         object.__setattr__(self, "host", host)
