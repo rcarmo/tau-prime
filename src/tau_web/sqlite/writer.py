@@ -71,6 +71,7 @@ class SqliteTransaction:
 class _WriteRequest:
     operation: WriteOperation | None
     future: asyncio.Future[object] | None
+    transactional: bool = True
 
 
 class SqliteWriter:
@@ -104,6 +105,26 @@ class SqliteWriter:
         """Run one repository operation atomically on the writer connection."""
         if not self._accepting:
             raise WriterClosedError("SQLite writer is shutting down")
+        return await self._submit(operation, priority=priority, transactional=True)
+
+    async def maintenance(
+        self,
+        operation: Callable[[SqliteTransaction], Awaitable[T]],
+        *,
+        priority: WritePriority = WritePriority.FINALISE,
+    ) -> T:
+        """Run serialised connection maintenance outside a transaction."""
+        if not self._accepting:
+            raise WriterClosedError("SQLite writer is shutting down")
+        return await self._submit(operation, priority=priority, transactional=False)
+
+    async def _submit(
+        self,
+        operation: Callable[[SqliteTransaction], Awaitable[T]],
+        *,
+        priority: WritePriority,
+        transactional: bool,
+    ) -> T:
         self.start()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[object] = loop.create_future()
@@ -111,7 +132,11 @@ class SqliteWriter:
         async def erased(transaction: SqliteTransaction) -> object:
             return await operation(transaction)
 
-        request = _WriteRequest(operation=erased, future=future)
+        request = _WriteRequest(
+            operation=erased,
+            future=future,
+            transactional=transactional,
+        )
         await self._queue.put((int(priority), next(self._sequence), request))
         return cast(T, await future)
 
@@ -140,14 +165,17 @@ class SqliteWriter:
             try:
                 if request.operation is None:
                     return
-                await self._connection.execute("BEGIN IMMEDIATE")
+                if request.transactional:
+                    await self._connection.execute("BEGIN IMMEDIATE")
                 try:
                     result = await request.operation(transaction)
                 except BaseException:
-                    await self._connection.rollback()
+                    if request.transactional:
+                        await self._connection.rollback()
                     raise
                 else:
-                    await self._connection.commit()
+                    if request.transactional:
+                        await self._connection.commit()
                 if request.future is not None and not request.future.done():
                     request.future.set_result(result)
             except BaseException as exc:

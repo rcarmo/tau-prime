@@ -150,3 +150,56 @@ async def test_database_rejects_writes_after_close(tmp_path: Path) -> None:
 
     with pytest.raises(WriterClosedError):
         await writer.transaction(operation)
+
+
+@pytest.mark.anyio
+async def test_integrity_check_and_checkpoint(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        assert await database.integrity_check() == ("ok",)
+        checkpoint = await database.checkpoint()
+
+        assert checkpoint.busy == 0
+        assert checkpoint.log_frames >= 0
+        assert checkpoint.checkpointed_frames >= 0
+
+
+@pytest.mark.anyio
+async def test_startup_marks_running_runs_interrupted(tmp_path: Path) -> None:
+    database_path = tmp_path / "tau.sqlite3"
+    async with SqliteDatabase(database_path) as database:
+        async def seed(transaction: SqliteTransaction) -> None:
+            await transaction.execute(
+                """
+                INSERT INTO workspaces(workspace_id, root_path, created_at, updated_at)
+                VALUES ('workspace', '/workspace', 'now', 'now')
+                """
+            )
+            await transaction.execute(
+                """
+                INSERT INTO sessions(
+                    session_id, workspace_id, agent_name, provider_name, model,
+                    created_at, updated_at
+                ) VALUES ('session', 'workspace', 'default', 'test', 'model', 'now', 'now')
+                """
+            )
+            await transaction.execute(
+                """
+                INSERT INTO session_runs(
+                    run_id, session_id, status, started_at, updated_at
+                ) VALUES ('run', 'session', 'running', 'now', 'now')
+                """
+            )
+
+        await database.write(seed)
+
+    async with SqliteDatabase(database_path) as database:
+        assert database.recovered_run_count == 1
+
+        async def inspect(reader: SqliteReader) -> tuple[str, bool, bool]:
+            row = await reader.fetch_one(
+                "SELECT status, ended_at, error_json FROM session_runs WHERE run_id = 'run'"
+            )
+            assert row is not None
+            return str(row[0]), row[1] is not None, row[2] is not None
+
+        assert await database.read(inspect) == ("interrupted", True, True)

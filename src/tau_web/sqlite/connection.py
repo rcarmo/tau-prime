@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from collections.abc import Awaitable, Callable, Sequence
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypeVar
@@ -22,6 +24,19 @@ ReadOperation = Callable[["SqliteReader"], Awaitable[T]]
 SqlParameters = Sequence[object]
 
 _BUSY_TIMEOUT_MILLISECONDS = 5_000
+
+
+@dataclass(frozen=True, slots=True)
+class CheckpointResult:
+    """Result counters returned by SQLite's WAL checkpoint pragma."""
+
+    busy: int
+    log_frames: int
+    checkpointed_frames: int
+
+
+class DatabaseIntegrityError(RuntimeError):
+    """Raised when SQLite reports corruption during startup validation."""
 
 
 class SqliteReader:
@@ -67,6 +82,7 @@ class SqliteDatabase:
             maxsize=read_pool_size
         )
         self._opened = False
+        self.recovered_run_count = 0
 
     @property
     def opened(self) -> bool:
@@ -83,6 +99,8 @@ class SqliteDatabase:
             self._write_connection = connection
             await _configure_write_connection(connection)
             await _apply_migrations(connection)
+            await _validate_integrity(connection)
+            self.recovered_run_count = await _recover_stale_runs(connection)
             _secure_database_files(self.path)
 
             self._writer = SqliteWriter(connection, queue_size=self._writer_queue_size)
@@ -113,6 +131,27 @@ class SqliteDatabase:
         finally:
             self._read_pool.put_nowait(connection)
 
+    async def integrity_check(self) -> tuple[str, ...]:
+        """Return SQLite quick-check diagnostics (``("ok",)`` for a healthy store)."""
+
+        async def inspect(reader: SqliteReader) -> tuple[str, ...]:
+            rows = await reader.fetch_all("PRAGMA quick_check")
+            return tuple(str(row[0]) for row in rows)
+
+        return await self.read(inspect)
+
+    async def checkpoint(self) -> CheckpointResult:
+        """Request a passive WAL checkpoint behind already accepted writes."""
+        writer = self._require_writer()
+
+        async def run(transaction: SqliteTransaction) -> CheckpointResult:
+            row = await transaction.fetch_one("PRAGMA wal_checkpoint(PASSIVE)")
+            if row is None:
+                raise RuntimeError("SQLite did not return checkpoint counters")
+            return CheckpointResult(int(row[0]), int(row[1]), int(row[2]))
+
+        return await writer.maintenance(run)
+
     async def close(self) -> None:
         if not self._opened and self._write_connection is None:
             await asyncio.to_thread(self._lock.release)
@@ -122,6 +161,8 @@ class SqliteDatabase:
         self._writer = None
         if writer is not None:
             await writer.close()
+        if self._write_connection is not None:
+            await _checkpoint_connection(self._write_connection)
         await self._close_connections()
         await asyncio.to_thread(self._lock.release)
 
@@ -176,6 +217,49 @@ async def _schema_version(connection: aiosqlite.Connection) -> int:
     finally:
         await cursor.close()
     return int(row[0]) if row is not None else 0
+
+
+async def _validate_integrity(connection: aiosqlite.Connection) -> None:
+    cursor = await connection.execute("PRAGMA quick_check")
+    try:
+        diagnostics = tuple(str(row[0]) for row in await cursor.fetchall())
+    finally:
+        await cursor.close()
+    if diagnostics != ("ok",):
+        raise DatabaseIntegrityError("SQLite integrity check failed: " + "; ".join(diagnostics))
+
+
+async def _recover_stale_runs(connection: aiosqlite.Connection) -> int:
+    timestamp = datetime.now(UTC).isoformat()
+    error_json = json.dumps(
+        {"code": "runtime_restarted", "message": "Run interrupted by runtime restart"},
+        separators=(",", ":"),
+    )
+    cursor = await connection.execute(
+        """
+        UPDATE session_runs
+        SET status = 'interrupted', updated_at = ?, ended_at = ?, error_json = ?
+        WHERE status = 'running'
+        """,
+        (timestamp, timestamp, error_json),
+    )
+    try:
+        recovered = cursor.rowcount
+    finally:
+        await cursor.close()
+    await connection.commit()
+    return recovered
+
+
+async def _checkpoint_connection(connection: aiosqlite.Connection) -> CheckpointResult:
+    cursor = await connection.execute("PRAGMA wal_checkpoint(PASSIVE)")
+    try:
+        row = await cursor.fetchone()
+    finally:
+        await cursor.close()
+    if row is None:
+        raise RuntimeError("SQLite did not return checkpoint counters")
+    return CheckpointResult(int(row[0]), int(row[1]), int(row[2]))
 
 
 async def _apply_migrations(connection: aiosqlite.Connection) -> None:
