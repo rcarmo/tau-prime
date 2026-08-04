@@ -57,6 +57,12 @@ from tau_agent.messages import AgentMessage, UserMessage
 from tau_agent.tools import AgentTool
 from tau_ai import ProviderErrorEvent, ProviderEvent
 from tau_ai.provider import CancellationToken
+from tau_coding.coding_session_factory import (
+    CodingSessionCompactionConfig,
+    CodingSessionFactory,
+    CodingSessionFactoryConfig,
+    CodingSessionFactoryRequest,
+)
 from tau_coding.commands import CommandRegistry, create_default_command_registry
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
 from tau_coding.diagnostics import llm_observer_from_env
@@ -92,7 +98,6 @@ from tau_coding.provider_runtime import create_model_provider
 from tau_coding.session import (
     TREE_RUNNING_MESSAGE,
     CodingSession,
-    CodingSessionConfig,
     ModelChoice,
     SessionTreeBranchResult,
     SessionTreeChoice,
@@ -4755,23 +4760,30 @@ async def run_tui_app(
                 index_on_first_persist = await manager_get_session(manager, record.id) is None
 
             session_records = await _list_session_records_for_manager(manager, cwd=cwd)
-            session = await CodingSession.load(
-                CodingSessionConfig(
-                    provider=provider,
-                    model=record.model or selection.model,
+            session = await CodingSessionFactory(
+                CodingSessionFactoryConfig(
+                    compaction=CodingSessionCompactionConfig(
+                        auto_compact_token_threshold=auto_compact_token_threshold,
+                        provider_compaction_enabled=tui_settings.provider_compaction_enabled,
+                        compaction_strategy=tui_settings.compaction_strategy,
+                    ),
+                    thinking_level=startup_thinking_level,
+                    shell_command_prefix=shell_settings.shell_command_prefix,
+                    llm_observer=llm_observer,
+                ),
+                provider_settings=provider_settings,
+                session_loader=CodingSession.load,
+            ).load(
+                CodingSessionFactoryRequest(
                     cwd=record.cwd,
                     storage=manager_session_storage(manager, record),
                     session_id=record.id,
                     session_manager=manager,
+                    provider=provider,
                     provider_name=selection.provider.name,
-                    provider_settings=provider_settings,
-                    runtime_provider_config=runtime_provider_config,
-                    auto_compact_token_threshold=auto_compact_token_threshold,
-                    provider_compaction_enabled=tui_settings.provider_compaction_enabled,
-                    compaction_strategy=tui_settings.compaction_strategy,
+                    model=record.model or selection.model,
+                    provider_config=runtime_provider_config,
                     index_on_first_persist=index_on_first_persist,
-                    shell_command_prefix=shell_settings.shell_command_prefix,
-                    llm_observer=llm_observer,
                 )
             )
             app = TauTuiApp(

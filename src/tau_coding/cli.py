@@ -23,6 +23,11 @@ from tau_ai import (
 )
 from tau_ai.env import DEFAULT_OPENAI_COMPATIBLE_BASE_URL
 from tau_coding import __version__
+from tau_coding.coding_session_factory import (
+    CodingSessionFactory,
+    CodingSessionFactoryConfig,
+    CodingSessionFactoryRequest,
+)
 from tau_coding.credentials import FileCredentialStore
 from tau_coding.diagnostics import llm_observer_from_env
 from tau_coding.linux_sandbox import (
@@ -62,12 +67,7 @@ from tau_coding.provider_config import (
 from tau_coding.provider_runtime import create_model_provider
 from tau_coding.rendering import PrintOutputMode, create_event_renderer
 from tau_coding.resources import TauResourcePaths
-from tau_coding.session import (
-    CodingSession,
-    CodingSessionConfig,
-    TerminalCommandResult,
-    parse_terminal_command,
-)
+from tau_coding.session import TerminalCommandResult, parse_terminal_command
 from tau_coding.session_export import (
     default_session_export_artifact_path,
     export_session_artifact,
@@ -1116,20 +1116,23 @@ async def run_print_mode(
     Returns False when the agent emits a non-recoverable error so CLI callers
     can fail non-interactive runs while still rendering the error message.
     """
-    session = await CodingSession.load(
-        CodingSessionConfig(
-            provider=provider,
-            model=model,
-            cwd=cwd,
-            storage=storage or _MemorySessionStorage(),
+    session = await CodingSessionFactory(
+        CodingSessionFactoryConfig(
             resource_paths=resource_paths,
-            session_id=session_id,
-            session_manager=session_manager,
-            provider_name=provider_name,
-            provider_settings=provider_settings,
-            runtime_provider_config=runtime_provider_config,
             shell_command_prefix=shell_command_prefix,
             llm_observer=llm_observer,
+        ),
+        provider_settings=provider_settings,
+    ).load(
+        CodingSessionFactoryRequest(
+            cwd=cwd,
+            storage=storage or _MemorySessionStorage(),
+            session_id=session_id,
+            session_manager=session_manager,
+            provider=provider,
+            provider_name=provider_name,
+            model=model,
+            provider_config=runtime_provider_config,
         )
     )
     renderer = create_event_renderer(output)
