@@ -23,3 +23,13 @@ def test_wheel_includes_optional_runtime_packages() -> None:
     assert "tau_web/app.py" in archive_names
     assert "tau_web/config.py" in archive_names
     assert "tau_web/middleware.py" in archive_names
+
+
+def test_wheel_includes_frontend_static_assets() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    assert "tau_web/static/index.html" in archive_names
+    assert "tau_web/static/app.css" in archive_names
+    assert "tau_web/static/app.js" in archive_names
+    assert "tau_web/static/manifest.webmanifest" in archive_names
+    assert "tau_web/static/sw.js" in archive_names
