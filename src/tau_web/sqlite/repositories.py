@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -1194,6 +1195,30 @@ class MediaRepository(SqliteRepository):
 
         return await self.database.read(read)
 
+    async def list(
+        self,
+        *,
+        session_id: str | None = None,
+        include_deleted: bool = False,
+    ) -> list[MediaItemRecord]:
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if session_id is not None:
+            clauses.append("session_id = ?")
+            parameters.append(_require_identifier(session_id, field="Session id"))
+        if not include_deleted:
+            clauses.append("deleted_at IS NULL")
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+        async def read(reader: SqliteReader) -> list[MediaItemRecord]:
+            rows = await reader.fetch_all(
+                f"SELECT * FROM media_items {where} ORDER BY created_at DESC, media_id DESC",  # noqa: S608
+                parameters,
+            )
+            return [_media_item_from_row(row) for row in rows]
+
+        return await self.database.read(read)
+
     async def add_reference(
         self,
         media_id: str,
@@ -1227,10 +1252,10 @@ class MediaRepository(SqliteRepository):
 
         return await self.database.write(write)
 
-    async def list_references(self, media_id: str) -> list[MediaReferenceRecord]:
+    async def list_references(self, media_id: str) -> builtins.list[MediaReferenceRecord]:
         media_key = _require_identifier(media_id, field="Media id")
 
-        async def read(reader: SqliteReader) -> list[MediaReferenceRecord]:
+        async def read(reader: SqliteReader) -> builtins.list[MediaReferenceRecord]:
             rows = await reader.fetch_all(
                 """
                 SELECT * FROM media_references

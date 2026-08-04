@@ -15,6 +15,7 @@ from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
     AuditRepository,
     DeliveryRepository,
+    MediaRepository,
     PlanRepository,
     QueueRepository,
     RunRepository,
@@ -36,6 +37,7 @@ class TauWebServices:
     queues: QueueRepository
     deliveries: DeliveryRepository
     audit: AuditRepository
+    media: MediaRepository
     plans: PlanRepository
     usage: UsageRepository
     fts: SearchRepository
@@ -62,6 +64,7 @@ class TauWebServices:
             queues = QueueRepository(database)
             deliveries = DeliveryRepository(database)
             audit = AuditRepository(database)
+            media = MediaRepository(database)
             plans = PlanRepository(database)
             usage = UsageRepository(database)
             fts = SearchRepository(database)
@@ -76,6 +79,7 @@ class TauWebServices:
                 queues=queues,
                 deliveries=deliveries,
                 audit=audit,
+                media=media,
                 plans=plans,
                 usage=usage,
                 fts=fts,
