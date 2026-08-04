@@ -28,8 +28,9 @@ Middleware = Callable[[Request, Handler], Awaitable[StreamResponse]]
 
 def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
     """Return Tau Web middlewares in outer-to-inner order."""
+    from tau_web.routes.frontend import is_frontend_path
 
-    @web.middleware  # type: ignore[untyped-decorator]
+    @web.middleware
     async def request_id_middleware(request: Request, handler: Handler) -> StreamResponse:
         request_id = _request_id_from_header(request.headers.get(REQUEST_ID_HEADER))
         request[REQUEST_ID_KEY] = request_id
@@ -40,7 +41,38 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
         response.headers[REQUEST_ID_HEADER] = request_id
         return response
 
-    @web.middleware  # type: ignore[untyped-decorator]
+    @web.middleware
+    async def frontend_security_headers_middleware(
+        request: Request,
+        handler: Handler,
+    ) -> StreamResponse:
+        response = await handler(request)
+        if is_frontend_path(request.path):
+            response.headers.setdefault(
+                "Content-Security-Policy",
+                "; ".join(
+                    (
+                        "default-src 'self'",
+                        "base-uri 'none'",
+                        "connect-src 'self'",
+                        "font-src 'self'",
+                        "form-action 'self'",
+                        "frame-ancestors 'none'",
+                        "img-src 'self' data:",
+                        "manifest-src 'self'",
+                        "object-src 'none'",
+                        "script-src 'self'",
+                        "style-src 'self'",
+                        "worker-src 'self'",
+                    )
+                ),
+            )
+            response.headers.setdefault("Referrer-Policy", "same-origin")
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+            response.headers.setdefault("X-Frame-Options", "DENY")
+        return response
+
+    @web.middleware
     async def structured_error_middleware(request: Request, handler: Handler) -> StreamResponse:
         try:
             return await handler(request)
@@ -62,10 +94,10 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
                 message="Internal Server Error",
             )
 
-    @web.middleware  # type: ignore[untyped-decorator]
+    @web.middleware
     async def bearer_auth_middleware(request: Request, handler: Handler) -> StreamResponse:
         auth_token = config.auth_token
-        if auth_token is None or request.path == _HEALTH_PATH:
+        if auth_token is None or request.path == _HEALTH_PATH or is_frontend_path(request.path):
             return await handler(request)
 
         authorization = request.headers.get("Authorization")
@@ -86,7 +118,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
             )
         return await handler(request)
 
-    @web.middleware  # type: ignore[untyped-decorator]
+    @web.middleware
     async def origin_csrf_middleware(request: Request, handler: Handler) -> StreamResponse:
         if request.method in _SAFE_METHODS:
             return await handler(request)
@@ -109,6 +141,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
 
     return (
         request_id_middleware,
+        frontend_security_headers_middleware,
         structured_error_middleware,
         bearer_auth_middleware,
         origin_csrf_middleware,

@@ -133,7 +133,16 @@ def _package_files() -> list[tuple[Path, str]]:
     shim = src / "pydantic.py"
     if shim.exists():
         files.append((shim, "pydantic.py"))
-    package_data_suffixes = {".md"}
+    package_data_suffixes = {
+        ".md",
+        ".html",
+        ".css",
+        ".js",
+        ".json",
+        ".webmanifest",
+        ".svg",
+        ".png",
+    }
     for package in ("tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"):
         package_root = src / package
         for path in package_root.rglob("*"):

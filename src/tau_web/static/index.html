@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Tau Web Shell</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#timeline-main">Skip to timeline</a>
+    <div class="app-shell">
+      <header class="topbar" aria-label="Tau status bar">
+        <div class="topbar-group topbar-branding">
+          <button
+            id="mobile-nav-toggle"
+            class="icon-button mobile-only"
+            type="button"
+            aria-controls="session-nav"
+            aria-expanded="false"
+            aria-label="Open sessions drawer"
+          >
+            Sessions
+          </button>
+          <div class="brand-block">
+            <h1>Tau</h1>
+            <p id="status-stream" class="muted">Connecting…</p>
+          </div>
+        </div>
+        <dl class="status-grid" aria-label="Current Tau status">
+          <div>
+            <dt>Session</dt>
+            <dd id="status-session">No session selected</dd>
+          </div>
+          <div>
+            <dt>Model</dt>
+            <dd id="status-model">Unset</dd>
+          </div>
+          <div>
+            <dt>Context</dt>
+            <dd id="status-context">No context loaded</dd>
+          </div>
+        </dl>
+        <div class="topbar-group topbar-actions">
+          <button
+            id="mobile-panel-toggle"
+            class="icon-button mobile-only"
+            type="button"
+            aria-controls="side-panel"
+            aria-expanded="false"
+            aria-label="Open workspace and settings drawer"
+          >
+            Panels
+          </button>
+        </div>
+      </header>
+
+      <div class="shell-layout">
+        <aside id="session-nav" class="panel panel-nav" aria-label="Session navigation">
+          <div class="panel-header sticky-header">
+            <div>
+              <h2>Sessions</h2>
+              <p class="muted">Persisted chats, archive, and restore.</p>
+            </div>
+            <button
+              id="close-nav-drawer"
+              class="icon-button mobile-only"
+              type="button"
+              aria-label="Close sessions drawer"
+            >
+              Close
+            </button>
+          </div>
+
+          <div class="button-row button-row-wrap" role="group" aria-label="Session actions">
+            <button id="new-session-button" type="button">New</button>
+            <button id="archive-session-button" type="button">Archive</button>
+            <button id="restore-session-button" type="button">Restore</button>
+          </div>
+
+          <div class="button-row" role="group" aria-label="Session list filter">
+            <button id="show-active-sessions" type="button" aria-pressed="true">Active</button>
+            <button id="show-archived-sessions" type="button" aria-pressed="false">
+              Archived
+            </button>
+          </div>
+
+          <p id="session-count" class="muted small-text">0 sessions</p>
+          <ul id="session-list" class="session-list" aria-label="Available sessions"></ul>
+        </aside>
+
+        <main id="timeline-main" class="panel panel-main" tabindex="-1">
+          <div class="panel-header sticky-header">
+            <div>
+              <h2>Timeline</h2>
+              <p id="timeline-meta" class="muted">Load a session to inspect persisted messages.</p>
+            </div>
+          </div>
+
+          <section class="branch-strip" aria-labelledby="branch-strip-title">
+            <div class="branch-strip-header">
+              <h3 id="branch-strip-title">Branches</h3>
+              <p class="muted small-text">Select the active leaf for restored playback.</p>
+            </div>
+            <div id="branch-list" class="branch-list" role="list"></div>
+          </section>
+
+          <ol id="timeline-list" class="timeline-list" aria-live="polite"></ol>
+        </main>
+
+        <aside id="side-panel" class="panel panel-side" aria-label="Workspace search and settings">
+          <div class="panel-header sticky-header">
+            <div>
+              <h2>Workspace</h2>
+              <p class="muted">Files, search, and Tau settings.</p>
+            </div>
+            <button
+              id="close-panel-drawer"
+              class="icon-button mobile-only"
+              type="button"
+              aria-label="Close workspace drawer"
+            >
+              Close
+            </button>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Sidebar sections">
+            <button
+              id="tab-workspace"
+              class="tab-button"
+              type="button"
+              role="tab"
+              aria-controls="panel-workspace"
+              aria-selected="true"
+            >
+              Workspace
+            </button>
+            <button
+              id="tab-search"
+              class="tab-button"
+              type="button"
+              role="tab"
+              aria-controls="panel-search"
+              aria-selected="false"
+            >
+              Search
+            </button>
+            <button
+              id="tab-settings"
+              class="tab-button"
+              type="button"
+              role="tab"
+              aria-controls="panel-settings"
+              aria-selected="false"
+            >
+              Settings
+            </button>
+          </div>
+
+          <section
+            id="panel-workspace"
+            class="tab-panel"
+            role="tabpanel"
+            aria-labelledby="tab-workspace"
+          >
+            <div class="toolbar-row">
+              <button id="workspace-up-button" type="button">Up</button>
+              <button id="workspace-reload-button" type="button">Reload</button>
+            </div>
+            <p id="workspace-path" class="muted small-text">.</p>
+            <div class="workspace-split">
+              <nav class="workspace-browser" aria-label="Workspace tree">
+                <ul id="workspace-list" class="workspace-list"></ul>
+              </nav>
+              <section class="workspace-editor-panel" aria-labelledby="workspace-editor-title">
+                <div class="workspace-editor-header">
+                  <h3 id="workspace-editor-title">Editor</h3>
+                  <p id="workspace-editor-path" class="muted small-text">No file selected</p>
+                </div>
+                <label class="sr-only" for="workspace-editor">Workspace file editor</label>
+                <textarea
+                  id="workspace-editor"
+                  spellcheck="false"
+                  aria-describedby="workspace-editor-note"
+                ></textarea>
+                <p id="workspace-editor-note" class="muted small-text">
+                  Local edits are not yet persisted through the web shell.
+                </p>
+              </section>
+            </div>
+          </section>
+
+          <section
+            id="panel-search"
+            class="tab-panel"
+            role="tabpanel"
+            aria-labelledby="tab-search"
+            hidden
+          >
+            <form id="search-form" class="stack-form">
+              <label for="search-input">Search persisted content</label>
+              <div class="toolbar-row">
+                <input
+                  id="search-input"
+                  name="query"
+                  type="search"
+                  autocomplete="off"
+                  placeholder="Search messages and indexed content"
+                />
+                <button id="search-submit-button" type="submit">Search</button>
+              </div>
+              <p class="muted small-text">Shortcut: Ctrl/Cmd+K</p>
+            </form>
+            <ol id="search-results" class="search-results" aria-live="polite"></ol>
+          </section>
+
+          <section
+            id="panel-settings"
+            class="tab-panel"
+            role="tabpanel"
+            aria-labelledby="tab-settings"
+            hidden
+          >
+            <form id="auth-form" class="stack-form">
+              <label for="auth-token">Bearer token</label>
+              <input id="auth-token" type="password" autocomplete="off" />
+              <div class="button-row button-row-wrap">
+                <button id="save-auth-button" type="submit">Save token</button>
+                <button id="clear-auth-button" type="button">Clear token</button>
+              </div>
+            </form>
+
+            <form id="model-form" class="stack-form">
+              <label for="provider-input">Provider</label>
+              <input id="provider-input" list="provider-options" autocomplete="off" />
+              <datalist id="provider-options"></datalist>
+
+              <label for="model-input">Model</label>
+              <input id="model-input" list="model-options" autocomplete="off" />
+              <datalist id="model-options"></datalist>
+
+              <div class="button-row button-row-wrap">
+                <button id="apply-model-button" type="submit">Apply to session</button>
+                <button id="refresh-button" type="button">Refresh shell</button>
+              </div>
+            </form>
+
+            <section aria-labelledby="settings-summary-title">
+              <h3 id="settings-summary-title">Runtime summary</h3>
+              <dl id="settings-summary" class="settings-summary"></dl>
+            </section>
+
+            <p id="streaming-note" class="muted small-text">
+              Streaming-rich transcript rendering is pending; this bounded shell focuses first on
+              persisted timeline playback, session management, and safe browsing.
+            </p>
+          </section>
+        </aside>
+      </div>
+
+      <footer class="composer-shell">
+        <form id="compose-form" class="compose-form">
+          <label for="compose-input">Send a prompt to Tau</label>
+          <div class="compose-row">
+            <textarea
+              id="compose-input"
+              name="prompt"
+              rows="3"
+              placeholder="Select or create a session, then send a prompt."
+            ></textarea>
+            <button id="compose-submit" type="submit">Run</button>
+          </div>
+          <div class="compose-status-row">
+            <p id="compose-help" class="muted small-text">Shortcut: Ctrl/Cmd+N for a new session.</p>
+            <p id="app-status" class="small-text" aria-live="polite">Loading Tau shell…</p>
+          </div>
+        </form>
+      </footer>
+    </div>
+
+    <button
+      id="drawer-backdrop"
+      class="drawer-backdrop"
+      type="button"
+      hidden
+      aria-label="Close open drawers"
+    ></button>
+
+    <noscript>
+      <p class="noscript-banner">Tau Web Shell requires JavaScript to load persisted sessions.</p>
+    </noscript>
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>
