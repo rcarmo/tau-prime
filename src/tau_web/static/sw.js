@@ -1,10 +1,11 @@
-const CACHE_NAME = "tau-web-shell-v1";
+const CACHE_NAME = "tau-web-shell-v2";
 const SHELL_URLS = Object.freeze([
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/static/app.css",
   "/static/app.js",
+  "/static/live-ui.js",
 ]);
 
 self.addEventListener("install", (event) => {

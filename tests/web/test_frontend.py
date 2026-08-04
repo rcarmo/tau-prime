@@ -33,6 +33,7 @@ FRONTEND_ASSETS = (
     ("/sw.js", "application/javascript"),
     ("/static/app.css", "text/css"),
     ("/static/app.js", "application/javascript"),
+    ("/static/live-ui.js", "application/javascript"),
 )
 
 
@@ -92,6 +93,7 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
     assert '<link rel="stylesheet" href="/static/app.css" />' in root_html
     assert '<script type="module" src="/static/app.js"></script>' in root_html
+    assert '<script type="module" src="/static/live-ui.js"></script>' in root_html
     assert re.search(r"<header\b", root_html) is not None
     assert re.search(r'<main\b[^>]*id="timeline-main"', root_html) is not None
     assert re.search(r"<footer\b", root_html) is not None
@@ -142,6 +144,32 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
         )
         is None
     )
+
+
+@pytest.mark.anyio
+async def test_live_ui_wires_runtime_controls_and_stream_events(web_config: WebConfig) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+    try:
+        async with client.get("/static/live-ui.js") as response:
+            script = await response.text()
+    finally:
+        await client.close()
+
+    for endpoint in ("/thinking", "/usage", "/runs", "/queue"):
+        assert endpoint in script
+    assert 'mutateRun(activeRun.run_id, "cancel")' in script
+    assert 'mutateRun(activeRun.run_id, "abort")' in script
+    for event_type in (
+        "thinking_delta",
+        "tool_execution_start",
+        "tool_execution_update",
+        "tool_execution_end",
+        "queue_update",
+        "message_end",
+    ):
+        assert event_type in script
+    assert ".innerHTML" not in script
 
 
 @pytest.mark.anyio
@@ -196,6 +224,7 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "/manifest.webmanifest",
         "/static/app.css",
         "/static/app.js",
+        "/static/live-ui.js",
     ):
         assert f'"{asset_path}"' in worker
 
