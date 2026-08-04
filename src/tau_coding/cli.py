@@ -10,6 +10,8 @@ from typing import Annotated
 
 import anyio
 import typer
+from typer import _click
+from typer.core import TyperGroup
 
 from tau_agent.session import JsonlSessionStorage, SessionEntry, SessionStorage
 from tau_ai import (
@@ -33,6 +35,7 @@ from tau_coding.macos_sandbox import (
     enter_macos_sandbox,
     should_enter_macos_sandbox,
 )
+from tau_coding.paths import TauPaths
 from tau_coding.provider_config import (
     DEFAULT_MODEL,
     DEFAULT_PROVIDER_NAME,
@@ -72,8 +75,31 @@ from tau_coding.update_check import (
     tau_prime_update_instructions,
 )
 
+
+class PromptCompatibleTyperGroup(TyperGroup):
+    """Allow legacy positional prompts alongside registered subcommands."""
+
+    def parse_args(self, ctx: _click.Context, args: list[str]) -> list[str]:
+        if not args and self.no_args_is_help and not ctx.resilient_parsing:
+            raise _click.exceptions.NoArgsIsHelpError(ctx)
+
+        rest = _click.core.Command.parse_args(self, ctx, args)
+        if not rest:
+            return ctx.args
+
+        command = self.get_command(ctx, rest[0])
+        if command is None:
+            ctx._protected_args = []
+            ctx.args = rest
+            return ctx.args
+
+        ctx._protected_args, ctx.args = rest[:1], rest[1:]
+        return ctx.args
+
+
 app = typer.Typer(
     name="tau",
+    cls=PromptCompatibleTyperGroup,
     help="Terminal coding agent.",
     add_completion=False,
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
@@ -125,13 +151,123 @@ def setup_command(
         typer.echo(f"Set {provider.api_key_env} before running Tau with this provider.", err=True)
 
 
+@app.command("import-session")
+def import_session_cli(
+    source_path: Annotated[
+        Path,
+        typer.Argument(help="Tau JSONL session file to import into the SQLite session store."),
+    ],
+    workspace_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--workspace",
+            "--cwd",
+            help="Workspace root to record for the imported SQLite session.",
+        ),
+    ] = None,
+    provider: Annotated[
+        str | None,
+        typer.Option("--provider", help="Configured provider name to record for the import."),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Model name to record for the import."),
+    ] = None,
+    database_path: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database path for session import/export."),
+    ] = None,
+    session_id: Annotated[
+        str | None,
+        typer.Option("--session-id", help="Exact SQLite session id to assign."),
+    ] = None,
+    agent_name: Annotated[
+        str | None,
+        typer.Option("--agent-name", "--name", help="Agent name to assign to the import."),
+    ] = None,
+    title: Annotated[
+        str | None,
+        typer.Option("--title", help="Session title to record for the import."),
+    ] = None,
+    thinking_level: Annotated[
+        str | None,
+        typer.Option("--thinking-level", help="Thinking level metadata to record."),
+    ] = None,
+) -> None:
+    """Import a JSONL session into Tau's SQLite session store."""
+    if session_id is not None:
+        try:
+            validate_session_id(session_id)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+    selected_workspace_root = workspace_root or Path.cwd()
+    try:
+        imported_session_id, imported_agent_name, imported_entry_count, selected_database = (
+            anyio.run(
+                import_sqlite_session_command,
+                source_path,
+                selected_workspace_root,
+                provider,
+                model,
+                database_path,
+                session_id,
+                agent_name,
+                title,
+                thinking_level,
+            )
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(
+        f"Imported session {imported_session_id} as @{imported_agent_name} "
+        f"({imported_entry_count} entries) into {selected_database}"
+    )
+
+
+@app.command("export-session")
+def export_session_cli(
+    session_ref: Annotated[
+        str,
+        typer.Argument(help="SQLite session id or local address to export as Tau JSONL."),
+    ],
+    export_format: Annotated[
+        str,
+        typer.Option("--format", help="Export format (only jsonl is currently supported)."),
+    ] = "jsonl",
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="Destination path for the exported JSONL file."),
+    ] = None,
+    overwrite: Annotated[
+        bool,
+        typer.Option(
+            "--overwrite/--no-overwrite",
+            help="Allow overwriting an existing JSONL export file.",
+        ),
+    ] = False,
+    database_path: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database path for session import/export."),
+    ] = None,
+) -> None:
+    """Export one SQLite-backed session as Tau JSONL."""
+    try:
+        exported_path = anyio.run(
+            export_sqlite_session_command,
+            session_ref,
+            output_path,
+            export_format,
+            overwrite,
+            database_path,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"Exported session to {exported_path}")
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    prompt_args: Annotated[
-        list[str] | None,
-        typer.Argument(help="Initial prompt to run in interactive TUI mode."),
-    ] = None,
     prompt_option: Annotated[
         str | None,
         typer.Option("--prompt", "-p", help="Prompt to run in non-interactive print mode."),
@@ -277,7 +413,7 @@ def main(
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from exc
 
-    positional_args = prompt_args or []
+    positional_args = list(ctx.args)
     command = positional_args[0] if positional_args else None
     initial_prompt = " ".join(positional_args) if positional_args else None
 
@@ -613,6 +749,103 @@ async def export_session_command(
     )
 
 
+async def import_sqlite_session_command(
+    source_path: Path,
+    workspace_root: Path,
+    provider_name: str | None,
+    model: str | None,
+    database_path: Path | None,
+    session_id: str | None,
+    agent_name: str | None,
+    title: str | None,
+    thinking_level: str | None,
+) -> tuple[str, str, int, Path]:
+    try:
+        from tau_web.sqlite.connection import SqliteDatabase
+        from tau_web.sqlite.interchange import JsonlImportOptions, SessionInterchange
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("Install 'tau-prime[web]' to use SQLite session import/export") from exc
+
+    resolved_source = source_path.expanduser().resolve()
+    if not resolved_source.exists():
+        raise ValueError(f"Session import source does not exist: {resolved_source}")
+    if not resolved_source.is_file():
+        raise ValueError(f"Session import source is not a file: {resolved_source}")
+
+    settings = load_provider_settings()
+    selection = resolve_provider_selection(settings, provider_name=provider_name, model=model)
+    selected_database = _resolve_sqlite_database_path(database_path)
+    selected_thinking_level = thinking_level or provider_default_thinking_level(
+        selection.provider,
+        model=selection.model,
+    )
+    async with SqliteDatabase(selected_database) as database:
+        result = await SessionInterchange(database).import_jsonl_file(
+            resolved_source,
+            options=JsonlImportOptions(
+                workspace_root=workspace_root,
+                provider_name=selection.provider.name,
+                model=selection.model,
+                session_id=session_id,
+                agent_name=agent_name,
+                title=title,
+                thinking_level=selected_thinking_level,
+                metadata={"imported_via": "tau import-session"},
+            ),
+        )
+    return result.session_id, result.agent_name, result.entry_count, selected_database
+
+
+async def export_sqlite_session_command(
+    session_ref: str,
+    output_path: Path | None,
+    export_format: str,
+    overwrite: bool,
+    database_path: Path | None,
+) -> Path:
+    if export_format.strip().casefold() != "jsonl":
+        raise ValueError("`tau export-session` only supports --format jsonl")
+
+    try:
+        from tau_web.sqlite.connection import SqliteDatabase
+        from tau_web.sqlite.interchange import SessionInterchange
+        from tau_web.sqlite.sessions import SessionRepository
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("Install 'tau-prime[web]' to use SQLite session import/export") from exc
+
+    selected_database = _resolve_sqlite_database_path(database_path)
+    async with SqliteDatabase(selected_database) as database:
+        record = await SessionRepository(database).resolve(session_ref)
+        if record is None:
+            raise RuntimeError(f"Unknown session: {session_ref}")
+        destination = _resolve_sqlite_session_export_destination(
+            output_path,
+            session_id=record.session_id,
+        )
+        return await SessionInterchange(database).export_jsonl_file(
+            record.session_id,
+            destination,
+            overwrite=overwrite,
+        )
+
+
+def _resolve_sqlite_database_path(database_path: Path | None) -> Path:
+    return (database_path or TauPaths().home / "tau.sqlite3").expanduser().resolve()
+
+
+def _resolve_sqlite_session_export_destination(
+    output_path: Path | None,
+    *,
+    session_id: str,
+) -> Path:
+    if output_path is None:
+        return Path.cwd() / f"{session_id}.jsonl"
+    candidate = output_path.expanduser()
+    if candidate.exists() and candidate.is_dir():
+        return candidate / f"{session_id}.jsonl"
+    return candidate
+
+
 def _parse_web_cli_args(
     args: list[str],
     *,
@@ -635,9 +868,7 @@ def _parse_web_cli_args(
         index += 2
 
     selected_cwd = Path(values["--cwd"]) if "--cwd" in values else cwd
-    selected_database = (
-        Path(values["--database"]) if "--database" in values else database_path
-    )
+    selected_database = Path(values["--database"]) if "--database" in values else database_path
     try:
         selected_port = int(values["--port"]) if "--port" in values else port
     except ValueError as exc:

@@ -31,72 +31,82 @@ class SqliteSessionStorage:
         """Append entries in order and atomically apply the final leaf pointer."""
         if not entries:
             return
+
+        async def write(transaction: SqliteTransaction) -> None:
+            await self.append_many_in_transaction(transaction, entries)
+
+        await self.database.write(write)
+
+    async def append_many_in_transaction(
+        self,
+        transaction: SqliteTransaction,
+        entries: Sequence[SessionEntry],
+    ) -> None:
+        """Append a validated batch inside a caller-owned SQLite transaction."""
+        if not entries:
+            return
         entry_ids = [entry.id for entry in entries]
         if len(set(entry_ids)) != len(entry_ids):
             raise SqliteSessionStorageError("Append batch contains duplicate entry ids")
         timestamp = datetime.now(UTC).isoformat()
-
-        async def write(transaction: SqliteTransaction) -> None:
-            session = await transaction.fetch_one(
-                "SELECT session_id FROM sessions WHERE session_id = ?",
-                (self.session_id,),
-            )
-            if session is None:
-                raise SqliteSessionStorageError(f"Unknown session: {self.session_id}")
-            row = await transaction.fetch_one(
-                """
+        session = await transaction.fetch_one(
+            "SELECT session_id FROM sessions WHERE session_id = ?",
+            (self.session_id,),
+        )
+        if session is None:
+            raise SqliteSessionStorageError(f"Unknown session: {self.session_id}")
+        row = await transaction.fetch_one(
+            """
                 SELECT COALESCE(MAX(ordinal), -1) + 1 AS next_ordinal
                 FROM session_entries
                 WHERE session_id = ?
                 """,
-                (self.session_id,),
-            )
-            if row is None:
-                raise SqliteSessionStorageError("Could not allocate session entry ordinal")
-            next_ordinal = int(row["next_ordinal"])
-            leaf_changed = False
-            active_leaf: str | None = None
+            (self.session_id,),
+        )
+        if row is None:
+            raise SqliteSessionStorageError("Could not allocate session entry ordinal")
+        next_ordinal = int(row["next_ordinal"])
+        leaf_changed = False
+        active_leaf: str | None = None
 
-            for offset, entry in enumerate(entries):
-                await _validate_entry_reference(transaction, self.session_id, entry.parent_id)
-                if isinstance(entry, LeafEntry):
-                    await _validate_entry_reference(transaction, self.session_id, entry.entry_id)
-                    leaf_changed = True
-                    active_leaf = entry.entry_id
-                await transaction.execute(
-                    """
+        for offset, entry in enumerate(entries):
+            await _validate_entry_reference(transaction, self.session_id, entry.parent_id)
+            if isinstance(entry, LeafEntry):
+                await _validate_entry_reference(transaction, self.session_id, entry.entry_id)
+                leaf_changed = True
+                active_leaf = entry.entry_id
+            await transaction.execute(
+                """
                     INSERT INTO session_entries(
                         entry_id, session_id, parent_entry_id, entry_type,
                         timestamp, ordinal, payload_json
                     ) VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (
-                        entry.id,
-                        self.session_id,
-                        entry.parent_id,
-                        entry.type,
-                        entry.timestamp,
-                        next_ordinal + offset,
-                        entry_to_json_line(entry).strip(),
-                    ),
-                )
+                (
+                    entry.id,
+                    self.session_id,
+                    entry.parent_id,
+                    entry.type,
+                    entry.timestamp,
+                    next_ordinal + offset,
+                    entry_to_json_line(entry).strip(),
+                ),
+            )
 
-            if not leaf_changed:
-                await transaction.execute(
-                    "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
-                    (timestamp, self.session_id),
-                )
-            else:
-                await transaction.execute(
-                    """
-                    UPDATE sessions
-                    SET active_leaf_entry_id = ?, updated_at = ?
-                    WHERE session_id = ?
-                    """,
-                    (active_leaf, timestamp, self.session_id),
-                )
-
-        await self.database.write(write)
+        if not leaf_changed:
+            await transaction.execute(
+                "UPDATE sessions SET updated_at = ? WHERE session_id = ?",
+                (timestamp, self.session_id),
+            )
+        else:
+            await transaction.execute(
+                """
+                UPDATE sessions
+                SET active_leaf_entry_id = ?, updated_at = ?
+                WHERE session_id = ?
+                """,
+                (active_leaf, timestamp, self.session_id),
+            )
 
     async def read_all(self) -> list[SessionEntry]:
         async def read(reader: SqliteReader) -> list[SessionEntry]:
@@ -153,6 +163,4 @@ async def _validate_entry_reference(
     if row is None:
         raise SqliteSessionStorageError(f"Entry reference does not exist: {entry_id}")
     if str(row["session_id"]) != session_id:
-        raise SqliteSessionStorageError(
-            f"Entry reference belongs to another session: {entry_id}"
-        )
+        raise SqliteSessionStorageError(f"Entry reference belongs to another session: {entry_id}")
