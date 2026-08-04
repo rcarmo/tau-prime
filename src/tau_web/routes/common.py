@@ -96,12 +96,28 @@ def require_text(body: Mapping[str, JSONValue], field: str) -> str:
     return value
 
 
+def require_non_empty_text(body: Mapping[str, JSONValue], field: str) -> str:
+    value = require_text(body, field)
+    if not value.strip():
+        raise web.HTTPBadRequest(reason=f"Field '{field}' must not be blank.")
+    return value
+
+
 def optional_text(body: Mapping[str, JSONValue], field: str) -> str | None:
     if field not in body:
         return None
     value = body[field]
     if not isinstance(value, str):
         raise web.HTTPBadRequest(reason=f"Field '{field}' must be a string.")
+    return value
+
+
+def optional_non_empty_text(body: Mapping[str, JSONValue], field: str) -> str | None:
+    value = optional_text(body, field)
+    if value is None:
+        return None
+    if not value.strip():
+        raise web.HTTPBadRequest(reason=f"Field '{field}' must not be blank.")
     return value
 
 
@@ -160,6 +176,30 @@ def raise_for_repository_error(exc: Exception) -> NoReturn:
 
 def json_response(data: object, *, status: int = 200) -> web.Response:
     return web.json_response(to_json_value(data), status=status)
+
+
+def record_json(record: object) -> JSONObject:
+    payload = to_json_value(record)
+    if not isinstance(payload, dict) or not all(isinstance(key, str) for key in payload):
+        raise TypeError("Serialized record payload must be a JSON object")
+    return payload
+
+
+def record_list_json(field: str, records: Sequence[object]) -> JSONObject:
+    return {field: [record_json(record) for record in records]}
+
+
+def record_response(record: object, *, status: int = 200) -> web.Response:
+    return json_response(record_json(record), status=status)
+
+
+def record_list_response(
+    field: str,
+    records: Sequence[object],
+    *,
+    status: int = 200,
+) -> web.Response:
+    return json_response(record_list_json(field, records), status=status)
 
 
 def to_json_value(value: object) -> JSONValue:
