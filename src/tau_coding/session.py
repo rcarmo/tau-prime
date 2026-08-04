@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+import inspect
+from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from tau_agent import (
     AgentEvent,
@@ -108,9 +109,13 @@ from tau_coding.session_export import (
     export_session_artifact,
     normalize_export_format,
 )
-from tau_coding.session_manager import SessionManager
+from tau_coding.session_manager import CodingSessionRecord, SessionManager
 from tau_coding.skills import Skill, expand_skill_command, load_skills_with_diagnostics
 from tau_coding.smart_compaction import compaction_budget
+from tau_coding.sqlite_session_manager import (
+    SqliteCodingSessionManager,
+    SqliteCodingSessionRecord,
+)
 from tau_coding.system_prompt import (
     BuildSystemPromptOptions,
     ProjectContextFile,
@@ -127,6 +132,9 @@ from tau_coding.tools import create_bash_tool, create_coding_tools
 
 StreamingBehavior = Literal["steer", "follow_up"]
 TREE_RUNNING_MESSAGE = "Tau is still working. Press Escape to interrupt before using /tree."
+
+type CodingSessionManager = SessionManager | SqliteCodingSessionManager
+type CodingSessionRecordLike = CodingSessionRecord | SqliteCodingSessionRecord
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,7 +215,7 @@ class CodingSessionConfig:
     tools: list[AgentTool] | None = None
     resource_paths: TauResourcePaths | None = None
     session_id: str | None = None
-    session_manager: SessionManager | None = None
+    session_manager: CodingSessionManager | None = None
     command_registry: CommandRegistry | None = None
     provider_name: str = "openai"
     provider_settings: ProviderSettings | None = None
@@ -266,6 +274,7 @@ class CodingSession:
         self._provider_compaction_enabled = config.provider_compaction_enabled
         self._compaction_strategy = config.compaction_strategy
         self._runtime_model_limits: RuntimeModelLimits | None = None
+        self._pending_manager_metadata_sync = False
         self._thinking_level = _state_thinking_level(state, config.thinking_level)
         self._apply_remote_compaction_state(self._latest_remote_compaction_state())
         self._owned_providers: list[ClosableModelProvider] = []
@@ -713,17 +722,21 @@ class CodingSession:
     @property
     def session_title(self) -> str | None:
         """Return this session's indexed human-friendly title, if named."""
-        if self._config.session_id is None or self._config.session_manager is None:
+        if self._config.session_id is None:
             return None
-        record = self._config.session_manager.get_session(self._config.session_id)
+        manager = self._config.session_manager
+        if not isinstance(manager, SessionManager):
+            return None
+        record = manager.get_session(self._config.session_id)
         if record is None:
             return None
         return record.title
 
     @property
     def session_manager(self) -> SessionManager | None:
-        """Return the session manager, if available."""
-        return self._config.session_manager
+        """Return the legacy session manager, if available."""
+        manager = self._config.session_manager
+        return manager if isinstance(manager, SessionManager) else None
 
     @property
     def is_running(self) -> bool:
@@ -773,12 +786,7 @@ class CodingSession:
         self._sync_thinking_level_to_active_model()
         self._refresh_runtime_provider()
         self._persist_default_model_choice()
-        if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(
-                self._config.session_id,
-                model=model,
-                provider_name=self.provider_name,
-            )
+        self._touch_session_manager_for_active_model()
 
     def set_model_choice(self, choice: ModelChoice) -> None:
         """Switch provider/model as one operation."""
@@ -878,12 +886,7 @@ class CodingSession:
         self._thinking_level = thinking_level
         if persist_default:
             self._persist_default_model_choice()
-        if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(
-                self._config.session_id,
-                model=model,
-                provider_name=self.provider_name,
-            )
+        self._touch_session_manager_for_active_model()
 
     async def set_thinking_level(self, level: str) -> str:
         """Persist and activate a thinking mode for future turns."""
@@ -964,6 +967,33 @@ class CodingSession:
             fallback_settings=self._provider_settings,
         )
         self._sync_thinking_level_to_active_model()
+
+    def _touch_session_manager_for_active_model(self) -> None:
+        session_id = self._config.session_id
+        manager = self._config.session_manager
+        if session_id is None or manager is None:
+            return
+        if isinstance(manager, SessionManager):
+            manager.touch_session(
+                session_id,
+                model=self.model,
+                provider_name=self.provider_name,
+            )
+            return
+        self._pending_manager_metadata_sync = True
+
+    async def _flush_pending_session_manager_metadata(self) -> None:
+        if not self._pending_manager_metadata_sync:
+            return
+        self._pending_manager_metadata_sync = False
+        if self._config.session_id is None or self._config.session_manager is None:
+            return
+        await _manager_touch_session(
+            self._config.session_manager,
+            self._config.session_id,
+            model=self.model,
+            provider_name=self.provider_name,
+        )
 
     def _refresh_runtime_provider(self) -> None:
         if self._runtime_provider_config is None:
@@ -1076,7 +1106,8 @@ class CodingSession:
         manager = self._config.session_manager
         if manager is None:
             raise ValueError("Session manager is not available")
-        record = manager.get_session(session_id)
+        await self._flush_pending_session_manager_metadata()
+        record = await _manager_get_session(manager, session_id)
         if record is None:
             raise ValueError(f"Unknown session: {session_id}")
 
@@ -1112,7 +1143,7 @@ class CodingSession:
                 provider=self._harness.config.provider,
                 model=restored_model,
                 cwd=record.cwd,
-                storage=jsonl_session_storage(record.path),
+                storage=_session_storage_for_record(manager, record),
                 system=self._config.system,
                 custom_system_prompt=self._config.custom_system_prompt,
                 append_system_prompt=self._config.append_system_prompt,
@@ -1137,11 +1168,14 @@ class CodingSession:
         self._state = replacement._state
         self._harness = replacement._harness
         self._last_parent_id = replacement._last_parent_id
+        self._pending_initial_entries = replacement._pending_initial_entries
+        self._session_initialization_lock = replacement._session_initialization_lock
         self._skills = replacement._skills
         self._prompt_templates = replacement._prompt_templates
         self._context_files = replacement._context_files
         self._resource_diagnostics = replacement._resource_diagnostics
         self._command_registry = replacement._command_registry
+        self._extension_runtime = replacement._extension_runtime
         self._provider_name = replacement._provider_name
         self._provider_settings = replacement._provider_settings
         self._runtime_provider_config = replacement._runtime_provider_config
@@ -1151,7 +1185,11 @@ class CodingSession:
         self._auto_compact_enabled = replacement._auto_compact_enabled
         self._provider_compaction_enabled = replacement._provider_compaction_enabled
         self._compaction_strategy = replacement._compaction_strategy
+        self._runtime_model_limits = replacement._runtime_model_limits
+        self._pending_manager_metadata_sync = replacement._pending_manager_metadata_sync
         self._thinking_level = replacement._thinking_level
+        self._diagnostic_logger = replacement._diagnostic_logger
+        self._credential_store = replacement._credential_store
         return f"Resumed session: {record.id}"
 
     async def new_session(self) -> str:
@@ -1159,6 +1197,7 @@ class CodingSession:
         manager = self._config.session_manager
         if manager is None:
             raise ValueError("Session manager is not available")
+        await self._flush_pending_session_manager_metadata()
 
         provider_name = self._provider_name
         model = self.model
@@ -1175,7 +1214,8 @@ class CodingSession:
                 current=self._thinking_level,
             )
 
-        record = manager.prepare_session(
+        record = await _manager_prepare_session(
+            manager,
             cwd=self.cwd,
             model=model,
             provider_name=provider_name,
@@ -1186,7 +1226,7 @@ class CodingSession:
                 provider=self._harness.config.provider,
                 model=record.model or model,
                 cwd=record.cwd,
-                storage=jsonl_session_storage(record.path),
+                storage=_session_storage_for_record(manager, record),
                 session_id=record.id,
                 provider_name=provider_name,
                 provider_settings=self._provider_settings,
@@ -1199,11 +1239,14 @@ class CodingSession:
         self._state = replacement._state
         self._harness = replacement._harness
         self._last_parent_id = replacement._last_parent_id
+        self._pending_initial_entries = replacement._pending_initial_entries
+        self._session_initialization_lock = replacement._session_initialization_lock
         self._skills = replacement._skills
         self._prompt_templates = replacement._prompt_templates
         self._context_files = replacement._context_files
         self._resource_diagnostics = replacement._resource_diagnostics
         self._command_registry = replacement._command_registry
+        self._extension_runtime = replacement._extension_runtime
         self._provider_name = replacement._provider_name
         self._provider_settings = replacement._provider_settings
         self._runtime_provider_config = replacement._runtime_provider_config
@@ -1213,7 +1256,11 @@ class CodingSession:
         self._auto_compact_enabled = replacement._auto_compact_enabled
         self._provider_compaction_enabled = replacement._provider_compaction_enabled
         self._compaction_strategy = replacement._compaction_strategy
+        self._runtime_model_limits = replacement._runtime_model_limits
+        self._pending_manager_metadata_sync = replacement._pending_manager_metadata_sync
         self._thinking_level = replacement._thinking_level
+        self._diagnostic_logger = replacement._diagnostic_logger
+        self._credential_store = replacement._credential_store
         return f"Started new session: {record.id}"
 
     async def compact(self, instructions: str | None = None) -> str:
@@ -1243,10 +1290,13 @@ class CodingSession:
 
     async def aclose(self) -> None:
         """Close runtime providers created by this coding session."""
-        self._dispatch_extension_lifecycle("shutdown")
-        for provider in self._owned_providers:
-            await provider.aclose()
-        self._owned_providers.clear()
+        try:
+            await self._flush_pending_session_manager_metadata()
+        finally:
+            self._dispatch_extension_lifecycle("shutdown")
+            for provider in self._owned_providers:
+                await provider.aclose()
+            self._owned_providers.clear()
 
     def handle_command(self, text: str) -> CommandResult:
         """Handle coding-session slash commands.
@@ -1337,6 +1387,7 @@ class CodingSession:
             )
             raise
 
+        await self._flush_pending_session_manager_metadata()
         await self._refresh_runtime_model_limits()
         if self._harness.is_running:
             if streaming_behavior == "steer":
@@ -1400,6 +1451,7 @@ class CodingSession:
     async def continue_(self) -> AsyncIterator[AgentEvent]:
         """Continue the agent from restored state and persist new messages."""
         context = self._diagnostic_context()
+        await self._flush_pending_session_manager_metadata()
         await self._refresh_runtime_model_limits()
         persisted_count = len(self._harness.messages)
         try:
@@ -1523,7 +1575,8 @@ class CodingSession:
         entries = await self._read_session_entries()
         self._state = SessionState.from_entries(entries, leaf_id=leaf_id)
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(
+            await _manager_touch_session(
+                self._config.session_manager,
                 self._config.session_id,
                 model=self.model,
                 provider_name=self.provider_name,
@@ -1543,20 +1596,29 @@ class CodingSession:
             return
         async with self._session_initialization_lock:
             initialized = bool(self._pending_initial_entries)
+            if not initialized:
+                return
+            if self._config.index_on_first_persist and isinstance(
+                self._config.session_manager, SqliteCodingSessionManager
+            ):
+                await self._index_current_session()
             while self._pending_initial_entries:
                 entry = self._pending_initial_entries[0]
                 await self._config.storage.append(entry)
                 self._pending_initial_entries = self._pending_initial_entries[1:]
-            if initialized and self._config.index_on_first_persist:
-                self._index_current_session()
+            if self._config.index_on_first_persist and not isinstance(
+                self._config.session_manager, SqliteCodingSessionManager
+            ):
+                await self._index_current_session()
 
-    def _index_current_session(self) -> None:
+    async def _index_current_session(self) -> None:
         if self._config.session_id is None or self._config.session_manager is None:
             return
-        existing = self._config.session_manager.get_session(self._config.session_id)
+        existing = await _manager_get_session(self._config.session_manager, self._config.session_id)
         if existing is not None:
             return
-        self._config.session_manager.create_session(
+        await _manager_create_session(
+            self._config.session_manager,
             cwd=self.cwd,
             model=self.model,
             provider_name=self.provider_name,
@@ -1741,9 +1803,7 @@ class CodingSession:
                     final_text = event.message.content
                 elif isinstance(event, ProviderErrorEvent):
                     details = f": {event.data}" if event.data is not None else ""
-                    raise RuntimeError(
-                        f"Compaction summarization failed: {event.message}{details}"
-                    )
+                    raise RuntimeError(f"Compaction summarization failed: {event.message}{details}")
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -2332,6 +2392,88 @@ def _interrupted_tool_repair_plan(
 def default_session_path(cwd: Path) -> Path:
     """Return Tau's default user-home session path for a project cwd."""
     return TauPaths().default_session_path(cwd)
+
+
+async def _manager_result[T](result: T | Awaitable[T]) -> T:
+    if inspect.isawaitable(result):
+        return await cast(Awaitable[T], result)
+    return result
+
+
+async def _manager_get_session(
+    manager: CodingSessionManager,
+    session_id: str,
+) -> CodingSessionRecordLike | None:
+    return await _manager_result(manager.get_session(session_id))
+
+
+async def _manager_prepare_session(
+    manager: CodingSessionManager,
+    *,
+    cwd: Path,
+    model: str,
+    provider_name: str,
+    title: str | None = None,
+    session_id: str | None = None,
+) -> CodingSessionRecordLike:
+    return await _manager_result(
+        manager.prepare_session(
+            cwd=cwd,
+            model=model,
+            provider_name=provider_name,
+            title=title,
+            session_id=session_id,
+        )
+    )
+
+
+async def _manager_create_session(
+    manager: CodingSessionManager,
+    *,
+    cwd: Path,
+    model: str,
+    provider_name: str,
+    title: str | None = None,
+    session_id: str | None = None,
+) -> CodingSessionRecordLike:
+    return await _manager_result(
+        manager.create_session(
+            cwd=cwd,
+            model=model,
+            provider_name=provider_name,
+            title=title,
+            session_id=session_id,
+        )
+    )
+
+
+async def _manager_touch_session(
+    manager: CodingSessionManager,
+    session_id: str,
+    *,
+    model: str | None = None,
+    provider_name: str | None = None,
+    title: str | None = None,
+) -> CodingSessionRecordLike | None:
+    return await _manager_result(
+        manager.touch_session(
+            session_id,
+            model=model,
+            provider_name=provider_name,
+            title=title,
+        )
+    )
+
+
+def _session_storage_for_record(
+    manager: CodingSessionManager,
+    record: CodingSessionRecordLike,
+) -> SessionStorage:
+    if isinstance(record, SqliteCodingSessionRecord):
+        if not isinstance(manager, SqliteCodingSessionManager):
+            raise RuntimeError(f"SQLite session record requires a SQLite manager: {record.id}")
+        return manager.session_storage(record.id)
+    return jsonl_session_storage(record.path)
 
 
 def jsonl_session_storage(path: str | Path) -> JsonlSessionStorage:

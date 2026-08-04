@@ -52,6 +52,10 @@ from tau_coding import (
 )
 from tau_coding import session as coding_session_module
 from tau_coding.session import _ordered_tree_entries, parse_terminal_command
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
+from tau_web.sqlite.connection import SqliteDatabase
+from tau_web.sqlite.session_storage import SqliteSessionStorage
+from tau_web.sqlite.sessions import SessionRepository
 
 
 async def _collect_session_events(session_stream: object) -> list[object]:
@@ -68,6 +72,10 @@ def _config(
         storage=storage,
         cwd=tmp_path,
     )
+
+
+def _sqlite_paths(tmp_path: Path) -> TauPaths:
+    return TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
 
 
 class SwitchableFakeProvider:
@@ -2510,6 +2518,122 @@ async def test_session_resumes_indexed_session(tmp_path: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_session_resumes_sqlite_indexed_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    paths = _sqlite_paths(tmp_path)
+    first_cwd = tmp_path / "first"
+    second_cwd = tmp_path / "second"
+    first_cwd.mkdir()
+    second_cwd.mkdir()
+    settings = ProviderSettings(
+        default_provider="sqlite-fake",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="sqlite-fake",
+                models=("fake",),
+                default_model="fake",
+            ),
+        ),
+    )
+    created: list[tuple[str, str | None]] = []
+
+    def create_provider(
+        provider_config: object,
+        *,
+        credential_store: FileCredentialStore | None = None,
+        model: str | None = None,
+        thinking_level: str | None = None,
+        llm_observer: object | None = None,
+    ) -> SwitchableFakeProvider:
+        del credential_store, thinking_level, llm_observer
+        created.append((provider_config.name, model))  # type: ignore[attr-defined]
+        return SwitchableFakeProvider(provider_config)
+
+    monkeypatch.setattr(coding_session_module, "create_model_provider", create_provider)
+
+    async with (
+        SqliteDatabase(paths.home / "tau.sqlite3") as database,
+        SqliteCodingSessionManager(
+            paths=paths,
+            database=database,
+            manage_database_lifecycle=False,
+        ) as manager,
+    ):
+        repository = SessionRepository(database)
+        first_record = await manager.create_session(
+            cwd=first_cwd,
+            model="fake",
+            provider_name="sqlite-fake",
+            title="Current",
+            session_id="current-sqlite-session",
+        )
+        second_record = await manager.create_session(
+            cwd=second_cwd,
+            model="fake",
+            provider_name="sqlite-fake",
+            title="Resumed",
+            session_id="resumed-sqlite-session",
+        )
+        resumed_storage = SqliteSessionStorage(database, second_record.id)
+        info = SessionInfoEntry(cwd=str(second_record.cwd), title="Resumed")
+        model = ModelChangeEntry(parent_id=info.id, model="fake")
+        thinking = ThinkingLevelChangeEntry(
+            parent_id=model.id,
+            thinking_level="medium",
+        )
+        user = MessageEntry(
+            parent_id=thinking.id,
+            message=UserMessage(content="Earlier"),
+        )
+        assistant = MessageEntry(
+            parent_id=user.id,
+            message=AssistantMessage(content="Restored"),
+        )
+        leaf = LeafEntry(parent_id=assistant.id, entry_id=assistant.id)
+        await resumed_storage.append_many([info, model, thinking, user, assistant, leaf])
+        created.clear()
+
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=FakeProvider([]),
+                model="fake",
+                system="You are Tau.",
+                storage=manager.session_storage(first_record.id),
+                cwd=first_record.cwd,
+                session_id=first_record.id,
+                session_manager=manager,
+                provider_name="sqlite-fake",
+                provider_settings=settings,
+                runtime_provider_config=settings.get_provider("sqlite-fake"),
+            )
+        )
+        created.clear()
+
+        message = await session.resume(second_record.id)
+        record = await repository.get(second_record.id)
+        stored_entries = await resumed_storage.read_all()
+
+    assert message == f"Resumed session: {second_record.id}"
+    assert session.session_id == second_record.id
+    assert session.cwd == second_record.cwd
+    assert session.model == "fake"
+    assert session.thinking_level == "medium"
+    assert session.state.active_leaf_id == assistant.id
+    assert session.messages == (
+        UserMessage(content="Earlier"),
+        AssistantMessage(content="Restored"),
+    )
+    assert record is not None
+    assert record.title == "Resumed"
+    assert record.provider_name == "sqlite-fake"
+    assert record.model == "fake"
+    assert record.active_leaf_entry_id == assistant.id
+    assert stored_entries == [info, model, thinking, user, assistant, leaf]
+    assert created == [("sqlite-fake", "fake")]
+
+
+@pytest.mark.anyio
 async def test_session_toggle_scoped_model_preserves_newer_provider_file_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2909,6 +3033,79 @@ async def test_session_new_session_is_indexed_after_first_message(
     assert indexed.provider_name == "openai"
     assert indexed.model == "gpt-5"
     assert indexed.path.exists()
+
+
+@pytest.mark.anyio
+async def test_session_new_sqlite_session_is_indexed_after_first_prompt(tmp_path: Path) -> None:
+    paths = _sqlite_paths(tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    provider = FakeProvider(
+        [
+            [
+                ProviderResponseStartEvent(model="fake"),
+                ProviderResponseEndEvent(message=AssistantMessage(content="Done")),
+            ]
+        ]
+    )
+
+    async with (
+        SqliteDatabase(paths.home / "tau.sqlite3") as database,
+        SqliteCodingSessionManager(
+            paths=paths,
+            database=database,
+            manage_database_lifecycle=False,
+        ) as manager,
+    ):
+        repository = SessionRepository(database)
+        current_record = await manager.create_session(
+            cwd=project,
+            model="fake",
+            provider_name="sqlite-fake",
+            session_id="current-sqlite-session",
+        )
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model="fake",
+                system="You are Tau.",
+                storage=manager.session_storage(current_record.id),
+                cwd=current_record.cwd,
+                session_id=current_record.id,
+                session_manager=manager,
+                provider_name="sqlite-fake",
+            )
+        )
+
+        message = await session.new_session()
+        pending_id = session.session_id
+
+        assert pending_id is not None
+        assert await manager.get_session(pending_id) is None
+        assert not paths.sessions_dir.exists()
+
+        _events = await _collect_session_events(session.prompt("Hello"))
+
+        record = await repository.get(pending_id)
+        storage = SqliteSessionStorage(database, pending_id)
+        entries = await storage.read_all()
+
+    assert message == f"Started new session: {pending_id}"
+    assert record is not None
+    assert record.provider_name == "sqlite-fake"
+    assert record.model == "fake"
+    assert len(entries) == 7
+    assert isinstance(entries[0], SessionInfoEntry)
+    assert isinstance(entries[1], ModelChangeEntry)
+    assert isinstance(entries[2], ThinkingLevelChangeEntry)
+    assert [entry.message for entry in entries if isinstance(entry, MessageEntry)] == [
+        UserMessage(content="Hello"),
+        AssistantMessage(content="Done"),
+    ]
+    assert isinstance(entries[-2], MessageEntry)
+    assert record.active_leaf_entry_id == entries[-2].id
+    assert session.state.active_leaf_id == entries[-2].id
+    assert list(paths.sessions_dir.rglob("*.jsonl")) == []
 
 
 @pytest.mark.anyio
