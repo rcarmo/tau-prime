@@ -1,0 +1,202 @@
+from __future__ import annotations
+
+import sqlite3
+from collections.abc import Iterator
+
+import pytest
+
+from tau_web.sqlite.migrations import LATEST_SCHEMA_VERSION, MIGRATIONS, pending_migrations
+
+
+@pytest.fixture
+def database() -> Iterator[sqlite3.Connection]:
+    connection = sqlite3.connect(":memory:")
+    connection.execute("PRAGMA foreign_keys = ON")
+    for migration in MIGRATIONS:
+        connection.executescript(migration.sql)
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name, applied_at) VALUES (?, ?, ?)",
+            (migration.version, migration.name, "2026-08-04T00:00:00Z"),
+        )
+    yield connection
+    connection.close()
+
+
+def _insert_workspace_and_session(
+    database: sqlite3.Connection, *, session_id: str = "session-1", agent_name: str = "default"
+) -> None:
+    database.execute(
+        """
+        INSERT INTO workspaces(workspace_id, root_path, created_at, updated_at)
+        VALUES ('workspace-1', '/workspace', 'now', 'now')
+        """
+    )
+    database.execute(
+        """
+        INSERT INTO sessions(
+            session_id, workspace_id, agent_name, provider_name, model, created_at, updated_at
+        ) VALUES (?, 'workspace-1', ?, 'test', 'test-model', 'now', 'now')
+        """,
+        (session_id, agent_name),
+    )
+
+
+def test_migration_versions_are_strictly_ordered() -> None:
+    versions = [migration.version for migration in MIGRATIONS]
+
+    assert versions == list(range(1, LATEST_SCHEMA_VERSION + 1))
+    assert len({migration.name for migration in MIGRATIONS}) == len(MIGRATIONS)
+    assert pending_migrations(0) == MIGRATIONS
+    assert pending_migrations(LATEST_SCHEMA_VERSION) == ()
+
+
+def test_pending_migrations_rejects_unsupported_versions() -> None:
+    with pytest.raises(ValueError, match="negative"):
+        pending_migrations(-1)
+    with pytest.raises(RuntimeError, match="newer"):
+        pending_migrations(LATEST_SCHEMA_VERSION + 1)
+
+
+def test_initial_schema_contains_all_runtime_entities(database: sqlite3.Connection) -> None:
+    objects = {
+        (row[0], row[1])
+        for row in database.execute(
+            "SELECT type, name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"
+        )
+    }
+
+    expected_tables = {
+        "schema_migrations",
+        "workspaces",
+        "sessions",
+        "session_entries",
+        "session_branches",
+        "session_runs",
+        "queued_messages",
+        "chat_deliveries",
+        "timeline_messages",
+        "usage_records",
+        "session_plans",
+        "media_blobs",
+        "media_items",
+        "media_references",
+        "extension_state",
+        "audit_records",
+    }
+    assert {("table", name) for name in expected_tables} <= objects
+    assert ("table", "search_fts") in objects
+
+
+def test_active_session_aliases_are_case_insensitively_unique(
+    database: sqlite3.Connection,
+) -> None:
+    _insert_workspace_and_session(database, agent_name="Review")
+
+    with pytest.raises(sqlite3.IntegrityError):
+        database.execute(
+            """
+            INSERT INTO sessions(
+                session_id, workspace_id, agent_name, provider_name, model,
+                created_at, updated_at
+            ) VALUES ('session-2', 'workspace-1', 'review', 'test', 'model', 'now', 'now')
+            """
+        )
+
+    database.execute("UPDATE sessions SET archived_at = 'now' WHERE session_id = 'session-1'")
+    database.execute(
+        """
+        INSERT INTO sessions(
+            session_id, workspace_id, agent_name, provider_name, model, created_at, updated_at
+        ) VALUES ('session-2', 'workspace-1', 'review', 'test', 'model', 'now', 'now')
+        """
+    )
+
+
+def test_entries_preserve_append_order_and_branch_edges(database: sqlite3.Connection) -> None:
+    _insert_workspace_and_session(database)
+    database.execute(
+        """
+        INSERT INTO session_entries(
+            entry_id, session_id, parent_entry_id, entry_type, timestamp, ordinal, payload_json
+        ) VALUES ('entry-1', 'session-1', NULL, 'session_info', 1.0, 0, '{}')
+        """
+    )
+    database.execute(
+        """
+        INSERT INTO session_entries(
+            entry_id, session_id, parent_entry_id, entry_type, timestamp, ordinal, payload_json
+        ) VALUES ('entry-2', 'session-1', 'entry-1', 'message', 2.0, 1, '{}')
+        """
+    )
+    database.execute(
+        """
+        INSERT INTO session_branches(
+            branch_id, session_id, name, leaf_entry_id, created_at, updated_at
+        ) VALUES ('branch-1', 'session-1', 'main', 'entry-2', 'now', 'now')
+        """
+    )
+    database.execute(
+        "UPDATE sessions SET active_leaf_entry_id = 'entry-2' WHERE session_id = 'session-1'"
+    )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        database.execute(
+            """
+            INSERT INTO session_entries(
+                entry_id, session_id, entry_type, timestamp, ordinal, payload_json
+            ) VALUES ('entry-3', 'session-1', 'message', 3.0, 1, '{}')
+            """
+        )
+
+
+def test_queue_delivery_and_extension_constraints(database: sqlite3.Connection) -> None:
+    _insert_workspace_and_session(database)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        database.execute(
+            """
+            INSERT INTO queued_messages(
+                queue_id, session_id, queue_kind, position, content_json, created_at
+            ) VALUES ('queue-1', 'session-1', 'later', 0, '{}', 'now')
+            """
+        )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        database.execute(
+            """
+            INSERT INTO extension_state(
+                extension_id, scope, scope_id, key, value_json, updated_at
+            ) VALUES ('test', 'invalid', 'x', 'key', '{}', 'now')
+            """
+        )
+
+    database.execute(
+        """
+        INSERT INTO chat_deliveries(
+            delivery_id, source_session_id, target_session_id, mode, content,
+            idempotency_key, status, created_at
+        ) VALUES ('delivery-1', 'session-1', 'session-1', 'queue', 'hello',
+                  'same-key', 'accepted', 'now')
+        """
+    )
+    with pytest.raises(sqlite3.IntegrityError):
+        database.execute(
+            """
+            INSERT INTO chat_deliveries(
+                delivery_id, source_session_id, target_session_id, mode, content,
+                idempotency_key, status, created_at
+            ) VALUES ('delivery-2', 'session-1', 'session-1', 'queue', 'again',
+                      'same-key', 'accepted', 'now')
+            """
+        )
+
+
+def test_foreign_keys_reject_orphan_entries(database: sqlite3.Connection) -> None:
+    with pytest.raises(sqlite3.IntegrityError):
+        database.execute(
+            """
+            INSERT INTO session_entries(
+                entry_id, session_id, entry_type, timestamp, ordinal, payload_json
+            ) VALUES ('entry-1', 'missing', 'message', 1.0, 0, '{}')
+            """
+        )
