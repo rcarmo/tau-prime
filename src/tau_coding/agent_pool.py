@@ -330,6 +330,20 @@ class AsyncAgentPool:
         self._request_cancel(entry)
         return True
 
+    def abort_current_run(self, session_id: str) -> bool:
+        """Request cancellation and forcibly cancel the active run task, if any."""
+        entry = self._require_session(session_id)
+        if entry.disposed:
+            raise SessionClosedError(f"Session {session_id!r} is closed.")
+        run_id = entry.current_run_id
+        if run_id is None:
+            return False
+        self._request_cancel(entry)
+        task = entry.run_tasks.get(run_id)
+        if task is not None:
+            task.cancel()
+        return True
+
     async def close_session(self, session_id: str) -> None:
         """Stop accepting work, drain in-flight tasks, and close owned resources."""
         entry = self._require_session(session_id)

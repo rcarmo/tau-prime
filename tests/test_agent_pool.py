@@ -55,6 +55,7 @@ class _FakeSession:
         prompt_scripts: Sequence[_Script] = (),
         continue_scripts: Sequence[_Script] = (),
         queue_message_scripts: Sequence[_Script] = (),
+        cooperative_cancel: bool = True,
     ) -> None:
         self._prompt_scripts: deque[_Script] = deque(prompt_scripts)
         self._continue_scripts: deque[_Script] = deque(continue_scripts)
@@ -66,6 +67,7 @@ class _FakeSession:
         self.close_calls = 0
         self.queued_steering: tuple[str, ...] = ()
         self.queued_follow_up: tuple[str, ...] = ()
+        self._cooperative_cancel = cooperative_cancel
         self._active_release: asyncio.Event | None = None
         self._active_run_token: int | None = None
         self._next_run_token = 0
@@ -112,7 +114,7 @@ class _FakeSession:
 
     def cancel(self) -> None:
         self.cancel_calls += 1
-        if self._active_release is not None:
+        if self._cooperative_cancel and self._active_release is not None:
             self._active_release.set()
 
     async def aclose(self) -> None:
@@ -600,6 +602,56 @@ async def test_agent_pool_cancel_current_run_unblocks_backpressure_and_drains_qu
     assert await second_events == ["agent_start", "agent_end"]
     assert session.cancel_calls == 1
     assert session.prompt_calls == ["first", "second"]
+    await _assert_pool_drained(pool, "alpha")
+
+
+@pytest.mark.anyio
+async def test_agent_pool_abort_current_run_cancels_task_and_preserves_successor_state() -> None:
+    first_started = asyncio.Event()
+    first_release = asyncio.Event()
+    second_started = asyncio.Event()
+    second_release = asyncio.Event()
+
+    session = _FakeSession(
+        prompt_scripts=(
+            _Script(started=first_started, release=first_release),
+            _Script(
+                events=(AgentStartEvent(), AgentEndEvent()),
+                started=second_started,
+                release=second_release,
+            ),
+        ),
+        cooperative_cancel=False,
+    )
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("alpha", session)
+    pool._sessions["alpha"].turn_lock = _YieldingLock()
+
+    first = pool.submit_prompt("alpha", "first", run_id="prompt-1")
+    second = pool.submit_prompt("alpha", "second", run_id="prompt-2")
+
+    await asyncio.wait_for(first_started.wait(), timeout=1.0)
+
+    assert pool.abort_current_run("alpha") is True
+    assert pool.snapshot("alpha").state is PoolSessionState.CANCELLING
+
+    await asyncio.wait_for(second_started.wait(), timeout=1.0)
+
+    first_result = await asyncio.wait_for(first.wait(), timeout=1.0)
+    assert first_result.status is RunStatus.CANCELLED
+    assert not first_release.is_set()
+    assert await _event_types(first) == []
+
+    snapshot = pool.snapshot("alpha")
+    assert snapshot.current_run_id == second.run_id
+    assert snapshot.state is PoolSessionState.RUNNING
+
+    second_release.set()
+    assert (await second.wait()).status is RunStatus.COMPLETED
+    assert await _event_types(second) == ["agent_start", "agent_end"]
+    assert session.cancel_calls == 1
+    assert session.prompt_calls == ["first", "second"]
+    assert pool.abort_current_run("alpha") is False
     await _assert_pool_drained(pool, "alpha")
 
 

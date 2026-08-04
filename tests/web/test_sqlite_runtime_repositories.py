@@ -93,6 +93,36 @@ async def test_queue_repository_orders_consumes_and_prunes(tmp_path: Path) -> No
 
 
 @pytest.mark.anyio
+async def test_queue_repository_consume_exact_is_fifo_and_validates_identity(
+    tmp_path: Path,
+) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        queue = QueueRepository(database)
+
+        one = await queue.enqueue(first, queue_kind="follow_up", content={"text": "one"})
+        two = await queue.enqueue(first, queue_kind="follow_up", content={"text": "two"})
+        other = await queue.enqueue(second, queue_kind="follow_up", content={"text": "other"})
+
+        with pytest.raises(RepositoryError, match="next FIFO row"):
+            await queue.consume_exact(two.queue_id, session_id=first, queue_kind="follow_up")
+        with pytest.raises(RepositoryError, match="does not belong"):
+            await queue.consume_exact(other.queue_id, session_id=first, queue_kind="follow_up")
+
+        consumed = await queue.consume_exact(
+            one.queue_id,
+            session_id=first,
+            queue_kind="follow_up",
+        )
+
+        assert consumed.queue_id == one.queue_id
+        assert consumed.consumed_at is not None
+        assert [record.queue_id for record in await queue.list(session_id=first)] == [two.queue_id]
+        with pytest.raises(RepositoryError, match="already been consumed"):
+            await queue.consume_exact(one.queue_id, session_id=first, queue_kind="follow_up")
+
+
+@pytest.mark.anyio
 async def test_delivery_repository_is_idempotent_and_tracks_receipts(tmp_path: Path) -> None:
     async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
         first, second = await _seed_sessions(database)
@@ -221,13 +251,16 @@ async def test_extension_state_uses_revisions_and_connection_policy(tmp_path: Pa
             )
         with pytest.raises(RepositoryError, match="connection-scope"):
             await state.list_scope("connection", "browser")
-        assert await state.delete(
-            "extension",
-            scope="session",
-            scope_id="first",
-            key="setting",
-            expected_revision=2,
-        ) == updated
+        assert (
+            await state.delete(
+                "extension",
+                scope="session",
+                scope_id="first",
+                key="setting",
+                expected_revision=2,
+            )
+            == updated
+        )
 
         connection_state = ExtensionStateRepository(
             database,

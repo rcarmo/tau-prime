@@ -36,9 +36,7 @@ type DeliveryStatus = Literal[
 ]
 type ExtensionScope = Literal["global", "workspace", "session", "connection"]
 
-_RUN_STATUSES = frozenset(
-    {"pending", "running", "completed", "cancelled", "failed", "interrupted"}
-)
+_RUN_STATUSES = frozenset({"pending", "running", "completed", "cancelled", "failed", "interrupted"})
 _TERMINAL_RUN_STATUSES = frozenset({"completed", "cancelled", "failed", "interrupted"})
 _QUEUE_KINDS = frozenset({"steer", "follow_up"})
 _DELIVERY_MODES = frozenset({"auto", "queue", "steer"})
@@ -622,6 +620,59 @@ class QueueRepository(SqliteRepository):
             updated = await transaction.fetch_one(
                 "SELECT * FROM queued_messages WHERE queue_id = ?",
                 (queue_id,),
+            )
+            if updated is None:
+                raise RuntimeError("Queue update did not return a record")
+            return _queue_from_row(updated)
+
+        return await self.database.write(write)
+
+    async def consume_exact(
+        self,
+        queue_id: str,
+        *,
+        session_id: str,
+        queue_kind: QueueKind,
+    ) -> QueueMessageRecord:
+        record_id = _require_identifier(queue_id, field="Queue id")
+        session_key = _require_identifier(session_id, field="Session id")
+        selected_kind = _validate_queue_kind(queue_kind)
+        timestamp = _timestamp()
+
+        async def write(transaction: SqliteTransaction) -> QueueMessageRecord:
+            current_row = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ?",
+                (record_id,),
+            )
+            if current_row is None:
+                raise RecordNotFoundError(f"Unknown queued message: {record_id}")
+            current = _queue_from_row(current_row)
+            if current.session_id != session_key or current.queue_kind != selected_kind:
+                raise RepositoryError("Queued message does not belong to the requested session")
+            if current.consumed_at is not None:
+                raise RepositoryError("Queued message has already been consumed")
+
+            head_row = await transaction.fetch_one(
+                """
+                SELECT * FROM queued_messages
+                WHERE session_id = ? AND queue_kind = ? AND consumed_at IS NULL
+                ORDER BY position
+                LIMIT 1
+                """,
+                (session_key, selected_kind),
+            )
+            if head_row is None:
+                raise RepositoryError("No pending queued messages exist for the requested session")
+            if str(head_row["queue_id"]) != record_id:
+                raise RepositoryError("Queued message is not the next FIFO row")
+
+            await transaction.execute(
+                "UPDATE queued_messages SET consumed_at = ? WHERE queue_id = ?",
+                (timestamp, record_id),
+            )
+            updated = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ?",
+                (record_id,),
             )
             if updated is None:
                 raise RuntimeError("Queue update did not return a record")
@@ -1842,9 +1893,7 @@ def _delivery_from_row(row: Row) -> DeliveryRecord:
         target_session_id=(
             str(row["target_session_id"]) if row["target_session_id"] is not None else None
         ),
-        target_address=(
-            str(row["target_address"]) if row["target_address"] is not None else None
-        ),
+        target_address=(str(row["target_address"]) if row["target_address"] is not None else None),
         mode=_validate_delivery_mode(str(row["mode"])),
         content=str(row["content"]),
         idempotency_key=(
@@ -1856,9 +1905,7 @@ def _delivery_from_row(row: Row) -> DeliveryRecord:
         status=_validate_delivery_status(str(row["status"])),
         created_at=str(row["created_at"]),
         accepted_at=str(row["accepted_at"]) if row["accepted_at"] is not None else None,
-        completed_at=(
-            str(row["completed_at"]) if row["completed_at"] is not None else None
-        ),
+        completed_at=(str(row["completed_at"]) if row["completed_at"] is not None else None),
         error=_load_json_object(row["error_json"]) if row["error_json"] is not None else None,
     )
 
@@ -1938,13 +1985,9 @@ def _audit_from_row(row: Row) -> AuditRecord:
         event_type=str(row["event_type"]),
         actor_type=str(row["actor_type"]),
         actor_id=str(row["actor_id"]) if row["actor_id"] is not None else None,
-        workspace_id=(
-            str(row["workspace_id"]) if row["workspace_id"] is not None else None
-        ),
+        workspace_id=(str(row["workspace_id"]) if row["workspace_id"] is not None else None),
         session_id=str(row["session_id"]) if row["session_id"] is not None else None,
-        extension_id=(
-            str(row["extension_id"]) if row["extension_id"] is not None else None
-        ),
+        extension_id=(str(row["extension_id"]) if row["extension_id"] is not None else None),
         request_id=str(row["request_id"]) if row["request_id"] is not None else None,
         details=_load_json_object(row["details_json"]),
         created_at=str(row["created_at"]),
