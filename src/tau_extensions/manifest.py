@@ -35,6 +35,8 @@ type Permission = Literal[
     "events",
     "views",
     "actions",
+    "sandboxed_widgets",
+    "trusted_frontend",
 ]
 
 _ALLOWED_PERMISSIONS: frozenset[str] = frozenset(
@@ -48,13 +50,13 @@ _ALLOWED_PERMISSIONS: frozenset[str] = frozenset(
         "events",
         "views",
         "actions",
+        "sandboxed_widgets",
+        "trusted_frontend",
     }
 )
 _MISSING = object()
 _ID_LABEL_RE = r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-_ID_RE = re.compile(
-    rf"^(?:(?:{_ID_LABEL_RE}\.)+{_ID_LABEL_RE}|{_ID_LABEL_RE})$"
-)
+_ID_RE = re.compile(rf"^(?:(?:{_ID_LABEL_RE}\.)+{_ID_LABEL_RE}|{_ID_LABEL_RE})$")
 _ENTRYPOINT_RE = re.compile(
     r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$"
 )
@@ -63,9 +65,7 @@ _SEMVER_RE = re.compile(
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
     r"(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
-_VERSION_RANGE_RE = re.compile(
-    r"^(\^)?(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$"
-)
+_VERSION_RANGE_RE = re.compile(r"^(\^)?(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$")
 
 
 class ManifestError(ValueError):

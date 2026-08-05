@@ -1,0 +1,15 @@
+{
+  "name": "tau-browser-harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium-phone --project=chromium-tablet --project=chromium-desktop",
+    "test:webkit": "playwright test --project=webkit-phone --project=webkit-tablet --project=webkit-desktop",
+    "install:browsers": "playwright install chromium webkit"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.62.1"
+  }
+}

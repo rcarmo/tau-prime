@@ -7,13 +7,14 @@ Tau currently has **two extension seams**:
 
 They are related, but they are **not** the same runtime.
 
+See also [architecture](./architecture.md), [API](./api.md), and [extension examples](./examples.md).
+
 ## Current status
 
-- `tau_extensions` already ships a real portable manifest format, discovery, trust/resolution logic, lifecycle host, and typed web UI/action contracts.
-- The portable package does **not** hard-code discovery roots or auto-import code. A host must choose roots, call discovery/resolution, and provide a loader.
-- Tau Web already serves a browser renderer for declarative extension views.
-- End-user host wiring for portable manifest activation, public services, and full web integration is **still in progress**. The contracts are real; the default app integration is not yet a complete user-facing feature.
-- `tau_coding.extensions` remains the **compatibility path** used by the current Python `*.py` TUI/coding extension seam.
+- `tau_extensions` ships the portable manifest format, discovery, trust/resolution logic, lifecycle host, typed web UI/actions, scoped storage, background tasks, commands, tools, routes, events, assets, file renderers, annotations, sandboxed widgets, and trusted frontend contracts.
+- Tau Web exposes HTTP adapters and browser support for the portable services, including extension routes/assets, widgets, and trusted frontend modules.
+- The portable package deliberately does **not** hard-code discovery roots or auto-import code. The default web server starts with an empty extension directory; an embedding host chooses roots, resolves approvals and policy, loads code, and registers service bundles.
+- `tau_coding.extensions` remains the **compatibility path** used by the Python `*.py` TUI/coding extension seam.
 
 ## Portable API (`tau_extensions`)
 
@@ -32,7 +33,7 @@ Portable extensions are described by `tau-extension.json` manifests. The current
 - `version`: strict semantic version
 - `api_version`: exact or caret `major.minor` range compatible with `API_VERSION`
 - `entrypoint`: `module.path:attribute`
-- `permissions`: subset of `storage`, `background_tasks`, `assets`, `commands`, `tools`, `routes`, `events`, `views`, `actions`
+- `permissions`: subset of `storage`, `background_tasks`, `assets`, `commands`, `tools`, `routes`, `events`, `views`, `actions`, `sandboxed_widgets`, `trusted_frontend`
 - `dependencies`: optional list of `{id, version?}`
 - `contributions`: host-defined JSON object
 
@@ -208,7 +209,52 @@ Current browser behaviour:
 - dispatches `CustomEvent("tau:extension-action", ...)` when a `Button` is pressed
 - includes `view_id`, `action_id`, and merged JSON payload in the action event detail
 
-This renderer is real and shipped. What is **not** complete yet is the default server-side/public-services path that would let end users discover, activate, and drive portable manifest extensions as a finished built-in feature.
+The renderer and server-side service path are shipped. Manifest discovery and activation remain host policy: the stock server does not scan directories or import portable extension code automatically.
+
+### Trusted frontend modules
+
+Tau also exposes a **trusted frontend module** contract for exceptional host-integrated cases. See [architecture](./architecture.md) for trust tiers, [API](./api.md) for `/api/extensions/...` routes, and [extension examples](./examples.md) for compact verified snippets.
+
+Current policy and validation constraints:
+
+- Only **built-in** and **administrator-installed** extensions are eligible for exposure.
+- Workspace-sourced extensions are hard-denied for `trusted_frontend`, even if a policy allowlist tries to include it.
+- Each module must declare:
+  - `sdk_version` matching the current trusted frontend SDK version.
+  - `integrity` in standard SRI form: `sha256-<base64>`.
+- `script_path` must be a safe relative path and must resolve to a **locally registered extension asset**.
+- The Python registry requires that asset to be JavaScript (`application/javascript` or `text/javascript`) and that its bytes match the declared SRI digest.
+- Browser descriptors are validated strictly: they must contain exactly `asset_url`, `extension_id`, `integrity`, `module_id`, and `sdk_version`.
+- In the browser loader, `asset_url` must resolve to the same origin and its pathname must start with `/api/extensions/assets/`.
+- The browser loader fetches at most **64** module descriptors and at most **1 MiB** per JS asset.
+- Loaded assets must remain JavaScript when served (`application/javascript`, `text/javascript`, `application/ecmascript`, or `text/ecmascript`).
+- No workspace JavaScript is loaded through this path.
+
+Current browser module shape and lifecycle from `frontend-sdk.js`:
+
+- The module must export `activate(api)` or a default function.
+- `activate(api)` may return a disposer function; `disposeAll()` later awaits that disposer.
+- `api` is a frozen object exposing:
+  - `version`
+  - `extensionId`
+  - `moduleId`
+  - `request(path, options)`
+  - `submit`
+  - `navigate`
+  - `mountSlot(slot, mount)`
+- `request(...)` is limited to same-origin `/api/*` targets.
+- `mountSlot(...)` is limited to `dashboard`, `timeline_before`, `timeline_after`, `sidebar`, `compose_above`, and `compose_below`.
+- `mountSlot(...)` appends one owned container into that slot, passes `(container, {signal})` to the mount callback, and records an optional mount disposer returned by the callback.
+- On disposal, the SDK aborts mount signals, awaits mount disposers, removes owned containers, and only then awaits the module disposer.
+- Trusted modules run with the page's same-origin privileges; they are **not sandboxed widgets**.
+
+Use this tier only when a declarative view or sandboxed widget cannot meet requirements, for example:
+
+- shell-level keyboard/navigation integration,
+- host-owned DOM or slot integration points,
+- APIs unavailable through the widget bridge.
+
+Ordinary custom rendering is **not** sufficient justification for trusted frontend modules.
 
 ### Typed action execution
 

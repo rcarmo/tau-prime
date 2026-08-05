@@ -7,8 +7,19 @@ from pathlib import Path
 
 import pytest
 
-from tau_agent import UserMessage
-from tau_agent.session import LeafEntry, MessageEntry, SessionInfoEntry
+from tau_agent import AssistantMessage, ToolCall, ToolResultMessage, UserMessage
+from tau_agent.session import (
+    CompactionEntry,
+    CustomEntry,
+    LabelEntry,
+    LeafEntry,
+    MessageEntry,
+    ModelChangeEntry,
+    SessionEntry,
+    SessionInfoEntry,
+    ThinkingLevelChangeEntry,
+    path_to_entry,
+)
 from tau_agent.session.jsonl import entry_to_json_line
 from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
 from tau_web.sqlite.interchange import (
@@ -75,6 +86,183 @@ async def test_jsonl_import_export_round_trip_is_atomic(tmp_path: Path) -> None:
             "fixture": True,
             "interchange_format": "tau-jsonl",
         }
+
+
+@pytest.mark.anyio
+async def test_jsonl_rich_interchange_round_trip_preserves_semantics_and_branches(
+    tmp_path: Path,
+) -> None:
+    entries: list[SessionEntry] = [
+        SessionInfoEntry(
+            id="info",
+            timestamp=1.0,
+            created_at=1.0,
+            cwd="/workspace/tau",
+            title="Rich interchange source",
+        ),
+        ModelChangeEntry(
+            id="model",
+            parent_id="info",
+            timestamp=2.0,
+            model="source-model",
+        ),
+        ThinkingLevelChangeEntry(
+            id="thinking",
+            parent_id="model",
+            timestamp=3.0,
+            thinking_level="high",
+        ),
+        MessageEntry(
+            id="user-root",
+            parent_id="thinking",
+            timestamp=4.0,
+            message=UserMessage(content="Summarize current workspace state."),
+        ),
+        MessageEntry(
+            id="assistant-left",
+            parent_id="user-root",
+            timestamp=5.0,
+            message=AssistantMessage(
+                content="I will read the project summary.",
+                tool_calls=[
+                    ToolCall(id="call-read", name="read", arguments={"path": "README.md"})
+                ],
+            ),
+        ),
+        MessageEntry(
+            id="assistant-right",
+            parent_id="user-root",
+            timestamp=6.0,
+            message=AssistantMessage(content="Alternative branch answer."),
+        ),
+        MessageEntry(
+            id="tool-result",
+            parent_id="assistant-left",
+            timestamp=7.0,
+            message=ToolResultMessage(
+                tool_call_id="call-read",
+                name="read",
+                content="Loaded README.md",
+                ok=True,
+                data={"bytes": 512},
+                details={"cached": False, "source": "disk"},
+            ),
+        ),
+        CompactionEntry(
+            id="compaction",
+            parent_id="tool-result",
+            timestamp=8.0,
+            summary="Compacted earlier branch context.",
+            replaces_entry_ids=["user-root", "assistant-left", "tool-result"],
+            details={"reason": "token_budget", "token_estimate": 2048},
+        ),
+        LabelEntry(
+            id="label",
+            parent_id="compaction",
+            timestamp=9.0,
+            label="Left branch compacted",
+        ),
+        CustomEntry(
+            id="custom",
+            parent_id="label",
+            timestamp=10.0,
+            namespace="tau.tests.rich_interchange",
+            data={"ok": True, "tags": ["alpha", "beta"], "stage": 1},
+        ),
+        LeafEntry(
+            id="leaf-active",
+            parent_id="custom",
+            timestamp=11.0,
+            entry_id="custom",
+        ),
+    ]
+    source_jsonl = "".join(entry_to_json_line(entry) for entry in entries)
+
+    async with SqliteDatabase(tmp_path / "source.sqlite3") as source_database:
+        source_interchange = SessionInterchange(source_database)
+        source_result = await source_interchange.import_jsonl(
+            source_jsonl,
+            options=JsonlImportOptions(
+                workspace_root=tmp_path / "workspace-source",
+                provider_name="test",
+                model="source-model",
+                session_id="rich-source",
+                agent_name="rich-source-agent",
+                title="Rich source session",
+                thinking_level="high",
+                metadata={"fixture": "rich", "nested": {"level": 1}},
+            ),
+        )
+        first_export = await source_interchange.export_jsonl(source_result.session_id)
+        source_round_trip = source_interchange.parse_jsonl(first_export)
+        source_session = await SessionRepository(source_database).get(source_result.session_id)
+
+    assert source_session is not None
+    assert source_session.active_leaf_entry_id == "custom"
+    assert source_session.metadata == {
+        "fixture": "rich",
+        "interchange_format": "tau-jsonl",
+        "nested": {"level": 1},
+    }
+
+    async with SqliteDatabase(tmp_path / "target.sqlite3") as target_database:
+        target_interchange = SessionInterchange(target_database)
+        target_result = await target_interchange.import_jsonl(
+            first_export,
+            options=JsonlImportOptions(
+                workspace_root=tmp_path / "workspace-target",
+                provider_name="test",
+                model="target-model",
+                session_id="rich-target",
+                agent_name="rich-target-agent",
+                title="Rich target session",
+                thinking_level="medium",
+                metadata={"fixture": "rich", "nested": {"level": 1}},
+            ),
+        )
+        second_export = await target_interchange.export_jsonl(target_result.session_id)
+        target_round_trip = target_interchange.parse_jsonl(second_export)
+        target_session = await SessionRepository(target_database).get(target_result.session_id)
+
+    def canonical(payload: list[SessionEntry]) -> list[dict[str, object]]:
+        return [entry.model_dump(mode="json") for entry in payload]
+
+    def branch_leaf_ids(payload: list[SessionEntry]) -> list[str]:
+        non_leaf = [entry for entry in payload if not isinstance(entry, LeafEntry)]
+        non_leaf_parent_ids = {entry.parent_id for entry in non_leaf if entry.parent_id is not None}
+        return [entry.id for entry in non_leaf if entry.id not in non_leaf_parent_ids]
+
+    assert target_session is not None
+    assert target_session.active_leaf_entry_id == "custom"
+    assert target_session.metadata == {
+        "fixture": "rich",
+        "interchange_format": "tau-jsonl",
+        "nested": {"level": 1},
+    }
+    assert canonical(source_round_trip) == canonical(entries)
+    assert canonical(target_round_trip) == canonical(source_round_trip)
+    assert [entry.id for entry in target_round_trip] == [entry.id for entry in entries]
+    assert {entry.id: entry.parent_id for entry in target_round_trip} == {
+        entry.id: entry.parent_id for entry in source_round_trip
+    }
+    assert [
+        (entry.id, entry.parent_id, entry.entry_id)
+        for entry in target_round_trip
+        if isinstance(entry, LeafEntry)
+    ] == [
+        (entry.id, entry.parent_id, entry.entry_id)
+        for entry in source_round_trip
+        if isinstance(entry, LeafEntry)
+    ]
+    assert branch_leaf_ids(source_round_trip) == ["assistant-right", "custom"]
+    assert branch_leaf_ids(target_round_trip) == ["assistant-right", "custom"]
+    assert {
+        leaf_id: [entry.id for entry in path_to_entry(source_round_trip, leaf_id)]
+        for leaf_id in branch_leaf_ids(source_round_trip)
+    } == {
+        leaf_id: [entry.id for entry in path_to_entry(target_round_trip, leaf_id)]
+        for leaf_id in branch_leaf_ids(target_round_trip)
+    }
 
 
 @pytest.mark.anyio

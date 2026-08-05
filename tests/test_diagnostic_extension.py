@@ -149,6 +149,7 @@ _PERMISSIONS = [
     "events",
     "views",
     "actions",
+    "sandboxed_widgets",
 ]
 
 
@@ -166,10 +167,16 @@ def test_builtin_diagnostic_discovery_is_import_free_and_matches_manifest(
     assert candidate.manifest.contributions == {
         "views": [{"id": "diagnostic-view"}],
         "actions": [{"id": "refresh-status"}],
+        "file_renderers": [{"id": "diagnostic-file"}],
+        "editor_annotations": [{"id": "diagnostic-annotations"}],
+        "widgets": [{"id": "diagnostic-widget"}],
         "commands": [{"name": "diagnostic.command"}],
         "tools": [{"name": "diagnostic.tool"}],
         "routes": [{"method": "GET", "path": "/status"}],
-        "assets": [{"path": "diagnostic/state.json"}],
+        "assets": [
+            {"path": "diagnostic/state.json"},
+            {"path": "diagnostic/widget.js"},
+        ],
         "events": [{"name": "diagnostic.ping"}],
     }
     assert "tau_extensions.builtin.diagnostic" not in sys.modules
@@ -221,6 +228,11 @@ def test_builtin_diagnostic_resolution_entrypoint_load_and_host_contributions() 
     assert extension.host_events == ["activate"]
     assert host.contribution_registry.values("views") == (extension.view,)
     assert host.contribution_registry.values("actions") == (extension.action_definition,)
+    assert host.contribution_registry.values("file_renderers") == (extension.file_renderer_spec,)
+    assert host.contribution_registry.values("editor_annotations") == (
+        extension.annotation_provider_spec,
+    )
+    assert host.contribution_registry.values("widgets") == (extension.widget_spec,)
     assert host.contribution_registry.values("commands") == (extension.command_spec,)
     assert host.contribution_registry.values("tools") == (extension.tool_spec,)
     assert host.contribution_registry.values("routes") == (extension.route_spec,)
@@ -243,6 +255,9 @@ def test_builtin_diagnostic_resolution_entrypoint_load_and_host_contributions() 
     assert host.active_extension_ids == ()
     assert host.contribution_registry.values("views") == ()
     assert host.contribution_registry.values("actions") == ()
+    assert host.contribution_registry.values("file_renderers") == ()
+    assert host.contribution_registry.values("editor_annotations") == ()
+    assert host.contribution_registry.values("widgets") == ()
     assert host.contribution_registry.values("commands") == ()
     assert host.contribution_registry.values("tools") == ()
     assert host.contribution_registry.values("routes") == ()

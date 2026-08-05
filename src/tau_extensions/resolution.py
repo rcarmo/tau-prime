@@ -25,6 +25,8 @@ _ALL_PERMISSIONS = cast(
             "events",
             "views",
             "actions",
+            "sandboxed_widgets",
+            "trusted_frontend",
         }
     ),
 )
@@ -32,6 +34,12 @@ _DEFAULT_WORKSPACE_PERMISSIONS = cast(
     frozenset[Permission],
     frozenset({"views", "actions", "events", "commands"}),
 )
+_HARD_DENIED_SOURCE_PERMISSIONS = MappingProxyType(
+    {
+        ExtensionSource.WORKSPACE: frozenset({"trusted_frontend"}),
+    }
+)
+
 _DEFAULT_PERMISSION_ALLOWLISTS = MappingProxyType(
     {
         ExtensionSource.BUILT_IN: _ALL_PERMISSIONS,
@@ -67,6 +75,8 @@ class TrustPolicy:
         if permission_allowlists is not None:
             for source, permissions in permission_allowlists.items():
                 merged[source] = frozenset(permissions)
+        for source, denied_permissions in _HARD_DENIED_SOURCE_PERMISSIONS.items():
+            merged[source] = frozenset(merged[source] - denied_permissions)
         object.__setattr__(self, "permission_allowlists", MappingProxyType(merged))
 
     def permissions_for(self, source: ExtensionSource) -> frozenset[Permission]:

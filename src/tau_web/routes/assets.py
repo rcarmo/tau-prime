@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import mimetypes
 import stat
 from dataclasses import dataclass
 from io import BytesIO
@@ -13,6 +15,8 @@ from aiohttp.multipart import BodyPartReader, MultipartReader
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from tau_agent.types import JSONObject
+from tau_extensions import FileRenderContext, WidgetReference
+from tau_extensions.web import view_to_json
 from tau_web.routes.common import (
     config_for,
     json_response,
@@ -77,7 +81,7 @@ class _ImagePreview:
     width: int
     height: int
     thumbnail_content: bytes
-    metadata: dict[str, str | int | bool]
+    metadata: JSONObject
 
 
 def setup_routes(app: web.Application) -> None:
@@ -108,14 +112,66 @@ async def get_file_or_directory(request: web.Request) -> web.Response:
         text = content.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise web.HTTPUnsupportedMediaType(reason="Only UTF-8 text files are accessible.") from exc
-    return json_response(
-        TextFileResource(
-            kind="file",
-            path=display_path,
-            encoding="utf-8",
-            content=text,
-        )
+    resource = TextFileResource(
+        kind="file",
+        path=display_path,
+        encoding="utf-8",
+        content=text,
     )
+    extension_directory = services_for(request).extensions
+    context = FileRenderContext(
+        path=display_path,
+        media_type=mimetypes.guess_type(display_path)[0] or "text/plain",
+        content=text,
+    )
+    renderer, annotations = await asyncio.gather(
+        extension_directory.render_file(context),
+        extension_directory.annotate_file(context),
+    )
+    if renderer is None and not annotations:
+        return json_response(resource)
+
+    payload: JSONObject = {
+        "kind": resource.kind,
+        "path": resource.path,
+        "encoding": resource.encoding,
+        "content": resource.content,
+    }
+    if renderer is not None:
+        if isinstance(renderer.output, WidgetReference):
+            widget = extension_directory.lookup_widget(
+                renderer.extension_id,
+                renderer.output.widget_id,
+            )
+            if widget is not None:
+                payload["renderer"] = {
+                    "type": "widget",
+                    "extension_id": renderer.extension_id,
+                    "renderer_id": renderer.renderer_id,
+                    "widget": {
+                        "id": widget.id,
+                        "title": widget.title,
+                        "height": widget.height,
+                        "url": (f"/api/extensions/widgets/{renderer.extension_id}/{widget.id}"),
+                    },
+                }
+        else:
+            payload["renderer"] = {
+                "type": "view",
+                "extension_id": renderer.extension_id,
+                "renderer_id": renderer.renderer_id,
+                "view": view_to_json(renderer.output),
+            }
+    if annotations:
+        payload["annotations"] = [
+            {
+                **resolved.annotation.to_json(),
+                "extension_id": resolved.extension_id,
+                "provider_id": resolved.provider_id,
+            }
+            for resolved in annotations
+        ]
+    return json_response(payload)
 
 
 async def upload_media(request: web.Request) -> web.Response:

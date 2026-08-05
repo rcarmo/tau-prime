@@ -30,6 +30,7 @@ check.
 | `tau export <ref> [dest] [--format html\|jsonl]` | Export a live session id from SQLite, or an existing Tau JSONL file, as HTML or JSONL |
 | `tau import-session <source.jsonl> [options]` | Import a Tau JSONL session into the SQLite store |
 | `tau export-session <ref> [options]` | Export one SQLite-backed session as Tau JSONL |
+| `tau web [options]` | Start Tau Web's browser UI, REST API, and SSE service |
 | `tau providers` | List configured providers and how each authenticates |
 | `tau [setup options] setup` | Create/update an OpenAI-compatible provider |
 
@@ -65,6 +66,19 @@ interchange commands for the live SQLite store:
 - `tau export-session <ref>` exports one SQLite-backed session as Tau JSONL.
   `ref` may be a session id or local address. Use `--output`, `--overwrite`,
   and `--database` as needed.
+
+### Tau Web options
+
+`tau web` requires the `tau-prime[web]` extra. It shares the default SQLite store with the TUI and print mode but takes an exclusive live-process lock while running.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--cwd PATH` | current directory | Root for workspace file access |
+| `--host HOST` | `127.0.0.1` | Listen address |
+| `--port INT` | `8080` | Listen port |
+| `--database PATH` | `~/.tau/tau.sqlite3` | SQLite database path |
+
+`tau --web` is different: it serves the Textual TUI through Textual's own web server and does not expose Tau Web's API.
 
 ### Provider setup options
 

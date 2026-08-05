@@ -24,11 +24,24 @@ python -m pip install --upgrade pip
 python -m pip install tau-prime
 ```
 
-Or, from a source checkout/tarball:
+Run Tau without installing it:
+
+```bash
+uvx --from tau-prime tau --version
+uvx --from tau-prime tau -p "summarize this repository"
+```
+
+From a source checkout:
 
 ```bash
 python -m pip install -r requirements.txt
 python -m pip install .
+```
+
+A local source tarball also works directly with `uvx`:
+
+```bash
+uvx --from ./tau_prime-42.3.0.tar.gz tau --version
 ```
 
 Check it worked:
@@ -104,6 +117,23 @@ tau --resume <session-id>
 
 …or open the picker inside the TUI with `/resume`. See
 [Sessions](./guides/sessions.md) for resuming, branching, and exporting.
+
+## Browser mode
+
+Tau Web uses the same SQLite sessions as the TUI and print mode. Install the optional web dependencies, then start its loopback server:
+
+```bash
+uv tool install "tau-prime[web]"
+tau web
+```
+
+For an ephemeral run:
+
+```bash
+uvx --from "tau-prime[web]" tau web
+```
+
+Open <http://127.0.0.1:8080/>. Binding to a non-loopback address needs deliberate authentication and origin configuration; see the repository's `docs/web.md` operations guide.
 
 ## One-shot mode
 

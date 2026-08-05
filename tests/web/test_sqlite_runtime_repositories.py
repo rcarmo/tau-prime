@@ -125,6 +125,69 @@ async def test_queue_repository_consume_exact_is_fifo_and_validates_identity(
 
 
 @pytest.mark.anyio
+async def test_database_reopen_recovers_run_and_preserves_fifo_queue_and_pending_delivery(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "tau.sqlite3"
+
+    async with SqliteDatabase(database_path) as database:
+        first, second = await _seed_sessions(database)
+        runs = RunRepository(database)
+        queue = QueueRepository(database)
+        deliveries = DeliveryRepository(database)
+
+        await runs.create(first, run_id="run", status="running", last_status={"phase": "running"})
+        one = await queue.enqueue(first, queue_kind="follow_up", content={"text": "one"})
+        two = await queue.enqueue(first, queue_kind="follow_up", content={"text": "two"})
+        delivery = await deliveries.create(
+            source_session_id=first,
+            target_session_id=second,
+            target_address="@second",
+            mode="queue",
+            content="pending delivery",
+        )
+
+    async with SqliteDatabase(database_path) as database:
+        runs = RunRepository(database)
+        queue = QueueRepository(database)
+        deliveries = DeliveryRepository(database)
+
+        assert database.recovered_run_count == 1
+
+        recovered_run = await runs.get("run")
+        assert recovered_run is not None
+        assert recovered_run.status == "interrupted"
+        assert recovered_run.ended_at is not None
+        assert recovered_run.error is not None
+
+        queued = await queue.list(session_id=first, queue_kind="follow_up")
+        assert [record.queue_id for record in queued] == [one.queue_id, two.queue_id]
+
+        with pytest.raises(RepositoryError, match="next FIFO row"):
+            await queue.consume_exact(two.queue_id, session_id=first, queue_kind="follow_up")
+
+        consumed_one = await queue.consume_exact(
+            one.queue_id,
+            session_id=first,
+            queue_kind="follow_up",
+        )
+        consumed_two = await queue.consume_exact(
+            two.queue_id,
+            session_id=first,
+            queue_kind="follow_up",
+        )
+
+        assert (consumed_one.queue_id, consumed_two.queue_id) == (one.queue_id, two.queue_id)
+
+        pending_delivery = await deliveries.get(delivery.delivery_id)
+        assert pending_delivery is not None
+        assert pending_delivery.status == "pending"
+        assert pending_delivery.accepted_at is None
+        assert pending_delivery.completed_at is None
+        assert pending_delivery.error is None
+
+
+@pytest.mark.anyio
 async def test_delivery_repository_is_idempotent_and_tracks_receipts(tmp_path: Path) -> None:
     async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
         first, second = await _seed_sessions(database)

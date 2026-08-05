@@ -20,7 +20,7 @@ It is not intended to track the upstream user experience or branding.
 
 * Session initialisation, OAuth polling and asynchronous cleanup have additional checks for the failure modes encountered on iOS and during interrupted logins.
 
-* The source distribution has a repeatable Makefile workflow that runs the test suite, builds the package and checks it through an isolated `uvx` installation.
+* The source distribution has a repeatable Makefile workflow that runs the test suite, builds the package and checks it through an isolated `uvx` installation. Wheels and source distributions include the browser assets and published technical documentation.
 
 ## Current limitations
 
@@ -30,7 +30,7 @@ On macOS, the command uses `/usr/bin/sandbox-exec`, which Apple has deprecated b
 
 Local model servers normally run on another machine. Set LM Studio's provider URL to that machine's LAN address; `localhost` only works when the server is reachable from the same environment.
 
-The repository contains upstream documentation and development notes, but this README describes the supported fork. Some upstream pages may refer to features, commands or installation paths that have not been checked on a-Shell.
+The repository retains historical upstream development notes where they explain inherited design decisions. Current installation, runtime, storage, web, extension, and release behaviour is documented in this README, `docs/`, and the published site sources.
 
 ## Requirements
 
@@ -65,7 +65,30 @@ tau
 
 Use `Ctrl+B` if you want the sidebar. `Ctrl+C` or `Cmd+.` cancels the active operation without discarding the session.
 
-## Install for desktop development
+## Install on a desktop
+
+Install the published command with `uv`:
+
+```sh
+uv tool install tau-prime
+tau --version
+```
+
+Run it ephemerally with `uvx` instead:
+
+```sh
+uvx --from tau-prime tau --version
+uvx --from tau-prime tau -p "summarise this repository"
+```
+
+To test a downloaded or locally built source tarball, replace the package name with its path:
+
+```sh
+uvx --from ./tau_prime-42.3.0.tar.gz tau --version
+uv tool install "tau-prime[web] @ file://$PWD/tau_prime-42.3.0.tar.gz"
+```
+
+For development from a checkout:
 
 ```sh
 git clone https://github.com/rcarmo/tau-prime.git
@@ -101,7 +124,12 @@ tau web --host 0.0.0.0 --port 8080
 tau web --database /path/to/tau.sqlite3
 ```
 
-`tau web` requires the optional web dependencies from `tau-prime[web]` (or `".[web]"` from a checkout).
+`tau web` requires the optional web dependencies from `tau-prime[web]` (or `".[web]"` from a checkout). With `uv`, install or run that extra explicitly:
+
+```sh
+uv tool install "tau-prime[web]"
+uvx --from "tau-prime[web]" tau web
+```
 
 * `tau --web` runs the Textual TUI through Textual's separate web server command. It is not the same feature as `tau web`.
 
@@ -191,7 +219,7 @@ Live sessions are stored in SQLite by default at `~/.tau/tau.sqlite3`. The TUI, 
 
 The shared database opens in WAL mode, enables foreign keys, and uses `json_valid(...)` constraints for structured JSON columns. JSONL is now an interchange format rather than the live store: `/export` and `tau export` can write HTML or JSONL artefacts, `tau import-session` imports Tau JSONL into SQLite, `tau export-session` exports one SQLite-backed session as Tau JSONL, and `tau export <path-to-jsonl>` can still read an older JSONL transcript directly.
 
-Project instructions can be supplied through `AGENTS.md`, `.tau/` and `.agents/` resources. See [context compaction](docs/compaction.md), [SQLite storage and migration](docs/storage.md), [Tau Web operations](docs/web.md), and [extensions](docs/extensions.md).
+Project instructions can be supplied through `AGENTS.md`, `.tau/` and `.agents/` resources. See [architecture](docs/architecture.md), [API](docs/api.md), [extension examples](docs/examples.md), [context compaction](docs/compaction.md), [SQLite storage and migration](docs/storage.md), [Tau Web operations](docs/web.md), and [extensions](docs/extensions.md).
 
 One-shot mode is available for scripts and short queries:
 

@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import base64
 import csv
+import gzip
 import hashlib
 import io
+import os
 import tarfile
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +25,7 @@ except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib  # type: ignore[no-redef]
 
 ROOT = Path(__file__).resolve().parent
+ZIP_EPOCH = 315532800  # 1980-01-01T00:00:00Z (minimum for ZIP timestamps)
 
 
 def _project() -> dict[str, Any]:
@@ -39,6 +43,37 @@ def _version() -> str:
 
 def _dist_info_name() -> str:
     return f"{_dist_name()}-{_version()}.dist-info"
+
+
+def _source_date_epoch() -> int | None:
+    value = os.environ.get("SOURCE_DATE_EPOCH")
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return max(parsed, 0)
+
+
+def _build_mtime() -> int:
+    epoch = _source_date_epoch()
+    if epoch is None:
+        return ZIP_EPOCH
+    return epoch
+
+
+def _zip_timestamp(epoch: int) -> tuple[int, int, int, int, int, int]:
+    effective_epoch = max(epoch, ZIP_EPOCH)
+    dt = datetime.fromtimestamp(effective_epoch, tz=UTC)
+    return dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second
+
+
+def _file_mode(path: Path) -> int:
+    mode = path.stat().st_mode & 0o777
+    if mode == 0:
+        return 0o644
+    return mode
 
 
 def _metadata_text() -> str:
@@ -101,8 +136,24 @@ def _hash(data: bytes) -> str:
     return "sha256=" + base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
+def _is_excluded_source(path: Path) -> bool:
+    relative = path.relative_to(ROOT)
+    parts = relative.parts
+    if any(part in {".venv", "__pycache__", "pycache"} for part in parts):
+        return True
+    if relative.name == ".env" or relative.name.startswith(".env."):
+        return True
+    browser_excluded_prefixes = (
+        ("tests", "browser", "node_modules"),
+        ("tests", "browser", "test-results"),
+        ("tests", "browser", "playwright-report"),
+        ("tests", "browser", ".cache"),
+    )
+    return any(parts[: len(prefix)] == prefix for prefix in browser_excluded_prefixes)
+
+
 def _source_files() -> list[Path]:
-    include_roots = ["src", "tests", "website", "dev-notes"]
+    include_roots = ["src", "tests", "website", "dev-notes", "docs"]
     include_files = [
         "AGENTS.md",
         "CONTRIBUTING.md",
@@ -123,7 +174,9 @@ def _source_files() -> list[Path]:
         root = ROOT / name
         if not root.exists():
             continue
-        files.extend(path for path in root.rglob("*") if path.is_file())
+        files.extend(
+            path for path in root.rglob("*") if path.is_file() and not _is_excluded_source(path)
+        )
     return sorted(files)
 
 
@@ -153,6 +206,18 @@ def _package_files() -> list[tuple[Path, str]]:
     return sorted(files, key=lambda item: item[1])
 
 
+def _tar_info(arcname: str, data: bytes, mode: int, mtime: int) -> tarfile.TarInfo:
+    info = tarfile.TarInfo(arcname)
+    info.size = len(data)
+    info.mode = mode
+    info.uid = 0
+    info.gid = 0
+    info.uname = ""
+    info.gname = ""
+    info.mtime = mtime
+    return info
+
+
 def prepare_metadata_for_build_wheel(
     metadata_directory: str, config_settings: dict[str, Any] | None = None
 ) -> str:
@@ -177,15 +242,29 @@ def build_wheel(
     wheel_name = f"{_dist_name()}-{_version()}-py3-none-any.whl"
     wheel_path = Path(wheel_directory) / wheel_name
     records: list[tuple[str, str, str]] = []
+    build_mtime = _build_mtime()
+    zip_timestamp = _zip_timestamp(build_mtime)
 
-    def write(zf: zipfile.ZipFile, arcname: str, data: bytes) -> None:
-        zf.writestr(arcname, data)
-        records.append((arcname, _hash(data), str(len(data))))
+    def write(
+        zf: zipfile.ZipFile,
+        arcname: str,
+        data: bytes,
+        mode: int = 0o644,
+        *,
+        record: bool = True,
+    ) -> None:
+        info = zipfile.ZipInfo(arcname, date_time=zip_timestamp)
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = (mode & 0o777) << 16
+        info.create_system = 3
+        zf.writestr(info, data)
+        if record:
+            records.append((arcname, _hash(data), str(len(data))))
 
     dist_info = _dist_info_name()
     with zipfile.ZipFile(wheel_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path, arcname in _package_files():
-            write(zf, arcname, path.read_bytes())
+            write(zf, arcname, path.read_bytes(), mode=_file_mode(path))
         write(zf, f"{dist_info}/METADATA", _metadata_text().encode("utf-8"))
         write(zf, f"{dist_info}/WHEEL", _wheel_text().encode("utf-8"))
         entry_points = _entry_points_text()
@@ -197,7 +276,7 @@ def build_wheel(
         for row in records:
             writer.writerow(row)
         writer.writerow((record_name, "", ""))
-        zf.writestr(record_name, output.getvalue().encode("utf-8"))
+        write(zf, record_name, output.getvalue().encode("utf-8"), record=False)
     return wheel_name
 
 
@@ -206,13 +285,30 @@ def build_sdist(sdist_directory: str, config_settings: dict[str, Any] | None = N
     sdist_name = f"{_dist_name()}-{_version()}.tar.gz"
     sdist_path = Path(sdist_directory) / sdist_name
     prefix = f"{_dist_name()}-{_version()}"
-    with tarfile.open(sdist_path, "w:gz", format=tarfile.PAX_FORMAT) as tf:
+    build_mtime = _build_mtime()
+
+    with (
+        sdist_path.open("wb") as raw,
+        gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=build_mtime) as gzip_file,
+        tarfile.open(fileobj=gzip_file, mode="w", format=tarfile.PAX_FORMAT) as tf,
+    ):
         for path in _source_files():
-            tf.add(path, arcname=f"{prefix}/{path.relative_to(ROOT).as_posix()}")
+            relative = path.relative_to(ROOT).as_posix()
+            data = path.read_bytes()
+            info = _tar_info(
+                f"{prefix}/{relative}",
+                data,
+                mode=_file_mode(path),
+                mtime=build_mtime,
+            )
+            tf.addfile(info, io.BytesIO(data))
         pkg_info = _metadata_text().encode("utf-8")
-        info = tarfile.TarInfo(f"{prefix}/PKG-INFO")
-        info.size = len(pkg_info)
-        info.mode = 0o644
+        info = _tar_info(
+            f"{prefix}/PKG-INFO",
+            pkg_info,
+            mode=0o644,
+            mtime=build_mtime,
+        )
         tf.addfile(info, io.BytesIO(pkg_info))
     return sdist_name
 

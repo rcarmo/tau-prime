@@ -8,6 +8,7 @@ import secrets
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import suppress
 from http import HTTPStatus
+from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 from aiohttp import web
@@ -15,6 +16,9 @@ from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 
 from tau_web.config import WebConfig, normalize_origin
+
+if TYPE_CHECKING:
+    from tau_web.services import TauWebServices
 
 REQUEST_ID_HEADER = "X-Request-ID"
 REQUEST_ID_KEY = web.RequestKey[str]("tau.web.request_id")
@@ -62,7 +66,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
                         "img-src 'self' blob: data:",
                         "manifest-src 'self'",
                         "object-src 'none'",
-                        "script-src 'self'",
+                        "script-src 'self' blob:",
                         "style-src 'self'",
                         "worker-src 'self'",
                     )
@@ -151,7 +155,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
 
         from tau_web.app import SERVICES_KEY
 
-        services = request.app._state.get(SERVICES_KEY)
+        services = cast("TauWebServices | None", request.app._state.get(SERVICES_KEY))
         if services is None:
             return response
         session_id = request.match_info.get("session_id")

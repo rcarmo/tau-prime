@@ -1,15 +1,130 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import sqlite3
 import stat
 from pathlib import Path
 
 import pytest
 
+from tau_agent import UserMessage
+from tau_agent.session import LeafEntry, MessageEntry, SessionInfoEntry
+from tau_agent.session.jsonl import entry_to_json_line
 from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
-from tau_web.sqlite.migrations import LATEST_SCHEMA_VERSION
+from tau_web.sqlite.migrations import LATEST_SCHEMA_VERSION, MIGRATIONS
 from tau_web.sqlite.process_lock import DatabaseLockedError, DatabaseProcessLock
 from tau_web.sqlite.writer import SqliteTransaction, WriterClosedError
+
+_FIXTURE_SESSION_ID = "upgrade-session"
+_FIXTURE_QUEUE_ID = "upgrade-queue"
+_FIXTURE_RUN_ID = "upgrade-run"
+
+
+def _fixture_source_schema_version() -> int:
+    if LATEST_SCHEMA_VERSION <= 1:
+        return LATEST_SCHEMA_VERSION
+    return LATEST_SCHEMA_VERSION - 1
+
+
+def _fixture_entries() -> list[SessionInfoEntry | MessageEntry | LeafEntry]:
+    info = SessionInfoEntry(
+        id="upgrade-info",
+        timestamp=1.0,
+        created_at=1.0,
+        cwd="/workspace",
+        title="Upgrade fixture",
+    )
+    message = MessageEntry(
+        id="upgrade-message",
+        parent_id=info.id,
+        timestamp=2.0,
+        message=UserMessage(content="preserve seeded transcript"),
+    )
+    leaf = LeafEntry(
+        id="upgrade-leaf",
+        parent_id=message.id,
+        timestamp=3.0,
+        entry_id=message.id,
+    )
+    return [info, message, leaf]
+
+
+def _build_migrated_fixture(
+    path: Path, *, schema_version: int
+) -> list[SessionInfoEntry | MessageEntry | LeafEntry]:
+    entries = _fixture_entries()
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("PRAGMA foreign_keys = ON")
+        for migration in MIGRATIONS:
+            if migration.version > schema_version:
+                break
+            connection.executescript(migration.sql)
+            connection.execute(
+                "INSERT INTO schema_migrations(version, name, applied_at) VALUES (?, ?, ?)",
+                (migration.version, migration.name, "2026-08-05T00:00:00Z"),
+            )
+            connection.execute(f"PRAGMA user_version = {migration.version}")
+
+        connection.execute(
+            """
+            INSERT INTO workspaces(workspace_id, root_path, created_at, updated_at)
+            VALUES ('upgrade-workspace', '/workspace', 'now', 'now')
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO sessions(
+                session_id, workspace_id, agent_name, provider_name, model,
+                created_at, updated_at
+            ) VALUES (?, 'upgrade-workspace', 'upgrade', 'test', 'model', 'now', 'now')
+            """,
+            (_FIXTURE_SESSION_ID,),
+        )
+        for ordinal, entry in enumerate(entries):
+            connection.execute(
+                """
+                INSERT INTO session_entries(
+                    entry_id, session_id, parent_entry_id, entry_type,
+                    timestamp, ordinal, payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    entry.id,
+                    _FIXTURE_SESSION_ID,
+                    entry.parent_id,
+                    entry.type,
+                    entry.timestamp,
+                    ordinal,
+                    entry_to_json_line(entry).strip(),
+                ),
+            )
+        connection.execute(
+            "UPDATE sessions SET active_leaf_entry_id = ? WHERE session_id = ?",
+            (entries[1].id, _FIXTURE_SESSION_ID),
+        )
+        connection.execute(
+            """
+            INSERT INTO queued_messages(
+                queue_id, session_id, queue_kind, position, content_json, created_at
+            ) VALUES (?, ?, 'follow_up', 0, ?, 'now')
+            """,
+            (_FIXTURE_QUEUE_ID, _FIXTURE_SESSION_ID, json.dumps("preserve queued state")),
+        )
+        connection.execute(
+            """
+            INSERT INTO session_runs(
+                run_id, session_id, status, started_at, updated_at
+            ) VALUES (?, ?, 'pending', 'now', 'now')
+            """,
+            (_FIXTURE_RUN_ID, _FIXTURE_SESSION_ID),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    return entries
 
 
 def test_database_process_lock_is_exclusive(tmp_path: Path) -> None:

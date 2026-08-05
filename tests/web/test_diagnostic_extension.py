@@ -14,6 +14,7 @@ from tau_extensions.builtin.diagnostic import (
     GLOBAL_STATE_KEY,
     ROUTE_PATH,
     VIEW_ID,
+    WIDGET_ID,
     create_extension,
 )
 from tau_web.app import SERVICES_KEY, create_app
@@ -33,6 +34,7 @@ _PERMISSIONS = [
     "events",
     "views",
     "actions",
+    "sandboxed_widgets",
 ]
 
 
@@ -93,6 +95,10 @@ async def _read_global_state_row(
 async def test_builtin_diagnostic_extension_uses_sqlite_storage_and_web_adapters(
     web_config: WebConfig,
 ) -> None:
+    (web_config.cwd / "fixture.tau-diagnostic.json").write_text(
+        '{"diagnostic": true}\n',
+        encoding="utf-8",
+    )
     client = await _start_client(replace(web_config, auth_token="secret-token"))
     diagnostic = None
     try:
@@ -114,6 +120,38 @@ async def test_builtin_diagnostic_extension_uses_sqlite_storage_and_web_adapters
 
         assert services.extensions.extension_ids == (DIAGNOSTIC_EXTENSION_ID,)
         assert services.extensions.get(DIAGNOSTIC_EXTENSION_ID) is extension_services
+
+        file_response = await client.get(
+            "/api/files?path=fixture.tau-diagnostic.json",
+            headers={"Authorization": "Bearer secret-token"},
+        )
+        assert file_response.status == 200
+        file_payload = await file_response.json()
+        assert file_payload["renderer"]["type"] == "widget"
+        assert file_payload["renderer"]["extension_id"] == DIAGNOSTIC_EXTENSION_ID
+        assert file_payload["renderer"]["widget"]["id"] == WIDGET_ID
+        assert file_payload["annotations"][0]["source"] == DIAGNOSTIC_EXTENSION_ID
+
+        widget_response = await client.get(
+            f"/api/extensions/widgets/{DIAGNOSTIC_EXTENSION_ID}/{WIDGET_ID}",
+            headers={"Authorization": "Bearer secret-token"},
+        )
+        assert widget_response.status == 200
+        assert "/static/widget-bridge.js" in await widget_response.text()
+
+        widget_action = await client.post(
+            f"/api/extensions/widgets/{DIAGNOSTIC_EXTENSION_ID}/{WIDGET_ID}/actions/snapshot",
+            json={"payload": {"source": "test"}},
+            headers={
+                "Authorization": "Bearer secret-token",
+                "X-Tau-CSRF": "1",
+            },
+        )
+        assert widget_action.status == 200
+        widget_action_payload = await widget_action.json()
+        assert widget_action_payload["payload"] == {"source": "test"}
+        assert widget_action_payload["snapshot"]["extension_id"] == DIAGNOSTIC_EXTENSION_ID
+
         assert await _read_global_state_row(services) == (
             '{"asset_path":"diagnostic/state.json","event_count":1,"extension_id":"tau.diagnostic","route_path":"/status","session_revision":1,"started":true,"storage_revision":2,"view_id":"diagnostic-view","workspace_revision":1}',
             2,

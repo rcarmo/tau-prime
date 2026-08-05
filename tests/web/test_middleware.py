@@ -119,6 +119,28 @@ async def test_safe_get_ignores_origin_and_csrf(web_config: WebConfig) -> None:
 
 
 @pytest.mark.anyio
+async def test_frontend_csp_allows_blob_script_src_and_keeps_object_src_none(
+    web_config: WebConfig,
+) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+
+    try:
+        async with client.get("/") as response:
+            assert response.status == 200
+            csp = response.headers["Content-Security-Policy"]
+    finally:
+        await client.close()
+
+    directives = {
+        directive.split(" ", 1)[0]: directive
+        for directive in csp.split("; ")
+    }
+    assert directives["script-src"] == "script-src 'self' blob:"
+    assert directives["object-src"] == "object-src 'none'"
+
+
+@pytest.mark.anyio
 async def test_same_origin_post_with_csrf_header_is_allowed(web_config: WebConfig) -> None:
     app = create_app(web_config)
     _install_test_post_route(app)

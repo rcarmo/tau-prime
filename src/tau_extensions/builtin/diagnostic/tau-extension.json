@@ -14,7 +14,8 @@
     "routes",
     "events",
     "views",
-    "actions"
+    "actions",
+    "sandboxed_widgets"
   ],
   "dependencies": [],
   "contributions": {
@@ -26,6 +27,21 @@
     "actions": [
       {
         "id": "refresh-status"
+      }
+    ],
+    "file_renderers": [
+      {
+        "id": "diagnostic-file"
+      }
+    ],
+    "editor_annotations": [
+      {
+        "id": "diagnostic-annotations"
+      }
+    ],
+    "widgets": [
+      {
+        "id": "diagnostic-widget"
       }
     ],
     "commands": [
@@ -47,6 +63,9 @@
     "assets": [
       {
         "path": "diagnostic/state.json"
+      },
+      {
+        "path": "diagnostic/widget.js"
       }
     ],
     "events": [

@@ -3,10 +3,13 @@ from __future__ import annotations
 import re
 import sqlite3
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
+from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
 from tau_web.sqlite.migrations import LATEST_SCHEMA_VERSION, MIGRATIONS, pending_migrations
+from tau_web.sqlite.writer import SqliteTransaction
 
 
 @pytest.fixture
@@ -231,3 +234,79 @@ def test_foreign_keys_reject_orphan_entries(database: sqlite3.Connection) -> Non
             ) VALUES ('entry-1', 'missing', 'message', 1.0, 0, '{}')
             """
         )
+
+
+@pytest.mark.anyio
+async def test_fresh_database_reopen_is_migration_idempotent_without_prior_release(
+    tmp_path: Path,
+) -> None:
+    assert len(MIGRATIONS) == 1
+    assert LATEST_SCHEMA_VERSION == 1
+
+    database_path = tmp_path / "tau.sqlite3"
+    async with SqliteDatabase(database_path) as database:
+        async def seed_runtime_rows(tx: SqliteTransaction) -> None:
+            await tx.execute(
+                """
+                INSERT INTO workspaces(workspace_id, root_path, created_at, updated_at)
+                VALUES ('workspace-1', '/workspace', 'now', 'now')
+                """
+            )
+            await tx.execute(
+                """
+                INSERT INTO sessions(
+                    session_id, workspace_id, agent_name, provider_name, model,
+                    created_at, updated_at
+                ) VALUES ('session-1', 'workspace-1', 'default', 'test', 'model', 'now', 'now')
+                """
+            )
+            await tx.execute(
+                """
+                INSERT INTO session_entries(
+                    entry_id, session_id, parent_entry_id, entry_type,
+                    timestamp, ordinal, payload_json
+                ) VALUES ('entry-1', 'session-1', NULL, 'message', 1.0, 0, '{"seed":true}')
+                """
+            )
+
+        await database.write(seed_runtime_rows)
+
+    async with SqliteDatabase(database_path) as database:
+        async def inspect(reader: SqliteReader) -> None:
+            version_row = await reader.fetch_one("PRAGMA user_version")
+            assert version_row is not None
+            assert int(version_row[0]) == LATEST_SCHEMA_VERSION
+
+            migration_row = await reader.fetch_one(
+                """
+                SELECT count(*), count(DISTINCT version), count(DISTINCT name)
+                FROM schema_migrations
+                """
+            )
+            assert migration_row is not None
+            migration_count, unique_versions, unique_names = (int(value) for value in migration_row)
+            assert migration_count == len(MIGRATIONS)
+            assert unique_versions == migration_count
+            assert unique_names == migration_count
+
+            workspace_row = await reader.fetch_one(
+                "SELECT root_path FROM workspaces WHERE workspace_id = 'workspace-1'"
+            )
+            session_row = await reader.fetch_one(
+                "SELECT workspace_id FROM sessions WHERE session_id = 'session-1'"
+            )
+            entry_row = await reader.fetch_one(
+                "SELECT payload_json FROM session_entries WHERE entry_id = 'entry-1'"
+            )
+            assert workspace_row is not None
+            assert str(workspace_row[0]) == "/workspace"
+            assert session_row is not None
+            assert str(session_row[0]) == "workspace-1"
+            assert entry_row is not None
+            assert str(entry_row[0]) == '{"seed":true}'
+
+            assert await reader.fetch_all("PRAGMA foreign_key_check") == []
+            integrity_rows = await reader.fetch_all("PRAGMA integrity_check")
+            assert [str(row[0]) for row in integrity_rows] == ["ok"]
+
+        await database.read(inspect)

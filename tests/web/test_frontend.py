@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
+from pathlib import Path
 
 import pytest
 from aiohttp import web
@@ -21,7 +24,7 @@ CSP_HEADER = "; ".join(
         "img-src 'self' blob: data:",
         "manifest-src 'self'",
         "object-src 'none'",
-        "script-src 'self'",
+        "script-src 'self' blob:",
         "style-src 'self'",
         "worker-src 'self'",
     )
@@ -35,6 +38,8 @@ FRONTEND_ASSETS = (
     ("/static/app.js", "application/javascript"),
     ("/static/live-ui.js", "application/javascript"),
     ("/static/extension-ui.js", "application/javascript"),
+    ("/static/widget-bridge.js", "application/javascript"),
+    ("/static/frontend-sdk.js", "application/javascript"),
 )
 
 
@@ -97,9 +102,15 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     assert root_html == index_html
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
     assert '<link rel="stylesheet" href="/static/app.css" />' in root_html
-    assert '<script type="module" src="/static/app.js"></script>' in root_html
     assert '<script type="module" src="/static/live-ui.js"></script>' in root_html
     assert '<script type="module" src="/static/extension-ui.js"></script>' in root_html
+    assert '<script type="module" src="/static/frontend-sdk.js"></script>' in root_html
+    assert '<script type="module" src="/static/app.js"></script>' in root_html
+    extension_script = '<script type="module" src="/static/extension-ui.js"></script>'
+    frontend_sdk_script = '<script type="module" src="/static/frontend-sdk.js"></script>'
+    app_script = '<script type="module" src="/static/app.js"></script>'
+    assert root_html.index(extension_script) < root_html.index(frontend_sdk_script)
+    assert root_html.index(frontend_sdk_script) < root_html.index(app_script)
     assert {
         match.group(1)
         for match in re.finditer(r'data-extension-slot="([^"]+)"', root_html)
@@ -167,6 +178,24 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         "dashboard-manage",
     ):
         assert f'id="{element_id}"' in root_html
+    assert (
+        re.search(r'<textarea\b[^>]*id="compose-input"[^>]*role="combobox"', root_html)
+        is not None
+    )
+    assert (
+        re.search(
+            r'<input\b[^>]*id="compose-file-input"[^>]*aria-label="Attach files"',
+            root_html,
+        )
+        is not None
+    )
+    branch_list_markup = re.search(r'<div\b[^>]*id="branch-list"[^>]*>', root_html)
+    assert branch_list_markup is not None
+    assert 'role="list"' not in branch_list_markup.group(0)
+    search_results_markup = re.search(r'<ol\b[^>]*id="search-results"[^>]*>', root_html)
+    assert search_results_markup is not None
+    assert 'tabindex="0"' in search_results_markup.group(0)
+    assert 'aria-label="Search results"' in search_results_markup.group(0)
 
 
 @pytest.mark.anyio
@@ -245,6 +274,58 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
     )
 
 
+def test_app_js_trusted_frontend_source_contracts() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    script = (repo_root / "src" / "tau_web" / "static" / "app.js").read_text(encoding="utf-8")
+
+    init_start = script.index("async function init() {")
+    init_end = script.index("function bindUi()", init_start)
+    init_block = script[init_start:init_end]
+    refresh_call = 'await refreshShell({ reconnect: true, announceMessage: "Tau shell ready." });'
+    trusted_init_call = "void initializeTrustedFrontendModules();"
+    assert refresh_call in init_block
+    assert trusted_init_call in init_block
+    assert init_block.index(refresh_call) < init_block.index(trusted_init_call)
+
+    trusted_start = script.index("async function submitTrustedFrontendMessage(payload) {")
+    trusted_end = script.index("async function apiFetch(path, options = {}) {", trusted_start)
+    trusted_block = script[trusted_start:trusted_end]
+    assert 'const response = await apiFetch("/api/extensions/frontend-modules");' in trusted_block
+    configure_start = trusted_block.index("sdk.configure({")
+    fetch_asset_index = trusted_block.index("fetchAsset: authenticatedFetch", configure_start)
+    request_index = trusted_block.index("request: apiFetch", configure_start)
+    submit_index = trusted_block.index("submit: submitTrustedFrontendMessage", configure_start)
+    navigate_index = trusted_block.index("navigate: navigateTrustedFrontend", configure_start)
+    assert configure_start < fetch_asset_index < request_index < submit_index < navigate_index
+    assert "json: { content: text }" in trusted_block
+    assert ".innerHTML" not in trusted_block
+    assert "eval(" not in trusted_block
+    assert "new Function" not in trusted_block
+
+    navigate_start = trusted_block.index("async function navigateTrustedFrontend(target) {")
+    navigate_end = trusted_block.index(
+        "async function initializeTrustedFrontendModules()",
+        navigate_start,
+    )
+    navigate_block = trusted_block[navigate_start:navigate_end]
+    assert "stringOrEmpty(entry.session_id).trim()" in navigate_block
+    assert "stringOrEmpty(entry.chat_jid).trim()" in navigate_block
+    assert "stringOrEmpty(entry.name).trim()" in navigate_block
+    assert "stringOrEmpty(entry.alias).trim()" in navigate_block
+    assert "selectSession(sessionId, { reconnect: true, focusTimeline: true })" in navigate_block
+    assert "window.location" not in navigate_block
+    assert "buildSessionUrl" not in navigate_block
+
+    handlers_start = script.index("function installEventHandlers() {")
+    handlers_end = script.index("async function refreshShell", handlers_start)
+    handlers_block = script[handlers_start:handlers_end]
+    unload_start = handlers_block.index('window.addEventListener("beforeunload", () => {')
+    unload_end = handlers_block.index('window.addEventListener("resize", () => {', unload_start)
+    unload_block = handlers_block[unload_start:unload_end]
+    assert "if (trustedFrontendConfigured) {" in unload_block
+    assert "void window.tauFrontendSDK?.disposeAll?.();" in unload_block
+
+
 @pytest.mark.anyio
 async def test_live_ui_wires_runtime_controls_and_stream_events(web_config: WebConfig) -> None:
     app = create_app(web_config)
@@ -315,6 +396,50 @@ async def test_extension_ui_script_exposes_safe_extension_view_renderer(
 
 
 @pytest.mark.anyio
+async def test_frontend_sdk_exposes_loader_without_eval_or_inner_html(
+    web_config: WebConfig,
+) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+
+    try:
+        async with client.get("/static/frontend-sdk.js") as response:
+            script = await response.text()
+    finally:
+        await client.close()
+
+    assert "window.tauFrontendSDK" in script
+    assert "configure:" in script
+    assert "loadAll:" in script
+    assert "disposeAll:" in script
+    assert ".innerHTML" not in script
+    assert "eval(" not in script
+    assert "new Function" not in script
+
+
+def test_frontend_sdk_node_vm_contracts() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node executable not found")
+
+    repo_root = Path(__file__).resolve().parents[2]
+    script = repo_root / "tests" / "web" / "frontend-sdk.test.mjs"
+    result = subprocess.run(
+        [node, str(script)],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, (
+        "frontend-sdk node vm tests failed\n"
+        f"stdout:\n{result.stdout}\n"
+        f"stderr:\n{result.stderr}"
+    )
+
+
+@pytest.mark.anyio
 async def test_app_css_contains_responsive_media_queries(web_config: WebConfig) -> None:
     app = create_app(web_config)
     client = await _start_client(app)
@@ -380,6 +505,7 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "theme_color": "#0f172a",
         "lang": "en",
     }
+    assert 'const CACHE_NAME = "tau-web-shell-v10";' in worker
     for asset_path in (
         "/",
         "/index.html",
@@ -388,6 +514,8 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "/static/app.js",
         "/static/live-ui.js",
         "/static/extension-ui.js",
+        "/static/widget-bridge.js",
+        "/static/frontend-sdk.js",
     ):
         assert f'"{asset_path}"' in worker
 

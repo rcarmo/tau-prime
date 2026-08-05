@@ -16,6 +16,12 @@ from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Literal, Protocol, TypeVar, cast, runtime_checkable
 
+from tau_extensions.extended_ui import (
+    AnnotationProviderRegistry,
+    FileRendererRegistry,
+    TrustedFrontendRegistry,
+    WidgetRegistry,
+)
 from tau_extensions.manifest import Permission
 from tau_extensions.runtime import DisposalHandle, RegistryError, RuntimeDiagnostic
 from tau_extensions.types import JSONObject, JSONValue
@@ -50,6 +56,8 @@ _ALLOWED_PERMISSIONS = frozenset(
         "events",
         "views",
         "actions",
+        "sandboxed_widgets",
+        "trusted_frontend",
     }
 )
 
@@ -729,6 +737,10 @@ class ExtensionServices:
         self.tools = ToolRegistry(self._context)
         self.routes = RouteRegistry(self._context)
         self.events = EventBus(self._context)
+        self.file_renderers = FileRendererRegistry(self._context)
+        self.annotation_providers = AnnotationProviderRegistry(self._context)
+        self.widgets = WidgetRegistry(self._context, self.assets.lookup)
+        self.trusted_frontend = TrustedFrontendRegistry(self._context, self.assets.lookup)
         self._dispose_lock = asyncio.Lock()
         self._disposed = False
 
@@ -759,6 +771,10 @@ class ExtensionServices:
                 return
             await self.tasks.dispose()
             self.events.dispose()
+            self.trusted_frontend.dispose()
+            self.widgets.dispose()
+            self.annotation_providers.dispose()
+            self.file_renderers.dispose()
             self.routes.dispose()
             self.tools.dispose()
             self.commands.dispose()

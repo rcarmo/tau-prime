@@ -199,7 +199,7 @@
               <h3 id="branch-strip-title">Branches</h3>
               <p class="muted small-text">Select the active leaf for restored playback.</p>
             </div>
-            <div id="branch-list" class="branch-list" role="list"></div>
+            <div id="branch-list" class="branch-list"></div>
           </section>
 
           <section id="session-overview" class="session-overview" aria-label="Live session overview">
@@ -358,6 +358,16 @@
                 <p id="workspace-editor-note" class="muted small-text">
                   Local edits are not yet persisted through the web shell.
                 </p>
+                <section id="workspace-annotations" class="workspace-annotations" hidden>
+                  <h4>Annotations</h4>
+                  <ul id="workspace-annotation-list" class="workspace-annotation-list"></ul>
+                </section>
+                <section
+                  id="workspace-renderer"
+                  class="workspace-renderer"
+                  aria-label="Extension file preview"
+                  hidden
+                ></section>
               </section>
             </div>
           </section>
@@ -383,7 +393,13 @@
               </div>
               <p class="muted small-text">Shortcut: Ctrl/Cmd+K</p>
             </form>
-            <ol id="search-results" class="search-results" aria-live="polite"></ol>
+            <ol
+              id="search-results"
+              class="search-results"
+              tabindex="0"
+              aria-label="Search results"
+              aria-live="polite"
+            ></ol>
           </section>
 
           <section
@@ -507,7 +523,13 @@
             <div class="compose-attachment-bar">
               <button id="compose-attachment-button" type="button">Attach files</button>
               <button id="compose-clear-attachments" type="button">Clear staged</button>
-              <input id="compose-file-input" class="sr-only" type="file" multiple />
+              <input
+                id="compose-file-input"
+                class="sr-only"
+                type="file"
+                multiple
+                aria-label="Attach files"
+              />
             </div>
             <ul
               id="compose-attachment-list"
@@ -525,6 +547,7 @@
                 name="prompt"
                 rows="3"
                 autocomplete="off"
+                role="combobox"
                 aria-autocomplete="list"
                 aria-controls="compose-completion-listbox"
                 aria-describedby="compose-help compose-completion-status"
@@ -569,8 +592,9 @@
     <noscript>
       <p class="noscript-banner">Tau Web Shell requires JavaScript to load persisted sessions.</p>
     </noscript>
-    <script type="module" src="/static/app.js"></script>
     <script type="module" src="/static/live-ui.js"></script>
     <script type="module" src="/static/extension-ui.js"></script>
+    <script type="module" src="/static/frontend-sdk.js"></script>
+    <script type="module" src="/static/app.js"></script>
   </body>
 </html>

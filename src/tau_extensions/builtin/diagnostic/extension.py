@@ -7,17 +7,23 @@ import json
 from collections.abc import Sequence
 
 from tau_extensions import (
+    AnnotationProviderSpec,
     CommandSpec,
     DisposalHandle,
+    EditorAnnotation,
     ExtensionDefinition,
     ExtensionRegistrar,
     ExtensionServices,
+    FileRenderContext,
+    FileRendererSpec,
     JSONObject,
     JSONValue,
     RouteRequest,
     RouteResponse,
     RouteSpec,
     ToolSpec,
+    WidgetReference,
+    WidgetSpec,
 )
 from tau_extensions.web import (
     ActionContext,
@@ -46,6 +52,10 @@ COMMAND_NAME = "diagnostic.command"
 TOOL_NAME = "diagnostic.tool"
 ROUTE_PATH = "/status"
 ASSET_PATH = "diagnostic/state.json"
+WIDGET_SCRIPT_PATH = "diagnostic/widget.js"
+FILE_RENDERER_ID = "diagnostic-file"
+ANNOTATION_PROVIDER_ID = "diagnostic-annotations"
+WIDGET_ID = "diagnostic-widget"
 EVENT_NAME = "diagnostic.ping"
 GLOBAL_STATE_KEY = "state"
 WORKSPACE_SCOPE_ID = "diagnostic-workspace"
@@ -81,6 +91,22 @@ class DiagnosticExtension:
             self._run_tool,
         )
         self.route_spec = RouteSpec("GET", ROUTE_PATH, self._route_response)
+        self.file_renderer_spec = FileRendererSpec(
+            FILE_RENDERER_ID,
+            self._render_file,
+            filename_patterns=("*.tau-diagnostic.json", "*.tau-diagnostic.txt"),
+        )
+        self.annotation_provider_spec = AnnotationProviderSpec(
+            ANNOTATION_PROVIDER_ID,
+            self._annotate_file,
+            filename_patterns=("*.tau-diagnostic.json", "*.tau-diagnostic.txt"),
+        )
+        self.widget_spec = WidgetSpec(
+            WIDGET_ID,
+            "Diagnostic widget",
+            WIDGET_SCRIPT_PATH,
+            actions={"snapshot": self._widget_snapshot},
+        )
         self.asset_content = _json_bytes(
             {
                 "asset_path": ASSET_PATH,
@@ -88,6 +114,7 @@ class DiagnosticExtension:
                 "view_id": self.view.id,
             }
         )
+        self.widget_script = _widget_script_bytes()
         self.definition = ExtensionDefinition(setup=self._setup)
         self.host_events: list[str] = []
         self.service_events: list[JSONObject] = []
@@ -125,6 +152,18 @@ class DiagnosticExtension:
                     mime_type="application/json",
                 )
             )
+            handles.append(
+                self.services.assets.register(
+                    WIDGET_SCRIPT_PATH,
+                    self.widget_script,
+                    mime_type="application/javascript",
+                )
+            )
+            handles.append(self.services.file_renderers.register(self.file_renderer_spec))
+            handles.append(
+                self.services.annotation_providers.register(self.annotation_provider_spec)
+            )
+            handles.append(self.services.widgets.register(self.widget_spec))
             handles.append(self.services.commands.register(self.command_spec))
             handles.append(self.services.tools.register(self.tool_spec))
             handles.append(self.services.routes.register(self.route_spec))
@@ -208,6 +247,13 @@ class DiagnosticExtension:
         return (
             registrar.contribute("views", VIEW_ID, self.view),
             registrar.contribute("actions", ACTION_ID, self.action_definition),
+            registrar.contribute("file_renderers", FILE_RENDERER_ID, self.file_renderer_spec),
+            registrar.contribute(
+                "editor_annotations",
+                ANNOTATION_PROVIDER_ID,
+                self.annotation_provider_spec,
+            ),
+            registrar.contribute("widgets", WIDGET_ID, self.widget_spec),
             registrar.contribute("commands", COMMAND_NAME, self.command_spec),
             registrar.contribute("tools", TOOL_NAME, self.tool_spec),
             registrar.contribute("routes", _ROUTE_CONTRIBUTION_KEY, self.route_spec),
@@ -305,6 +351,24 @@ class DiagnosticExtension:
             ),
         )
 
+    def _render_file(self, context: FileRenderContext) -> StandardView | WidgetReference:
+        if context.path.endswith(".json"):
+            return WidgetReference(WIDGET_ID)
+        return self.view
+
+    def _annotate_file(self, context: FileRenderContext) -> tuple[EditorAnnotation, ...]:
+        return (
+            EditorAnnotation(
+                1,
+                f"Diagnostic fixture: {context.path}",
+                severity="info",
+                source="tau.diagnostic",
+            ),
+        )
+
+    def _widget_snapshot(self, payload: JSONObject) -> JSONObject:
+        return {"payload": dict(payload), "snapshot": self.snapshot()}
+
     def _run_command(self) -> JSONObject:
         return self.snapshot()
 
@@ -390,6 +454,27 @@ def _build_view() -> StandardView:
     )
 
 
+def _widget_script_bytes() -> bytes:
+    return b"""(() => {
+  'use strict';
+  const root = document.getElementById('tau-widget-root');
+  const status = document.createElement('pre');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Load diagnostic snapshot';
+  button.addEventListener('click', async () => {
+    try {
+      const result = await window.tauWidget.action({name: 'snapshot', payload: {source: 'widget'}});
+      status.textContent = JSON.stringify(result, null, 2);
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'Widget action failed.';
+    }
+  });
+  root.replaceChildren(button, status);
+})();
+"""
+
+
 def _json_bytes(value: JSONValue) -> bytes:
     return json.dumps(
         value,
@@ -414,6 +499,8 @@ __all__ = [
     "ASSET_PATH",
     "COMMAND_NAME",
     "DIAGNOSTIC_EXTENSION_ID",
+    "FILE_RENDERER_ID",
+    "ANNOTATION_PROVIDER_ID",
     "DiagnosticExtension",
     "EVENT_NAME",
     "GLOBAL_STATE_KEY",
@@ -422,6 +509,8 @@ __all__ = [
     "SESSION_STATE_KEY",
     "TOOL_NAME",
     "VIEW_ID",
+    "WIDGET_ID",
+    "WIDGET_SCRIPT_PATH",
     "WORKSPACE_SCOPE_ID",
     "WORKSPACE_STATE_KEY",
     "create_extension",

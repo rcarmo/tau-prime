@@ -6,6 +6,8 @@ const LIMITS = Object.freeze({
   textBytes: 16 * 1024,
   tableRows: 50,
   tableColumns: 20,
+  widgetDocumentBytes: 2 * 1024 * 1024,
+  widgetMessageBytes: 16 * 1024,
 });
 const VIEW_KINDS = Object.freeze(["card", "detail", "form"]);
 const PLACEMENTS = Object.freeze([
@@ -32,9 +34,11 @@ const COMPONENT_KEYS = Object.freeze({
   stack: ["kind", "direction", "accessible_label", "children"],
 });
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+const IDENTIFIER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/;
 const ENCODER = new TextEncoder();
 const statusElement = document.getElementById("app-status");
 const renderedViews = new Map();
+const mountedWidgets = new Map();
 const handledEvents = new WeakSet();
 const slotElements = new Map(
   Array.from(document.querySelectorAll("[data-extension-slot]"), (node) => [
@@ -614,6 +618,162 @@ function clear() {
   });
 }
 
+function ensureIdentifier(value, path) {
+  if (typeof value !== "string" || !IDENTIFIER_RE.test(value)) {
+    throw new Error(`${path} must be a safe identifier`);
+  }
+  return value;
+}
+
+function validateWidgetDescriptor(value) {
+  const widget = ensureObject(value, "widget");
+  rejectUnknownKeys(widget, "widget", ["extension_id", "id", "title", "height", "url"]);
+  const height = ensureNumber(widget.height, "widget.height");
+  if (!Number.isInteger(height) || height < 120 || height > 1200) {
+    throw new Error("widget.height must be an integer between 120 and 1200");
+  }
+  return {
+    extension_id: ensureIdentifier(widget.extension_id, "widget.extension_id"),
+    id: ensureIdentifier(widget.id, "widget.id"),
+    title: ensureString(widget.title, "widget.title", { nonBlank: true, maxChars: 128 }),
+    height,
+    url: ensureString(widget.url, "widget.url", { nonBlank: true, maxChars: 2048 }),
+  };
+}
+
+function widgetFrameId(widget) {
+  return `${widget.extension_id}:${widget.id}`;
+}
+
+function mountWidget(target, descriptor, documentText) {
+  return safely("Extension widget rejected", () => {
+    const mountTarget = resolveTarget(target);
+    const widget = validateWidgetDescriptor(descriptor);
+    const source = ensureString(documentText, "widget document", {
+      nonBlank: true,
+      maxBytes: LIMITS.widgetDocumentBytes,
+    });
+    const frameId = widgetFrameId(widget);
+    removeWidget(frameId);
+    const frame = create("iframe", "tau-widget-frame");
+    frame.title = widget.title;
+    frame.height = String(widget.height);
+    frame.referrerPolicy = "no-referrer";
+    frame.setAttribute("sandbox", "allow-scripts");
+    frame.dataset.tauWidgetFrameId = frameId;
+    frame.srcdoc = source;
+    mountTarget.replaceChildren(frame);
+    mountedWidgets.set(frameId, { frame, target: mountTarget, widget, documentText: source });
+    return frameId;
+  });
+}
+
+function removeWidget(frameId) {
+  const mounted = mountedWidgets.get(frameId);
+  if (!mounted) return false;
+  mounted.frame.remove();
+  mountedWidgets.delete(frameId);
+  return true;
+}
+
+function refreshWidget(frameId, documentText) {
+  return safely("Extension widget refresh failed", () => {
+    const mounted = mountedWidgets.get(frameId);
+    if (!mounted) throw new Error("Unknown widget frame");
+    const source = ensureString(documentText, "widget document", {
+      nonBlank: true,
+      maxBytes: LIMITS.widgetDocumentBytes,
+    });
+    mounted.documentText = source;
+    mounted.frame.srcdoc = source;
+    return true;
+  });
+}
+
+function respondWidget(frameId, requestId, { result = null, error = null } = {}) {
+  return safely("Extension widget response failed", () => {
+    const mounted = mountedWidgets.get(frameId);
+    if (!mounted?.frame.contentWindow) throw new Error("Unknown widget frame");
+    mounted.frame.contentWindow.postMessage({
+      source: "tau-host",
+      version: 1,
+      request_id: ensureString(requestId, "request_id", { nonBlank: true, maxChars: 128 }),
+      result: cloneJson(result, "result"),
+      error: error === null ? null : ensureString(error, "error", { nonBlank: true, maxBytes: LIMITS.textBytes }),
+    }, "*");
+    return true;
+  });
+}
+
+function handleWidgetMessage(event) {
+  if (event.origin !== "null") return;
+  const mountedEntry = Array.from(mountedWidgets.entries()).find(
+    ([, mounted]) => mounted.frame.contentWindow === event.source,
+  );
+  if (!mountedEntry) return;
+  const [frameId, mounted] = mountedEntry;
+  let message;
+  try {
+    if (jsonSize(event.data) > LIMITS.widgetMessageBytes) return;
+    message = ensureObject(event.data, "widget message");
+    if (
+      message.source !== "tau-widget" ||
+      message.version !== 1 ||
+      message.extension_id !== mounted.widget.extension_id ||
+      message.widget_id !== mounted.widget.id
+    ) return;
+    ensureString(message.request_id, "widget message.request_id", { nonBlank: true, maxChars: 128 });
+  } catch {
+    return;
+  }
+
+  if (message.kind === "action") {
+    try {
+      ensureIdentifier(message.name, "widget message.name");
+      const payload = cloneJson(ensureObject(message.payload, "widget message.payload"), "widget message.payload");
+      if (jsonSize(payload) > LIMITS.payloadBytes) throw new Error("payload is too large");
+      document.dispatchEvent(new CustomEvent("tau:widget-action", { detail: {
+        frame_id: frameId,
+        extension_id: mounted.widget.extension_id,
+        widget_id: mounted.widget.id,
+        request_id: message.request_id,
+        name: message.name,
+        payload,
+      } }));
+    } catch (error) {
+      respondWidget(frameId, message.request_id, { error: error instanceof Error ? error.message : "Invalid action." });
+    }
+    return;
+  }
+  if (message.kind === "submit") {
+    if (typeof message.text !== "string" || bytesForText(message.text) > LIMITS.textBytes) return;
+    if (!["prefill", "submit"].includes(message.mode)) return;
+    document.dispatchEvent(new CustomEvent("tau:widget-submit", { detail: {
+      frame_id: frameId,
+      text: message.text,
+      mode: message.mode,
+    } }));
+    return;
+  }
+  if (message.kind === "refresh") {
+    document.dispatchEvent(new CustomEvent("tau:widget-refresh", { detail: {
+      frame_id: frameId,
+      extension_id: mounted.widget.extension_id,
+      widget_id: mounted.widget.id,
+      url: mounted.widget.url,
+      key: typeof message.key === "string" ? message.key : null,
+    } }));
+    return;
+  }
+  if (message.kind === "close") {
+    removeWidget(frameId);
+    document.dispatchEvent(new CustomEvent("tau:widget-close", { detail: {
+      frame_id: frameId,
+      reason: typeof message.reason === "string" ? message.reason : null,
+    } }));
+  }
+}
+
 function handleViewEvent(event) {
   if (!(event instanceof CustomEvent) || handledEvents.has(event)) return;
   handledEvents.add(event);
@@ -622,4 +782,14 @@ function handleViewEvent(event) {
 
 window.addEventListener("tau:extension-view", handleViewEvent);
 document.addEventListener("tau:extension-view", handleViewEvent);
-window.tauExtensionUI = Object.freeze({ render, remove, clear, renderInto });
+window.addEventListener("message", handleWidgetMessage);
+window.tauExtensionUI = Object.freeze({
+  render,
+  remove,
+  clear,
+  renderInto,
+  mountWidget,
+  removeWidget,
+  refreshWidget,
+  respondWidget,
+});

@@ -2,6 +2,8 @@
 
 Tau has **two different browser-facing modes**.
 
+For runtime layering see [architecture](./architecture.md); for the exact route index see [API](./api.md).
+
 ## Optional install
 
 `pyproject.toml` defines a `web` extra with `aiohttp`, `pillow` and `watchfiles`.
@@ -93,9 +95,10 @@ All current API routes live under `/api`.
 - Runs and queue: `/api/sessions/{session_id}/runs`, `/api/runs/{run_id}`, `/api/runs/{run_id}/cancel`, `/abort`, `/retry`, `/api/sessions/{session_id}/queue`, `/api/runs/{run_id}/messages`, `/api/runs/{run_id}/queue/{kind}/dispatch`
 - Metadata and search: `/api/settings`, `/api/models`, `/api/commands`, `/api/sessions/{session_id}/model`, `/thinking`, `/plan`, `/usage`, `/api/search`
 - Workspace and media: `/api/files`, `/api/media`, `/api/media/{media_id}`, `/api/media/{media_id}/content`
+- Extensions: `/api/extensions/frontend-modules`, `/api/extensions/widgets/...`, `/api/extensions/assets/...`, `/api/extensions/routes/...`
 - Events: `/api/events`
 
-There are currently **no** public `/api/extensions/...` routes.
+The exact methods and path parameters are listed in [API](./api.md).
 
 ## SSE cursors, replay and recovery
 
@@ -122,7 +125,7 @@ The bundled browser shell reconnects automatically with exponential back-off fro
 
 ## PWA and frontend shell
 
-Tau Web serves these public shell assets: `/`, `/index.html`, `/manifest.webmanifest`, `/sw.js`, `/static/app.css`, `/static/app.js`, `/static/live-ui.js`, `/static/extension-ui.js`.
+Tau Web serves these public shell assets: `/`, `/index.html`, `/manifest.webmanifest`, `/sw.js`, `/static/app.css`, `/static/app.js`, `/static/live-ui.js`, `/static/extension-ui.js`, `/static/widget-bridge.js`, and `/static/frontend-sdk.js`.
 
 The manifest sets `start_url: "/"`, `scope: "/"` and `display: "standalone"`. The shell registers `/sw.js` as a service worker.
 
@@ -136,13 +139,13 @@ The file browser rejects absolute paths, `..` traversal, symlink traversal, bina
 
 Important distinction: session records may store their own `workspace_root`, but `/api/files` browsing is rooted in **server `cwd`**, not in each session's recorded workspace root. Creating or importing a session does not widen file-browser access.
 
-## Declarative extension UI: current status
+## Extension UI and host activation
 
-There is a real declarative web UI contract in `tau_extensions.web`, and the shell ships an `extension-ui.js` renderer with six slots: `compose_above`, `compose_below`, `sidebar`, `timeline_before`, `timeline_after`, `dashboard`.
+Tau Web exposes the portable extension runtime services and HTTP adapters for declarative views/actions, extension assets and routes, sandboxed widgets, and trusted frontend modules. The shell includes `extension-ui.js`, `widget-bridge.js`, and `frontend-sdk.js`, with six shared slots: `compose_above`, `compose_below`, `sidebar`, `timeline_before`, `timeline_after`, and `dashboard`.
 
-The SQLite schema also includes persistent `extension_state` storage.
+Extension-scoped state is persisted in SQLite. The public route families are listed in [API](./api.md), and the trust tiers and registration contracts are described in [extensions](./extensions.md).
 
-However, Tau Web does **not** currently expose public extension HTTP routes or a built-in end-user activation path for extension views and actions. The renderer and contracts exist, but server-side extension UI integration is not yet a complete user feature.
+The default server creates an empty extension directory. It does not automatically discover, approve, import, or activate manifest extensions from disk; an embedding host must perform those policy-sensitive steps and register the resulting service bundles. Once registered, their contributions are available through the shipped browser and HTTP paths.
 
 Current declarative UI limits enforced in source:
 

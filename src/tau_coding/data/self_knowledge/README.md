@@ -12,7 +12,7 @@ Topic map:
 - `providers.md` — provider-specific behavior and model routing constraints.
 - `models.md` — static/dynamic model metadata rules.
 - `compaction.md` — adaptive and provider-native compaction design.
-- `extensions.md` — supported extension API surface and deferred component hosting.
+- `extensions.md` — compatibility and portable extension runtimes, web adapters, and trust boundaries.
 - `skills-and-resources.md` — AGENTS.md, skills, prompts, and resource discovery.
 - `packaging-and-release.md` — tarball release flow and a-Shell install expectations.
 - `fork-invariants.md` — concise list of behaviors to preserve.

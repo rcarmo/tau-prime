@@ -189,6 +189,98 @@ def test_resolve_extensions_denies_permissions_outside_source_allowlist(tmp_path
     assert plan.diagnostics[0].message.endswith("extensions: tools")
 
 
+def test_resolve_extensions_workspace_trusted_frontend_is_hard_denied(
+    tmp_path: Path,
+) -> None:
+    workspace = _candidate(
+        tmp_path,
+        "com.example.workspace",
+        source=ExtensionSource.WORKSPACE,
+        permissions=("views", "trusted_frontend"),
+    )
+
+    plan = resolve_extensions(
+        [workspace],
+        enabled_ids={workspace.manifest.id},
+        approvals={Approval(workspace.manifest.id, workspace.fingerprint)},
+        policy=TrustPolicy(
+            permission_allowlists={
+                ExtensionSource.WORKSPACE: (
+                    "views",
+                    "actions",
+                    "events",
+                    "commands",
+                    "trusted_frontend",
+                )
+            }
+        ),
+    )
+
+    assert plan.ordered_candidates == ()
+    assert _decision_codes(plan) == {"com.example.workspace": "permission_denied"}
+    assert "trusted_frontend" in plan.diagnostics[0].message
+
+
+def test_resolve_extensions_admin_trusted_frontend_requires_enablement_and_allowlist(
+    tmp_path: Path,
+) -> None:
+    admin = _candidate(
+        tmp_path,
+        "com.example.admin",
+        source=ExtensionSource.ADMIN,
+        permissions=("trusted_frontend",),
+    )
+
+    not_enabled = resolve_extensions(
+        [admin],
+        enabled_ids=(),
+        approvals=(),
+        policy=TrustPolicy(admin_allowlist={admin.manifest.id}),
+    )
+    assert _decision_codes(not_enabled) == {"com.example.admin": "not_enabled"}
+    assert not_enabled.ordered_candidates == ()
+
+    missing_allowlist = resolve_extensions(
+        [admin],
+        enabled_ids={admin.manifest.id},
+        approvals=(),
+        policy=TrustPolicy(),
+    )
+    assert _decision_codes(missing_allowlist) == {"com.example.admin": "admin_not_allowlisted"}
+    assert missing_allowlist.ordered_candidates == ()
+
+    enabled = resolve_extensions(
+        [admin],
+        enabled_ids={admin.manifest.id},
+        approvals=(),
+        policy=TrustPolicy(admin_allowlist={admin.manifest.id}),
+    )
+    assert _decision_codes(enabled) == {"com.example.admin": "explicitly_enabled"}
+    assert [candidate.manifest.id for candidate in enabled.ordered_candidates] == [
+        "com.example.admin"
+    ]
+
+
+def test_resolve_extensions_builtin_accepts_trusted_frontend_permission(tmp_path: Path) -> None:
+    built_in = _candidate(
+        tmp_path,
+        "com.example.built-in",
+        source=ExtensionSource.BUILT_IN,
+        permissions=("trusted_frontend",),
+    )
+
+    plan = resolve_extensions(
+        [built_in],
+        enabled_ids=(),
+        approvals=(),
+        policy=TrustPolicy(),
+    )
+
+    assert _decision_codes(plan) == {"com.example.built-in": "builtin_default_enabled"}
+    assert [candidate.manifest.id for candidate in plan.ordered_candidates] == [
+        "com.example.built-in"
+    ]
+
 
 def test_resolve_extensions_blocks_missing_disabled_and_version_mismatched_dependencies(
     tmp_path: Path,
@@ -242,7 +334,6 @@ def test_resolve_extensions_blocks_missing_disabled_and_version_mismatched_depen
     }
 
 
-
 def test_resolve_extensions_orders_enabled_candidates_topologically_with_stable_ties(
     tmp_path: Path,
 ) -> None:
@@ -275,7 +366,6 @@ def test_resolve_extensions_orders_enabled_candidates_topologically_with_stable_
         "com.example.gamma",
     ]
     assert plan.diagnostics == ()
-
 
 
 def test_resolve_extensions_blocks_cycles_and_transitive_dependents(tmp_path: Path) -> None:

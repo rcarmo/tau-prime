@@ -37,6 +37,10 @@ const DEFAULT_THINKING_LEVELS = Object.freeze([
 ]);
 const TABS = ["workspace", "search", "plan", "settings"];
 
+let trustedFrontendConfigured = false;
+let trustedFrontendLoading = null;
+let trustedFrontendLoaded = false;
+
 class ApiError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -86,6 +90,8 @@ const state = {
   workspaceEntries: [],
   workspaceFilePath: null,
   workspaceFileContent: "",
+  workspaceFileRenderer: null,
+  workspaceAnnotations: [],
   searchResults: [],
   plan: null,
   planDraft: "",
@@ -119,6 +125,7 @@ async function init() {
     applySessionFilter(state.sessionFilter);
     closeDrawers();
     await refreshShell({ reconnect: true, announceMessage: "Tau shell ready." });
+    void initializeTrustedFrontendModules();
     await refreshMeters();
     startMetersPolling();
     await registerServiceWorker();
@@ -187,6 +194,9 @@ function bindUi() {
     workspaceList: requiredElement("workspace-list"),
     workspaceEditorPath: requiredElement("workspace-editor-path"),
     workspaceEditor: requiredElement("workspace-editor"),
+    workspaceAnnotations: requiredElement("workspace-annotations"),
+    workspaceAnnotationList: requiredElement("workspace-annotation-list"),
+    workspaceRenderer: requiredElement("workspace-renderer"),
     searchForm: requiredElement("search-form"),
     searchInput: requiredElement("search-input"),
     searchSubmitButton: requiredElement("search-submit-button"),
@@ -346,12 +356,25 @@ function installEventHandlers() {
     void submitPrompt();
   });
 
+  document.addEventListener("tau:widget-action", (event) => {
+    void handleWidgetAction(event);
+  });
+  document.addEventListener("tau:widget-submit", (event) => {
+    void handleWidgetSubmit(event);
+  });
+  document.addEventListener("tau:widget-refresh", (event) => {
+    void handleWidgetRefresh(event);
+  });
+
   window.addEventListener("keydown", handleKeyboardShortcuts);
   document.addEventListener("visibilitychange", handleMetersVisibilityChange);
   window.addEventListener("beforeunload", () => {
     stopEventStream();
     stopMetersPolling();
     stopDashboardTimers();
+    if (trustedFrontendConfigured) {
+      void window.tauFrontendSDK?.disposeAll?.();
+    }
   });
   window.addEventListener("resize", () => {
     if (window.innerWidth > 960) {
@@ -752,12 +775,10 @@ async function reloadWorkspace() {
       try {
         const file = await apiFetch(`${API_PATHS.files}?path=${encodeURIComponent(state.workspaceFilePath)}`);
         if (file?.kind === "file") {
-          state.workspaceFilePath = file.path;
-          state.workspaceFileContent = stringOrEmpty(file.content);
+          applyWorkspaceFileResponse(file);
         }
       } catch {
-        state.workspaceFilePath = null;
-        state.workspaceFileContent = "";
+        clearWorkspaceFile();
       }
     }
     renderWorkspace();
@@ -784,8 +805,7 @@ async function openWorkspaceEntry(entry) {
     if (response?.kind !== "file") {
       throw new ApiError("Selected workspace path is not a file.");
     }
-    state.workspaceFilePath = response.path;
-    state.workspaceFileContent = stringOrEmpty(response.content);
+    applyWorkspaceFileResponse(response);
     renderWorkspace();
     announce(`Opened ${response.path}.`);
   } catch (error) {
@@ -2026,6 +2046,8 @@ function renderWorkspace() {
   ui.workspacePath.textContent = state.workspacePath;
   ui.workspaceEditorPath.textContent = state.workspaceFilePath ?? "No file selected";
   ui.workspaceEditor.value = state.workspaceFileContent;
+  renderWorkspaceAnnotations();
+  void renderWorkspaceRenderer();
   ui.workspaceList.replaceChildren();
 
   if (!state.workspaceEntries.length) {
@@ -2053,6 +2075,129 @@ function renderWorkspace() {
     button.append(label, kind);
     item.append(button);
     ui.workspaceList.append(item);
+  }
+}
+
+function renderWorkspaceAnnotations() {
+  ui.workspaceAnnotationList.replaceChildren();
+  const annotations = state.workspaceAnnotations.filter(
+    (item) => item && typeof item === "object" && Number.isInteger(item.line) && item.line > 0,
+  );
+  ui.workspaceAnnotations.hidden = annotations.length === 0;
+  ui.workspaceEditor.setAttribute(
+    "aria-describedby",
+    annotations.length ? "workspace-editor-note workspace-annotations" : "workspace-editor-note",
+  );
+  for (const annotation of annotations) {
+    const item = document.createElement("li");
+    item.className = "workspace-annotation";
+    item.dataset.severity = ["info", "warning", "error"].includes(annotation.severity)
+      ? annotation.severity
+      : "info";
+    const endLine = Number.isInteger(annotation.end_line) && annotation.end_line >= annotation.line
+      ? `–${annotation.end_line}`
+      : "";
+    const source = typeof annotation.source === "string" && annotation.source
+      ? ` · ${annotation.source}`
+      : "";
+    item.textContent = `Line ${annotation.line}${endLine}${source}: ${stringOrEmpty(annotation.message)}`;
+    ui.workspaceAnnotationList.append(item);
+  }
+}
+
+async function renderWorkspaceRenderer() {
+  const renderer = state.workspaceFileRenderer;
+  const target = ui.workspaceRenderer;
+  if (!renderer || typeof renderer !== "object" || !window.tauExtensionUI) {
+    const frameId = target.dataset.widgetFrameId;
+    if (frameId) window.tauExtensionUI?.removeWidget(frameId);
+    target.replaceChildren();
+    target.hidden = true;
+    delete target.dataset.rendererKey;
+    delete target.dataset.widgetFrameId;
+    return;
+  }
+
+  const rendererKey = JSON.stringify(renderer);
+  if (target.dataset.rendererKey === rendererKey && target.childNodes.length) return;
+  const previousFrameId = target.dataset.widgetFrameId;
+  if (previousFrameId) window.tauExtensionUI.removeWidget(previousFrameId);
+  target.replaceChildren();
+  target.hidden = false;
+  target.dataset.rendererKey = rendererKey;
+  delete target.dataset.widgetFrameId;
+
+  if (renderer.type === "view" && renderer.view && typeof renderer.view === "object") {
+    window.tauExtensionUI.renderInto(target, renderer.view);
+    return;
+  }
+  if (
+    renderer.type !== "widget" ||
+    typeof renderer.extension_id !== "string" ||
+    !renderer.widget ||
+    typeof renderer.widget.id !== "string"
+  ) {
+    target.hidden = true;
+    return;
+  }
+
+  const url = `/api/extensions/widgets/${encodeURIComponent(renderer.extension_id)}/${encodeURIComponent(renderer.widget.id)}`;
+  try {
+    const documentText = await apiFetch(url);
+    if (target.dataset.rendererKey !== rendererKey) return;
+    const frameId = window.tauExtensionUI.mountWidget(
+      target,
+      { ...renderer.widget, extension_id: renderer.extension_id, url },
+      documentText,
+    );
+    if (frameId) target.dataset.widgetFrameId = frameId;
+  } catch (error) {
+    if (target.dataset.rendererKey === rendererKey) {
+      target.replaceChildren(createMutedText(messageForError(error, "Unable to load file preview.")));
+    }
+  }
+}
+
+async function handleWidgetAction(event) {
+  const detail = event instanceof CustomEvent ? event.detail : null;
+  if (!detail || typeof detail !== "object") return;
+  const { frame_id: frameId, extension_id: extensionId, widget_id: widgetId, request_id: requestId } = detail;
+  if (![frameId, extensionId, widgetId, requestId, detail.name].every((value) => typeof value === "string" && value)) return;
+  const path = `/api/extensions/widgets/${encodeURIComponent(extensionId)}/${encodeURIComponent(widgetId)}/actions/${encodeURIComponent(detail.name)}`;
+  try {
+    const result = await apiFetch(path, { method: "POST", json: { payload: detail.payload } });
+    window.tauExtensionUI?.respondWidget(frameId, requestId, { result });
+  } catch (error) {
+    window.tauExtensionUI?.respondWidget(frameId, requestId, {
+      error: messageForError(error, "Widget action failed."),
+    });
+  }
+}
+
+async function handleWidgetSubmit(event) {
+  const detail = event instanceof CustomEvent ? event.detail : null;
+  if (!detail || typeof detail.text !== "string") return;
+  ui.composeInput.value = detail.text;
+  handleComposeInputChange();
+  ui.composeInput.focus();
+  if (detail.mode === "submit") await submitPrompt();
+}
+
+async function handleWidgetRefresh(event) {
+  const detail = event instanceof CustomEvent ? event.detail : null;
+  const renderer = state.workspaceFileRenderer;
+  if (
+    !detail ||
+    renderer?.type !== "widget" ||
+    detail.extension_id !== renderer.extension_id ||
+    detail.widget_id !== renderer.widget?.id
+  ) return;
+  const url = `/api/extensions/widgets/${encodeURIComponent(detail.extension_id)}/${encodeURIComponent(detail.widget_id)}`;
+  try {
+    const documentText = await apiFetch(url);
+    window.tauExtensionUI?.refreshWidget(detail.frame_id, documentText);
+  } catch (error) {
+    handleError(error, "Unable to refresh widget.");
   }
 }
 
@@ -2199,15 +2344,29 @@ function applyWorkspaceResponse(response, { preserveFile = false } = {}) {
     state.workspacePath = response.path || ".";
     state.workspaceEntries = Array.isArray(response.entries) ? response.entries : [];
     if (!preserveFile) {
-      state.workspaceFilePath = null;
-      state.workspaceFileContent = "";
+      clearWorkspaceFile();
     }
     return;
   }
   if (response?.kind === "file") {
-    state.workspaceFilePath = response.path;
-    state.workspaceFileContent = stringOrEmpty(response.content);
+    applyWorkspaceFileResponse(response);
   }
+}
+
+function applyWorkspaceFileResponse(response) {
+  state.workspaceFilePath = response.path;
+  state.workspaceFileContent = stringOrEmpty(response.content);
+  state.workspaceFileRenderer = response.renderer && typeof response.renderer === "object"
+    ? response.renderer
+    : null;
+  state.workspaceAnnotations = Array.isArray(response.annotations) ? response.annotations : [];
+}
+
+function clearWorkspaceFile() {
+  state.workspaceFilePath = null;
+  state.workspaceFileContent = "";
+  state.workspaceFileRenderer = null;
+  state.workspaceAnnotations = [];
 }
 
 function syncProviderInputs(providerName, model) {
@@ -2820,6 +2979,153 @@ async function registerServiceWorker() {
     await navigator.serviceWorker.register("/sw.js", { scope: "/" });
   } catch {
     announce("Offline support is unavailable.");
+  }
+}
+
+async function authenticatedFetch(path, options = {}) {
+  const url = new URL(path, location.origin);
+  if (url.origin !== location.origin) {
+    throw new Error("Cross-origin requests are not allowed.");
+  }
+
+  const inputOptions = options && typeof options === "object" ? options : {};
+  const { headers: sourceHeaders = {}, ...requestOptions } = inputOptions;
+  const method = stringOrEmpty(requestOptions.method).trim().toUpperCase() || "GET";
+  return fetch(url, {
+    ...requestOptions,
+    method,
+    headers: buildHeaders(method, sourceHeaders || {}),
+  });
+}
+
+async function submitTrustedFrontendMessage(payload) {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    Object.getPrototypeOf(payload) !== Object.prototype
+  ) {
+    throw new Error("Trusted frontend payload must be a plain object.");
+  }
+
+  const keys = Object.keys(payload);
+  if (!keys.includes("text") || keys.some((key) => key !== "text" && key !== "mode")) {
+    throw new Error("Trusted frontend payload must only include text and mode.");
+  }
+
+  const text = stringOrEmpty(payload.text).trim();
+  if (text.length < 1 || text.length > 16384) {
+    throw new Error("Trusted frontend text must be between 1 and 16384 characters.");
+  }
+
+  const rawMode = payload.mode === undefined ? "run" : stringOrEmpty(payload.mode).trim();
+  const mode = normalizeDeliveryMode(rawMode);
+  if (!DELIVERY_MODES.has(rawMode)) {
+    throw new Error("Trusted frontend mode is unsupported.");
+  }
+
+  const sessionId = await ensureComposerSessionId();
+  if (!sessionId) {
+    throw new Error("No session is available for trusted frontend messages.");
+  }
+
+  if (mode === "run") {
+    await apiFetch(`${sessionPath(sessionId)}/runs`, {
+      method: "POST",
+      json: { content: text },
+    });
+  } else {
+    const active = currentComposerActiveRun();
+    if (active) {
+      await submitComposerQueuedMessage(active.run_id, mode, text);
+    } else {
+      await enqueueComposerSessionMessage(sessionId, mode, text);
+    }
+  }
+
+  return { accepted: true, mode };
+}
+
+async function navigateTrustedFrontend(target) {
+  const sessionTarget = typeof target === "string" ? target.trim() : "";
+  if (!sessionTarget || sessionTarget.length > 256) {
+    throw new Error("Trusted frontend navigation target must be 1 to 256 characters.");
+  }
+
+  const session = state.sessions.find((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return false;
+    }
+    const candidates = [
+      stringOrEmpty(entry.session_id).trim(),
+      stringOrEmpty(entry.chat_jid).trim(),
+      stringOrEmpty(entry.name).trim(),
+      stringOrEmpty(entry.alias).trim(),
+    ].filter(Boolean);
+    return candidates.includes(sessionTarget);
+  });
+
+  const sessionId = stringOrEmpty(session?.session_id).trim();
+  if (!sessionId) {
+    throw new Error("Unknown trusted frontend navigation target.");
+  }
+
+  await selectSession(sessionId, { reconnect: true, focusTimeline: true });
+  return { session_id: sessionId };
+}
+
+async function initializeTrustedFrontendModules() {
+  if (trustedFrontendLoaded) {
+    return;
+  }
+  if (trustedFrontendLoading) {
+    await trustedFrontendLoading;
+    return;
+  }
+
+  const sdk = window.tauFrontendSDK;
+  if (!sdk || typeof sdk.configure !== "function" || typeof sdk.loadAll !== "function") {
+    return;
+  }
+
+  trustedFrontendLoading = (async () => {
+    if (!trustedFrontendConfigured) {
+      sdk.configure({
+        fetchAsset: authenticatedFetch,
+        request: apiFetch,
+        submit: submitTrustedFrontendMessage,
+        navigate: navigateTrustedFrontend,
+      });
+      trustedFrontendConfigured = true;
+    }
+
+    const response = await apiFetch("/api/extensions/frontend-modules");
+    if (!response || typeof response !== "object" || Array.isArray(response) || !Array.isArray(response.modules)) {
+      throw new Error("Invalid trusted frontend module response.");
+    }
+
+    const summary = await sdk.loadAll(response.modules);
+    const errors = Array.isArray(summary?.errors) ? summary.errors.slice(0, 16) : [];
+    for (const entry of errors) {
+      const extensionId = truncateText(stringOrEmpty(entry?.extension_id), 96) || "unknown-extension";
+      const moduleId = truncateText(stringOrEmpty(entry?.module_id), 96) || "unknown-module";
+      const message = truncateText(stringOrEmpty(entry?.message), 256) || "load failed";
+      console.warn(`[trusted-frontend] ${extensionId}/${moduleId}: ${message}`);
+    }
+
+    trustedFrontendLoaded = true;
+  })().catch((error) => {
+    const message = truncateText(
+      error instanceof Error && typeof error.message === "string" ? error.message : "initialization failed",
+      256,
+    ) || "initialization failed";
+    console.warn(`[trusted-frontend] initialization failed: ${message}`);
+  });
+
+  try {
+    await trustedFrontendLoading;
+  } finally {
+    trustedFrontendLoading = null;
   }
 }
 
