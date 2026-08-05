@@ -12,11 +12,13 @@ from tau_coding.agent_pool import AsyncAgentPool
 from tau_web.chat_routing import ChatRouter
 from tau_web.config import WebConfig
 from tau_web.events import EventProjector, WebEventEnvelope
+from tau_web.extensions import ExtensionDirectory, SqliteExtensionStorageBackend
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
     AuditRepository,
     DeliveryRepository,
+    ExtensionStateRepository,
     MediaRepository,
     PlanRepository,
     QueueRepository,
@@ -46,6 +48,9 @@ class TauWebServices:
     usage: UsageRepository
     fts: SearchRepository
     timeline: TimelineMessageRepository
+    extension_state: ExtensionStateRepository
+    extension_storage: SqliteExtensionStorageBackend
+    extensions: ExtensionDirectory
     projector: EventProjector
     broker: EventBroker
     pool: AsyncAgentPool
@@ -79,6 +84,9 @@ class TauWebServices:
             usage = UsageRepository(database)
             fts = SearchRepository(database)
             timeline = TimelineMessageRepository(database)
+            extension_state = ExtensionStateRepository(database)
+            extension_storage = SqliteExtensionStorageBackend(extension_state)
+            extensions = ExtensionDirectory()
             projector = EventProjector(timeline)
             broker = EventBroker(
                 replay_capacity=config.sse_replay_capacity,
@@ -111,6 +119,9 @@ class TauWebServices:
                 usage=usage,
                 fts=fts,
                 timeline=timeline,
+                extension_state=extension_state,
+                extension_storage=extension_storage,
+                extensions=extensions,
                 projector=projector,
                 broker=broker,
                 pool=pool,
@@ -162,6 +173,13 @@ class TauWebServices:
             else:
                 if first_error is None and receipt_errors:
                     first_error = receipt_errors[0]
+
+            try:
+                await self.extensions.dispose()
+            except BaseException as exc:
+                cleanup_failed = True
+                if first_error is None:
+                    first_error = exc
 
             try:
                 self._unsubscribe()
