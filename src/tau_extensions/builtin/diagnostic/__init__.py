@@ -1,0 +1,37 @@
+"""Built-in diagnostic extension for Tau."""
+
+from tau_extensions.builtin.diagnostic.extension import (
+    ACTION_ID,
+    ASSET_PATH,
+    COMMAND_NAME,
+    DIAGNOSTIC_EXTENSION_ID,
+    EVENT_NAME,
+    GLOBAL_STATE_KEY,
+    ROUTE_PATH,
+    SESSION_SCOPE_ID,
+    SESSION_STATE_KEY,
+    TOOL_NAME,
+    VIEW_ID,
+    WORKSPACE_SCOPE_ID,
+    WORKSPACE_STATE_KEY,
+    DiagnosticExtension,
+    create_extension,
+)
+
+__all__ = [
+    "ACTION_ID",
+    "ASSET_PATH",
+    "COMMAND_NAME",
+    "DIAGNOSTIC_EXTENSION_ID",
+    "DiagnosticExtension",
+    "EVENT_NAME",
+    "GLOBAL_STATE_KEY",
+    "ROUTE_PATH",
+    "SESSION_SCOPE_ID",
+    "SESSION_STATE_KEY",
+    "TOOL_NAME",
+    "VIEW_ID",
+    "WORKSPACE_SCOPE_ID",
+    "WORKSPACE_STATE_KEY",
+    "create_extension",
+]

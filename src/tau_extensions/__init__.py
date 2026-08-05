@@ -73,6 +73,7 @@ from tau_extensions.services import (
     ToolRegistry,
     ToolSpec,
 )
+from tau_extensions.types import JSONObject, JSONPrimitive, JSONValue
 
 __all__ = [
     "API_VERSION",
@@ -107,6 +108,9 @@ __all__ = [
     "MAX_MANIFEST_BYTES",
     "MAX_STORAGE_VALUE_BYTES",
     "ManifestError",
+    "JSONObject",
+    "JSONPrimitive",
+    "JSONValue",
     "OwnedTaskService",
     "Permission",
     "PermissionDeniedError",

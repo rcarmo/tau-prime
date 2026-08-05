@@ -16,9 +16,9 @@ from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Literal, Protocol, TypeVar, cast, runtime_checkable
 
-from tau_agent.types import JSONObject, JSONValue
 from tau_extensions.manifest import Permission
 from tau_extensions.runtime import DisposalHandle, RegistryError, RuntimeDiagnostic
+from tau_extensions.types import JSONObject, JSONValue
 
 MAX_STORAGE_VALUE_BYTES = 64 * 1024
 MAX_ASSET_BYTES = 2 * 1024 * 1024

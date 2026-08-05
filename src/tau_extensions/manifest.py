@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal, Never, Self, cast
 
 from pydantic import BaseModel, ConfigDict
-from tau_agent.types import JSONObject, JSONValue
+from tau_extensions.types import JSONObject, JSONValue
 
 API_VERSION = "1.0"
 MAX_MANIFEST_BYTES = 256 * 1024

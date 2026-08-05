@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Literal, cast
 
-from tau_agent.types import JSONObject, JSONPrimitive, JSONValue
+from tau_extensions.types import JSONObject, JSONPrimitive, JSONValue
 
 MAX_CANONICAL_VIEW_BYTES = 64 * 1024
 MAX_VIEW_DEPTH = 12

@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Literal, cast
 
-from tau_agent.types import JSONObject, JSONValue
 from tau_extensions.runtime import DisposalHandle
+from tau_extensions.types import JSONObject, JSONValue
 from tau_extensions.web.components import (
     MAX_ACTION_PAYLOAD_BYTES,
     FrozenJSONObject,

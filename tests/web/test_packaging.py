@@ -18,6 +18,9 @@ def test_wheel_includes_optional_runtime_packages() -> None:
     archive_names = {archive_name for _, archive_name in build_backend._package_files()}
 
     assert "tau_extensions/__init__.py" in archive_names
+    assert "tau_extensions/builtin/diagnostic/__init__.py" in archive_names
+    assert "tau_extensions/builtin/diagnostic/extension.py" in archive_names
+    assert "tau_extensions/builtin/diagnostic/tau-extension.json" in archive_names
     assert "tau_extensions/web/__init__.py" in archive_names
     assert "tau_web/__init__.py" in archive_names
     assert "tau_web/app.py" in archive_names
