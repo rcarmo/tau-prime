@@ -23,6 +23,7 @@ from tau_ai.events import (
     ProviderToolCallEvent,
 )
 from tau_ai.http import create_async_client
+from tau_ai.multimodal import anthropic_content
 from tau_ai.observability import (
     LLMObserver,
     observe_llm_error,
@@ -239,15 +240,12 @@ class AnthropicProvider:
                                 if isinstance(error, Mapping):
                                     message = _string_or_empty(error.get("message")) or message
                                 error_type = _anthropic_error_type(chunk)
-                                if (
-                                    not emitted_content
-                                    and self._should_retry(attempt, error_type=error_type)
+                                if not emitted_content and self._should_retry(
+                                    attempt, error_type=error_type
                                 ):
                                     delay = retry_delay_seconds(
                                         attempt,
-                                        max_delay_seconds=(
-                                            self._config.max_retry_delay_seconds
-                                        ),
+                                        max_delay_seconds=(self._config.max_retry_delay_seconds),
                                     )
                                     yield provider_retry_event(
                                         attempt=attempt,
@@ -419,7 +417,7 @@ def _anthropic_message(
 ) -> dict[str, JSONValue] | None:
     invalid_tool_call_ids = invalid_tool_call_ids or set()
     if isinstance(message, UserMessage):
-        return {"role": "user", "content": message.content}
+        return {"role": "user", "content": anthropic_content(message)}
     if isinstance(message, AssistantMessage):
         content: list[JSONValue] = []
         if message.content:
@@ -475,7 +473,6 @@ def _anthropic_tool_id(value: str) -> str:
     return (cleaned[: 64 - len(suffix)].rstrip("_") or "tool_call") + suffix
 
 
-
 def _sanitize_anthropic_payload_tool_ids(payload: dict[str, JSONValue]) -> None:
     """Defensively sanitize tool IDs in the final Anthropic payload."""
     messages = payload.get("messages")
@@ -501,7 +498,6 @@ def _sanitize_anthropic_payload_tool_ids(payload: dict[str, JSONValue]) -> None:
                 raw = block.get("tool_use_id")
                 if isinstance(raw, str):
                     block["tool_use_id"] = id_map.get(raw, _anthropic_tool_id(raw))
-
 
 
 def _anthropic_tool(tool: AgentTool) -> dict[str, JSONValue]:

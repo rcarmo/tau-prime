@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import stat
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote, unquote
 
 from aiohttp import web
 from aiohttp.multipart import BodyPartReader, MultipartReader
+from PIL import Image, ImageOps, UnidentifiedImageError
 
+from tau_agent.types import JSONObject
 from tau_web.routes.common import (
     config_for,
     json_response,
@@ -47,8 +50,34 @@ class TextFileResource:
 
 
 @dataclass(frozen=True, slots=True)
+class MediaItemResource:
+    media_id: str
+    session_id: str | None
+    blob_id: str
+    thumbnail_blob_id: str | None
+    filename: str
+    media_type: str
+    width: int | None
+    height: int | None
+    metadata: JSONObject
+    reference_count: int
+    content_url: str
+    thumbnail_url: str | None
+    created_at: str
+    deleted_at: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class MediaListResource:
-    media: tuple[MediaItemRecord, ...]
+    media: tuple[MediaItemResource, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _ImagePreview:
+    width: int
+    height: int
+    thumbnail_content: bytes
+    metadata: dict[str, str | int | bool]
 
 
 def setup_routes(app: web.Application) -> None:
@@ -57,6 +86,7 @@ def setup_routes(app: web.Application) -> None:
     app.router.add_post("/api/media", upload_media)
     app.router.add_get("/api/media/{media_id}", get_media_item)
     app.router.add_get("/api/media/{media_id}/content", get_media_content)
+    app.router.add_get("/api/media/{media_id}/thumbnail", get_media_thumbnail)
     app.router.add_delete("/api/media/{media_id}", delete_media_item)
 
 
@@ -133,19 +163,36 @@ async def upload_media(request: web.Request) -> web.Response:
         raise web.HTTPBadRequest(reason="Multipart form data must include one 'file' field.")
     if session_id is not None:
         await _require_session(services, session_id)
+    await _enforce_media_quota(
+        services,
+        session_id=session_id,
+        incoming_bytes=len(file_content),
+        max_bytes=config.max_media_bytes_per_session,
+        max_items=config.max_media_items_per_session,
+    )
 
+    image = _build_image_preview(file_content, file_media_type)
     try:
         blob = await services.media.store_blob(file_content)
+        thumbnail_blob = (
+            await services.media.store_blob(image.thumbnail_content) if image is not None else None
+        )
         item = await services.media.create_item(
             blob_id=blob.blob_id,
             filename=file_name,
             media_type=file_media_type,
             session_id=session_id,
+            thumbnail_blob_id=thumbnail_blob.blob_id if thumbnail_blob is not None else None,
+            width=image.width if image is not None else None,
+            height=image.height if image is not None else None,
+            metadata=image.metadata if image is not None else None,
         )
+        if session_id is not None:
+            await services.media.add_reference(item.media_id, "session", session_id)
     except Exception as exc:
         raise_for_repository_error(exc)
 
-    return record_response(item, status=201)
+    return record_response(await _media_resource(services, item), status=201)
 
 
 async def list_media(request: web.Request) -> web.Response:
@@ -159,12 +206,14 @@ async def list_media(request: web.Request) -> web.Response:
     if session_id is not None:
         await _require_session(services, session_id)
     records = await services.media.list(session_id=session_id, include_deleted=include_deleted)
-    return json_response(MediaListResource(media=tuple(records)))
+    resources = tuple([await _media_resource(services, record) for record in records])
+    return json_response(MediaListResource(media=resources))
 
 
 async def get_media_item(request: web.Request) -> web.Response:
-    item = await _require_live_media_item(services_for(request), request.match_info["media_id"])
-    return record_response(item)
+    services = services_for(request)
+    item = await _require_live_media_item(services, request.match_info["media_id"])
+    return record_response(await _media_resource(services, item))
 
 
 async def get_media_content(request: web.Request) -> web.Response:
@@ -188,6 +237,26 @@ async def get_media_content(request: web.Request) -> web.Response:
     )
 
 
+async def get_media_thumbnail(request: web.Request) -> web.Response:
+    services = services_for(request)
+    item = await _require_live_media_item(services, request.match_info["media_id"])
+    if item.thumbnail_blob_id is None:
+        raise web.HTTPNotFound(reason=f"Media item has no thumbnail: {item.media_id}")
+    blob = require_found(
+        await services.media.get_blob(item.thumbnail_blob_id),
+        resource="media blob",
+        identifier=item.thumbnail_blob_id,
+    )
+    etag = f'"{blob.sha256}"'
+    if _if_none_match_matches(request.headers.get("If-None-Match"), etag):
+        return web.Response(status=304, headers={"ETag": etag})
+    return web.Response(
+        body=blob.content,
+        content_type="image/png",
+        headers={"Content-Disposition": "inline", "ETag": etag},
+    )
+
+
 async def delete_media_item(request: web.Request) -> web.Response:
     services = services_for(request)
     media_id = request.match_info["media_id"]
@@ -195,7 +264,100 @@ async def delete_media_item(request: web.Request) -> web.Response:
         item = await services.media.mark_deleted(media_id)
     except Exception as exc:
         raise_for_repository_error(exc)
-    return record_response(item)
+    return record_response(await _media_resource(services, item))
+
+
+async def _media_resource(
+    services: TauWebServices,
+    item: MediaItemRecord,
+) -> MediaItemResource:
+    references = await services.media.list_references(item.media_id)
+    return MediaItemResource(
+        media_id=item.media_id,
+        session_id=item.session_id,
+        blob_id=item.blob_id,
+        thumbnail_blob_id=item.thumbnail_blob_id,
+        filename=item.filename,
+        media_type=item.media_type,
+        width=item.width,
+        height=item.height,
+        metadata=item.metadata,
+        reference_count=len(references),
+        content_url=f"/api/media/{item.media_id}/content",
+        thumbnail_url=(
+            f"/api/media/{item.media_id}/thumbnail" if item.thumbnail_blob_id is not None else None
+        ),
+        created_at=item.created_at,
+        deleted_at=item.deleted_at,
+    )
+
+
+async def _enforce_media_quota(
+    services: TauWebServices,
+    *,
+    session_id: str | None,
+    incoming_bytes: int,
+    max_bytes: int,
+    max_items: int,
+) -> None:
+    items = await services.media.list(session_id=session_id)
+    if len(items) >= max_items:
+        raise web.HTTPRequestEntityTooLarge(max_size=max_items, actual_size=len(items) + 1)
+    used_bytes = 0
+    for item in items:
+        blob = await services.media.get_blob(item.blob_id)
+        if blob is not None:
+            used_bytes += blob.byte_length
+    if used_bytes + incoming_bytes > max_bytes:
+        raise web.HTTPRequestEntityTooLarge(
+            max_size=max_bytes,
+            actual_size=used_bytes + incoming_bytes,
+        )
+
+
+def _build_image_preview(content: bytes, media_type: str) -> _ImagePreview | None:
+    normalized_type = media_type.partition(";")[0].strip().lower()
+    formats = {
+        "image/gif": "GIF",
+        "image/jpeg": "JPEG",
+        "image/png": "PNG",
+        "image/webp": "WEBP",
+    }
+    expected_format = formats.get(normalized_type)
+    if expected_format is None:
+        return None
+    try:
+        with Image.open(BytesIO(content)) as opened:
+            if opened.format != expected_format:
+                raise web.HTTPUnsupportedMediaType(
+                    reason="Image content does not match Content-Type."
+                )
+            frame_count = getattr(opened, "n_frames", 1)
+            opened.seek(0)
+            image = ImageOps.exif_transpose(opened).copy()
+            image.load()
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        raise web.HTTPUnsupportedMediaType(reason="Uploaded image could not be decoded.") from exc
+
+    width, height = image.size
+    thumbnail = image.copy()
+    thumbnail.thumbnail((512, 512), Image.Resampling.LANCZOS)
+    if thumbnail.mode not in {"RGB", "RGBA"}:
+        thumbnail = thumbnail.convert("RGBA")
+    buffer = BytesIO()
+    thumbnail.save(buffer, format="PNG", optimize=True)
+    return _ImagePreview(
+        width=width,
+        height=height,
+        thumbnail_content=buffer.getvalue(),
+        metadata={
+            "thumbnail_media_type": "image/png",
+            "thumbnail_width": thumbnail.width,
+            "thumbnail_height": thumbnail.height,
+            "animated": frame_count > 1,
+            "frame_count": frame_count,
+        },
+    )
 
 
 async def _require_session(services: TauWebServices, session_id: str) -> SessionRecord:

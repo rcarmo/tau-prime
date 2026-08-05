@@ -181,12 +181,12 @@ class AgentHarness:
             follow_up=tuple(message.content for message in self._follow_up_queue),
         )
 
-    def prompt(self, content: str) -> AsyncIterator[AgentEvent]:
+    def prompt(self, content: str | UserMessage) -> AsyncIterator[AgentEvent]:
         """Append a user message and run the agent loop."""
         self._ensure_not_running()
         self._append_interrupted_tool_results()
         self._activate_run()
-        message = UserMessage(content=content)
+        message = content if isinstance(content, UserMessage) else UserMessage(content=content)
         self._messages.append(message)
         return self._run(prompt_message=message)
 

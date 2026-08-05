@@ -19,9 +19,10 @@ class ValidationError(ValueError):
 
 class _FieldInfo:
     def __init__(self, default: Any = ..., *, default_factory: Any = None, **kwargs: Any) -> None:
-        del kwargs
         self.default = default
         self.default_factory = default_factory
+        self.exclude = bool(kwargs.get("exclude", False))
+        self.exclude_if = kwargs.get("exclude_if")
 
     def value(self) -> Any:
         if self.default_factory is not None:
@@ -186,7 +187,12 @@ class BaseModel:
         for name in annotations:
             if name == "model_config":
                 continue
+            field = getattr(self.__class__, name, None)
             value = getattr(self, name)
+            if isinstance(field, _FieldInfo) and (
+                field.exclude or (field.exclude_if is not None and field.exclude_if(value))
+            ):
+                continue
             if exclude_none and value is None:
                 continue
             output[name] = _to_plain(value)
@@ -199,7 +205,11 @@ class BaseModel:
         )
 
     def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Any:
-        data = copy.deepcopy(self.model_dump()) if deep else dict(self.model_dump())
+        data = {
+            name: copy.deepcopy(getattr(self, name)) if deep else getattr(self, name)
+            for name in _all_annotations(self.__class__)
+            if name != "model_config"
+        }
         if update:
             data.update(update)
         return self.__class__.model_validate(data)
@@ -232,4 +242,6 @@ class TypeAdapter:
 
     def dump_json(self, value: Any, **kwargs: Any) -> bytes:
         indent = kwargs.get("indent")
-        return json.dumps(_to_plain(value), separators=None if indent else (",", ":"), indent=indent).encode("utf-8")
+        return json.dumps(
+            _to_plain(value), separators=None if indent else (",", ":"), indent=indent
+        ).encode("utf-8")

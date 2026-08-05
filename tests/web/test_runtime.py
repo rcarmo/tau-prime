@@ -15,6 +15,7 @@ from tau_agent import (
     ErrorEvent,
     MessageDeltaEvent,
     QueueUpdateEvent,
+    UserMessage,
 )
 from tau_coding.agent_pool import AsyncAgentPool, PoolSessionState, UnknownSessionError
 from tau_web.events import EventProjectorCallback
@@ -22,6 +23,7 @@ from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
     AuditRepository,
+    MediaRepository,
     QueueMessageRecord,
     QueueRepository,
     RunRepository,
@@ -58,7 +60,7 @@ class _FakeSession:
         self._active_release: asyncio.Event | None = None
         self._active_run_token: int | None = None
         self._next_run_token = 0
-        self.prompt_calls: list[str] = []
+        self.prompt_calls: list[str | UserMessage] = []
         self.continue_calls = 0
         self.queue_message_calls: list[tuple[str, str]] = []
         self.queued_steering: tuple[str, ...] = ()
@@ -68,7 +70,7 @@ class _FakeSession:
 
     def prompt(
         self,
-        content: str,
+        content: str | UserMessage,
         *,
         streaming_behavior: str | None = None,
     ) -> AsyncIterator[AgentEvent]:
@@ -148,6 +150,7 @@ class _RuntimeHarness:
     runs: RunRepository
     queues: QueueRepository
     audit: AuditRepository
+    media: MediaRepository
     session: _FakeSession
     session_id: str
 
@@ -176,12 +179,14 @@ async def _open_runtime(
     runs = RunRepository(database)
     queues = QueueRepository(database)
     audit = AuditRepository(database)
+    media = MediaRepository(database)
     runtime = DurableAgentRuntime(
         AsyncAgentPool(max_concurrency=1),
         runs,
         queues,
         audit,
         event_projector=event_projector,
+        media=media,
     )
     runtime.register_session(session_id, session, owned=owned)
     return _RuntimeHarness(
@@ -190,6 +195,7 @@ async def _open_runtime(
         runs=runs,
         queues=queues,
         audit=audit,
+        media=media,
         session=session,
         session_id=session_id,
     )

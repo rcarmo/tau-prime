@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from tau_agent import UserAttachment, UserMessage
 from tau_agent.types import JSONObject, JSONValue
 from tau_coding.agent_pool import (
     AgentPoolError,
@@ -21,6 +23,7 @@ from tau_coding.agent_pool import (
 from tau_web.events import EventProjectorCallback, canonical_agent_event_type
 from tau_web.sqlite.repositories import (
     AuditRepository,
+    MediaRepository,
     QueueKind,
     QueueMessageRecord,
     QueueRepository,
@@ -32,6 +35,7 @@ from tau_web.sqlite.repositories import (
 
 _TERMINAL_RUN_STATUSES = frozenset({"completed", "cancelled", "failed", "interrupted"})
 _QUEUEABLE_RUN_STATUSES = frozenset({"pending", "running"})
+_MEDIA_REFERENCE_PATTERN = re.compile(r"\[media:([A-Za-z0-9._-]+)\]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,12 +66,14 @@ class DurableAgentRuntime:
         queues: QueueRepository,
         audit: AuditRepository,
         event_projector: EventProjectorCallback | None = None,
+        media: MediaRepository | None = None,
     ) -> None:
         self._pool = pool
         self._runs = runs
         self._queues = queues
         self._audit = audit
         self._event_projector = event_projector
+        self._media = media
         self._abort_run_ids: set[str] = set()
         self._driver_tasks: set[asyncio.Task[RunRecord]] = set()
         self._queue_locks: dict[str, asyncio.Lock] = {}
@@ -92,11 +98,12 @@ class DurableAgentRuntime:
         run_id: str | None = None,
     ) -> DurableRunHandle:
         """Create a durable pending row and submit one prompt run."""
+        prompt = await self._hydrate_media_references(session_id, content)
         return await self._submit(
             session_id,
             lambda claimed_run_id: self._pool.submit_prompt(
                 session_id,
-                content,
+                prompt,
                 run_id=claimed_run_id,
             ),
             run_id=run_id,
@@ -386,11 +393,12 @@ class DurableAgentRuntime:
                 f"Queued message {queued.queue_id!r} for {queued.queue_kind!r} must have string "
                 "content."
             )
+        prompt = await self._hydrate_media_references(run.session_id, content)
         try:
             if queued.queue_kind == "steer":
-                await self._pool.steer(run.session_id, content, current_run_id=run.run_id)
+                await self._pool.steer(run.session_id, prompt, current_run_id=run.run_id)
             else:
-                await self._pool.follow_up(run.session_id, content, current_run_id=run.run_id)
+                await self._pool.follow_up(run.session_id, prompt, current_run_id=run.run_id)
         except RuntimeError as exc:
             return await self._defer_or_raise_queue_race(run, queued, exc)
         consumed = await self._queues.consume_exact(
@@ -498,6 +506,44 @@ class DurableAgentRuntime:
         if record is None:
             raise RecordNotFoundError(f"Unknown run: {run_id}")
         return record
+
+    async def _hydrate_media_references(
+        self,
+        session_id: str,
+        content: str,
+    ) -> str | UserMessage:
+        """Resolve composer media markers into transient provider image data."""
+        if self._media is None:
+            return content
+        media_ids = tuple(dict.fromkeys(_MEDIA_REFERENCE_PATTERN.findall(content)))
+        if not media_ids:
+            return content
+
+        attachments: list[UserAttachment] = []
+        for media_id in media_ids:
+            item = await self._media.get_item(media_id)
+            if item is None or item.deleted_at is not None:
+                raise ValueError(f"Unknown media item: {media_id}")
+            if item.session_id not in {None, session_id}:
+                raise ValueError(f"Media item {media_id!r} belongs to another session")
+            blob = await self._media.get_blob(item.blob_id)
+            if blob is None:
+                raise ValueError(f"Unknown media blob: {item.blob_id}")
+            await self._media.add_reference(
+                media_id,
+                reference_type="session",
+                reference_id=session_id,
+            )
+            attachments.append(
+                UserAttachment(
+                    media_id=item.media_id,
+                    filename=item.filename,
+                    media_type=item.media_type,
+                    size_bytes=len(blob.content),
+                    data=blob.content,
+                )
+            )
+        return UserMessage(content=content, attachments=attachments)
 
     def _queue_lock(self, session_id: str) -> asyncio.Lock:
         lock = self._queue_locks.get(session_id)

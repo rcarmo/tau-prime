@@ -6,8 +6,10 @@ import asyncio
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Self
 
+from tau_agent import AgentTool
 from tau_coding.agent_pool import AsyncAgentPool
 from tau_web.baseline_extensions.meters import HostMetersSampler
 from tau_web.baseline_extensions.session_dashboard import (
@@ -18,6 +20,7 @@ from tau_web.chat_routing import ChatRouter
 from tau_web.config import WebConfig
 from tau_web.events import EventProjector, WebEventEnvelope, build_invalidation_envelope
 from tau_web.extensions import ExtensionDirectory, SqliteExtensionStorageBackend
+from tau_web.media_tools import create_attachment_tool
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
@@ -88,6 +91,8 @@ class TauWebServices:
             deliveries = DeliveryRepository(database)
             audit = AuditRepository(database)
             media = MediaRepository(database)
+            media_cutoff = datetime.now(UTC) - timedelta(days=config.media_retention_days)
+            await media.purge_deleted_before(media_cutoff.isoformat())
             plans = PlanRepository(database)
             usage = UsageRepository(database)
             fts = SearchRepository(database)
@@ -131,6 +136,7 @@ class TauWebServices:
                 queues,
                 audit,
                 event_projector=projector.project,
+                media=media,
             )
             router = ChatRouter(sessions, deliveries, runtime, pool)
             return cls(
@@ -180,6 +186,10 @@ class TauWebServices:
     def session_storage(self, session_id: str) -> SqliteSessionStorage:
         """Return append-only entry storage bound to one durable session."""
         return SqliteSessionStorage(self.database, session_id)
+
+    def attachment_tool(self, session_id: str) -> AgentTool:
+        """Return the session-confined uploaded-attachment tool."""
+        return create_attachment_tool(self.media, session_id)
 
     async def close(self) -> None:
         """Shut down runtime, receipt tasks, and database resources."""

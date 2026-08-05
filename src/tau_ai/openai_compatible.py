@@ -31,6 +31,7 @@ from tau_ai.events import (
     ProviderToolCallEvent,
 )
 from tau_ai.http import create_async_client
+from tau_ai.multimodal import openai_chat_content, openai_responses_content
 from tau_ai.observability import (
     LLMObserver,
     observe_llm_error,
@@ -547,18 +548,14 @@ class _ResponsesStreamParser:
         elif chunk_type == "response.function_call_arguments.delta":
             item_id = chunk.get("item_id")
             if isinstance(item_id, str):
-                builder = self._tool_call_builders.setdefault(
-                    item_id, _ResponsesToolCallBuilder()
-                )
+                builder = self._tool_call_builders.setdefault(item_id, _ResponsesToolCallBuilder())
                 builder.add_arguments_delta(chunk.get("delta"))
                 self.emitted_content = True
 
         elif chunk_type == "response.function_call_arguments.done":
             item_id = chunk.get("item_id")
             if isinstance(item_id, str):
-                builder = self._tool_call_builders.setdefault(
-                    item_id, _ResponsesToolCallBuilder()
-                )
+                builder = self._tool_call_builders.setdefault(item_id, _ResponsesToolCallBuilder())
                 builder.set_final(arguments=chunk.get("arguments"))
 
         elif chunk_type == "response.output_item.done":
@@ -579,9 +576,7 @@ class _ResponsesStreamParser:
         elif chunk_type == "error":
             self.fatal = True
             return [
-                ProviderErrorEvent(
-                    message=_responses_error_message(chunk), data={"event": chunk}
-                )
+                ProviderErrorEvent(message=_responses_error_message(chunk), data={"event": chunk})
             ], True
 
         return [], False
@@ -595,9 +590,7 @@ class _ResponsesStreamParser:
         events: list[ProviderEvent] = [
             ProviderToolCallEvent(tool_call=tool_call) for tool_call in tool_calls
         ]
-        finish_reason = _normalize_finish_reason(
-            self._status, has_tool_calls=bool(tool_calls)
-        )
+        finish_reason = _normalize_finish_reason(self._status, has_tool_calls=bool(tool_calls))
         events.append(
             ProviderResponseEndEvent(
                 message=AssistantMessage(
@@ -782,7 +775,7 @@ def _messages_to_responses_input(
         if isinstance(message, UserMessage):
             if message.content == f"Previous conversation summary:\n{REMOTE_COMPACTION_SENTINEL}":
                 continue
-            items.append({"role": "user", "content": message.content})
+            items.append({"role": "user", "content": openai_responses_content(message)})
         elif isinstance(message, AssistantMessage):
             if message.content:
                 items.append({"role": "assistant", "content": message.content})
@@ -823,7 +816,6 @@ def _responses_call_id(value: str) -> str:
         return cleaned
     suffix = "_" + sha1(value.encode("utf-8")).hexdigest()[:10]
     return (cleaned[: 64 - len(suffix)].rstrip("_") or "call") + suffix
-
 
 
 def _tool_to_responses(tool: AgentTool) -> dict[str, JSONValue]:
@@ -880,10 +872,7 @@ def _ordered_builders(
     builders: dict[str, _ResponsesToolCallBuilder],
 ) -> list[_ResponsesToolCallBuilder]:
     return [
-        builder
-        for _, builder in sorted(
-            builders.items(), key=lambda pair: pair[1].output_index
-        )
+        builder for _, builder in sorted(builders.items(), key=lambda pair: pair[1].output_index)
     ]
 
 
@@ -958,7 +947,7 @@ def _message_to_openai(
 ) -> dict[str, JSONValue] | None:
     invalid_tool_call_ids = invalid_tool_call_ids or set()
     if isinstance(message, UserMessage):
-        return {"role": "user", "content": message.content}
+        return {"role": "user", "content": openai_chat_content(message)}
 
     if isinstance(message, AssistantMessage):
         valid_tool_calls = [

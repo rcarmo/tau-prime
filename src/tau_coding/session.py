@@ -1359,7 +1359,7 @@ class CodingSession:
 
     def _queue_active_run_message(
         self,
-        content: str,
+        content: str | UserMessage,
         *,
         behavior: StreamingBehavior,
         expected_run_token: int | None = None,
@@ -1375,9 +1375,17 @@ class CodingSession:
                 "refusing to queue on a different run."
             )
         if behavior == "steer":
-            return self._harness.steer(content)
+            return (
+                self._harness.steer_message(content)
+                if isinstance(content, UserMessage)
+                else self._harness.steer(content)
+            )
         if behavior == "follow_up":
-            return self._harness.follow_up(content)
+            return (
+                self._harness.follow_up_message(content)
+                if isinstance(content, UserMessage)
+                else self._harness.follow_up(content)
+            )
         raise AssertionError(f"Unsupported streaming behavior: {behavior!r}")
 
     async def run_terminal_command(
@@ -1437,7 +1445,7 @@ class CodingSession:
 
     async def queue_message(
         self,
-        content: str,
+        content: str | UserMessage,
         *,
         behavior: StreamingBehavior,
     ) -> QueueUpdateEvent:
@@ -1447,24 +1455,36 @@ class CodingSession:
             raise RuntimeError(
                 "CodingSession is idle; cannot queue a message because no run is active."
             )
-        _context, expanded_content = await self._prepare_prompt_content(content)
+        raw_content = content.content if isinstance(content, UserMessage) else content
+        _context, expanded_content = await self._prepare_prompt_content(raw_content)
+        expanded_message = (
+            content.model_copy(update={"content": expanded_content})
+            if isinstance(content, UserMessage)
+            else expanded_content
+        )
         return self._queue_active_run_message(
-            expanded_content,
+            expanded_message,
             behavior=behavior,
             expected_run_token=active_run_token,
         )
 
     async def prompt(
         self,
-        content: str,
+        content: str | UserMessage,
         *,
         streaming_behavior: StreamingBehavior | None = None,
     ) -> AsyncIterator[AgentEvent]:
         """Append a user prompt, run the agent, and persist new messages."""
-        context, expanded_content = await self._prepare_prompt_content(content)
+        raw_content = content.content if isinstance(content, UserMessage) else content
+        context, expanded_content = await self._prepare_prompt_content(raw_content)
+        expanded_message = (
+            content.model_copy(update={"content": expanded_content})
+            if isinstance(content, UserMessage)
+            else expanded_content
+        )
         if self._harness.is_running:
             if streaming_behavior is not None:
-                yield self._queue_active_run_message(expanded_content, behavior=streaming_behavior)
+                yield self._queue_active_run_message(expanded_message, behavior=streaming_behavior)
                 return
             raise RuntimeError(
                 "CodingSession is already running; pass streaming_behavior to queue a message."
@@ -1475,7 +1495,7 @@ class CodingSession:
         persisted_count = len(self._harness.messages)
         overflow_event: ErrorEvent | None = None
         try:
-            async for event in self._harness.prompt(expanded_content):
+            async for event in self._harness.prompt(expanded_message):
                 if isinstance(event, ErrorEvent) and not event.recoverable:
                     self._last_diagnostic_log_path = self._diagnostic_logger.log_error_event(
                         context=context,

@@ -10,6 +10,22 @@ from tau_agent.tools import ToolCall
 from tau_agent.types import JSONValue
 
 
+class UserAttachment(BaseModel):
+    """Metadata for media attached to a user message.
+
+    ``data`` is transient: providers may use it for one request, while session
+    stores and exports retain only the stable media metadata and ID.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    media_id: str
+    filename: str
+    media_type: str
+    size_bytes: int
+    data: bytes | None = Field(default=None, exclude=True, repr=False)
+
+
 class UserMessage(BaseModel):
     """A message authored by the user."""
 
@@ -17,6 +33,7 @@ class UserMessage(BaseModel):
 
     role: Literal["user"] = "user"
     content: str
+    attachments: list[UserAttachment] = Field(default_factory=list, exclude_if=lambda value: not value)
 
 
 class AssistantMessage(BaseModel):

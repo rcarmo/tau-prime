@@ -12,6 +12,8 @@ from tau_coding.paths import TauPaths
 DEFAULT_WEB_HOST = "127.0.0.1"
 DEFAULT_WEB_PORT = 8080
 DEFAULT_MAX_REQUEST_BYTES = 16 * 1024 * 1024
+DEFAULT_MAX_MEDIA_BYTES_PER_SESSION = 64 * 1024 * 1024
+DEFAULT_MAX_MEDIA_ITEMS_PER_SESSION = 64
 _ALLOWED_ORIGIN_SCHEMES = frozenset({"http", "https"})
 
 
@@ -72,6 +74,9 @@ class WebConfig:
     auth_token: str | None = field(default=None, repr=False)
     allowed_origins: tuple[str, ...] = ()
     max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES
+    max_media_bytes_per_session: int = DEFAULT_MAX_MEDIA_BYTES_PER_SESSION
+    max_media_items_per_session: int = DEFAULT_MAX_MEDIA_ITEMS_PER_SESSION
+    media_retention_days: int = 7
     max_active_runs: int = 4
     sse_replay_capacity: int = 512
     sse_client_capacity: int = 64
@@ -93,6 +98,12 @@ class WebConfig:
             raise ValueError("Web port must be between 1 and 65535")
         if self.max_request_bytes <= 0:
             raise ValueError("Maximum request size must be positive")
+        if self.max_media_bytes_per_session <= 0:
+            raise ValueError("Maximum media bytes per session must be positive")
+        if self.max_media_items_per_session <= 0:
+            raise ValueError("Maximum media items per session must be positive")
+        if self.media_retention_days < 0:
+            raise ValueError("Media retention days must be zero or greater")
         if self.max_active_runs <= 0:
             raise ValueError("Maximum active runs must be positive")
         if not isfinite(self.sse_replay_capacity) or self.sse_replay_capacity <= 0:

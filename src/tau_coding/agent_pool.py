@@ -10,7 +10,7 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import uuid4
 
-from tau_agent import AgentEvent, ErrorEvent, QueueUpdateEvent
+from tau_agent import AgentEvent, ErrorEvent, QueueUpdateEvent, UserMessage
 
 _TERMINAL_SENTINEL = object()
 
@@ -48,7 +48,7 @@ class CodingSessionLike(Protocol):
 
     def prompt(
         self,
-        content: str,
+        content: str | UserMessage,
         *,
         streaming_behavior: str | None = None,
     ) -> AsyncIterator[AgentEvent]:
@@ -57,7 +57,7 @@ class CodingSessionLike(Protocol):
     def continue_(self) -> AsyncIterator[AgentEvent]:
         """Continue one restored or interrupted run."""
 
-    async def queue_message(self, content: str, *, behavior: str) -> QueueUpdateEvent:
+    async def queue_message(self, content: str | UserMessage, *, behavior: str) -> QueueUpdateEvent:
         """Queue one message for the currently active run."""
 
     def cancel(self) -> None:
@@ -279,7 +279,7 @@ class AsyncAgentPool:
     def submit_prompt(
         self,
         session_id: str,
-        content: str,
+        content: str | UserMessage,
         *,
         run_id: str | None = None,
     ) -> RunHandle:
@@ -293,7 +293,7 @@ class AsyncAgentPool:
     async def steer(
         self,
         session_id: str,
-        content: str,
+        content: str | UserMessage,
         *,
         current_run_id: str,
     ) -> QueueUpdateEvent:
@@ -308,7 +308,7 @@ class AsyncAgentPool:
     async def follow_up(
         self,
         session_id: str,
-        content: str,
+        content: str | UserMessage,
         *,
         current_run_id: str,
     ) -> QueueUpdateEvent:
@@ -395,7 +395,7 @@ class AsyncAgentPool:
     async def _queue_message(
         self,
         session_id: str,
-        content: str,
+        content: str | UserMessage,
         *,
         behavior: str,
         current_run_id: str,

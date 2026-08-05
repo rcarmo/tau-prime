@@ -1747,11 +1747,130 @@ async function selectBranch(leafEntryId) {
   }
 }
 
+function displayMessageContent(message) {
+  const content = messageContent(message);
+  const marker = "\n\nAttachment references (uploaded separately; not inline media):\n";
+  const markerIndex = content.indexOf(marker);
+  return markerIndex >= 0 ? content.slice(0, markerIndex) : content;
+}
+
+function messageAttachments(message) {
+  if (!message || typeof message !== "object") {
+    return [];
+  }
+  if (Array.isArray(message.attachments) && message.attachments.length) {
+    return message.attachments
+      .filter((attachment) => typeof attachment?.media_id === "string" && attachment.media_id)
+      .map((attachment) => ({
+        mediaId: attachment.media_id,
+        filename: stringOrEmpty(attachment.filename) || "attachment",
+        mediaType: stringOrEmpty(attachment.media_type) || "application/octet-stream",
+      }));
+  }
+
+  const content = messageContent(message);
+  const references = [];
+  const pattern = /\[media:([A-Za-z0-9._-]+)\]\s+([^\n(]+?)\s*\(([^)\n]+)\)/g;
+  for (const match of content.matchAll(pattern)) {
+    references.push({
+      mediaId: match[1],
+      filename: match[2].trim() || "attachment",
+      mediaType: match[3].trim() || "application/octet-stream",
+    });
+  }
+  return references;
+}
+
+function createTimelineAttachments(attachments) {
+  if (!attachments.length) {
+    return null;
+  }
+  const gallery = document.createElement("div");
+  gallery.className = "timeline-attachments";
+  for (const attachment of attachments) {
+    const link = document.createElement("a");
+    link.className = "timeline-attachment";
+    const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
+    link.href = contentUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.title = attachment.filename;
+    if (state.authToken) {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        void downloadAuthenticatedMedia(contentUrl, attachment.filename);
+      });
+    }
+
+    if (attachment.mediaType.startsWith("image/")) {
+      const image = document.createElement("img");
+      image.className = "timeline-attachment-image";
+      const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
+      image.alt = attachment.filename;
+      image.loading = "lazy";
+      if (state.authToken) {
+        void loadAuthenticatedImage(image, thumbnailUrl);
+      } else {
+        image.src = thumbnailUrl;
+      }
+      link.append(image);
+    }
+
+    const label = document.createElement("span");
+    label.className = "timeline-attachment-label";
+    label.textContent = attachment.filename;
+    link.append(label);
+    gallery.append(link);
+  }
+  return gallery;
+}
+
+async function fetchMediaBlob(url) {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: buildHeaders("GET", { Accept: "*/*" }),
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    throw await apiErrorFromResponse(response);
+  }
+  return await response.blob();
+}
+
+async function loadAuthenticatedImage(image, url) {
+  try {
+    const blob = await fetchMediaBlob(url);
+    const objectUrl = URL.createObjectURL(blob);
+    image.addEventListener("load", () => URL.revokeObjectURL(objectUrl), { once: true });
+    image.src = objectUrl;
+  } catch (error) {
+    image.alt = `${image.alt} (preview unavailable)`;
+    console.warn("Unable to load attachment preview", error);
+  }
+}
+
+async function downloadAuthenticatedMedia(url, filename) {
+  try {
+    const blob = await fetchMediaBlob(url);
+    const objectUrl = URL.createObjectURL(blob);
+    const download = document.createElement("a");
+    download.href = objectUrl;
+    download.download = filename;
+    document.body.append(download);
+    download.click();
+    download.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (error) {
+    handleError(error, "Unable to download the attachment.");
+  }
+}
+
 function renderTimeline() {
   ui.timelineList.replaceChildren();
   const timelineItems = state.messages.map((entry) => ({
     role: entry?.message?.role ?? "assistant",
-    content: messageContent(entry?.message),
+    content: displayMessageContent(entry?.message),
+    attachments: messageAttachments(entry?.message),
     meta: typeof entry?.id === "string" ? `Entry ${shortId(entry.id)}` : "Persisted message",
   }));
 
@@ -1791,6 +1910,10 @@ function renderTimeline() {
     content.textContent = item.content || "(empty)";
 
     card.append(role, meta, content);
+    const attachmentGallery = createTimelineAttachments(item.attachments ?? []);
+    if (attachmentGallery) {
+      card.append(attachmentGallery);
+    }
     listItem.append(card);
     ui.timelineList.append(listItem);
   }

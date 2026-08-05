@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 from hashlib import sha256
+from io import BytesIO
 from typing import cast
 
 import pytest
 from aiohttp import FormData, web
 from aiohttp.test_utils import TestClient, TestServer
+from PIL import Image
 
 from tau_web.app import SERVICES_KEY, create_app
 from tau_web.config import WebConfig
@@ -249,6 +251,84 @@ async def test_media_routes_return_metadata_download_headers_and_deleted_not_fou
         assert [item["media_id"] for item in (await deleted_list.json())["media"]] == [
             created["media_id"]
         ]
+    finally:
+        await client.close()
+
+
+@pytest.mark.anyio
+async def test_image_upload_records_dimensions_and_serves_png_thumbnail(
+    web_config: WebConfig,
+) -> None:
+    source = BytesIO()
+    Image.new("RGB", (800, 400), color=(30, 120, 200)).save(source, format="PNG")
+
+    client = await _start_client(create_app(web_config))
+    try:
+        session_id = await _create_session(client, "image-session")
+        upload = await _upload_media(
+            client,
+            content=source.getvalue(),
+            filename="wide.png",
+            media_type="image/png",
+            session_id=session_id,
+        )
+        assert upload.status == 201
+        created = await upload.json()
+        assert created["width"] == 800
+        assert created["height"] == 400
+        assert created["thumbnail_blob_id"]
+        assert created["reference_count"] == 1
+        assert created["content_url"] == f"/api/media/{created['media_id']}/content"
+        assert created["thumbnail_url"] == f"/api/media/{created['media_id']}/thumbnail"
+        assert created["metadata"] == {
+            "animated": False,
+            "frame_count": 1,
+            "thumbnail_height": 256,
+            "thumbnail_media_type": "image/png",
+            "thumbnail_width": 512,
+        }
+
+        thumbnail = await client.get(f"/api/media/{created['media_id']}/thumbnail")
+        assert thumbnail.status == 200
+        assert thumbnail.content_type == "image/png"
+        with Image.open(BytesIO(await thumbnail.read())) as preview:
+            assert preview.size == (512, 256)
+
+        references = await _services(client).media.list_references(created["media_id"])
+        assert [(reference.reference_type, reference.reference_id) for reference in references] == [
+            ("session", session_id)
+        ]
+    finally:
+        await client.close()
+
+
+@pytest.mark.anyio
+async def test_media_upload_enforces_session_item_and_byte_quotas(web_config: WebConfig) -> None:
+    config = replace(
+        web_config,
+        max_media_items_per_session=1,
+        max_media_bytes_per_session=5,
+    )
+    client = await _start_client(create_app(config))
+    try:
+        session_id = await _create_session(client, "quota-session")
+        first = await _upload_media(
+            client,
+            content=b"1234",
+            filename="first.txt",
+            media_type="text/plain",
+            session_id=session_id,
+        )
+        assert first.status == 201
+
+        second = await _upload_media(
+            client,
+            content=b"x",
+            filename="second.txt",
+            media_type="text/plain",
+            session_id=session_id,
+        )
+        assert second.status == 413
     finally:
         await client.close()
 

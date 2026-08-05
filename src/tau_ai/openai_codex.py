@@ -29,6 +29,7 @@ from tau_ai.events import (
     ProviderToolCallEvent,
 )
 from tau_ai.http import create_async_client
+from tau_ai.multimodal import openai_responses_blocks
 from tau_ai.model_limits import RuntimeModelLimits
 from tau_ai.observability import (
     LLMObserver,
@@ -276,9 +277,7 @@ class OpenAICodexProvider:
                             ):
                                 delay = retry_delay_seconds(
                                     attempt,
-                                    max_delay_seconds=(
-                                        self._config.max_retry_delay_seconds
-                                    ),
+                                    max_delay_seconds=(self._config.max_retry_delay_seconds),
                                 )
                                 stream_error = _stream_error_event_data(event) or {}
                                 details = _stream_error_details(stream_error)
@@ -286,9 +285,7 @@ class OpenAICodexProvider:
                                     attempt=attempt,
                                     max_retries=self._config.max_retries,
                                     delay_seconds=delay,
-                                    reason=(
-                                        f"stream error ({details['code'] or 'unknown'})"
-                                    ),
+                                    reason=(f"stream error ({details['code'] or 'unknown'})"),
                                     data={"event": stream_error},
                                 )
                                 attempt += 1
@@ -545,7 +542,7 @@ def _messages_to_responses_input(messages: list[AgentMessage]) -> list[JSONValue
             items.append(
                 {
                     "role": "user",
-                    "content": [{"type": "input_text", "text": message.content}],
+                    "content": openai_responses_blocks(message),
                 }
             )
         elif isinstance(message, AssistantMessage):
@@ -614,15 +611,12 @@ def _codex_identifier(value: str, *, fallback: str) -> str:
     return (cleaned[: 64 - len(suffix)].rstrip("_") or fallback) + suffix
 
 
-
 def _codex_call_id(value: str) -> str:
     return _codex_identifier(value, fallback="call")
 
 
-
 def _codex_item_id(value: str) -> str:
     return _codex_identifier(value, fallback="item")
-
 
 
 def _tool_to_codex(tool: AgentTool) -> dict[str, JSONValue]:

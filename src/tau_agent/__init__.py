@@ -28,7 +28,13 @@ from tau_agent.harness import (
     SimpleCancellationToken,
 )
 from tau_agent.loop import run_agent_loop
-from tau_agent.messages import AgentMessage, AssistantMessage, ToolResultMessage, UserMessage
+from tau_agent.messages import (
+    AgentMessage,
+    AssistantMessage,
+    ToolResultMessage,
+    UserAttachment,
+    UserMessage,
+)
 from tau_agent.session import (
     BranchSummaryEntry,
     CompactionEntry,
@@ -90,6 +96,7 @@ __all__ = [
     "ToolResultMessage",
     "TurnEndEvent",
     "TurnStartEvent",
+    "UserAttachment",
     "UserMessage",
     "run_agent_loop",
 ]

@@ -680,6 +680,44 @@ button[aria-selected="true"],
   line-height: 1.45;
 }
 
+.timeline-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.timeline-attachment {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--panel-soft);
+}
+
+.timeline-attachment:hover,
+.timeline-attachment:focus-visible {
+  border-color: var(--accent);
+}
+
+.timeline-attachment-image {
+  width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
+  border-radius: 0.4rem;
+  background: var(--panel-strong);
+}
+
+.timeline-attachment-label {
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
