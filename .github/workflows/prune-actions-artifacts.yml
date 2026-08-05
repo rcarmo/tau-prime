@@ -2,12 +2,7 @@ name: Actions storage cleanup
 
 on:
   schedule:
-    - cron: "23 */6 * * *"
-  workflow_run:
-    workflows:
-      - "Release Tau Prime"
-      - "Deploy documentation"
-    types: [completed]
+    - cron: "37 4 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +15,7 @@ concurrency:
 
 jobs:
   cleanup:
-    name: Delete Actions storage older than one day
+    name: Delete Actions storage older than seven days
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -30,7 +25,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+            const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
             async function remove(label, operation) {
               try {
@@ -83,5 +78,5 @@ jobs:
 
             core.notice(
               `Deleted ${deletedArtifacts} artifact(s), ${deletedCaches} cache(s), ` +
-              `${deletedRuns} completed workflow run(s) older than 24 hours.`
+              `${deletedRuns} completed workflow run(s) older than seven days.`
             );
