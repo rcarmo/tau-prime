@@ -10,9 +10,13 @@ from typing import Self
 
 from tau_coding.agent_pool import AsyncAgentPool
 from tau_web.baseline_extensions.meters import HostMetersSampler
+from tau_web.baseline_extensions.session_dashboard import (
+    DASHBOARD_EVENT_TYPE,
+    SessionDashboard,
+)
 from tau_web.chat_routing import ChatRouter
 from tau_web.config import WebConfig
-from tau_web.events import EventProjector, WebEventEnvelope
+from tau_web.events import EventProjector, WebEventEnvelope, build_invalidation_envelope
 from tau_web.extensions import ExtensionDirectory, SqliteExtensionStorageBackend
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
@@ -30,7 +34,7 @@ from tau_web.sqlite.repositories import (
 )
 from tau_web.sqlite.session_storage import SqliteSessionStorage
 from tau_web.sqlite.sessions import SessionRepository
-from tau_web.sse import EventBroker
+from tau_web.sse import GLOBAL_EVENT_SESSION_ID, EventBroker
 
 
 @dataclass(slots=True)
@@ -55,6 +59,7 @@ class TauWebServices:
     projector: EventProjector
     broker: EventBroker
     meters: HostMetersSampler
+    dashboard: SessionDashboard
     pool: AsyncAgentPool
     runtime: DurableAgentRuntime
     router: ChatRouter
@@ -97,12 +102,29 @@ class TauWebServices:
             )
             meters = HostMetersSampler(broker=broker)
             await meters.open()
+            pool = AsyncAgentPool(max_concurrency=config.max_active_runs)
+            dashboard = SessionDashboard(
+                sessions=sessions,
+                runs=runs,
+                queues=queues,
+                timeline=timeline,
+                pool=pool,
+                storage_for=lambda session_id: SqliteSessionStorage(database, session_id),
+            )
 
             async def publish_event(envelope: WebEventEnvelope) -> None:
+                dashboard_changed = await dashboard.observe(envelope)
                 await broker.publish(envelope)
+                if dashboard_changed:
+                    await broker.publish(
+                        build_invalidation_envelope(
+                            event_type=DASHBOARD_EVENT_TYPE,
+                            session_id=GLOBAL_EVENT_SESSION_ID,
+                            payload={"updated_session_id": envelope.session_id},
+                        )
+                    )
 
             unsubscribe = projector.subscribe(publish_event)
-            pool = AsyncAgentPool(max_concurrency=config.max_active_runs)
             runtime = DurableAgentRuntime(
                 pool,
                 runs,
@@ -130,6 +152,7 @@ class TauWebServices:
                 projector=projector,
                 broker=broker,
                 meters=meters,
+                dashboard=dashboard,
                 pool=pool,
                 runtime=runtime,
                 router=router,

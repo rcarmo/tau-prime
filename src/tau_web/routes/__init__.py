@@ -8,6 +8,7 @@ from typing import Any
 def setup_routes(app: Any) -> None:
     """Register Tau Web routes without importing aiohttp at package import time."""
     from tau_web.routes.assets import setup_routes as setup_asset_routes
+    from tau_web.routes.dashboard import setup_routes as setup_dashboard_routes
     from tau_web.routes.events import setup_routes as setup_event_routes
     from tau_web.routes.extensions import setup_routes as setup_extension_routes
     from tau_web.routes.frontend import setup_routes as setup_frontend_routes
@@ -22,6 +23,7 @@ def setup_routes(app: Any) -> None:
     setup_run_routes(app)
     setup_metadata_routes(app)
     setup_meter_routes(app)
+    setup_dashboard_routes(app)
     setup_asset_routes(app)
     setup_event_routes(app)
     setup_extension_routes(app)

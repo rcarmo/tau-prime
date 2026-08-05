@@ -18,6 +18,7 @@ const API_PATHS = Object.freeze({
   search: "/api/search",
   events: "/api/events",
   meters: "/meters",
+  dashboard: "/dashboard",
 });
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -52,7 +53,7 @@ const state = {
   authToken: loadStorage(STORAGE_KEYS.authToken),
   sessions: [],
   sessionFilter: normalizeSessionFilter(loadStorage(STORAGE_KEYS.sessionFilter)),
-  selectedSessionId: loadStorage(STORAGE_KEYS.selectedSessionId),
+  selectedSessionId: sessionFromLocation() ?? loadStorage(STORAGE_KEYS.selectedSessionId),
   selectedSession: null,
   context: null,
   branches: [],
@@ -63,6 +64,21 @@ const state = {
   metersEnabled: loadBooleanStorage(STORAGE_KEYS.metersEnabled, true),
   metersCollapsed: loadBooleanStorage(STORAGE_KEYS.metersCollapsed, true),
   metersTimer: null,
+  dashboard: {
+    open: false,
+    sessions: [],
+    page: 1,
+    pageSize: dashboardCapacity(),
+    total: 0,
+    totalPages: 1,
+    generatedAt: null,
+    loading: false,
+    fullRefreshTimer: null,
+    previewRefreshTimer: null,
+    ageTimer: null,
+    invalidationTimer: null,
+    needsRefresh: false,
+  },
   models: [],
   commands: [],
   activeTab: "workspace",
@@ -129,6 +145,16 @@ function bindUi() {
     meterRamSparkline: requiredElement("meter-ram-sparkline"),
     meterRssSparkline: requiredElement("meter-rss-sparkline"),
     meterSwapSparkline: requiredElement("meter-swap-sparkline"),
+    dashboardToggle: requiredElement("dashboard-toggle"),
+    dashboardCount: requiredElement("dashboard-count"),
+    sessionDashboard: requiredElement("session-dashboard"),
+    dashboardClose: requiredElement("dashboard-close"),
+    dashboardGrid: requiredElement("dashboard-grid"),
+    dashboardAge: requiredElement("dashboard-age"),
+    dashboardPrevious: requiredElement("dashboard-previous"),
+    dashboardPage: requiredElement("dashboard-page"),
+    dashboardNext: requiredElement("dashboard-next"),
+    dashboardManage: requiredElement("dashboard-manage"),
     mobileNavToggle: requiredElement("mobile-nav-toggle"),
     mobilePanelToggle: requiredElement("mobile-panel-toggle"),
     sessionNav: requiredElement("session-nav"),
@@ -213,6 +239,11 @@ function installEventHandlers() {
   ui.drawerBackdrop.addEventListener("click", closeDrawers);
   ui.metersCollapseButton.addEventListener("click", toggleMetersCollapsed);
   ui.metersVisibilityButton.addEventListener("click", toggleMetersEnabled);
+  ui.dashboardToggle.addEventListener("click", toggleDashboard);
+  ui.dashboardClose.addEventListener("click", () => setDashboardOpen(false));
+  ui.dashboardPrevious.addEventListener("click", () => changeDashboardPage(-1));
+  ui.dashboardNext.addEventListener("click", () => changeDashboardPage(1));
+  ui.dashboardManage.addEventListener("click", openSessionManager);
 
   ui.newSessionButton.addEventListener("click", () => {
     void createSession({ focusComposer: true });
@@ -319,11 +350,13 @@ function installEventHandlers() {
   window.addEventListener("beforeunload", () => {
     stopEventStream();
     stopMetersPolling();
+    stopDashboardTimers();
   });
   window.addEventListener("resize", () => {
     if (window.innerWidth > 960) {
       closeDrawers();
     }
+    handleDashboardResize();
   });
 }
 
@@ -867,6 +900,10 @@ async function handleStreamFrame(frame, sessionId) {
     applyMetersSnapshot(frame.data?.payload);
     return;
   }
+  if (frame.event === "tau.dashboard.updated") {
+    scheduleDashboardInvalidation();
+    return;
+  }
   if (!frame.data || frame.data.session_id !== sessionId) {
     return;
   }
@@ -1024,6 +1061,7 @@ function syncSelection(preferredSessionId) {
   state.selectedSession = selected;
   state.selectedSessionId = selected?.session_id ?? null;
   persistStorage(STORAGE_KEYS.selectedSessionId, state.selectedSessionId);
+  replaceSessionLocation(state.selectedSessionId);
   if (previousSessionId !== state.selectedSessionId) {
     handleComposerSessionChange(previousSessionId, state.selectedSessionId);
     notifySelectedSessionChanged();
@@ -1101,6 +1139,7 @@ function setDrawerState(which, open) {
 
 function renderShell() {
   renderMeters();
+  renderDashboard();
   renderSessions();
   renderSessionDetails();
   renderBranches();
@@ -1110,6 +1149,309 @@ function renderShell() {
   renderPlan();
   renderSettings();
   renderControls();
+}
+
+function toggleDashboard() {
+  setDashboardOpen(!state.dashboard.open);
+}
+
+function setDashboardOpen(open) {
+  const nextOpen = Boolean(open);
+  state.dashboard.open = nextOpen;
+  state.dashboard.pageSize = dashboardCapacity();
+  renderDashboard();
+  if (!nextOpen || document.hidden) {
+    stopDashboardTimers();
+    return;
+  }
+  void refreshDashboard({ announceError: true });
+  startDashboardTimers();
+}
+
+function renderDashboard() {
+  const dashboard = state.dashboard;
+  const hasSnapshot = dashboard.generatedAt !== null || dashboard.sessions.length > 0 || dashboard.loading;
+  const activeSessionCount = currentActiveSessions().length;
+  const total = hasSnapshot ? dashboard.total : activeSessionCount;
+
+  ui.sessionDashboard.hidden = !dashboard.open;
+  ui.sessionDashboard.dataset.open = String(dashboard.open);
+  ui.dashboardToggle.setAttribute("aria-expanded", String(dashboard.open));
+  ui.dashboardCount.textContent = String(total);
+  ui.dashboardGrid.setAttribute("aria-busy", String(dashboard.loading));
+  ui.dashboardPage.textContent = `Page ${dashboard.page} of ${dashboard.totalPages}`;
+  ui.dashboardPrevious.disabled = dashboard.loading || dashboard.page <= 1;
+  ui.dashboardNext.disabled = dashboard.loading || dashboard.page >= dashboard.totalPages;
+
+  if (!dashboard.open) {
+    return;
+  }
+
+  const tiles = [];
+  if (!dashboard.sessions.length) {
+    const empty = document.createElement("p");
+    empty.className = "dashboard-empty";
+    empty.textContent = dashboard.loading ? "Loading dashboard sessions…" : "No active sessions.";
+    tiles.push(empty);
+  } else {
+    for (const session of dashboard.sessions) {
+      tiles.push(renderDashboardTile(session));
+    }
+  }
+
+  ui.dashboardGrid.replaceChildren(...tiles);
+  updateDashboardAgeLabels();
+}
+
+function renderDashboardTile(session) {
+  const selected = session?.session_id === state.selectedSessionId;
+  const tile = document.createElement("article");
+  tile.className = "dashboard-tile";
+  tile.dataset.selected = String(selected);
+  tile.setAttribute("role", "listitem");
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dashboard-tile-button";
+  button.setAttribute("aria-current", selected ? "page" : "false");
+  button.title = "Open this session. Ctrl-click or Cmd-click opens it in a new tab.";
+  button.addEventListener("click", (event) => {
+    if (event.metaKey || event.ctrlKey) {
+      window.open(buildSessionUrl(session.session_id), "_blank", "noopener");
+      return;
+    }
+    void selectSession(session.session_id, { reconnect: true, focusTimeline: true });
+  });
+
+  const header = document.createElement("div");
+  header.className = "dashboard-tile-header";
+
+  const agent = document.createElement("p");
+  agent.className = "dashboard-agent";
+  agent.textContent = sessionLabel(session);
+
+  const status = document.createElement("span");
+  status.className = "dashboard-state";
+  status.dataset.state = stringOrEmpty(session?.activity_state) || "idle";
+  status.dataset.error = String(Boolean(session?.has_error));
+  status.textContent = dashboardActivityLabel(session);
+
+  header.append(agent, status);
+
+  const identity = document.createElement("p");
+  identity.className = "dashboard-identity";
+  const agentName = stringOrEmpty(session?.agent_name);
+  identity.textContent = [
+    agentName ? `@${agentName}` : null,
+    shortId(session?.session_id),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const workspace = document.createElement("p");
+  workspace.className = "dashboard-workspace";
+  workspace.textContent = stringOrEmpty(session?.workspace) || "Workspace unavailable";
+
+  const model = document.createElement("p");
+  model.className = "dashboard-model";
+  model.textContent = stringOrEmpty(session?.model) || "Model unavailable";
+
+  const previewKind = document.createElement("p");
+  previewKind.className = "dashboard-preview-kind";
+  previewKind.textContent = dashboardPreviewKindLabel(session?.preview_kind);
+
+  const preview = document.createElement("p");
+  preview.className = "dashboard-preview";
+  preview.textContent = stringOrEmpty(session?.preview) || "No assistant summary yet.";
+
+  const indicators = document.createElement("div");
+  indicators.className = "dashboard-indicators";
+
+  const queue = document.createElement("span");
+  queue.textContent = `Queue ${numberOrZero(session?.queue_count)}`;
+
+  const context = document.createElement("div");
+  context.className = "dashboard-context";
+
+  const contextLabel = document.createElement("span");
+  contextLabel.textContent = `Context ${formatDashboardContext(session)}`;
+
+  const contextTrack = document.createElement("span");
+  contextTrack.className = "dashboard-context-track";
+
+  const contextFill = document.createElement("span");
+  contextFill.className = "dashboard-context-fill";
+  contextFill.style.width = `${formatDashboardContextPercent(session)}%`;
+  contextTrack.append(contextFill);
+  context.append(contextLabel, contextTrack);
+
+  indicators.append(queue, context);
+
+  if (session?.has_error) {
+    const error = document.createElement("span");
+    error.className = "dashboard-error";
+    error.textContent = "Error";
+    indicators.append(error);
+  }
+
+  const age = document.createElement("p");
+  age.className = "dashboard-tile-age";
+  age.dataset.dashboardAgeSource = stringOrEmpty(session?.last_activity);
+  age.textContent = "Activity unknown";
+  indicators.append(age);
+
+  button.append(header, identity, workspace, model, previewKind, preview, indicators);
+  tile.append(button);
+  return tile;
+}
+
+async function refreshDashboard({ announceError = false } = {}) {
+  if (!state.dashboard.open) {
+    return;
+  }
+  if (state.dashboard.loading) {
+    state.dashboard.needsRefresh = true;
+    return;
+  }
+
+  state.dashboard.loading = true;
+  state.dashboard.needsRefresh = false;
+  renderDashboard();
+
+  const requestedPage = state.dashboard.page;
+  const requestedPageSize = state.dashboard.pageSize;
+  const params = new URLSearchParams({
+    page: String(requestedPage),
+    page_size: String(requestedPageSize),
+  });
+
+  try {
+    const payload = await apiFetch(`${API_PATHS.dashboard}?${params.toString()}`);
+    if (state.dashboard.page !== requestedPage || state.dashboard.pageSize !== requestedPageSize) {
+      state.dashboard.needsRefresh = true;
+      return;
+    }
+
+    state.dashboard.sessions = Array.isArray(payload?.sessions) ? payload.sessions : [];
+    state.dashboard.page = Math.max(1, numberOrZero(payload?.page) || requestedPage);
+    state.dashboard.pageSize = Math.max(1, numberOrZero(payload?.page_size) || requestedPageSize);
+    state.dashboard.total = Math.max(0, numberOrZero(payload?.total));
+    state.dashboard.totalPages = Math.max(1, numberOrZero(payload?.total_pages) || 1);
+    state.dashboard.generatedAt = stringOrEmpty(payload?.generated_at) || new Date().toISOString();
+  } catch (error) {
+    if (announceError) {
+      handleError(error, "Unable to load the session dashboard.");
+    }
+  } finally {
+    state.dashboard.loading = false;
+    renderDashboard();
+    if (state.dashboard.needsRefresh && state.dashboard.open && !document.hidden) {
+      state.dashboard.needsRefresh = false;
+      void refreshDashboard({ announceError: false });
+    }
+  }
+}
+
+function startDashboardTimers() {
+  stopDashboardTimers();
+  if (!state.dashboard.open || document.hidden) {
+    return;
+  }
+  state.dashboard.fullRefreshTimer = window.setInterval(() => {
+    void refreshDashboard({ announceError: false });
+  }, 15000);
+  state.dashboard.previewRefreshTimer = window.setInterval(() => {
+    void refreshDashboard({ announceError: false });
+  }, 3000);
+  updateDashboardAgeLabels();
+  state.dashboard.ageTimer = window.setInterval(updateDashboardAgeLabels, 1000);
+}
+
+function stopDashboardTimers() {
+  if (state.dashboard.fullRefreshTimer !== null) {
+    window.clearInterval(state.dashboard.fullRefreshTimer);
+    state.dashboard.fullRefreshTimer = null;
+  }
+  if (state.dashboard.previewRefreshTimer !== null) {
+    window.clearInterval(state.dashboard.previewRefreshTimer);
+    state.dashboard.previewRefreshTimer = null;
+  }
+  if (state.dashboard.ageTimer !== null) {
+    window.clearInterval(state.dashboard.ageTimer);
+    state.dashboard.ageTimer = null;
+  }
+  if (state.dashboard.invalidationTimer !== null) {
+    window.clearTimeout(state.dashboard.invalidationTimer);
+    state.dashboard.invalidationTimer = null;
+  }
+}
+
+function scheduleDashboardInvalidation() {
+  if (!state.dashboard.open || document.hidden) {
+    return;
+  }
+  if (state.dashboard.invalidationTimer !== null) {
+    window.clearTimeout(state.dashboard.invalidationTimer);
+  }
+  state.dashboard.invalidationTimer = window.setTimeout(() => {
+    state.dashboard.invalidationTimer = null;
+    void refreshDashboard({ announceError: false });
+  }, 400);
+}
+
+function updateDashboardAgeLabels() {
+  if (!state.dashboard.open) {
+    return;
+  }
+
+  if (!state.dashboard.generatedAt) {
+    ui.dashboardAge.textContent = state.dashboard.loading ? "Refreshing dashboard…" : "Not refreshed yet.";
+  } else if (state.dashboard.loading) {
+    ui.dashboardAge.textContent = `Refreshing… last updated ${relativeTimeText(state.dashboard.generatedAt)}.`;
+  } else {
+    ui.dashboardAge.textContent = `Updated ${relativeTimeText(state.dashboard.generatedAt)}.`;
+  }
+
+  for (const element of ui.dashboardGrid.querySelectorAll(".dashboard-tile-age")) {
+    const timestamp = stringOrEmpty(element.dataset.dashboardAgeSource);
+    element.textContent = timestamp ? `Activity ${relativeTimeText(timestamp)}` : "Activity unknown";
+  }
+}
+
+function changeDashboardPage(delta) {
+  const nextPage = Math.max(1, Math.min(state.dashboard.totalPages, state.dashboard.page + delta));
+  if (nextPage === state.dashboard.page) {
+    return;
+  }
+  state.dashboard.page = nextPage;
+  renderDashboard();
+  if (state.dashboard.open && !document.hidden) {
+    void refreshDashboard({ announceError: true });
+  }
+}
+
+function handleDashboardResize() {
+  const nextPageSize = dashboardCapacity();
+  if (state.dashboard.pageSize === nextPageSize) {
+    return;
+  }
+  state.dashboard.pageSize = nextPageSize;
+  renderDashboard();
+  if (state.dashboard.open && !document.hidden) {
+    void refreshDashboard({ announceError: false });
+  }
+}
+
+function openSessionManager() {
+  setDashboardOpen(false);
+  setDrawerState("panel", false);
+  if (window.innerWidth <= 960) {
+    setDrawerState("nav", true);
+  }
+  const target = ui.sessionList.querySelector("button") ?? ui.newSessionButton;
+  if (target instanceof HTMLElement) {
+    target.focus();
+  }
 }
 
 async function refreshMeters() {
@@ -1155,10 +1497,15 @@ function stopMetersPolling() {
 function handleMetersVisibilityChange() {
   if (document.hidden) {
     stopMetersPolling();
+    stopDashboardTimers();
     return;
   }
   void refreshMeters();
   startMetersPolling();
+  if (state.dashboard.open) {
+    void refreshDashboard({ announceError: false });
+    startDashboardTimers();
+  }
 }
 
 function toggleMetersEnabled() {
@@ -2226,7 +2573,15 @@ function handleKeyboardShortcuts(event) {
     void createSession({ focusComposer: true });
     return;
   }
+  if (!isModifier && !event.altKey && event.code === "Backquote" && !isDashboardShortcutEditableTarget(event.target)) {
+    event.preventDefault();
+    toggleDashboard();
+    return;
+  }
   if (event.key === "Escape") {
+    if (state.dashboard.open) {
+      setDashboardOpen(false);
+    }
     closeDrawers();
   }
 }
@@ -2389,6 +2744,117 @@ function messageForError(error, fallbackMessage) {
 
 function normalizeSessionFilter(value) {
   return SESSION_FILTERS.has(value) ? value : "active";
+}
+
+function dashboardCapacity() {
+  if (window.innerWidth < 760) {
+    return 4;
+  }
+  if (window.innerWidth < 1080) {
+    return 6;
+  }
+  return 8;
+}
+
+function sessionFromLocation() {
+  try {
+    const sessionId = new URL(window.location.href).searchParams.get("session_id");
+    return sessionId && sessionId.trim() ? sessionId.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildSessionUrl(sessionId) {
+  const url = new URL(window.location.href);
+  if (sessionId) {
+    url.searchParams.set("session_id", sessionId);
+  } else {
+    url.searchParams.delete("session_id");
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function replaceSessionLocation(sessionId) {
+  const nextUrl = buildSessionUrl(sessionId);
+  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (nextUrl === currentUrl) {
+    return;
+  }
+  window.history.replaceState(null, "", nextUrl);
+}
+
+function dashboardPreviewKindLabel(value) {
+  switch (value) {
+    case "draft":
+      return "Draft";
+    case "thinking":
+      return "Thinking";
+    case "tool":
+      return "Tool";
+    case "summary":
+      return "Summary";
+    default:
+      return "Preview";
+  }
+}
+
+function dashboardActivityLabel(session) {
+  return sentenceCase(stringOrEmpty(session?.activity_state) || "idle");
+}
+
+function formatDashboardContext(session) {
+  const used = numberOrZero(session?.context_used_tokens).toLocaleString();
+  const windowTokens = numberOrZero(session?.context_window_tokens).toLocaleString();
+  return `${used} / ${windowTokens} · ${formatDashboardContextPercent(session)}%`;
+}
+
+function formatDashboardContextPercent(session) {
+  const value = typeof session?.context_percent === "number" && Number.isFinite(session.context_percent)
+    ? session.context_percent
+    : 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function relativeTimeText(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) {
+    return "just now";
+  }
+  const elapsedSeconds = Math.max(0, Math.round((Date.now() - date.valueOf()) / 1000));
+  if (elapsedSeconds < 5) {
+    return "just now";
+  }
+  if (elapsedSeconds < 60) {
+    return `${elapsedSeconds}s ago`;
+  }
+  const elapsedMinutes = Math.round(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes}m ago`;
+  }
+  const elapsedHours = Math.round(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `${elapsedHours}h ago`;
+  }
+  const elapsedDays = Math.round(elapsedHours / 24);
+  return `${elapsedDays}d ago`;
+}
+
+function sentenceCase(value) {
+  const text = stringOrEmpty(value).replace(/_/g, " ").trim();
+  if (!text) {
+    return "Unknown";
+  }
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function isDashboardShortcutEditableTarget(target) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  return target.closest(
+    "input, textarea, select, form, [contenteditable=''], [contenteditable='true'], [role='textbox'], .cm-editor, .CodeMirror, .monaco-editor"
+  ) !== null;
 }
 
 function requiredElement(id) {

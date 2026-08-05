@@ -14,7 +14,13 @@ GLOBAL_EVENT_SESSION_ID = "__tau_global__"
 """Internal pseudo-session id for host-wide events such as meters updates."""
 
 _LOW_EVENT_TYPES = frozenset(
-    {"message_delta", "thinking_delta", "tool_execution_update", "tau.meters.updated"}
+    {
+        "message_delta",
+        "thinking_delta",
+        "tool_execution_update",
+        "tau.meters.updated",
+        "tau.dashboard.updated",
+    }
 )
 _DELTA_EVENT_TYPES = frozenset({"message_delta", "thinking_delta"})
 
@@ -335,7 +341,7 @@ def _coalesce_tail(existing: BrokerEvent, incoming: BrokerEvent) -> BrokerEvent 
             return None
         return incoming
 
-    if existing_type == "tau.meters.updated":
+    if existing_type in {"tau.meters.updated", "tau.dashboard.updated"}:
         return incoming
 
     return None

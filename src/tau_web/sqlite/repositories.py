@@ -1041,6 +1041,28 @@ class TimelineMessageRepository(SqliteRepository):
 
         return await self.database.write(write)
 
+    async def latest_assistant(
+        self,
+        *,
+        session_id: str,
+    ) -> TimelineMessageRecord | None:
+        """Return the newest visible assistant projection for one session."""
+        session_key = _require_identifier(session_id, field="Session id")
+
+        async def read(reader: SqliteReader) -> TimelineMessageRecord | None:
+            row = await reader.fetch_one(
+                """
+                SELECT * FROM timeline_messages
+                WHERE session_id = ? AND role = 'assistant' AND deleted_at IS NULL
+                ORDER BY message_id DESC
+                LIMIT 1
+                """,
+                (session_key,),
+            )
+            return _timeline_message_from_row(row) if row is not None else None
+
+        return await self.database.read(read)
+
     async def list(
         self,
         *,
