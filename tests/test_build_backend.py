@@ -31,6 +31,9 @@ def test_sdist_contains_makefile_and_docs(tmp_path: Path) -> None:
         "/tests/browser/test-results/",
         "/tests/browser/playwright-report/",
         "/tests/browser/.cache/",
+        "/website/node_modules/",
+        "/website/.astro/",
+        "/website/dist/",
         "/.venv/",
         "/__pycache__/",
         "/pycache/",
@@ -54,6 +57,10 @@ def test_source_files_exclude_browser_artifacts_and_cache_dirs(
     write_text("tests/browser/playwright-report/index.html")
     write_text("tests/browser/.cache/cache.txt")
     write_text("tests/browser/.env.secret")
+    write_text("website/src/content/docs/index.md")
+    write_text("website/node_modules/pkg/index.js")
+    write_text("website/.astro/content.db")
+    write_text("website/dist/index.html")
     write_text(".venv/bin/python")
     write_text("src/__pycache__/module.cpython-313.pyc")
     write_text("src/pycache/cache.dat")
@@ -69,6 +76,10 @@ def test_source_files_exclude_browser_artifacts_and_cache_dirs(
     assert "tests/browser/playwright-report/index.html" not in selected
     assert "tests/browser/.cache/cache.txt" not in selected
     assert "tests/browser/.env.secret" not in selected
+    assert "website/src/content/docs/index.md" in selected
+    assert "website/node_modules/pkg/index.js" not in selected
+    assert "website/.astro/content.db" not in selected
+    assert "website/dist/index.html" not in selected
     assert ".venv/bin/python" not in selected
     assert "src/__pycache__/module.cpython-313.pyc" not in selected
     assert "src/pycache/cache.dat" not in selected

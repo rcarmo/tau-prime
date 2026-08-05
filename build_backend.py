@@ -139,7 +139,13 @@ def _hash(data: bytes) -> str:
 def _is_excluded_source(path: Path) -> bool:
     relative = path.relative_to(ROOT)
     parts = relative.parts
-    if any(part in {".venv", "__pycache__", "pycache"} for part in parts):
+    if any(part in {".venv", "__pycache__", "pycache", "node_modules"} for part in parts):
+        return True
+    generated_prefixes = (
+        ("website", ".astro"),
+        ("website", "dist"),
+    )
+    if any(parts[: len(prefix)] == prefix for prefix in generated_prefixes):
         return True
     if relative.name == ".env" or relative.name.startswith(".env."):
         return True
