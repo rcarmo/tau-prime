@@ -10,13 +10,27 @@ const API_PATHS = Object.freeze({
   sessions: "/api/sessions",
   settings: "/api/settings",
   models: "/api/models",
+  commands: "/api/commands",
   files: "/api/files",
+  media: "/api/media",
   search: "/api/search",
   events: "/api/events",
 });
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_FILTERS = new Set(["active", "archived"]);
+const DELIVERY_MODES = new Set(["run", "follow_up", "steer"]);
+const MAX_COMPOSER_ATTACHMENTS = 8;
+const MAX_ATTACHMENT_REFERENCE_ITEMS = MAX_COMPOSER_ATTACHMENTS;
+const DEFAULT_THINKING_LEVELS = Object.freeze([
+  ["", "Default"],
+  ["off", "Off -- no reasoning"],
+  ["minimal", "Minimal -- very brief reasoning"],
+  ["low", "Low -- light reasoning"],
+  ["medium", "Medium -- moderate reasoning"],
+  ["high", "High -- deep reasoning"],
+  ["xhigh", "XHigh -- maximum reasoning"],
+]);
 const TABS = ["workspace", "search", "settings"];
 
 class ApiError extends Error {
@@ -43,6 +57,7 @@ const state = {
   liveDraft: null,
   settings: null,
   models: [],
+  commands: [],
   activeTab: "workspace",
   workspacePath: ".",
   workspaceEntries: [],
@@ -50,6 +65,8 @@ const state = {
   workspaceFileContent: "",
   searchResults: [],
   composing: false,
+  uploadingAttachments: false,
+  composer: createComposerState(),
   stream: {
     controller: null,
     reconnectTimer: null,
@@ -60,6 +77,8 @@ const state = {
 };
 
 ui.authToken.value = state.authToken ?? "";
+ui.providerInput.value = loadStorage(STORAGE_KEYS.provider) ?? "";
+ui.modelInput.value = loadStorage(STORAGE_KEYS.model) ?? "";
 ui.workspaceEditor.readOnly = true;
 
 installEventHandlers();
@@ -128,9 +147,23 @@ function bindUi() {
     modelOptions: requiredElement("model-options"),
     applyModelButton: requiredElement("apply-model-button"),
     refreshButton: requiredElement("refresh-button"),
+    thinkingForm: requiredElement("thinking-form"),
+    thinkingLevelSelect: requiredElement("thinking-level-select"),
     settingsSummary: requiredElement("settings-summary"),
     composeForm: requiredElement("compose-form"),
+    composeProviderSelect: requiredElement("compose-provider-select"),
+    composeModelSelect: requiredElement("compose-model-select"),
+    composeThinkingSelect: requiredElement("compose-thinking-select"),
+    composeDeliveryMode: requiredElement("compose-delivery-mode"),
+    composeContextReadout: requiredElement("compose-context-readout"),
+    composeAttachmentButton: requiredElement("compose-attachment-button"),
+    composeFileInput: requiredElement("compose-file-input"),
+    composeAttachmentList: requiredElement("compose-attachment-list"),
+    composeClearAttachments: requiredElement("compose-clear-attachments"),
     composeInput: requiredElement("compose-input"),
+    composeCompletionPopup: requiredElement("compose-completion-popup"),
+    composeCompletionListbox: requiredElement("compose-completion-listbox"),
+    composeCompletionStatus: requiredElement("compose-completion-status"),
     composeSubmit: requiredElement("compose-submit"),
     appStatus: requiredElement("app-status"),
     drawerBackdrop: requiredElement("drawer-backdrop"),
@@ -189,9 +222,41 @@ function installEventHandlers() {
     event.preventDefault();
     void applyModelSettings();
   });
+  ui.providerInput.addEventListener("input", handleProviderModelInputChange);
+  ui.modelInput.addEventListener("input", handleProviderModelInputChange);
+  ui.providerInput.addEventListener("change", handleProviderModelInputChange);
+  ui.modelInput.addEventListener("change", handleProviderModelInputChange);
   ui.refreshButton.addEventListener("click", () => {
     void refreshShell({ reconnect: true, announceMessage: "Shell refreshed." });
   });
+
+  ui.composeProviderSelect.addEventListener("change", () => {
+    void handleComposerModelControlChange();
+  });
+  ui.composeModelSelect.addEventListener("change", () => {
+    void handleComposerModelControlChange();
+  });
+  ui.composeThinkingSelect.addEventListener("change", () => {
+    void handleComposerThinkingControlChange();
+  });
+  ui.composeDeliveryMode.addEventListener("change", () => {
+    state.composer.deliveryMode = normalizeDeliveryMode(ui.composeDeliveryMode.value);
+    renderControls();
+  });
+  ui.composeAttachmentButton.addEventListener("click", () => {
+    ui.composeFileInput.click();
+  });
+  ui.composeFileInput.addEventListener("change", () => {
+    void handleComposerFileSelection();
+  });
+  ui.composeClearAttachments.addEventListener("click", () => {
+    clearComposerAttachments({ announceMessage: "Cleared staged attachments." });
+  });
+  ui.composeInput.addEventListener("input", handleComposeInputChange);
+  ui.composeInput.addEventListener("click", updateComposerCompletion);
+  ui.composeInput.addEventListener("keyup", handleComposeCursorMove);
+  ui.composeInput.addEventListener("keydown", handleComposeInputKeydown);
+  ui.composeInput.addEventListener("blur", handleComposeInputBlur);
 
   ui.composeForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -214,15 +279,17 @@ async function refreshShell({ reconnect = true, announceMessage = null } = {}) {
   const responses = await Promise.all([
     apiFetch(API_PATHS.settings),
     apiFetch(API_PATHS.models),
+    apiFetch(API_PATHS.commands),
     apiFetch(`${API_PATHS.sessions}?include_archived=true`),
     apiFetch(`${API_PATHS.files}?path=${encodeURIComponent(state.workspacePath)}`),
   ]);
 
   state.settings = responses[0];
   state.models = Array.isArray(responses[1]?.models) ? responses[1].models : [];
-  state.sessions = Array.isArray(responses[2]?.sessions) ? responses[2].sessions : [];
+  state.commands = Array.isArray(responses[2]?.commands) ? responses[2].commands : [];
+  state.sessions = Array.isArray(responses[3]?.sessions) ? responses[3].sessions : [];
 
-  applyWorkspaceResponse(responses[3], { preserveFile: true });
+  applyWorkspaceResponse(responses[4], { preserveFile: true });
   syncSelection(previousSelection);
   renderShell();
   await refreshSelectedSessionData({ reconnect });
@@ -305,14 +372,16 @@ async function loadSessions({ preferredSessionId = state.selectedSessionId } = {
   renderShell();
 }
 
-async function selectSession(sessionId, { reconnect = true } = {}) {
+async function selectSession(sessionId, { reconnect = true, focusTimeline = true } = {}) {
   state.selectedSessionId = sessionId;
   persistStorage(STORAGE_KEYS.selectedSessionId, sessionId);
   syncSelection(sessionId);
   renderShell();
   closeDrawers();
   await refreshSelectedSessionData({ reconnect });
-  ui.timelineMain.focus();
+  if (focusTimeline) {
+    ui.timelineMain.focus();
+  }
 }
 
 async function refreshSelectedSessionData({ reconnect = false } = {}) {
@@ -346,6 +415,9 @@ async function refreshSelectedSessionData({ reconnect = false } = {}) {
       startEventStream(sessionId);
     }
   } catch (error) {
+    if (state.selectedSessionId !== sessionId) {
+      return;
+    }
     handleError(error, "Unable to load the selected session.");
   }
 }
@@ -465,7 +537,7 @@ async function runSearch() {
   }
 
   const params = new URLSearchParams({ q: query, limit: "20" });
-  if (state.selectedSessionId && !state.showArchivedSessions.matches?.(":focus")) {
+  if (state.selectedSessionId) {
     params.set("session_id", state.selectedSessionId);
   }
 
@@ -496,34 +568,47 @@ async function clearAuthToken() {
 
 async function submitPrompt() {
   const prompt = ui.composeInput.value.trim();
-  if (!prompt) {
-    announce("Enter a prompt before running.");
+  const content = buildSubmittedPromptContent(prompt);
+  if (!content) {
+    announce("Enter a prompt or stage an attachment before sending.");
     return;
   }
   if (state.selectedSession?.archived_at) {
-    announce("Restore the selected session before running a prompt.");
+    announce("Restore the selected session before sending a prompt.");
     return;
   }
 
   try {
-    if (!state.selectedSessionId) {
-      await createSession({ focusComposer: false });
-    }
-    if (!state.selectedSessionId) {
-      throw new ApiError("No session is available for this run.");
-    }
-
     state.composing = true;
     renderControls();
-    const sessionId = state.selectedSessionId;
-    const run = await apiFetch(`${sessionPath(sessionId)}/runs`, {
-      method: "POST",
-      json: { content: prompt },
-    });
+
+    const sessionId = await ensureComposerSessionId();
+    if (!sessionId) {
+      throw new ApiError("No session is available for this prompt.");
+    }
+
+    const mode = normalizeDeliveryMode(ui.composeDeliveryMode.value);
+    const activeRun = currentComposerActiveRun();
+    if (mode === "run") {
+      const run = await apiFetch(`${sessionPath(sessionId)}/runs`, {
+        method: "POST",
+        json: { content },
+      });
+      state.liveDraft = null;
+      renderTimeline();
+      announce(`Run ${run.run_id} submitted.`);
+    } else if (activeRun) {
+      await submitComposerQueuedMessage(activeRun.run_id, mode, content);
+      announce(`${mode === "steer" ? "Steer" : "Follow-up"} queued for ${shortId(activeRun.run_id)}.`);
+    } else {
+      await enqueueComposerSessionMessage(sessionId, mode, content);
+      announce(`${mode === "steer" ? "Steer" : "Follow-up"} queued for ${sessionLabel(state.selectedSession ?? { session_id: sessionId })}.`);
+    }
+
     ui.composeInput.value = "";
-    state.liveDraft = null;
-    renderTimeline();
-    announce(`Run ${run.run_id} submitted.`);
+    clearComposerAttachments();
+    closeComposerCompletion();
+    renderControls();
   } catch (error) {
     handleError(error, "Unable to submit the prompt.");
   } finally {
@@ -787,6 +872,7 @@ function mergeSessions(nextSessions) {
 }
 
 function syncSelection(preferredSessionId) {
+  const previousSessionId = state.selectedSessionId;
   const visible = visibleSessions();
   const preferred = typeof preferredSessionId === "string" ? preferredSessionId : null;
   const selected =
@@ -797,6 +883,10 @@ function syncSelection(preferredSessionId) {
   state.selectedSession = selected;
   state.selectedSessionId = selected?.session_id ?? null;
   persistStorage(STORAGE_KEYS.selectedSessionId, state.selectedSessionId);
+  if (previousSessionId !== state.selectedSessionId) {
+    handleComposerSessionChange(previousSessionId, state.selectedSessionId);
+    notifySelectedSessionChanged();
+  }
 }
 
 function visibleSessions() {
@@ -1157,17 +1247,43 @@ function renderModelOptions() {
     modelValues.add(modelInput);
   }
 
-  replaceOptions(ui.providerOptions, Array.from(providerValues).sort());
-  replaceOptions(ui.modelOptions, Array.from(modelValues).sort());
+  const providerItems = Array.from(providerValues).sort().map((value) => ({ value, label: value }));
+  const modelItems = Array.from(modelValues).sort().map((value) => ({ value, label: value }));
+  replaceOptions(ui.providerOptions, providerItems.map((item) => item.value));
+  replaceOptions(ui.modelOptions, modelItems.map((item) => item.value));
+  replaceSelectOptions(ui.composeProviderSelect, providerItems);
+  replaceSelectOptions(ui.composeModelSelect, modelItems);
 }
 
 function renderControls() {
   const session = state.selectedSession;
   const archived = Boolean(session?.archived_at);
+  const selectedModel = currentProviderModelSelection();
+  const selectedThinkingLevel = session?.thinking_level ?? "";
+
+  renderThinkingOptions();
+  syncSelectValue(ui.composeProviderSelect, selectedModel.provider_name);
+  syncSelectValue(ui.composeModelSelect, selectedModel.model);
+  syncSelectValue(ui.composeThinkingSelect, selectedThinkingLevel, selectedThinkingLevel || "Default");
+
+  state.composer.deliveryMode = normalizeDeliveryMode(ui.composeDeliveryMode.value || state.composer.deliveryMode);
+  ui.composeDeliveryMode.value = state.composer.deliveryMode;
+  ui.composeContextReadout.textContent = composeContextReadoutText();
+  ui.composeAttachmentButton.textContent = state.uploadingAttachments ? "Uploading…" : "Attach files";
   ui.archiveSessionButton.disabled = !session || archived;
   ui.restoreSessionButton.disabled = !session || !archived;
   ui.applyModelButton.disabled = !session || archived;
-  ui.composeSubmit.disabled = archived || state.composing;
+  ui.composeProviderSelect.disabled = state.composing || state.uploadingAttachments;
+  ui.composeModelSelect.disabled = state.composing || state.uploadingAttachments;
+  ui.composeThinkingSelect.disabled = !session || archived || state.composing || state.uploadingAttachments;
+  ui.composeDeliveryMode.disabled = state.composing || state.uploadingAttachments;
+  ui.composeAttachmentButton.disabled = archived || state.composing || state.uploadingAttachments;
+  ui.composeFileInput.disabled = archived || state.composing || state.uploadingAttachments;
+  ui.composeClearAttachments.disabled = !state.composer.attachments.length || state.composing || state.uploadingAttachments;
+  ui.composeSubmit.disabled = archived || state.composing || state.uploadingAttachments;
+  ui.composeSubmit.textContent = state.composer.deliveryMode === "run" ? "Run" : "Send";
+  renderComposerAttachments();
+  renderComposerCompletion();
 }
 
 function applyWorkspaceResponse(response, { preserveFile = false } = {}) {
@@ -1189,6 +1305,8 @@ function applyWorkspaceResponse(response, { preserveFile = false } = {}) {
 function syncProviderInputs(providerName, model) {
   ui.providerInput.value = providerName ?? "";
   ui.modelInput.value = model ?? "";
+  syncSelectValue(ui.composeProviderSelect, ui.providerInput.value.trim());
+  syncSelectValue(ui.composeModelSelect, ui.modelInput.value.trim());
   persistStorage(STORAGE_KEYS.provider, ui.providerInput.value.trim() || null);
   persistStorage(STORAGE_KEYS.model, ui.modelInput.value.trim() || null);
 }
@@ -1208,6 +1326,554 @@ function selectedProviderModel() {
     "model";
   syncProviderInputs(provider_name, model);
   return { provider_name, model };
+}
+
+function createComposerState() {
+  return {
+    deliveryMode: "run",
+    attachments: [],
+    completion: createComposerCompletionState(),
+  };
+}
+
+function createComposerCompletionState() {
+  return {
+    open: false,
+    kind: null,
+    start: 0,
+    end: 0,
+    index: 0,
+    items: [],
+  };
+}
+
+function handleProviderModelInputChange() {
+  persistStorage(STORAGE_KEYS.provider, ui.providerInput.value.trim() || null);
+  persistStorage(STORAGE_KEYS.model, ui.modelInput.value.trim() || null);
+  renderModelOptions();
+  renderControls();
+}
+
+async function handleComposerModelControlChange() {
+  syncProviderInputs(ui.composeProviderSelect.value.trim(), ui.composeModelSelect.value.trim());
+  renderModelOptions();
+  renderControls();
+  if (!state.selectedSession || state.selectedSession.archived_at) {
+    return;
+  }
+  if (
+    state.selectedSession.provider_name === ui.providerInput.value.trim() &&
+    state.selectedSession.model === ui.modelInput.value.trim()
+  ) {
+    return;
+  }
+  ui.modelForm.requestSubmit();
+}
+
+async function handleComposerThinkingControlChange() {
+  const value = ui.composeThinkingSelect.value;
+  syncSelectValue(ui.thinkingLevelSelect, value, value || "Default");
+  ui.thinkingLevelSelect.value = value;
+  if (!state.selectedSession || state.selectedSession.archived_at) {
+    return;
+  }
+  if ((state.selectedSession.thinking_level ?? "") === value) {
+    return;
+  }
+  ui.thinkingForm.requestSubmit();
+}
+
+function handleComposeInputChange() {
+  renderControls();
+  updateComposerCompletion();
+}
+
+function handleComposeCursorMove(event) {
+  if (["ArrowUp", "ArrowDown", "Enter", "Tab", "Escape"].includes(event.key)) {
+    return;
+  }
+  updateComposerCompletion();
+}
+
+function handleComposeInputKeydown(event) {
+  if (state.composer.completion.open) {
+    const itemCount = state.composer.completion.items.length;
+    if (itemCount === 0) {
+      closeComposerCompletion();
+    } else {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        state.composer.completion.index = (state.composer.completion.index + 1) % itemCount;
+        renderComposerCompletion();
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        state.composer.completion.index =
+          (state.composer.completion.index + itemCount - 1) % itemCount;
+        renderComposerCompletion();
+        return;
+      }
+      if (event.key === "Tab" || event.key === "Enter") {
+        event.preventDefault();
+        void chooseComposerCompletion(state.composer.completion.index);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeComposerCompletion();
+        return;
+      }
+    }
+  }
+
+  if (
+    event.key === "Enter" &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.isComposing
+  ) {
+    event.preventDefault();
+    ui.composeForm.requestSubmit();
+  }
+}
+
+function handleComposeInputBlur() {
+  window.setTimeout(() => {
+    if (document.activeElement !== ui.composeInput) {
+      closeComposerCompletion();
+    }
+  }, 0);
+}
+
+function updateComposerCompletion() {
+  const token = activeComposerToken();
+  if (!token) {
+    closeComposerCompletion();
+    return;
+  }
+
+  const items = token.kind === "command"
+    ? collectCommandCompletions(token.query)
+    : collectSessionCompletions(token.query);
+  if (!items.length) {
+    closeComposerCompletion();
+    return;
+  }
+
+  const nextIndex = Math.min(state.composer.completion.index, items.length - 1);
+  state.composer.completion = {
+    open: true,
+    kind: token.kind,
+    start: token.start,
+    end: token.end,
+    index: nextIndex < 0 ? 0 : nextIndex,
+    items,
+  };
+  renderComposerCompletion();
+}
+
+function renderComposerCompletion() {
+  const completion = state.composer.completion;
+  ui.composeCompletionListbox.replaceChildren();
+  ui.composeCompletionPopup.hidden = !completion.open;
+  ui.composeInput.setAttribute("aria-expanded", String(completion.open));
+
+  if (!completion.open) {
+    ui.composeCompletionStatus.textContent = "";
+    ui.composeInput.removeAttribute("aria-activedescendant");
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const [index, item] of completion.items.entries()) {
+    const option = document.createElement("li");
+    option.id = `compose-completion-option-${index}`;
+    option.className = "compose-completion-option";
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(index === completion.index));
+    option.dataset.active = String(index === completion.index);
+    option.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    option.addEventListener("click", () => {
+      void chooseComposerCompletion(index);
+    });
+
+    const title = document.createElement("strong");
+    title.className = "compose-completion-title";
+    title.textContent = item.label;
+
+    const detail = document.createElement("p");
+    detail.className = "compose-completion-detail muted small-text";
+    detail.textContent = item.detail;
+
+    option.append(title, detail);
+    fragment.append(option);
+  }
+  ui.composeCompletionListbox.append(fragment);
+  ui.composeCompletionStatus.textContent = `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.`;
+  ui.composeInput.setAttribute("aria-activedescendant", `compose-completion-option-${completion.index}`);
+}
+
+function renderComposerAttachments() {
+  ui.composeAttachmentList.replaceChildren();
+  if (!state.composer.attachments.length) {
+    const placeholder = document.createElement("li");
+    placeholder.append(createMutedText(`No attachments staged. Up to ${MAX_COMPOSER_ATTACHMENTS}.`));
+    ui.composeAttachmentList.append(placeholder);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const attachment of state.composer.attachments) {
+    const item = document.createElement("li");
+    item.className = "attachment-chip";
+
+    const label = document.createElement("span");
+    label.className = "attachment-chip-label";
+    label.textContent = attachmentLabel(attachment);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "attachment-chip-remove";
+    button.setAttribute("aria-label", `Remove attachment ${attachment.filename}`);
+    button.textContent = "Remove";
+    button.addEventListener("click", () => {
+      removeComposerAttachment(attachment.media_id);
+    });
+
+    item.append(label, button);
+    fragment.append(item);
+  }
+  ui.composeAttachmentList.append(fragment);
+}
+
+async function chooseComposerCompletion(index) {
+  const completion = state.composer.completion;
+  const item = completion.items[index];
+  if (!completion.open || !item) {
+    closeComposerCompletion();
+    return;
+  }
+  if (item.kind === "command") {
+    applyComposerCommandCompletion(item);
+    return;
+  }
+  await applyComposerSessionCompletion(item);
+}
+
+function applyComposerCommandCompletion(item) {
+  replaceComposerToken(`/${item.name} `);
+  closeComposerCompletion();
+  updateComposerCompletion();
+}
+
+async function applyComposerSessionCompletion(item) {
+  removeComposerToken();
+  closeComposerCompletion();
+  if (state.sessionFilter !== "active") {
+    state.sessionFilter = "active";
+    persistStorage(STORAGE_KEYS.sessionFilter, state.sessionFilter);
+  }
+  await selectSession(item.session_id, { reconnect: true, focusTimeline: false });
+  ui.composeInput.focus();
+}
+
+function handleComposerSessionChange(previousSessionId, nextSessionId) {
+  const attachmentSessionId = state.composer.attachments[0]?.session_id ?? previousSessionId;
+  if (state.composer.attachments.length && attachmentSessionId && attachmentSessionId !== nextSessionId) {
+    clearComposerAttachments({ announceMessage: "Cleared staged attachments after switching sessions." });
+  }
+  closeComposerCompletion();
+}
+
+function currentActiveSessions() {
+  return state.sessions.filter((session) => !session?.archived_at);
+}
+
+function collectCommandCompletions(query) {
+  const normalizedQuery = query.toLowerCase();
+  return state.commands
+    .filter((command) => {
+      const haystack = [command?.name, command?.usage, command?.description]
+        .map((value) => stringOrEmpty(value).toLowerCase())
+        .join(" ");
+      return !normalizedQuery || haystack.includes(normalizedQuery);
+    })
+    .map((command) => ({
+      kind: "command",
+      name: stringOrEmpty(command.name),
+      label: `/${stringOrEmpty(command.name)}`,
+      detail: stringOrEmpty(command.description) || stringOrEmpty(command.usage) || "Slash command",
+    }));
+}
+
+function collectSessionCompletions(query) {
+  const normalizedQuery = query.toLowerCase();
+  return currentActiveSessions()
+    .filter((session) => {
+      const haystack = [session?.agent_name, session?.title, session?.session_id]
+        .map((value) => stringOrEmpty(value).toLowerCase())
+        .join(" ");
+      return !normalizedQuery || haystack.includes(normalizedQuery);
+    })
+    .map((session) => ({
+      kind: "session",
+      session_id: session.session_id,
+      label: `@${stringOrEmpty(session.agent_name) || shortId(session.session_id)}`,
+      detail: `${sessionLabel(session)} · ${session.provider_name}/${session.model}`,
+    }));
+}
+
+function activeComposerToken() {
+  if (ui.composeInput.selectionStart !== ui.composeInput.selectionEnd) {
+    return null;
+  }
+  const text = ui.composeInput.value;
+  const caret = ui.composeInput.selectionStart ?? text.length;
+  let start = caret;
+  while (start > 0 && !/\s/.test(text[start - 1])) {
+    start -= 1;
+  }
+  let end = caret;
+  while (end < text.length && !/\s/.test(text[end])) {
+    end += 1;
+  }
+  if (start === end) {
+    return null;
+  }
+  const prefix = text[start];
+  if (prefix !== "/" && prefix !== "@") {
+    return null;
+  }
+  const query = text.slice(start + 1, caret);
+  return {
+    kind: prefix === "/" ? "command" : "session",
+    start,
+    end,
+    query,
+  };
+}
+
+function replaceComposerToken(replacement) {
+  const { start, end } = state.composer.completion;
+  const before = ui.composeInput.value.slice(0, start);
+  const after = ui.composeInput.value.slice(end).replace(/^\s+/, " ");
+  const nextValue = `${before}${replacement}${after}`;
+  ui.composeInput.value = nextValue;
+  restoreComposerCaret(before.length + replacement.length);
+}
+
+function removeComposerToken() {
+  const { start, end } = state.composer.completion;
+  const before = ui.composeInput.value.slice(0, start);
+  let after = ui.composeInput.value.slice(end);
+  if (!before) {
+    after = after.replace(/^[ \t]+/, "");
+  } else if (/\s$/.test(before)) {
+    after = after.replace(/^[ \t]+/, "");
+  }
+  ui.composeInput.value = `${before}${after}`;
+  restoreComposerCaret(before.length);
+}
+
+function restoreComposerCaret(position) {
+  ui.composeInput.focus();
+  ui.composeInput.setSelectionRange(position, position);
+}
+
+function closeComposerCompletion() {
+  state.composer.completion = createComposerCompletionState();
+  renderComposerCompletion();
+}
+
+function clearComposerAttachments({ announceMessage = null } = {}) {
+  state.composer.attachments = [];
+  ui.composeFileInput.value = "";
+  renderControls();
+  if (announceMessage) {
+    announce(announceMessage);
+  }
+}
+
+function removeComposerAttachment(mediaId) {
+  state.composer.attachments = state.composer.attachments.filter((attachment) => attachment.media_id !== mediaId);
+  renderControls();
+}
+
+async function handleComposerFileSelection() {
+  const selectedFiles = Array.from(ui.composeFileInput.files ?? []);
+  ui.composeFileInput.value = "";
+  if (!selectedFiles.length) {
+    return;
+  }
+  if (state.selectedSession?.archived_at) {
+    announce("Restore the selected session before attaching files.");
+    return;
+  }
+
+  const remainingSlots = MAX_COMPOSER_ATTACHMENTS - state.composer.attachments.length;
+  if (remainingSlots <= 0) {
+    announce(`You can stage up to ${MAX_COMPOSER_ATTACHMENTS} attachments.`);
+    return;
+  }
+
+  const files = selectedFiles.slice(0, remainingSlots);
+  const ignoredCount = selectedFiles.length - files.length;
+
+  try {
+    state.uploadingAttachments = true;
+    renderControls();
+    const sessionId = await ensureComposerSessionId();
+    if (!sessionId) {
+      throw new ApiError("No session is available for attachments.");
+    }
+    for (const file of files) {
+      const uploaded = await uploadComposerAttachment(file, sessionId);
+      const mediaId = stringOrEmpty(uploaded?.media_id);
+      if (!mediaId) {
+        throw new ApiError("Uploaded attachment response did not include a media id.");
+      }
+      state.composer.attachments.push({
+        media_id: mediaId,
+        session_id: stringOrEmpty(uploaded?.session_id) || sessionId,
+        filename: stringOrEmpty(uploaded?.filename) || file.name || `media-${state.composer.attachments.length + 1}`,
+        media_type: stringOrEmpty(uploaded?.media_type) || file.type || "application/octet-stream",
+      });
+    }
+    if (ignoredCount > 0) {
+      announce(`Staged ${files.length} attachment${files.length === 1 ? "" : "s"}. Ignored ${ignoredCount} over the limit.`);
+    } else {
+      announce(`Staged ${files.length} attachment${files.length === 1 ? "" : "s"}.`);
+    }
+  } catch (error) {
+    handleError(error, "Unable to upload attachments.");
+  } finally {
+    state.uploadingAttachments = false;
+    renderControls();
+  }
+}
+
+async function ensureComposerSessionId() {
+  if (!state.selectedSessionId) {
+    await createSession({ focusComposer: false });
+  }
+  return state.selectedSessionId;
+}
+
+async function uploadComposerAttachment(file, sessionId) {
+  const formData = new FormData();
+  const uploadFile = file.type ? file : new File([file], file.name || "attachment", { type: "application/octet-stream" });
+  formData.append("file", uploadFile, uploadFile.name);
+  formData.append("session_id", sessionId);
+  return apiFetch(API_PATHS.media, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+function buildSubmittedPromptContent(prompt) {
+  const attachmentBlock = buildAttachmentReferenceBlock();
+  const content = [prompt, attachmentBlock].filter(Boolean).join("\n\n").trim();
+  return content;
+}
+
+function buildAttachmentReferenceBlock() {
+  if (!state.composer.attachments.length) {
+    return "";
+  }
+  const visible = state.composer.attachments.slice(0, MAX_ATTACHMENT_REFERENCE_ITEMS);
+  const lines = visible.map((attachment) => {
+    const filename = truncateText(stringOrEmpty(attachment.filename) || "attachment", 48);
+    const mediaType = stringOrEmpty(attachment.media_type) || "application/octet-stream";
+    const mediaId = stringOrEmpty(attachment.media_id);
+    return mediaId
+      ? `- [media:${mediaId}] ${filename} (${mediaType})`
+      : `- ${filename} (${mediaType})`;
+  });
+  if (state.composer.attachments.length > visible.length) {
+    const remaining = state.composer.attachments.length - visible.length;
+    lines.push(`- ${remaining} more uploaded item${remaining === 1 ? "" : "s"} available in session media.`);
+  }
+  return `Attachment references (uploaded separately; not inline media):\n${lines.join("\n")}`;
+}
+
+function currentComposerActiveRun() {
+  const liveUi = window.tauLiveUI;
+  if (!liveUi || typeof liveUi.getActiveRun !== "function") {
+    return null;
+  }
+  const run = liveUi.getActiveRun();
+  return run && typeof run.run_id === "string" ? run : null;
+}
+
+async function submitComposerQueuedMessage(runId, kind, content) {
+  const liveUi = window.tauLiveUI;
+  if (liveUi && typeof liveUi.submitComposerMessage === "function") {
+    await liveUi.submitComposerMessage({ runId, kind, content });
+    return;
+  }
+  await apiFetch(`/api/runs/${encodeURIComponent(runId)}/messages`, {
+    method: "POST",
+    json: { content, kind },
+  });
+}
+
+async function enqueueComposerSessionMessage(sessionId, kind, content) {
+  await apiFetch(`${sessionPath(sessionId)}/queue`, {
+    method: "POST",
+    json: { content, kind },
+  });
+}
+
+function renderThinkingOptions() {
+  const configuredOptions = Array.from(ui.thinkingLevelSelect.options).map((option) => ({
+    value: option.value,
+    label: option.textContent || option.value || "Default",
+  }));
+  const sourceOptions = configuredOptions.length ? configuredOptions : DEFAULT_THINKING_LEVELS.map(([value, label]) => ({ value, label }));
+  replaceSelectOptions(ui.composeThinkingSelect, sourceOptions);
+}
+
+function currentProviderModelSelection() {
+  return {
+    provider_name:
+      ui.providerInput.value.trim() ||
+      state.selectedSession?.provider_name ||
+      loadStorage(STORAGE_KEYS.provider) ||
+      state.models[0]?.provider_name ||
+      "",
+    model:
+      ui.modelInput.value.trim() ||
+      state.selectedSession?.model ||
+      loadStorage(STORAGE_KEYS.model) ||
+      state.models[0]?.model ||
+      "",
+  };
+}
+
+function composeContextReadoutText() {
+  if (!state.selectedSession) {
+    return state.composer.attachments.length
+      ? `${state.composer.attachments.length} attachment${state.composer.attachments.length === 1 ? "" : "s"} staged for the next session.`
+      : "No session selected. Sending will create one.";
+  }
+  const parts = [`@${state.selectedSession.agent_name}`, contextSummaryText()];
+  parts.push(`thinking ${state.selectedSession.thinking_level || "default"}`);
+  if (state.composer.attachments.length) {
+    parts.push(`${state.composer.attachments.length} attachment${state.composer.attachments.length === 1 ? "" : "s"} staged`);
+  }
+  return parts.join(" · ");
+}
+
+function notifySelectedSessionChanged() {
+  window.dispatchEvent(new CustomEvent("tau:session-selected", {
+    detail: { sessionId: state.selectedSessionId },
+  }));
 }
 
 function handleKeyboardShortcuts(event) {
@@ -1254,6 +1920,8 @@ async function apiFetch(path, options = {}) {
   if (options.json !== undefined) {
     headers.set("Content-Type", "application/json");
     request.body = JSON.stringify(options.json);
+  } else if (options.body !== undefined) {
+    request.body = options.body;
   }
 
   const response = await fetch(path, request);
@@ -1306,12 +1974,65 @@ function expectsJson(response) {
   return contentType.includes("application/json");
 }
 
+function replaceSelectOptions(select, items) {
+  const currentValue = select.value;
+  select.replaceChildren();
+  for (const item of items) {
+    const option = document.createElement("option");
+    option.value = stringOrEmpty(item?.value);
+    option.textContent = stringOrEmpty(item?.label) || option.value || "Default";
+    select.append(option);
+  }
+  if (currentValue) {
+    syncSelectValue(select, currentValue, currentValue);
+  }
+}
+
+function syncSelectValue(select, value, fallbackLabel = null) {
+  const normalized = stringOrEmpty(value);
+  if (!normalized) {
+    const emptyOption = Array.from(select.options).find((option) => option.value === "");
+    select.value = emptyOption ? "" : select.options[0]?.value ?? "";
+    return;
+  }
+
+  let option = Array.from(select.options).find((entry) => entry.value === normalized);
+  if (!option) {
+    option = document.createElement("option");
+    option.value = normalized;
+    option.textContent = fallbackLabel ?? normalized;
+    select.append(option);
+  }
+  select.value = normalized;
+}
+
+function normalizeDeliveryMode(value) {
+  return DELIVERY_MODES.has(value) ? value : "run";
+}
+
+function truncateText(value, maxLength) {
+  const text = stringOrEmpty(value);
+  if (!text || !Number.isFinite(maxLength) || maxLength < 4 || text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
 function announce(message) {
   ui.appStatus.textContent = message;
 }
 
 function setStreamStatus(message) {
   ui.statusStream.textContent = message;
+  if (/^live$/i.test(message)) {
+    ui.statusStream.dataset.state = "live";
+  } else if (/^connect/i.test(message)) {
+    ui.statusStream.dataset.state = "connecting";
+  } else if (/^retry/i.test(message)) {
+    ui.statusStream.dataset.state = "retrying";
+  } else {
+    ui.statusStream.dataset.state = "offline";
+  }
 }
 
 function handleError(error, fallbackMessage) {

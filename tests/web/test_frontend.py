@@ -119,9 +119,25 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         "auth-token",
         "provider-input",
         "model-input",
+        "thinking-level-select",
+        "compose-provider-select",
+        "compose-model-select",
+        "compose-thinking-select",
+        "compose-delivery-mode",
         "compose-input",
     ):
         assert f'for="{field_id}"' in root_html
+    for element_id in (
+        "compose-context-readout",
+        "compose-attachment-button",
+        "compose-file-input",
+        "compose-attachment-list",
+        "compose-clear-attachments",
+        "compose-completion-popup",
+        "compose-completion-listbox",
+        "compose-completion-status",
+    ):
+        assert f'id="{element_id}"' in root_html
 
 
 @pytest.mark.anyio
@@ -141,9 +157,12 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
         "/api/sessions",
         "/api/settings",
         "/api/models",
+        "/api/commands",
         "/api/files",
+        "/api/media",
         "/api/search",
         "/api/events",
+        "/queue",
     ):
         assert endpoint in script
     assert 'accept: "text/event-stream"' in script
@@ -174,6 +193,9 @@ async def test_live_ui_wires_runtime_controls_and_stream_events(web_config: WebC
         assert endpoint in script
     assert 'mutateRun(activeRun.run_id, "cancel")' in script
     assert 'mutateRun(activeRun.run_id, "abort")' in script
+    assert "window.tauLiveUI = Object.freeze" in script
+    assert "submitComposerMessage" in script
+    assert "handleComposeIntercept" not in script
     for event_type in (
         "thinking_delta",
         "tool_execution_start",
@@ -244,6 +266,10 @@ async def test_app_css_contains_responsive_media_queries(web_config: WebConfig) 
     assert ".extension-slot" in stylesheet
     assert ".tau-extension-view" in stylesheet
     assert ".tau-extension-stack" in stylesheet
+    assert ".compose-select-grid" in stylesheet
+    assert ".compose-attachment-list" in stylesheet
+    assert ".compose-completion-popup" in stylesheet
+    assert ".attachment-chip" in stylesheet
     assert '[data-extension-slot="dashboard"]' in stylesheet
     assert '[data-extension-slot="compose_above"]' in stylesheet
     assert '[data-extension-slot="compose_below"]' in stylesheet

@@ -667,6 +667,107 @@ button.danger-button {
   box-shadow: var(--shadow);
 }
 
+.compose-toolbar,
+.compose-editor-group,
+.compose-control {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.compose-select-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.compose-control label {
+  font-weight: 600;
+}
+
+.compose-context-readout,
+#compose-context-readout {
+  overflow-wrap: anywhere;
+}
+
+.compose-attachment-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.compose-attachment-list,
+.compose-completion-listbox {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.compose-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(103, 232, 249, 0.15);
+  background: rgba(9, 17, 31, 0.78);
+}
+
+.attachment-chip-label {
+  overflow-wrap: anywhere;
+}
+
+.attachment-chip-remove {
+  padding: 0.3rem 0.55rem;
+}
+
+.compose-completion-popup {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(103, 232, 249, 0.12);
+  background: rgba(9, 17, 31, 0.94);
+}
+
+.compose-completion-popup[hidden] {
+  display: none;
+}
+
+.compose-completion-listbox {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.compose-completion-option {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(103, 232, 249, 0.08);
+  background: rgba(18, 26, 43, 0.8);
+}
+
+.compose-completion-option[data-active="true"] {
+  border-color: rgba(103, 232, 249, 0.75);
+  background: rgba(8, 47, 73, 0.55);
+}
+
+.compose-completion-title {
+  overflow-wrap: anywhere;
+}
+
+.compose-completion-detail {
+  overflow-wrap: anywhere;
+}
+
 .extension-slot {
   display: grid;
   gap: 0.75rem;
@@ -910,6 +1011,10 @@ button.danger-button {
   min-width: 8rem;
 }
 
+#compose-input {
+  min-height: 7rem;
+}
+
 .drawer-backdrop,
 .mobile-only {
   display: none;
@@ -961,6 +1066,10 @@ button.danger-button {
 
   .stats-list {
     grid-template-columns: 1fr;
+  }
+
+  .compose-select-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .extension-slot[data-extension-slot="dashboard"] {
@@ -1042,7 +1151,9 @@ button.danger-button {
     min-width: 24rem;
   }
 
+  .compose-select-grid,
   .compose-row,
+  .compose-attachment-bar,
   .toolbar-row,
   .tabs,
   .run-action-row {
@@ -1052,6 +1163,7 @@ button.danger-button {
 
   .compose-row button,
   .run-action-row button,
+  .compose-attachment-bar > button,
   .button-row > button,
   .toolbar-row > button {
     width: 100%;

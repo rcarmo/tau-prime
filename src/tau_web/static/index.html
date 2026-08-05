@@ -339,18 +339,79 @@
       <footer class="composer-shell">
         <div class="extension-slot" data-extension-slot="compose_above"></div>
         <form id="compose-form" class="compose-form">
+          <section class="compose-toolbar" aria-label="Prompt controls">
+            <div class="compose-select-grid">
+              <div class="compose-control">
+                <label for="compose-provider-select">Provider</label>
+                <select id="compose-provider-select" name="provider_name"></select>
+              </div>
+              <div class="compose-control">
+                <label for="compose-model-select">Model</label>
+                <select id="compose-model-select" name="model"></select>
+              </div>
+              <div class="compose-control">
+                <label for="compose-thinking-select">Thinking</label>
+                <select id="compose-thinking-select" name="compose_thinking_level"></select>
+              </div>
+              <div class="compose-control">
+                <label for="compose-delivery-mode">Delivery</label>
+                <select id="compose-delivery-mode" name="delivery_mode">
+                  <option value="run">Run immediately</option>
+                  <option value="follow_up">Queue follow-up</option>
+                  <option value="steer">Queue steer</option>
+                </select>
+              </div>
+            </div>
+            <p id="compose-context-readout" class="muted small-text">
+              No session selected. Sending will create one.
+            </p>
+            <div class="compose-attachment-bar">
+              <button id="compose-attachment-button" type="button">Attach files</button>
+              <button id="compose-clear-attachments" type="button">Clear staged</button>
+              <input id="compose-file-input" class="sr-only" type="file" multiple />
+            </div>
+            <ul
+              id="compose-attachment-list"
+              class="compose-attachment-list"
+              aria-live="polite"
+              aria-label="Staged attachments"
+            ></ul>
+          </section>
+
           <label for="compose-input">Send a prompt to Tau</label>
-          <div class="compose-row">
-            <textarea
-              id="compose-input"
-              name="prompt"
-              rows="3"
-              placeholder="Select or create a session, then send a prompt."
-            ></textarea>
-            <button id="compose-submit" type="submit">Run</button>
+          <div class="compose-editor-group">
+            <div class="compose-row">
+              <textarea
+                id="compose-input"
+                name="prompt"
+                rows="3"
+                autocomplete="off"
+                aria-autocomplete="list"
+                aria-controls="compose-completion-listbox"
+                aria-describedby="compose-help compose-completion-status"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+                placeholder="Select or create a session, then send a prompt."
+              ></textarea>
+              <button id="compose-submit" type="submit">Run</button>
+            </div>
+            <div id="compose-completion-popup" class="compose-completion-popup" hidden>
+              <p
+                id="compose-completion-status"
+                class="muted small-text"
+                aria-live="polite"
+              ></p>
+              <ul
+                id="compose-completion-listbox"
+                class="compose-completion-listbox"
+                role="listbox"
+                aria-label="Composer completions"
+              ></ul>
+            </div>
           </div>
+
           <div class="compose-status-row">
-            <p id="compose-help" class="muted small-text">Shortcut: Ctrl/Cmd+N for a new session.</p>
+            <p id="compose-help" class="muted small-text">Enter sends. Shift+Enter inserts a newline.</p>
             <p id="app-status" class="small-text" aria-live="polite">Loading Tau shell…</p>
           </div>
         </form>

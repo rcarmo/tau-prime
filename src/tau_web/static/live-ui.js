@@ -32,6 +32,7 @@ function initialize() {
   window.setInterval(() => void syncFromStorage({ forceRefresh: true }), POLL_INTERVAL_MS);
   window.addEventListener("focus", () => void syncFromStorage({ forceRefresh: true }));
   window.addEventListener("storage", () => void syncFromStorage({ forceRefresh: true, restartStream: true }));
+  window.addEventListener("tau:session-selected", () => void syncFromStorage({ forceRefresh: true, restartStream: true }));
 }
 
 function bindUi() {
@@ -58,7 +59,6 @@ function bindEvents() {
   ui.dispatchFollowUpButton.addEventListener("click", () => void handleDispatch("follow_up"));
   ui.dispatchSteerButton.addEventListener("click", () => void handleDispatch("steer"));
   ui.thinkingForm.addEventListener("submit", (event) => void handleThinkingSubmit(event));
-  ui.composeForm.addEventListener("submit", (event) => void handleComposeIntercept(event), true);
 }
 
 function populateThinkingSelect() {
@@ -395,22 +395,15 @@ async function handleThinkingSubmit(event) {
   renderThinkingControls();
 }
 
-async function handleComposeIntercept(event) {
-  const activeRun = currentActiveRun();
-  if (!activeRun) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const content = ui.composeInput.value.trim();
-  if (!content) return;
-  try {
-    await apiFetch(`${API_ROOT}/runs/${encodeURIComponent(activeRun.run_id)}/messages`, { method: "POST", json: { content, kind: "follow_up" } });
-    ui.composeInput.value = "";
-    state.queueMessage = `Queued follow-up for active run ${shortId(activeRun.run_id)}.`;
-    await refreshSelectedSession();
-  } catch (error) {
-    state.queueMessage = messageFromError(error);
-  }
+async function submitComposerMessage({ runId, kind, content }) {
+  const record = await apiFetch(`${API_ROOT}/runs/${encodeURIComponent(runId)}/messages`, {
+    method: "POST",
+    json: { content, kind },
+  });
+  state.queueMessage = `Queued ${kind === "steer" ? "steer" : "follow-up"} for active run ${shortId(runId)}.`;
+  await refreshSelectedSession();
   renderQueueControls();
+  return record;
 }
 
 async function mutateRun(runId, action) {
@@ -423,6 +416,11 @@ async function mutateRun(runId, action) {
 }
 
 function currentActiveRun() { return state.runs.find((run) => run.status === "running") || state.runs[0] || null; }
+
+window.tauLiveUI = Object.freeze({
+  getActiveRun: currentActiveRun,
+  submitComposerMessage,
+});
 
 function startStream(sessionId) {
   stopStream();
