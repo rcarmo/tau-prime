@@ -212,6 +212,16 @@
               Search
             </button>
             <button
+              id="tab-plan"
+              class="tab-button"
+              type="button"
+              role="tab"
+              aria-controls="panel-plan"
+              aria-selected="false"
+            >
+              Plan
+            </button>
+            <button
               id="tab-settings"
               class="tab-button"
               type="button"
@@ -278,6 +288,39 @@
               <p class="muted small-text">Shortcut: Ctrl/Cmd+K</p>
             </form>
             <ol id="search-results" class="search-results" aria-live="polite"></ol>
+          </section>
+
+          <section
+            id="panel-plan"
+            class="tab-panel plan-panel"
+            role="tabpanel"
+            aria-labelledby="tab-plan"
+            hidden
+          >
+            <form id="plan-form" class="stack-form">
+              <div class="plan-editor-header">
+                <label for="plan-editor">Session plan</label>
+                <span id="plan-revision" class="muted small-text">Revision 0</span>
+              </div>
+              <textarea
+                id="plan-editor"
+                class="plan-editor"
+                spellcheck="true"
+                placeholder="- [ ] Add a concrete next step"
+                aria-describedby="plan-status"
+              ></textarea>
+              <p id="plan-status" class="muted small-text" aria-live="polite">
+                Select a session to edit its shared plan.
+              </p>
+              <div id="plan-conflict" class="plan-conflict" role="alert" hidden>
+                The plan changed elsewhere while you had local edits. Reload the server version or
+                save again after reviewing it.
+              </div>
+              <div class="button-row button-row-wrap">
+                <button id="plan-save-button" type="submit">Save plan</button>
+                <button id="plan-reload-button" type="button">Reload server plan</button>
+              </div>
+            </form>
           </section>
 
           <section

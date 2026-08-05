@@ -18,6 +18,7 @@ _SQLITE_SUPPORT_MESSAGE = "Install 'tau-prime[web]' to use SQLite coding session
 if TYPE_CHECKING:
     from aiosqlite import Row
 
+    from tau_coding.coding_session_factory import ExtraToolsFactory, TurnContextProviderFactory
     from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
     from tau_web.sqlite.session_storage import SqliteSessionStorage
     from tau_web.sqlite.sessions import SessionRepository
@@ -97,6 +98,13 @@ class SqliteCodingSessionManager:
 
     async def __aexit__(self, *_: object) -> None:
         await self.close()
+
+    def plan_factory_hooks(self) -> tuple[ExtraToolsFactory, TurnContextProviderFactory]:
+        """Return plan-tool and turn-context hooks for this open SQLite manager."""
+        from tau_web.plan import create_plan_factory_hooks
+        from tau_web.sqlite.repositories import PlanRepository
+
+        return create_plan_factory_hooks(PlanRepository(self._database_instance()))
 
     async def list_sessions(self, cwd: Path | None = None) -> list[SqliteCodingSessionRecord]:
         """Return active sessions, newest updated first."""

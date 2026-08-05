@@ -116,6 +116,7 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     for field_id in (
         "workspace-editor",
         "search-input",
+        "plan-editor",
         "auth-token",
         "provider-input",
         "model-input",
@@ -136,6 +137,11 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         "compose-completion-popup",
         "compose-completion-listbox",
         "compose-completion-status",
+        "plan-revision",
+        "plan-status",
+        "plan-conflict",
+        "plan-save-button",
+        "plan-reload-button",
     ):
         assert f'id="{element_id}"' in root_html
 
@@ -168,6 +174,8 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
     assert 'accept: "text/event-stream"' in script
     assert "readEventStream" in script
     assert "parseEventChunk" in script
+    assert 'case "tau.plan.updated"' in script
+    assert "expected_revision" in script
     assert 'navigator.serviceWorker.register("/sw.js", { scope: "/" });' in script
     assert ".innerHTML" not in script
     assert (

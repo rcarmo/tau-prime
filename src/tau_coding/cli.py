@@ -75,6 +75,7 @@ from tau_coding.session_export import (
 )
 from tau_coding.session_manager import validate_session_id
 from tau_coding.shell_config import load_shell_settings
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 from tau_coding.tui import run_tui_app
 from tau_coding.update_check import (
     UpdateNotice,
@@ -1116,11 +1117,18 @@ async def run_print_mode(
     Returns False when the agent emits a non-recoverable error so CLI callers
     can fail non-interactive runs while still rendering the error message.
     """
+    plan_hooks = (
+        session_manager.plan_factory_hooks()
+        if isinstance(session_manager, SqliteCodingSessionManager)
+        else (None, None)
+    )
     session = await CodingSessionFactory(
         CodingSessionFactoryConfig(
             resource_paths=resource_paths,
             shell_command_prefix=shell_command_prefix,
             llm_observer=llm_observer,
+            extra_tools_factory=plan_hooks[0],
+            turn_context_provider_factory=plan_hooks[1],
         ),
         provider_settings=provider_settings,
     ).load(

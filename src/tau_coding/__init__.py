@@ -55,6 +55,14 @@ from tau_coding.credentials import (
     credentials_path,
 )
 from tau_coding.paths import TauPaths
+from tau_coding.plan import (
+    PlanConflictError,
+    PlanItem,
+    PlanSnapshot,
+    PlanStore,
+    create_plan_tool,
+    plan_turn_context,
+)
 from tau_coding.prompt_templates import (
     PromptTemplate,
     expand_prompt_template_command,
@@ -217,6 +225,10 @@ __all__ = [
     "PrintOutputMode",
     "ProjectContextFile",
     "PromptTemplate",
+    "PlanConflictError",
+    "PlanItem",
+    "PlanSnapshot",
+    "PlanStore",
     "ProviderCatalogEntry",
     "ProviderConfig",
     "ProviderConfigError",
@@ -250,6 +262,7 @@ __all__ = [
     "builtin_provider_configs",
     "builtin_provider_entry",
     "collect_prompt_guidelines",
+    "create_plan_tool",
     "CredentialStoreError",
     "expand_prompt_template_command",
     "find_prompt_template",
@@ -292,6 +305,7 @@ __all__ = [
     "expand_skill_command",
     "format_skill_invocation",
     "parse_skill_invocation",
+    "plan_turn_context",
     "format_available_tools",
     "format_guidelines",
     "format_project_context",

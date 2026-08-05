@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Protocol
@@ -51,6 +51,15 @@ class _ModelProviderBuilder(Protocol):
         ...
 
 
+type ExtraToolsFactory = Callable[
+    ["CodingSessionFactoryBinding"], Sequence[AgentTool]
+]
+type TurnContextProvider = Callable[[], Awaitable[str | None]]
+type TurnContextProviderFactory = Callable[
+    ["CodingSessionFactoryBinding"], TurnContextProvider | None
+]
+
+
 class _CodingSessionLoader(Protocol):
     """Async loader that turns ``CodingSessionConfig`` into a session."""
 
@@ -85,6 +94,8 @@ class CodingSessionFactoryConfig:
 
     prompts: CodingSessionPromptConfig = field(default_factory=CodingSessionPromptConfig)
     tools: tuple[AgentTool, ...] | None = None
+    extra_tools_factory: ExtraToolsFactory | None = None
+    turn_context_provider_factory: TurnContextProviderFactory | None = None
     resource_paths: TauResourcePaths | None = None
     command_registry: CommandRegistry | None = None
     compaction: CodingSessionCompactionConfig = field(default_factory=CodingSessionCompactionConfig)
@@ -219,6 +230,16 @@ class CodingSessionFactory:
 
     def build_config(self, binding: CodingSessionFactoryBinding) -> CodingSessionConfig:
         """Build a ``CodingSessionConfig`` from resolved factory inputs."""
+        extra_tools = (
+            tuple(self._config.extra_tools_factory(binding))
+            if self._config.extra_tools_factory is not None
+            else ()
+        )
+        turn_context_provider = (
+            self._config.turn_context_provider_factory(binding)
+            if self._config.turn_context_provider_factory is not None
+            else None
+        )
         return CodingSessionConfig(
             provider=binding.provider,
             model=binding.model,
@@ -229,6 +250,8 @@ class CodingSessionFactory:
             append_system_prompt=self._config.prompts.append_system_prompt,
             context_files=self._config.prompts.context_files,
             tools=list(self._config.tools) if self._config.tools is not None else None,
+            extra_tools=extra_tools,
+            turn_context_provider=turn_context_provider,
             resource_paths=self._config.resource_paths,
             session_id=binding.session_id,
             session_manager=binding.session_manager,
@@ -270,4 +293,7 @@ __all__ = [
     "CodingSessionFactoryConfig",
     "CodingSessionFactoryRequest",
     "CodingSessionPromptConfig",
+    "ExtraToolsFactory",
+    "TurnContextProvider",
+    "TurnContextProviderFactory",
 ]

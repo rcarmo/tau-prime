@@ -31,7 +31,7 @@ const DEFAULT_THINKING_LEVELS = Object.freeze([
   ["high", "High -- deep reasoning"],
   ["xhigh", "XHigh -- maximum reasoning"],
 ]);
-const TABS = ["workspace", "search", "settings"];
+const TABS = ["workspace", "search", "plan", "settings"];
 
 class ApiError extends Error {
   constructor(message, details = {}) {
@@ -64,6 +64,10 @@ const state = {
   workspaceFilePath: null,
   workspaceFileContent: "",
   searchResults: [],
+  plan: null,
+  planDraft: "",
+  planDirty: false,
+  planConflict: null,
   composing: false,
   uploadingAttachments: false,
   composer: createComposerState(),
@@ -122,9 +126,11 @@ function bindUi() {
     closePanelDrawer: requiredElement("close-panel-drawer"),
     tabWorkspace: requiredElement("tab-workspace"),
     tabSearch: requiredElement("tab-search"),
+    tabPlan: requiredElement("tab-plan"),
     tabSettings: requiredElement("tab-settings"),
     panelWorkspace: requiredElement("panel-workspace"),
     panelSearch: requiredElement("panel-search"),
+    panelPlan: requiredElement("panel-plan"),
     panelSettings: requiredElement("panel-settings"),
     workspaceUpButton: requiredElement("workspace-up-button"),
     workspaceReloadButton: requiredElement("workspace-reload-button"),
@@ -136,6 +142,13 @@ function bindUi() {
     searchInput: requiredElement("search-input"),
     searchSubmitButton: requiredElement("search-submit-button"),
     searchResults: requiredElement("search-results"),
+    planForm: requiredElement("plan-form"),
+    planEditor: requiredElement("plan-editor"),
+    planRevision: requiredElement("plan-revision"),
+    planStatus: requiredElement("plan-status"),
+    planConflict: requiredElement("plan-conflict"),
+    planSaveButton: requiredElement("plan-save-button"),
+    planReloadButton: requiredElement("plan-reload-button"),
     authForm: requiredElement("auth-form"),
     authToken: requiredElement("auth-token"),
     saveAuthButton: requiredElement("save-auth-button"),
@@ -196,6 +209,7 @@ function installEventHandlers() {
 
   ui.tabWorkspace.addEventListener("click", () => switchTab("workspace"));
   ui.tabSearch.addEventListener("click", () => switchTab("search"));
+  ui.tabPlan.addEventListener("click", () => switchTab("plan"));
   ui.tabSettings.addEventListener("click", () => switchTab("settings"));
 
   ui.workspaceUpButton.addEventListener("click", () => {
@@ -208,6 +222,19 @@ function installEventHandlers() {
   ui.searchForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void runSearch();
+  });
+
+  ui.planEditor.addEventListener("input", () => {
+    state.planDraft = ui.planEditor.value;
+    state.planDirty = state.planDraft !== (state.plan?.markdown ?? "");
+    renderPlan();
+  });
+  ui.planForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void savePlan();
+  });
+  ui.planReloadButton.addEventListener("click", () => {
+    void loadPlan({ force: true });
   });
 
   ui.authForm.addEventListener("submit", (event) => {
@@ -373,6 +400,14 @@ async function loadSessions({ preferredSessionId = state.selectedSessionId } = {
 }
 
 async function selectSession(sessionId, { reconnect = true, focusTimeline = true } = {}) {
+  if (
+    state.planDirty &&
+    state.selectedSessionId &&
+    state.selectedSessionId !== sessionId &&
+    !window.confirm("Discard unsaved plan edits and switch sessions?")
+  ) {
+    return;
+  }
   state.selectedSessionId = sessionId;
   persistStorage(STORAGE_KEYS.selectedSessionId, sessionId);
   syncSelection(sessionId);
@@ -394,11 +429,12 @@ async function refreshSelectedSessionData({ reconnect = false } = {}) {
 
   const sessionId = state.selectedSessionId;
   try {
-    const [session, branches, messages, context] = await Promise.all([
+    const [session, branches, messages, context, plan] = await Promise.all([
       apiFetch(sessionPath(sessionId)),
       apiFetch(`${sessionPath(sessionId)}/branches`),
       apiFetch(`${sessionPath(sessionId)}/messages`),
       apiFetch(`${sessionPath(sessionId)}/context`),
+      apiFetch(`${sessionPath(sessionId)}/plan`),
     ]);
     if (state.selectedSessionId !== sessionId) {
       return;
@@ -408,6 +444,7 @@ async function refreshSelectedSessionData({ reconnect = false } = {}) {
     state.branches = Array.isArray(branches?.branches) ? branches.branches : [];
     state.messages = Array.isArray(messages?.messages) ? messages.messages : [];
     state.context = context;
+    applyPlanResponse(plan, { sessionId });
     state.liveDraft = null;
     syncProviderInputs(session.provider_name, session.model);
     renderShell();
@@ -428,6 +465,76 @@ function clearSelectedSessionState() {
   state.branches = [];
   state.messages = [];
   state.liveDraft = null;
+  state.plan = null;
+  state.planDraft = "";
+  state.planDirty = false;
+  state.planConflict = null;
+}
+
+function applyPlanResponse(plan, { sessionId, force = false } = {}) {
+  if (!plan || plan.session_id !== sessionId) {
+    return;
+  }
+  const samePlan = state.plan?.session_id === sessionId;
+  const changedRemotely = samePlan && plan.revision !== state.plan.revision;
+  if (!force && state.planDirty && changedRemotely) {
+    state.planConflict = plan;
+    renderPlan();
+    return;
+  }
+  state.plan = plan;
+  state.planDraft = typeof plan.markdown === "string" ? plan.markdown : "";
+  state.planDirty = false;
+  state.planConflict = null;
+}
+
+async function loadPlan({ force = false } = {}) {
+  const sessionId = state.selectedSessionId;
+  if (!sessionId) {
+    return;
+  }
+  try {
+    const plan = await apiFetch(`${sessionPath(sessionId)}/plan`);
+    if (state.selectedSessionId !== sessionId) {
+      return;
+    }
+    applyPlanResponse(plan, { sessionId, force });
+    renderPlan();
+    if (force) {
+      announce("Reloaded the server plan.");
+    }
+  } catch (error) {
+    handleError(error, "Unable to load the session plan.");
+  }
+}
+
+async function savePlan() {
+  const session = state.selectedSession;
+  if (!session || session.archived_at) {
+    announce("Select an active session before saving its plan.");
+    return;
+  }
+  try {
+    const plan = await apiFetch(`${sessionPath(session.session_id)}/plan`, {
+      method: "PUT",
+      json: {
+        markdown: state.planDraft,
+        expected_revision: state.planConflict?.revision ?? state.plan?.revision ?? 0,
+      },
+    });
+    applyPlanResponse(plan, { sessionId: session.session_id, force: true });
+    renderPlan();
+    announce("Session plan saved.");
+  } catch (error) {
+    const current = error instanceof ApiError ? error.details?.payload?.current : null;
+    if (error instanceof ApiError && error.status === 409 && current) {
+      state.planConflict = current;
+      renderPlan();
+      announce("The plan changed elsewhere. Review the conflict before saving.");
+      return;
+    }
+    handleError(error, "Unable to save the session plan.");
+  }
 }
 
 async function applyModelSettings() {
@@ -757,6 +864,10 @@ async function handleStreamFrame(frame, sessionId) {
       await refreshSelectedSessionData({ reconnect: false });
       break;
     }
+    case "tau.plan.updated": {
+      await loadPlan({ force: false });
+      break;
+    }
     case "tau.agent.error": {
       const message = frame.data.payload?.message;
       if (typeof message === "string" && message) {
@@ -921,6 +1032,7 @@ function switchTab(name) {
   const mappings = [
     ["workspace", ui.tabWorkspace, ui.panelWorkspace],
     ["search", ui.tabSearch, ui.panelSearch],
+    ["plan", ui.tabPlan, ui.panelPlan],
     ["settings", ui.tabSettings, ui.panelSettings],
   ];
   for (const [tabName, button, panel] of mappings) {
@@ -964,8 +1076,33 @@ function renderShell() {
   renderTimeline();
   renderWorkspace();
   renderSearchResults();
+  renderPlan();
   renderSettings();
   renderControls();
+}
+
+function renderPlan() {
+  const session = state.selectedSession;
+  const disabled = !session || Boolean(session.archived_at);
+  if (ui.planEditor.value !== state.planDraft) {
+    ui.planEditor.value = state.planDraft;
+  }
+  ui.planEditor.disabled = disabled;
+  ui.planSaveButton.disabled = disabled || !state.planDirty;
+  ui.planReloadButton.disabled = !session;
+  ui.planRevision.textContent = `Revision ${state.plan?.revision ?? 0}`;
+  ui.planConflict.hidden = !state.planConflict;
+  if (!session) {
+    ui.planStatus.textContent = "Select a session to edit its shared plan.";
+  } else if (session.archived_at) {
+    ui.planStatus.textContent = "Restore this session before editing its plan.";
+  } else if (state.planConflict) {
+    ui.planStatus.textContent = `Server revision ${state.planConflict.revision} is newer than your draft.`;
+  } else if (state.planDirty) {
+    ui.planStatus.textContent = "Unsaved local changes.";
+  } else {
+    ui.planStatus.textContent = "Shared with the agent and refreshed before each new turn.";
+  }
 }
 
 function renderSessions() {

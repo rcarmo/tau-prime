@@ -34,6 +34,26 @@ class WebEventEnvelope:
             raise ValueError("Event sequence must be 1-based")
 
 
+def build_invalidation_envelope(
+    *,
+    event_type: str,
+    session_id: str,
+    payload: JSONObject,
+) -> WebEventEnvelope:
+    """Build an ephemeral namespaced invalidation for broker fan-out."""
+    if "." not in event_type:
+        raise ValueError("Invalidation event types must be namespaced")
+    return WebEventEnvelope(
+        event_id=uuid4(),
+        type=event_type,
+        session_id=session_id,
+        run_id="",
+        sequence=1,
+        payload=payload,
+        created_at=datetime.now(UTC).isoformat(),
+    )
+
+
 class EventProjectorCallback(Protocol):
     """Async callback invoked once for each canonical runtime event."""
 

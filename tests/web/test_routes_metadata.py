@@ -104,6 +104,7 @@ async def test_plan_usage_and_search_routes(app_client: TestClient) -> None:
 
     empty_plan = await app_client.get("/api/sessions/meta/plan")
     assert (await empty_plan.json())["revision"] == 0
+    plan_events, _ = services.broker.subscribe(session_id="meta")
     created = await app_client.put(
         "/api/sessions/meta/plan",
         json={
@@ -114,11 +115,19 @@ async def test_plan_usage_and_search_routes(app_client: TestClient) -> None:
     assert created.status == 200
     created_json = await created.json()
     assert created_json["revision"] == 1
+    assert created_json["markdown"] == "- [ ] ship"
+    event = await plan_events.next(timeout=0.1)
+    assert event is not None
+    assert event.envelope.type == "tau.plan.updated"
+    assert event.envelope.payload == {"revision": 1}
     stale = await app_client.put(
         "/api/sessions/meta/plan",
         json={"content": {}, "expected_revision": 0},
     )
     assert stale.status == 409
+    stale_json = await stale.json()
+    assert stale_json["error"]["code"] == "plan_revision_conflict"
+    assert stale_json["current"]["revision"] == 1
 
     await services.usage.record(
         "meta",

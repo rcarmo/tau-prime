@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
@@ -214,6 +214,8 @@ class CodingSessionConfig:
     append_system_prompt: str | None = None
     context_files: tuple[ProjectContextFile, ...] = ()
     tools: list[AgentTool] | None = None
+    extra_tools: tuple[AgentTool, ...] = ()
+    turn_context_provider: Callable[[], Awaitable[str | None]] | None = None
     resource_paths: TauResourcePaths | None = None
     session_id: str | None = None
     session_manager: CodingSessionManager | None = None
@@ -256,6 +258,9 @@ class CodingSession:
         self._config = config
         self._state = state
         self._harness = harness
+        harness_config = getattr(harness, "config", None)
+        self._base_system_prompt = getattr(harness_config, "system", "")
+        self._turn_context: str | None = None
         self._last_parent_id = last_parent_id
         self._pending_initial_entries = pending_initial_entries
         self._session_initialization_lock = asyncio.Lock()
@@ -309,7 +314,7 @@ class CodingSession:
             if latest_leaf is not None
             else linear_state
         )
-        tools = (
+        tools = list(
             config.tools
             if config.tools is not None
             else create_coding_tools(
@@ -317,6 +322,7 @@ class CodingSession:
                 shell_command_prefix=config.shell_command_prefix,
             )
         )
+        tools.extend(config.extra_tools)
         resource_paths = resource_paths_with_cwd(config.resource_paths, config.cwd)
         extension_runtime = ExtensionRuntime()
         extension_runtime.load(resource_paths)
@@ -1079,7 +1085,8 @@ class CodingSession:
         self._context_files = resources.context_files
         self._resource_diagnostics = resources.diagnostics
         if rebuilt_system_prompt is not None:
-            self._harness.config.system = rebuilt_system_prompt
+            self._base_system_prompt = rebuilt_system_prompt
+            self._apply_turn_context()
 
         return CodingReloadSummary(
             skills=_category_summary(before_skills, after_skills),
@@ -1414,6 +1421,20 @@ class CodingSession:
             added_to_context=add_to_context,
         )
 
+    def _apply_turn_context(self) -> None:
+        context = self._turn_context
+        self._harness.config.system = (
+            f"{self._base_system_prompt}\n\n{context}" if context else self._base_system_prompt
+        )
+
+    async def _refresh_turn_context(self) -> None:
+        provider = self._config.turn_context_provider
+        if provider is None:
+            return
+        context = await provider()
+        self._turn_context = context.strip() if context and context.strip() else None
+        self._apply_turn_context()
+
     async def queue_message(
         self,
         content: str,
@@ -1449,6 +1470,7 @@ class CodingSession:
                 "CodingSession is already running; pass streaming_behavior to queue a message."
             )
 
+        await self._refresh_turn_context()
         await self._try_auto_compact(context=context, phase="auto_compact_before_prompt")
         persisted_count = len(self._harness.messages)
         overflow_event: ErrorEvent | None = None

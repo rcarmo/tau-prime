@@ -378,6 +378,31 @@ button[aria-selected="true"],
   gap: 1rem;
 }
 
+.plan-panel {
+  align-content: start;
+}
+
+.plan-editor-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.plan-editor {
+  min-height: 18rem;
+  resize: vertical;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+.plan-conflict {
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 65%, var(--border));
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--danger) 12%, var(--panel));
+}
+
 .workspace-split {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);

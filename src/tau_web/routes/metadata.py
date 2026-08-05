@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
 from dataclasses import dataclass
 from typing import Final, cast
@@ -12,12 +11,20 @@ from aiohttp import web
 from tau_agent.session import LeafEntry, ModelChangeEntry, ThinkingLevelChangeEntry
 from tau_agent.types import JSONObject, JSONValue
 from tau_coding.commands import create_default_command_registry
+from tau_coding.plan import (
+    PlanConflictError,
+    PlanItem,
+    PlanSnapshot,
+    PlanStatus,
+    parse_plan_markdown,
+    render_plan_markdown,
+)
 from tau_coding.thinking import normalize_thinking_level
-from tau_web.config import WebConfig
+from tau_web.events import build_invalidation_envelope
+from tau_web.plan import SqlitePlanStore
 from tau_web.routes.common import (
     config_for,
     json_response,
-    optional_json_object,
     raise_for_repository_error,
     require_found,
     require_json_body,
@@ -26,7 +33,7 @@ from tau_web.routes.common import (
 )
 from tau_web.routes.sessions import session_resource
 from tau_web.services import TauWebServices
-from tau_web.sqlite.repositories import PlanRecord, UsageRecord
+from tau_web.sqlite.repositories import UsageRecord
 from tau_web.sqlite.sessions import SessionRecord
 
 _WEB_COMMAND_NAMES: Final[tuple[str, ...]] = (
@@ -82,6 +89,8 @@ class CommandsResponse:
 class PlanResource:
     session_id: str
     content: JSONObject
+    items: tuple[PlanItem, ...]
+    markdown: str
     revision: int
     updated_at: str | None
     updated_by: str | None
@@ -241,45 +250,58 @@ async def get_session_plan(request: web.Request) -> web.Response:
     services = services_for(request)
     session_id = request.match_info["session_id"]
     await _require_session(services, session_id)
-    record = await services.plans.get(session_id)
-    if record is None:
-        return json_response(
-            PlanResource(
-                session_id=session_id,
-                content={},
-                revision=0,
-                updated_at=None,
-                updated_by=None,
-            )
-        )
-    return json_response(_plan_resource(record))
+    snapshot = await SqlitePlanStore(services.plans).get(session_id)
+    return json_response(_plan_resource(snapshot or PlanSnapshot(session_id=session_id)))
 
 
 async def put_session_plan(request: web.Request) -> web.Response:
     body = await require_json_body(
         request,
-        required_fields=("content", "expected_revision"),
+        required_fields=("expected_revision",),
+        optional_fields=("content", "items", "markdown"),
     )
     services = services_for(request)
     session_id = request.match_info["session_id"]
     await _require_writable_session(services, session_id)
-    content = optional_json_object(body, "content")
-    if content is None:
-        raise web.HTTPBadRequest(reason="Field 'content' must be a JSON object.")
     expected_revision = _expected_revision_field(body, "expected_revision")
 
     try:
-        record = await services.plans.save(
-            session_id,
-            markdown=_encode_plan_content(content),
-            explanation=None,
-            updated_by=_PLAN_UPDATED_BY,
+        items = _plan_items_from_request(body)
+        snapshot = await SqlitePlanStore(services.plans).save(
+            PlanSnapshot(
+                session_id=session_id,
+                items=items,
+                updated_by=_PLAN_UPDATED_BY,
+            ),
             expected_revision=expected_revision,
         )
+    except PlanConflictError:
+        current = await SqlitePlanStore(services.plans).get(session_id)
+        resource = _plan_resource(current or PlanSnapshot(session_id=session_id))
+        return json_response(
+            {
+                "error": {
+                    "code": "plan_revision_conflict",
+                    "message": "The session plan changed since it was loaded.",
+                },
+                "current": resource,
+            },
+            status=web.HTTPConflict.status_code,
+        )
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason=str(exc)) from exc
     except Exception as exc:
         raise_for_repository_error(exc)
+        raise AssertionError("unreachable") from exc
 
-    return json_response(_plan_resource(record))
+    await services.broker.publish(
+        build_invalidation_envelope(
+            event_type="tau.plan.updated",
+            session_id=session_id,
+            payload={"revision": snapshot.revision},
+        )
+    )
+    return json_response(_plan_resource(snapshot))
 
 
 async def get_session_usage(request: web.Request) -> web.Response:
@@ -386,31 +408,47 @@ def _positive_int_query(request: web.Request, field: str, *, default: int) -> in
     return value
 
 
-def _encode_plan_content(content: JSONObject) -> str:
-    return json.dumps(
-        content,
-        ensure_ascii=False,
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    )
+def _plan_items_from_request(body: JSONObject) -> tuple[PlanItem, ...]:
+    markdown = body.get("markdown")
+    if markdown is not None:
+        if not isinstance(markdown, str):
+            raise ValueError("Field 'markdown' must be a string.")
+        return parse_plan_markdown(markdown)
+
+    raw_items: JSONValue | None = body.get("items")
+    content = body.get("content")
+    if raw_items is None and isinstance(content, dict):
+        raw_items = content.get("items", [])
+    if raw_items is None:
+        raise ValueError("Request must include 'markdown', 'items', or content.items.")
+    if not isinstance(raw_items, list):
+        raise ValueError("Plan items must be an array.")
+
+    items: list[PlanItem] = []
+    for index, value in enumerate(raw_items):
+        if not isinstance(value, dict):
+            raise ValueError(f"Plan item {index + 1} must be an object.")
+        step = value.get("step")
+        status = value.get("status", "pending")
+        if not isinstance(step, str) or not isinstance(status, str):
+            raise ValueError(f"Plan item {index + 1} requires string step and status.")
+        items.append(PlanItem(step=step, status=cast(PlanStatus, status)))
+    return tuple(items)
 
 
-def _decode_plan_content(config: WebConfig, record: PlanRecord) -> JSONObject:
-    del config
-    payload = json.loads(record.markdown)
-    if not isinstance(payload, dict) or not all(isinstance(key, str) for key in payload):
-        raise RuntimeError(f"Stored plan for session {record.session_id} is not a JSON object")
-    return cast(JSONObject, payload)
-
-
-def _plan_resource(record: PlanRecord) -> PlanResource:
+def _plan_resource(snapshot: PlanSnapshot) -> PlanResource:
+    items_payload = [
+        cast(JSONObject, {"step": item.step, "status": item.status})
+        for item in snapshot.items
+    ]
     return PlanResource(
-        session_id=record.session_id,
-        content=_decode_plan_content(WebConfig(), record),
-        revision=record.revision,
-        updated_at=record.updated_at,
-        updated_by=record.updated_by,
+        session_id=snapshot.session_id,
+        content=cast(JSONObject, {"items": items_payload}),
+        items=snapshot.items,
+        markdown=render_plan_markdown(snapshot.items),
+        revision=snapshot.revision,
+        updated_at=snapshot.updated_at,
+        updated_by=snapshot.updated_by,
     )
 
 

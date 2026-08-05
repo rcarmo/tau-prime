@@ -105,6 +105,7 @@ from tau_coding.session import (
 )
 from tau_coding.shell_config import load_shell_settings
 from tau_coding.skills import Skill
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 from tau_coding.tui.adapter import TuiEventAdapter
 from tau_coding.tui.autocomplete import (
     CompletionItem,
@@ -4760,6 +4761,11 @@ async def run_tui_app(
                 index_on_first_persist = await manager_get_session(manager, record.id) is None
 
             session_records = await _list_session_records_for_manager(manager, cwd=cwd)
+            plan_hooks = (
+                manager.plan_factory_hooks()
+                if isinstance(manager, SqliteCodingSessionManager)
+                else (None, None)
+            )
             session = await CodingSessionFactory(
                 CodingSessionFactoryConfig(
                     compaction=CodingSessionCompactionConfig(
@@ -4770,6 +4776,8 @@ async def run_tui_app(
                     thinking_level=startup_thinking_level,
                     shell_command_prefix=shell_settings.shell_command_prefix,
                     llm_observer=llm_observer,
+                    extra_tools_factory=plan_hooks[0],
+                    turn_context_provider_factory=plan_hooks[1],
                 ),
                 provider_settings=provider_settings,
                 session_loader=CodingSession.load,

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
 from tau_agent import UserMessage
 from tau_agent.session import MessageEntry, SessionInfoEntry
+from tau_coding.coding_session_factory import CodingSessionFactoryBinding
 from tau_coding.paths import TauPaths
 from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 
@@ -41,6 +44,37 @@ async def test_sqlite_session_manager_lifecycle_and_prepare(tmp_path: Path) -> N
 
     await manager.close()
     assert not manager.opened
+
+
+@pytest.mark.anyio
+async def test_sqlite_manager_plan_hooks_share_tool_and_turn_context(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    async with SqliteCodingSessionManager(paths=_paths(tmp_path)) as manager:
+        record = await manager.create_session(
+            cwd=project,
+            model="gpt-test",
+            provider_name="provider",
+            session_id="planner",
+        )
+        extra_tools, context_factory = manager.plan_factory_hooks()
+        binding = cast(
+            CodingSessionFactoryBinding,
+            SimpleNamespace(session_id=record.id),
+        )
+        tools = extra_tools(binding)
+        assert [tool.name for tool in tools] == ["plan"]
+        await tools[0].executor(
+            {
+                "action": "update",
+                "plan": [{"step": "ship", "status": "in_progress"}],
+            }
+        )
+        context_provider = context_factory(binding)
+        assert context_provider is not None
+        context = await context_provider()
+        assert 'revision="1"' in context
+        assert "- [-] ship" in context
 
 
 @pytest.mark.anyio
