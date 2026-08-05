@@ -32,9 +32,10 @@ executes them in your working directory and streams the results.
 ## Sessions
 
 A **session** is one ongoing conversation plus everything the agent did in it.
-Sessions are saved to disk as append-only files, so you can **resume** them
-later. Because the history is a tree, you can also **branch** from any earlier
-point to try a different direction, and **export** a session to HTML or JSONL.
+Live sessions are stored durably in Tau's SQLite database, so you can
+**resume** them later. Because the history is a tree, you can also **branch**
+from any earlier point to try a different direction, and **export** a session
+to HTML or JSONL.
 → [Sessions](./guides/sessions.md)
 
 ## Project instructions (`AGENTS.md`)

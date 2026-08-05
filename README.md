@@ -83,6 +83,35 @@ Run against the checkout's source tree with:
 PYTHONPATH=src tau
 ```
 
+If you want the optional browser runtime from a checkout, install the web extra as well:
+
+```sh
+python -m pip install ".[web]"
+```
+
+## Web frontends
+
+Tau Prime has two distinct browser-facing modes:
+
+* `tau web` runs Tau Web's browser UI and HTTP API. It uses the same SQLite session store as the TUI and print mode.
+
+```sh
+tau web
+tau web --host 0.0.0.0 --port 8080
+tau web --database /path/to/tau.sqlite3
+```
+
+`tau web` requires the optional web dependencies from `tau-prime[web]` (or `".[web]"` from a checkout).
+
+* `tau --web` runs the Textual TUI through Textual's separate web server command. It is not the same feature as `tau web`.
+
+```sh
+tau --web
+tau --web --web-host 0.0.0.0 --web-port 8000
+```
+
+For `tau --web`, install Textual's optional web server package so that `textual-web` or `textual-serve` is available on your `PATH`.
+
 ## macOS sandbox
 
 macOS runs are sandboxed by default. Tau Prime re-executes the `tau` command through the system `sandbox-exec` utility, and the restriction is inherited by shell commands, Python, tests and their child processes.
@@ -158,7 +187,11 @@ Useful commands include:
 /theme
 ```
 
-Sessions are append-only JSONL files under `~/.tau/sessions/`. Project instructions can be supplied through `AGENTS.md`, `.tau/` and `.agents/` resources. See [context compaction](docs/compaction.md) for adaptive local summaries and verified OpenAI/Codex provider-native compaction, and [extensions](docs/extensions.md) for the local Python extension seam.
+Live sessions are stored in SQLite by default at `~/.tau/tau.sqlite3`. The TUI, print mode, `tau sessions`, `tau --resume`, and `tau web` all use that shared durable store. The session tree is still append-only — messages, model changes, compaction entries, and leaf pointers are preserved — but it now lives in SQLite rather than per-project JSONL files.
+
+The shared database opens in WAL mode, enables foreign keys, and uses `json_valid(...)` constraints for structured JSON columns. JSONL is now an interchange format rather than the live store: `/export` and `tau export` can write HTML or JSONL artefacts, `tau import-session` imports Tau JSONL into SQLite, `tau export-session` exports one SQLite-backed session as Tau JSONL, and `tau export <path-to-jsonl>` can still read an older JSONL transcript directly.
+
+Project instructions can be supplied through `AGENTS.md`, `.tau/` and `.agents/` resources. See [context compaction](docs/compaction.md), [SQLite storage and migration](docs/storage.md), [Tau Web operations](docs/web.md), and [extensions](docs/extensions.md).
 
 One-shot mode is available for scripts and short queries:
 
@@ -169,15 +202,17 @@ tau --cwd /path/to/project -p "find the command-line entry point"
 
 ## Code layout
 
-The separation between the reusable agent, the coding session and the terminal interface is deliberate:
+The separation between the reusable agent, the coding session, the extension contracts and the frontends is deliberate:
 
 ```text
-tau_ai      provider clients and provider-neutral events
-tau_agent   messages, tools, agent loop, harness and session primitives
-tau_coding  coding tools, persistence, provider configuration, CLI and TUI
+tau_ai          provider clients, runtime model metadata and provider-neutral events
+tau_agent       messages, tools, agent loop, harness and append-only session primitives
+tau_coding      coding tools, shared session/runtime orchestration, provider configuration, CLI, print mode and TUI
+tau_extensions  portable extension discovery, manifests, resolution and runtime contracts
+tau_web         optional browser runtime, HTTP routes, and shared SQLite persistence/interchange
 ```
 
-`AgentHarness` contains the reusable agent loop. `CodingSession` supplies the coding environment and durable state. The TUI consumes session events and is only one possible frontend.
+`AgentHarness` contains the reusable agent loop. `CodingSession` supplies the coding environment and durable state. The TUI, print mode and `tau web` all sit on that shared session machinery, while `tau_extensions` deliberately stays decoupled from the browser server and its dependencies.
 
 ## Test and package
 

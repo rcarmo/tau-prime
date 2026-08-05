@@ -5,8 +5,10 @@ Tau Prime follows the same broad layering as Tau but the fork has mobile, provid
 ## Packages
 
 - `tau_ai` owns provider adapters, provider-neutral streaming events, model listing, retry helpers, HTTP helpers, observability, and provider-native capabilities such as remote compaction or runtime model limits.
-- `tau_agent` owns portable agent primitives: messages, tools, tool results, the agent loop, harness state, event models, append-only session entries, JSONL storage, and branch replay.
-- `tau_coding` owns the coding product: CLI, TUI, commands, resources, provider configuration, credentials/OAuth, session manager, compaction policy, extensions, rendering, packaging-facing behavior, and system prompt assembly.
+- `tau_agent` owns portable agent primitives: messages, tools, tool results, the agent loop, harness state, event models, append-only session entries/tree semantics, storage interfaces, and branch replay.
+- `tau_coding` owns the coding product: CLI, TUI, commands, resources, provider configuration, credentials/OAuth, session manager integration, compaction policy, rendering, packaging-facing behavior, and system prompt assembly.
+- `tau_extensions` owns portable extension discovery, manifests, resolution, and runtime contracts.
+- `tau_web` owns the optional browser runtime, HTTP routes, static shell assets, the shared SQLite runtime store, and JSONL import/export interchange.
 
 ## Placement rules
 
@@ -22,4 +24,4 @@ Tau Prime currently emits legacy Tau events and Pi-shaped `message_update` event
 
 ## Session architecture
 
-Sessions are append-only JSONL trees. Compaction, branch summaries, model changes, labels, session info, and custom extension entries are durable entries. Do not rewrite old transcript entries to compact or repair; append repair/summary entries instead.
+SQLite is the sole live durable session store. The durable session model is still an append-only entry tree: compaction, branch summaries, model changes, labels, session info, and custom extension entries append durable entries and leaf updates instead of rewriting transcript history in place. Preserve the current SQLite invariants: WAL mode, foreign keys, and `json_valid(...)`-style constraints on structured JSON columns. JSONL remains import/export and legacy interchange only; it is not the authoritative live store.

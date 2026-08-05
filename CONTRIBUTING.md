@@ -4,20 +4,22 @@ Thanks for helping improve Tau. Tau is both a usable terminal coding agent and a
 
 ## Project philosophy
 
-Tau is organized around three layers:
+Tau is organised around five packages:
 
 ```text
-tau_ai      provider/model streaming layer
-tau_agent   portable agent harness, loop, tools, events, sessions
-tau_coding  CLI app, resources, skills, extensions, commands, TUI integration
+tau_ai          provider/model streaming layer
+tau_agent       portable agent harness, loop, tools, events, sessions
+tau_coding      CLI app, shared session/runtime orchestration, resources, skills, print mode and TUI
+tau_extensions  portable extension discovery, manifests, resolution and runtime contracts
+tau_web         optional browser runtime, HTTP routes, and shared SQLite persistence/interchange
 ```
 
-The key boundary is:
+The key boundary is still:
 
 ```text
 AgentHarness = reusable agent brain
 AgentSession = coding-agent environment
-TUI = one possible frontend
+TUI, print mode, and Tau Web = frontends over shared session machinery
 ```
 
 Please keep these principles in mind:
@@ -27,7 +29,7 @@ Please keep these principles in mind:
 - **The core stays portable.** `tau_agent` should not depend on the CLI, Textual, Rich, local config paths, or Tau-specific resource loading.
 - **Tools are ordinary typed functions.** Prefer explicit schemas and structured results.
 - **Sessions are durable and inspectable.** Avoid changes that make history hard to read, resume, or export.
-- **Documentation follows implementation.** User-facing behavior and architectural decisions should be documented.
+- **Documentation follows implementation.** User-facing behaviour and architectural decisions should be documented.
 
 ## Local development
 
@@ -37,15 +39,17 @@ Use a Python 3.13+ virtual environment for Python commands so they run in the pr
 python3.13 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-dev.txt
-python -m pip install -e .
+python -m pip install .
+# Optional, if you are touching tau web, SQLite import/export, or tests/web
+python -m pip install ".[web]"
 tau --version
 ```
 
-Run Tau from the checkout:
+The in-tree build backend does not provide editable installs, so run Tau from the checkout with `PYTHONPATH=.:src`:
 
 ```bash
-tau
-tau -p "explain this repo"
+PYTHONPATH=.:src tau
+PYTHONPATH=.:src tau -p "explain this repo"
 ```
 
 ## Contributor workflow
@@ -135,12 +139,12 @@ gh pr checks 207 --repo huggingface/tau
 ### Recommended development sequence
 
 1. **Read the issue** — `gh issue view 123 --repo huggingface/tau`
-2. **Set up your environment** — `python -m pip install -r requirements-dev.txt && python -m pip install -e .`
+2. **Set up your environment** — `python -m pip install -r requirements-dev.txt && python -m pip install .` (plus `python -m pip install ".[web]"` when working on Tau Web, SQLite import/export, or `tests/web`)
 3. **Create a branch or worktree** — follow naming conventions above
 4. **Implement changes** — follow layer boundaries below
 5. **Write tests** — use fake providers/tools for deterministic tests
-6. **Run checks** — `python -m pytest`, `python -m ruff check .`, `python -m mypy`
-7. **Update docs** — `dev-notes/` for substantial changes, `website/` for user-facing
+6. **Run checks** — `PYTHONPATH=.:src python -m pytest`, `python -m ruff check .`, `PYTHONPATH=.:src python -m mypy src`
+7. **Update docs** — `dev-notes/` for substantial changes, `website/src/content/docs/` for published user docs, and `docs/` for technical runtime notes
 8. **Commit** — one coherent change per commit
 9. **Push and open a PR** — `git push origin feat/issue-123-desc` then `gh pr create`
 
@@ -149,10 +153,20 @@ gh pr checks 207 --repo huggingface/tau
 Run the relevant focused tests while developing, then run the full checks before opening a pull request when practical:
 
 ```bash
-python -m pytest
+PYTHONPATH=.:src python -m pytest
 python -m ruff check .
 python -m ruff format --check .
-python -m mypy
+PYTHONPATH=.:src python -m mypy src
+```
+
+If you touch Tau Web, SQLite-backed session import/export, or `tests/web`, install the optional web dependencies first and run the relevant web checks as well:
+
+```bash
+python -m pip install ".[web]"
+PYTHONPATH=.:src python -m pytest tests/web
+node --check src/tau_web/static/app.js
+node --check src/tau_web/static/live-ui.js
+node --check src/tau_web/static/extension-ui.js
 ```
 
 For the documentation site:
@@ -169,20 +183,32 @@ bun run build
 Use the layer boundaries to decide where code should live:
 
 - Provider integrations, model adapters, and provider-neutral streaming belong in `tau_ai`.
-- Agent loop behavior, tool abstractions, events, messages, harnesses, and portable session primitives belong in `tau_agent`.
-- CLI behavior, slash commands, TUI integration, local config, resources, skills, prompt templates, and coding-specific tools belong in `tau_coding`.
+- Agent loop behaviour, tool abstractions, events, messages, harnesses, and portable session primitives belong in `tau_agent`.
+- CLI behaviour, slash commands, shared session/runtime orchestration, print mode, TUI integration, local config, resources, skills, prompt templates, and coding-specific tools belong in `tau_coding`.
+- Portable extension discovery, manifests, resolution, and runtime contracts belong in `tau_extensions`.
+- The optional browser runtime, HTTP routes, static shell assets, SQLite runtime store, and JSONL interchange live in `tau_web`.
 - Textual-specific code should stay behind the TUI layer.
 - Rich rendering should not leak into the reusable agent harness.
+- Keep optional web dependencies lazy: non-web code paths should not require `aiohttp`, Pillow, or other `tau-prime[web]` extras.
 
 If a change crosses layers, prefer adding a small typed boundary instead of importing app-specific details into core code.
 
+## Storage and migration expectations
+
+- The live durable session store is SQLite by default; do not add new features that depend on per-project JSONL files as live state.
+- Session history remains append-only even in SQLite. Repairs, compaction, summaries, labels, branch updates, and similar changes should append durable entries instead of rewriting transcript history in place.
+- JSONL still matters for export/import and older transcripts, but it is an interchange format rather than the primary live store.
+- Database migrations in `src/tau_web/sqlite/migrations.py` are forward-only and append-only. Add a new numbered migration instead of editing an already-shipped migration in place.
+- Preserve the current SQLite invariants: WAL mode, foreign keys, and `json_valid(...)`-style constraints on structured JSON columns.
+
 ## Testing expectations
 
-- Add or update tests for behavior changes.
+- Add or update tests for behaviour changes.
 - Use fake providers and fake tools for deterministic agent-loop tests.
 - Keep core tests free of provider-specific assumptions.
 - Add regression tests for bugs.
-- Prefer focused tests that describe the behavior being protected.
+- Prefer focused tests that describe the behaviour being protected.
+- If you touch `src/tau_web/static/`, keep DOM updates explicit and safe: prefer `createElement`, `textContent`, and `replaceChildren`; avoid `innerHTML`, `eval`, or HTML-string injection for data-bearing UI updates.
 
 ## Documentation expectations
 
@@ -193,10 +219,12 @@ For substantial architectural or phase-oriented work, add beginner-friendly note
 - how it maps to Tau's architecture
 - how to test or use it
 
-For user-facing behavior, update the published docs under:
+When behaviour changes, update the matching docs in the same change:
 
 ```text
-website/src/content/docs/
+website/src/content/docs/   published user documentation
+docs/                       technical runtime and platform notes
+README.md                   top-level install, packaging, and workflow expectations
 ```
 
 ## Release process
@@ -216,10 +244,10 @@ process.
 Good Tau pull requests are small, focused, and easy to review. Please include:
 
 - the motivation for the change
-- a summary of behavior changes
+- a summary of behaviour changes
 - tests or checks you ran
 - screenshots or terminal output for TUI/CLI changes when useful
-- notes about compatibility, migrations, config changes, or provider-specific behavior
+- notes about compatibility, migrations, config changes, or provider-specific behaviour
 
 Avoid unrelated refactors in feature or bug-fix PRs. If a larger design change is needed, open an issue or discussion first.
 

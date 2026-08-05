@@ -13,6 +13,9 @@ Preserve these unless Rui explicitly decides otherwise.
 - Codex's reserved `python` function name is mapped at the provider boundary.
 - macOS sandboxing is default-on and fail-closed; `--no-sandbox` is the explicit bypass.
 - Provider/model pairs must remain atomic on resume, scoped switching, and branch operations.
-- Session storage is append-only JSONL; repairs/compactions append entries instead of rewriting history.
+- SQLite is the sole live durable session store; do not reintroduce per-project JSONL as authoritative runtime state.
+- Session history remains an append-only entry tree; repairs, summaries, compactions, labels, and branch updates append durable entries instead of rewriting transcript history.
+- Preserve the current SQLite invariants: WAL mode, foreign keys, and `json_valid(...)`-style constraints on structured JSON columns.
+- JSONL remains import/export and legacy interchange only.
 - Adaptive/provider-native compaction must fail closed for opaque native state.
 - Release tarballs are the supported a-Shell install artifact.

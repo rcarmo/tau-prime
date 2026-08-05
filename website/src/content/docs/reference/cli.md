@@ -17,7 +17,8 @@ tau [OPTIONS] [PROMPT] [COMMAND] [ARGS]
 On TUI and text print-mode startup, Tau may show a non-blocking notice when a
 newer `tau-prime` release is available on PyPI. Disable it with
 `TAU_NO_UPDATE_CHECK=1`; utility commands such as `tau --version`, `tau sessions`,
-and `tau export` do not run the check.
+`tau export`, `tau import-session`, and `tau export-session` do not run the
+check.
 
 ## Commands
 
@@ -25,8 +26,10 @@ and `tau export` do not run the check.
 | --- | --- |
 | `tau` | Open the interactive TUI |
 | `tau "<prompt>"` | Open the TUI with an initial prompt |
-| `tau sessions` | List indexed sessions (id, title, model, cwd) |
-| `tau export <ref> [dest] [--format html\|jsonl]` | Export a session id or JSONL path (HTML default) |
+| `tau sessions` | List live sessions from the default SQLite store (id, title, model, cwd) |
+| `tau export <ref> [dest] [--format html\|jsonl]` | Export a live session id from SQLite, or an existing Tau JSONL file, as HTML or JSONL |
+| `tau import-session <source.jsonl> [options]` | Import a Tau JSONL session into the SQLite store |
+| `tau export-session <ref> [options]` | Export one SQLite-backed session as Tau JSONL |
 | `tau providers` | List configured providers and how each authenticates |
 | `tau [setup options] setup` | Create/update an OpenAI-compatible provider |
 
@@ -43,6 +46,25 @@ and `tau export` do not run the check.
 | `--new-session` | Start a new session instead of resuming the default |
 | `--auto-compact-threshold INT` | Auto-compact above this rough token estimate |
 | `--version` | Print the version and exit |
+
+### Session exports and interchange
+
+`tau export` is the user-facing export command. When `<ref>` is a live session
+id, Tau reads that session from SQLite. When `<ref>` is an existing file path,
+Tau treats it as a Tau JSONL transcript or export for compatibility. The
+default export format is HTML; `--format jsonl` writes JSONL instead. If the
+output path has no suffix, Tau treats it as a destination directory.
+
+`tau import-session` and `tau export-session` are the explicit JSONL
+interchange commands for the live SQLite store:
+
+- `tau import-session <source.jsonl>` imports one Tau JSONL file into SQLite.
+  Use `--workspace`, `--provider`, `--model`, `--session-id`, `--agent-name`,
+  `--title`, `--thinking-level`, and `--database` to control recorded
+  metadata and the target database.
+- `tau export-session <ref>` exports one SQLite-backed session as Tau JSONL.
+  `ref` may be a session id or local address. Use `--output`, `--overwrite`,
+  and `--database` as needed.
 
 ### Provider setup options
 

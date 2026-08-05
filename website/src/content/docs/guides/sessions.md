@@ -3,9 +3,10 @@ title: Sessions
 description: Resume past conversations, branch from any point in history, rename sessions, and export them.
 ---
 
-Every Tau conversation is a **session**, saved to disk so you can come back to
-it. Sessions are stored as append-only JSONL under `~/.tau/sessions/`, organized
-per working directory, so resume flows focus on the project you're in.
+Every Tau conversation is a **session**, saved durably so you can come back to
+it. Live sessions are stored in SQLite by default at `~/.tau/tau.sqlite3`.
+Resume flows still focus on the project you're in by recording each session's
+working directory and surfacing it in lists and pickers.
 
 ## Listing sessions
 
@@ -60,8 +61,8 @@ The new name appears in the `/resume` picker and id completions.
 Export a session to a shareable file:
 
 ```text
-/export                              # HTML, into the current directory
-/export --format jsonl               # raw JSONL
+/export                              # HTML, default file: tau-session.html
+/export --format jsonl               # JSONL interchange: tau-session.jsonl
 /export --format html report.html    # explicit destination
 ```
 
@@ -71,19 +72,39 @@ Or from the shell:
 tau export <session-id>                     # HTML (default)
 tau export <session-id> session.html
 tau export <session-id> --format jsonl
+tau export ./older-session.jsonl report.html
 ```
 
-The source can be an indexed session id **or** a path to a JSONL session file.
-HTML exports are self-contained and include the preserved session tree plus the
-transcript in storage order.
+For live sessions, `/export` and `tau export` read from SQLite. The shell
+command also accepts an existing Tau JSONL transcript or export path for
+compatibility. HTML exports are self-contained and include the preserved
+session tree plus the transcript in storage order.
+
+If you specifically want JSONL interchange with the live store, use the
+explicit import/export commands:
+
+```bash
+tau export-session <session-id> --output session.jsonl
+tau import-session session.jsonl --workspace /path/to/project
+```
+
+`tau export-session` writes Tau JSONL from one SQLite-backed session.
+`tau import-session` validates a Tau JSONL file and records it in SQLite with
+workspace, provider, model, and optional title metadata.
 
 ## Where sessions live
 
 ```text
-~/.tau/sessions/<cleaned-path>-<short-hash>/
+~/.tau/tau.sqlite3
 ```
 
-For example, `/Users/you/repos/tau` becomes something like
-`repos-tau-a1b2c3`. The original JSONL is append-only — compaction and branching
-change the *active* view, never the recorded history. See
-[Configuration](../reference/configuration.md#sessions) for the exact layout.
+Tau stores live sessions, workspaces, aliases, and session metadata in this
+single database by default. The session tree is still append-only at the entry
+level -- compaction and branching change the *active* view, not the recorded
+history.
+
+Older `~/.tau/sessions/` JSONL trees may still exist from earlier releases. Tau
+does not use them as the live durable store any more, but `tau export
+<path-to-jsonl>` and `tau import-session` let you keep moving data in and out.
+See [Configuration](../reference/configuration.md#sessions) for the exact
+layout.

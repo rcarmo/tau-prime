@@ -2,11 +2,13 @@
 
 Tau Prime sandboxes the `tau` command by default on macOS. The CLI re-executes itself through `/usr/bin/sandbox-exec`, which applies one Seatbelt profile to Tau and every process it launches.
 
+Because that re-exec happens in Tau's shared CLI entrypoint, the same macOS sandbox is entered before normal startup for the TUI, one-shot print mode (`tau -p ...`), `tau web`, and `tau --web`.
+
 The implementation is deliberately filesystem-focused: reads, network access and process execution continue to work, while writes are limited to the project and the small set of directories Tau needs for its own state.
 
 ## Startup flow
 
-The sandbox is established before Tau constructs a provider, opens a session or starts the TUI:
+The sandbox is established before Tau constructs a provider, opens a session, dispatches `tau web`, or starts the TUI/Textual web path. One-shot print mode goes through the same bootstrap:
 
 1. The CLI parses enough of the command line to determine `--cwd` and `--no-sandbox`.
 2. On macOS, `should_enter_macos_sandbox()` checks that sandboxing is enabled and that this is not already the re-executed process.
@@ -22,6 +24,8 @@ The resulting command is equivalent to:
 ```
 
 There is no wrapper process left behind. The sandboxed invocation replaces the original Tau process.
+
+By the time Tau reaches interactive mode, print mode, `tau web`, or `tau --web`, the process is already running inside Seatbelt unless `--no-sandbox` was given.
 
 ## Filesystem policy
 
@@ -78,6 +82,12 @@ tau --cwd ~/Projects/example
 
 The selected directory must already exist. Symlinks are resolved before the path is placed in the profile.
 
+## Tau Web confinement versus Seatbelt
+
+`tau web` uses the same macOS sandbox bootstrap as the TUI and print mode because the CLI decides whether to re-exec before it dispatches subcommands. If you start Tau Web with `tau web --cwd /path/to/worktree`, that path becomes both `WebConfig.cwd` and the Seatbelt project root.
+
+Tau Web also applies an application-level workspace boundary: `/api/files` only serves paths inside `WebConfig.cwd` and rejects traversal or symlink escapes. That boundary is useful, but it is not a replacement for the macOS sandbox. Seatbelt constrains the whole Tau process tree; the `/api/files` restriction only governs that HTTP endpoint.
+
 ## Failure behaviour
 
 Sandboxing is mandatory by default on macOS. Tau exits with status 1 rather than continuing without protection when:
@@ -98,7 +108,11 @@ Use `--no-sandbox` only when unrestricted filesystem writes are intentional:
 tau --no-sandbox
 ```
 
-The option has no practical effect on a-Shell, Linux or other non-macOS platforms because they do not enter this sandbox path.
+On macOS, this skips the `sandbox-exec` re-exec entirely. Tau then runs with the ordinary permissions of the current user, and its tools and child processes can write wherever that user can write.
+
+That matters for `tau web` as well. Its `/api/files` route remains confined to `WebConfig.cwd`, but that application-level workspace check does not replace Seatbelt and does not restrict other code paths, tools, or subprocesses from modifying files outside that directory once the macOS sandbox is disabled.
+
+This page documents the macOS path. On a-Shell and other non-macOS platforms the Seatbelt bootstrap is skipped; Linux may use Tau's separate bubblewrap sandbox when enabled.
 
 ## Apple API status
 
@@ -118,7 +132,7 @@ The implementation is split across:
 Run the automated checks with:
 
 ```sh
-python -m pytest -q tests/test_macos_sandbox.py tests/test_cli.py
+PYTHONPATH=.:src python -m pytest -q tests/test_macos_sandbox.py tests/test_cli.py
 python -m compileall -q src tests
 git diff --check
 ```

@@ -33,9 +33,10 @@ to read, test, and add. → [Built-in tools](../reference/tools.md)
 
 ## Sessions are durable and inspectable
 
-Every conversation is an append-only JSONL transcript on disk. History is a tree
-you can resume and branch; compaction changes the *active* context without
-rewriting the record. The format is plain enough to read by hand.
+Every conversation is durably stored in SQLite. History is still an append-only
+tree you can resume and branch; compaction changes the *active* context without
+rewriting earlier entries. JSONL remains Tau's import/export interchange
+format, and the live store stays inspectable with ordinary SQLite tools.
 → [Sessions](../guides/sessions.md)
 
 ## Documentation follows implementation
