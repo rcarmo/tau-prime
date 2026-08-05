@@ -15,6 +15,7 @@ from aiosqlite import Row
 
 from tau_agent.messages import AgentMessage
 from tau_agent.types import JSONObject, JSONValue
+from tau_web.security import redact_json
 from tau_web.sqlite.connection import SqliteDatabase, SqliteReader
 from tau_web.sqlite.writer import SqliteTransaction
 
@@ -1755,7 +1756,10 @@ class AuditRepository(SqliteRepository):
         selected_event_type = _require_non_empty_text(event_type, field="Event type")
         selected_actor_type = _require_non_empty_text(actor_type, field="Actor type")
         timestamp = _timestamp()
-        details_json = _dump_json(details or {})
+        redacted_details = redact_json(details or {})
+        if not isinstance(redacted_details, dict):
+            raise TypeError("Redacted audit details must remain a JSON object")
+        details_json = _dump_json(redacted_details)
 
         async def write(transaction: SqliteTransaction) -> AuditRecord:
             audit_id = await transaction.execute_insert(

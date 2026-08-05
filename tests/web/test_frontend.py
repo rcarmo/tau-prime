@@ -18,7 +18,7 @@ CSP_HEADER = "; ".join(
         "font-src 'self'",
         "form-action 'self'",
         "frame-ancestors 'none'",
-        "img-src 'self' data:",
+        "img-src 'self' blob: data:",
         "manifest-src 'self'",
         "object-src 'none'",
         "script-src 'self'",
@@ -67,6 +67,10 @@ async def test_frontend_assets_return_expected_status_types_and_headers(
             assert response.headers["Referrer-Policy"] == "same-origin"
             assert response.headers["X-Content-Type-Options"] == "nosniff"
             assert response.headers["X-Frame-Options"] == "DENY"
+            assert response.headers["Permissions-Policy"] == (
+                "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+            )
+            assert response.headers["Cross-Origin-Opener-Policy"] == "same-origin"
             if path == "/sw.js":
                 assert response.headers["Service-Worker-Allowed"] == "/"
             else:
@@ -187,6 +191,8 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
         "/api/media",
         "/api/search",
         "/api/events",
+        "/api/approvals/",
+        "/approvals",
         "/meters",
         "/dashboard",
         "/queue",
@@ -196,8 +202,13 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
     assert "readEventStream" in script
     assert "parseEventChunk" in script
     assert 'case "tau.plan.updated"' in script
+    assert 'case "tau.approval.requested"' in script
+    assert 'case "tau.approval.resolved"' in script
     assert 'frame.event === "tau.meters.updated"' in script
     assert 'frame.event === "tau.dashboard.updated"' in script
+    assert "loadApprovals" in script
+    assert "renderApprovalPrompt" in script
+    assert "settleApproval" in script
     assert "startMetersPolling" in script
     assert "startDashboardTimers" in script
     assert "stopDashboardTimers" in script

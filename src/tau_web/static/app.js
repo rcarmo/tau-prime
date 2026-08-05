@@ -91,6 +91,7 @@ const state = {
   planDraft: "",
   planDirty: false,
   planConflict: null,
+  approvals: [],
   composing: false,
   uploadingAttachments: false,
   composer: createComposerState(),
@@ -488,12 +489,13 @@ async function refreshSelectedSessionData({ reconnect = false } = {}) {
 
   const sessionId = state.selectedSessionId;
   try {
-    const [session, branches, messages, context, plan] = await Promise.all([
+    const [session, branches, messages, context, plan, approvals] = await Promise.all([
       apiFetch(sessionPath(sessionId)),
       apiFetch(`${sessionPath(sessionId)}/branches`),
       apiFetch(`${sessionPath(sessionId)}/messages`),
       apiFetch(`${sessionPath(sessionId)}/context`),
       apiFetch(`${sessionPath(sessionId)}/plan`),
+      apiFetch(`${sessionPath(sessionId)}/approvals`),
     ]);
     if (state.selectedSessionId !== sessionId) {
       return;
@@ -504,9 +506,11 @@ async function refreshSelectedSessionData({ reconnect = false } = {}) {
     state.messages = Array.isArray(messages?.messages) ? messages.messages : [];
     state.context = context;
     applyPlanResponse(plan, { sessionId });
+    state.approvals = Array.isArray(approvals?.approvals) ? approvals.approvals : [];
     state.liveDraft = null;
     syncProviderInputs(session.provider_name, session.model);
     renderShell();
+    renderApprovalPrompt();
     if (reconnect) {
       startEventStream(sessionId);
     }
@@ -528,6 +532,8 @@ function clearSelectedSessionState() {
   state.planDraft = "";
   state.planDirty = false;
   state.planConflict = null;
+  state.approvals = [];
+  document.querySelector(".approval-backdrop")?.remove();
 }
 
 function applyPlanResponse(plan, { sessionId, force = false } = {}) {
@@ -564,6 +570,98 @@ async function loadPlan({ force = false } = {}) {
     }
   } catch (error) {
     handleError(error, "Unable to load the session plan.");
+  }
+}
+
+async function loadApprovals() {
+  const sessionId = state.selectedSessionId;
+  if (!sessionId) {
+    state.approvals = [];
+    renderApprovalPrompt();
+    return;
+  }
+  try {
+    const payload = await apiFetch(`${sessionPath(sessionId)}/approvals`);
+    if (state.selectedSessionId !== sessionId) {
+      return;
+    }
+    state.approvals = Array.isArray(payload?.approvals) ? payload.approvals : [];
+    renderApprovalPrompt();
+  } catch (error) {
+    handleError(error, "Unable to load tool approvals.");
+  }
+}
+
+function renderApprovalPrompt() {
+  const existing = document.querySelector(".approval-backdrop");
+  const approval = state.approvals[0];
+  if (!approval) {
+    existing?.remove();
+    return;
+  }
+  if (existing?.dataset.approvalId === approval.approval_id) {
+    return;
+  }
+  existing?.remove();
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "approval-backdrop";
+  backdrop.dataset.approvalId = approval.approval_id;
+  const panel = document.createElement("section");
+  panel.className = "approval-prompt";
+  panel.setAttribute("role", "alertdialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "approval-title");
+  panel.setAttribute("aria-describedby", "approval-description");
+
+  const title = document.createElement("h2");
+  title.id = "approval-title";
+  title.textContent = `Allow ${approval.tool_name}?`;
+  const description = document.createElement("p");
+  description.id = "approval-description";
+  description.textContent = approval.description || "The agent requested permission to run this tool.";
+  const argumentsView = document.createElement("pre");
+  argumentsView.className = "approval-arguments";
+  argumentsView.textContent = JSON.stringify(approval.arguments ?? {}, null, 2);
+  const actions = document.createElement("div");
+  actions.className = "approval-actions";
+  const denyButton = document.createElement("button");
+  denyButton.type = "button";
+  denyButton.className = "secondary-button";
+  denyButton.textContent = "Deny";
+  const allowButton = document.createElement("button");
+  allowButton.type = "button";
+  allowButton.className = "primary-button";
+  allowButton.textContent = "Allow once";
+  denyButton.addEventListener("click", () => void settleApproval(approval.approval_id, "deny"));
+  allowButton.addEventListener("click", () => void settleApproval(approval.approval_id, "allow"));
+  actions.append(denyButton, allowButton);
+  panel.append(title, description, argumentsView, actions);
+  backdrop.append(panel);
+  document.body.append(backdrop);
+  denyButton.focus();
+}
+
+function setApprovalButtonsDisabled(disabled) {
+  const buttons = document.querySelectorAll(".approval-prompt button");
+  for (const button of buttons) {
+    button.disabled = disabled;
+  }
+}
+
+async function settleApproval(approvalId, decision) {
+  setApprovalButtonsDisabled(true);
+  try {
+    await apiFetch(`/api/approvals/${encodeURIComponent(approvalId)}`, {
+      method: "POST",
+      json: { decision },
+    });
+    state.approvals = state.approvals.filter((item) => item.approval_id !== approvalId);
+    renderApprovalPrompt();
+    announce(`Tool request ${decision === "allow" ? "allowed" : "denied"}.`);
+  } catch (error) {
+    setApprovalButtonsDisabled(false);
+    handleError(error, "Unable to resolve the tool request.");
   }
 }
 
@@ -933,6 +1031,11 @@ async function handleStreamFrame(frame, sessionId) {
     }
     case "tau.plan.updated": {
       await loadPlan({ force: false });
+      break;
+    }
+    case "tau.approval.requested":
+    case "tau.approval.resolved": {
+      await loadApprovals();
       break;
     }
     case "tau.agent.error": {

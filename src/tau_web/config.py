@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from math import isfinite
+from os import environ
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from tau_coding.paths import TauPaths
+from tau_web.security import is_loopback_host
 
 DEFAULT_WEB_HOST = "127.0.0.1"
 DEFAULT_WEB_PORT = 8080
@@ -71,8 +73,16 @@ class WebConfig:
     host: str = DEFAULT_WEB_HOST
     port: int = DEFAULT_WEB_PORT
     database_path: Path | None = None
-    auth_token: str | None = field(default=None, repr=False)
-    allowed_origins: tuple[str, ...] = ()
+    auth_token: str | None = field(
+        default_factory=lambda: environ.get("TAU_WEB_AUTH_TOKEN"), repr=False
+    )
+    allowed_origins: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            origin.strip()
+            for origin in environ.get("TAU_WEB_ALLOWED_ORIGINS", "").split(",")
+            if origin.strip()
+        )
+    )
     max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES
     max_media_bytes_per_session: int = DEFAULT_MAX_MEDIA_BYTES_PER_SESSION
     max_media_items_per_session: int = DEFAULT_MAX_MEDIA_ITEMS_PER_SESSION
@@ -81,6 +91,7 @@ class WebConfig:
     sse_replay_capacity: int = 512
     sse_client_capacity: int = 64
     sse_heartbeat_seconds: float = 15.0
+    tool_approval_timeout_seconds: float = 300.0
 
     def __post_init__(self) -> None:
         cwd = self.cwd.expanduser().resolve()
@@ -94,6 +105,10 @@ class WebConfig:
 
         if not host:
             raise ValueError("Web host must not be empty")
+        if not is_loopback_host(host) and auth_token is None:
+            raise ValueError(
+                "Non-loopback Tau Web hosts require TAU_WEB_AUTH_TOKEN or auth_token."
+            )
         if not 1 <= self.port <= 65535:
             raise ValueError("Web port must be between 1 and 65535")
         if self.max_request_bytes <= 0:
@@ -112,6 +127,11 @@ class WebConfig:
             raise ValueError("SSE client capacity must be positive and finite")
         if not isfinite(self.sse_heartbeat_seconds) or self.sse_heartbeat_seconds <= 0:
             raise ValueError("SSE heartbeat seconds must be positive and finite")
+        if (
+            not isfinite(self.tool_approval_timeout_seconds)
+            or self.tool_approval_timeout_seconds <= 0
+        ):
+            raise ValueError("Tool approval timeout must be positive and finite")
 
         object.__setattr__(self, "cwd", cwd)
         object.__setattr__(self, "host", host)

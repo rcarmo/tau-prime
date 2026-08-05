@@ -1614,3 +1614,55 @@ button.danger-button {
     width: 100%;
   }
 }
+
+.approval-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #020617 72%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.approval-prompt {
+  width: min(34rem, 100%);
+  max-height: min(42rem, calc(100dvh - 2rem));
+  overflow: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.approval-prompt h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.approval-prompt p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.approval-arguments {
+  max-height: 18rem;
+  margin: 1rem 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--panel-strong);
+  color: var(--text);
+  font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}

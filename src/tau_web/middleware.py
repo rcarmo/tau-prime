@@ -6,6 +6,7 @@ import asyncio
 import re
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
+from contextlib import suppress
 from http import HTTPStatus
 from uuid import uuid4
 
@@ -58,7 +59,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
                         "font-src 'self'",
                         "form-action 'self'",
                         "frame-ancestors 'none'",
-                        "img-src 'self' data:",
+                        "img-src 'self' blob: data:",
                         "manifest-src 'self'",
                         "object-src 'none'",
                         "script-src 'self'",
@@ -70,6 +71,11 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
             response.headers.setdefault("Referrer-Policy", "same-origin")
             response.headers.setdefault("X-Content-Type-Options", "nosniff")
             response.headers.setdefault("X-Frame-Options", "DENY")
+            response.headers.setdefault(
+                "Permissions-Policy",
+                "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+            )
+            response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         return response
 
     @web.middleware
@@ -124,20 +130,45 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
             return await handler(request)
 
         raw_origin = request.headers.get("Origin")
-        if raw_origin is None:
-            return await handler(request)
+        if raw_origin is not None:
+            try:
+                origin = normalize_origin(raw_origin)
+                request_origin = normalize_origin(f"{request.scheme}://{request.host}")
+            except ValueError as exc:
+                raise web.HTTPForbidden(reason=str(exc)) from exc
 
-        try:
-            origin = normalize_origin(raw_origin)
-            request_origin = normalize_origin(f"{request.scheme}://{request.host}")
-        except ValueError as exc:
-            raise web.HTTPForbidden(reason=str(exc)) from exc
-
-        if origin != request_origin and origin not in config.allowed_origins:
-            raise web.HTTPForbidden(reason="Origin is not allowed.")
-        if request.headers.get(CSRF_HEADER) != "1":
-            raise web.HTTPForbidden(reason="Missing or invalid CSRF header.")
+            if origin != request_origin and origin not in config.allowed_origins:
+                raise web.HTTPForbidden(reason="Origin is not allowed.")
+            if request.headers.get(CSRF_HEADER) != "1":
+                raise web.HTTPForbidden(reason="Missing or invalid CSRF header.")
         return await handler(request)
+
+    @web.middleware
+    async def mutation_audit_middleware(request: Request, handler: Handler) -> StreamResponse:
+        response = await handler(request)
+        if request.method in _SAFE_METHODS:
+            return response
+
+        from tau_web.app import SERVICES_KEY
+
+        services = request.app._state.get(SERVICES_KEY)
+        if services is None:
+            return response
+        session_id = request.match_info.get("session_id")
+        with suppress(Exception):
+            await services.audit.append(
+                event_type="http.mutation",
+                actor_type="browser",
+                actor_id=request.remote,
+                session_id=session_id,
+                request_id=request.get(REQUEST_ID_KEY),
+                details={
+                    "method": request.method,
+                    "path": request.path,
+                    "status": response.status,
+                },
+            )
+        return response
 
     return (
         request_id_middleware,
@@ -145,6 +176,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
         structured_error_middleware,
         bearer_auth_middleware,
         origin_csrf_middleware,
+        mutation_audit_middleware,
     )
 
 

@@ -20,6 +20,7 @@ from tau_coding.agent_pool import (
 from tau_coding.agent_pool import (
     RunStatus as PoolRunStatus,
 )
+from tau_web.approvals import ToolApprovalManager
 from tau_web.events import EventProjectorCallback, canonical_agent_event_type
 from tau_web.sqlite.repositories import (
     AuditRepository,
@@ -67,6 +68,7 @@ class DurableAgentRuntime:
         audit: AuditRepository,
         event_projector: EventProjectorCallback | None = None,
         media: MediaRepository | None = None,
+        approvals: ToolApprovalManager | None = None,
     ) -> None:
         self._pool = pool
         self._runs = runs
@@ -74,6 +76,7 @@ class DurableAgentRuntime:
         self._audit = audit
         self._event_projector = event_projector
         self._media = media
+        self._approvals = approvals
         self._abort_run_ids: set[str] = set()
         self._driver_tasks: set[asyncio.Task[RunRecord]] = set()
         self._queue_locks: dict[str, asyncio.Lock] = {}
@@ -88,6 +91,10 @@ class DurableAgentRuntime:
         owned: bool = False,
     ) -> PoolSessionSnapshot:
         """Register one session with the underlying pool."""
+        if self._approvals is not None:
+            setter = getattr(session, "set_tool_approval_callback", None)
+            if callable(setter):
+                setter(self._approvals.callback_for(session_id))
         return self._pool.register_session(session_id, session, owned=owned)
 
     async def submit_prompt(

@@ -36,6 +36,36 @@ def test_web_config_normalizes_auth_token_and_allowed_origins(tmp_path: Path) ->
     assert "secret-token" not in repr(config)
 
 
+def test_web_config_reads_env_defaults_for_auth_and_allowed_origins(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TAU_WEB_AUTH_TOKEN", " env-secret ")
+    monkeypatch.setenv(
+        "TAU_WEB_ALLOWED_ORIGINS",
+        " https://example.com/, http://127.0.0.1:8080 , ",
+    )
+
+    config = WebConfig(cwd=tmp_path)
+
+    assert config.auth_token == "env-secret"
+    assert config.allowed_origins == ("https://example.com", "http://127.0.0.1:8080")
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "example.com"])
+def test_web_config_requires_auth_token_for_non_loopback_hosts(
+    tmp_path: Path,
+    host: str,
+) -> None:
+    with pytest.raises(ValueError, match="Non-loopback Tau Web hosts require"):
+        WebConfig(cwd=tmp_path, host=host)
+
+    config = WebConfig(cwd=tmp_path, host=host, auth_token="secret-token")
+
+    assert config.host == host
+    assert config.auth_token == "secret-token"
+
+
 @pytest.mark.parametrize("port", [0, 65536])
 def test_web_config_rejects_invalid_port(tmp_path: Path, port: int) -> None:
     with pytest.raises(ValueError, match="port"):
@@ -84,6 +114,14 @@ def test_web_config_rejects_non_finite_or_non_positive_sse_limits(
 ) -> None:
     with pytest.raises(ValueError, match="positive and finite"):
         WebConfig(cwd=tmp_path, **{field: value})
+
+
+@pytest.mark.parametrize("value", [0, float("inf")])
+def test_web_config_rejects_invalid_tool_approval_timeout(
+    tmp_path: Path, value: float
+) -> None:
+    with pytest.raises(ValueError, match="Tool approval timeout must be positive and finite"):
+        WebConfig(cwd=tmp_path, tool_approval_timeout_seconds=value)
 
 
 def test_web_package_import_does_not_load_optional_dependencies() -> None:

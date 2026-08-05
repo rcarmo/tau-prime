@@ -433,6 +433,50 @@ async def test_load_persists_repair_for_historical_interrupted_tool_call(
 
 
 @pytest.mark.anyio
+async def test_load_preserves_tool_approval_callback_when_repair_reconstructs_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    user_entry = MessageEntry(message=UserMessage(content="Read README.md"))
+    await storage.append(user_entry)
+    tool_call = ToolCall(id="call-1", name="read", arguments={"path": "README.md"})
+    assistant_entry = MessageEntry(
+        parent_id=user_entry.id,
+        message=AssistantMessage(content="I'll read it.", tool_calls=[tool_call]),
+    )
+    await storage.append(assistant_entry)
+    await storage.append(LeafEntry(parent_id=assistant_entry.id, entry_id=assistant_entry.id))
+
+    original = CodingSession._persist_loaded_interrupted_tool_repairs
+    observed: list[object] = []
+
+    async def wrapped(self: CodingSession) -> None:
+        async def approve(*_: object, **__: object) -> bool:
+            return True
+
+        self.set_tool_approval_callback(approve)
+        await original(self)
+        observed.append(self._harness.config.approve_tool)
+
+    monkeypatch.setattr(CodingSession, "_persist_loaded_interrupted_tool_repairs", wrapped)
+
+    session = await CodingSession.load(
+        CodingSessionConfig(
+            provider=FakeProvider([]),
+            model="fake",
+            system="You are Tau.",
+            storage=storage,
+            cwd=tmp_path,
+        )
+    )
+
+    assert len(observed) == 1
+    assert observed[0] is session._harness.config.approve_tool
+    assert observed[0] is not None
+
+
+@pytest.mark.anyio
 async def test_prompt_persists_user_assistant_and_leaf_entries(tmp_path: Path) -> None:
     storage = JsonlSessionStorage(tmp_path / "session.jsonl")
     provider = FakeProvider(

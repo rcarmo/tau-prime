@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import cast
 
@@ -37,7 +38,7 @@ from tau_agent.provider_events import (
 from tau_agent.provider_events import (
     ThinkingDeltaEvent as AssistantThinkingDeltaEvent,
 )
-from tau_agent.tools import AgentTool, AgentToolResult, ToolCall
+from tau_agent.tools import AgentTool, AgentToolResult, ToolApprovalCallback, ToolCall
 from tau_agent.types import JSONValue
 from tau_ai.events import (
     ProviderErrorEvent,
@@ -62,6 +63,7 @@ async def run_agent_loop(
     get_steering_messages: Callable[[], Sequence[AgentMessage]] | None = None,
     get_follow_up_messages: Callable[[], Sequence[AgentMessage]] | None = None,
     get_queue_update: Callable[[], QueueUpdateEvent] | None = None,
+    approve_tool: ToolApprovalCallback | None = None,
 ) -> AsyncIterator[AgentEvent]:
     """Run the pure agent loop and stream provider-neutral agent events.
 
@@ -239,6 +241,7 @@ async def run_agent_loop(
             tool_by_name,
             messages,
             signal,
+            approve_tool,
         ):
             yield tool_event
 
@@ -285,6 +288,7 @@ async def _execute_tool_calls(
     tool_by_name: Mapping[str, AgentTool],
     messages: list[AgentMessage],
     signal: CancellationToken | None,
+    approve_tool: ToolApprovalCallback | None,
 ) -> AsyncIterator[AgentEvent]:
     for index, tool_call in enumerate(tool_calls):
         if signal is not None and signal.is_cancelled():
@@ -300,6 +304,18 @@ async def _execute_tool_calls(
         tool = tool_by_name.get(tool_call.name)
         if tool is None:
             result = _unknown_tool_result(tool_call)
+        elif approve_tool is not None:
+            try:
+                approved = await approve_tool(tool_call, tool, signal)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                approved = False
+            result = (
+                await _execute_tool(tool, tool_call, signal)
+                if approved
+                else _denied_tool_result(tool_call)
+            )
         else:
             result = await _execute_tool(tool, tool_call, signal)
 
@@ -350,6 +366,17 @@ def _replace_tool_call_id(result: AgentToolResult, tool_call_id: str) -> AgentTo
 
 def _unknown_tool_result(tool_call: ToolCall) -> AgentToolResult:
     message = f"Unknown tool: {tool_call.name}"
+    return AgentToolResult(
+        tool_call_id=tool_call.id,
+        name=tool_call.name,
+        ok=False,
+        content=message,
+        error=message,
+    )
+
+
+def _denied_tool_result(tool_call: ToolCall) -> AgentToolResult:
+    message = "Tool call denied by user"
     return AgentToolResult(
         tool_call_id=tool_call.id,
         name=tool_call.name,

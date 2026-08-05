@@ -11,6 +11,7 @@ from typing import Self
 
 from tau_agent import AgentTool
 from tau_coding.agent_pool import AsyncAgentPool
+from tau_web.approvals import ToolApprovalManager
 from tau_web.baseline_extensions.meters import HostMetersSampler
 from tau_web.baseline_extensions.session_dashboard import (
     DASHBOARD_EVENT_TYPE,
@@ -63,6 +64,7 @@ class TauWebServices:
     broker: EventBroker
     meters: HostMetersSampler
     dashboard: SessionDashboard
+    approvals: ToolApprovalManager
     pool: AsyncAgentPool
     runtime: DurableAgentRuntime
     router: ChatRouter
@@ -107,6 +109,11 @@ class TauWebServices:
             )
             meters = HostMetersSampler(broker=broker)
             await meters.open()
+            approvals = ToolApprovalManager(
+                audit,
+                broker,
+                timeout_seconds=config.tool_approval_timeout_seconds,
+            )
             pool = AsyncAgentPool(max_concurrency=config.max_active_runs)
             dashboard = SessionDashboard(
                 sessions=sessions,
@@ -137,6 +144,7 @@ class TauWebServices:
                 audit,
                 event_projector=projector.project,
                 media=media,
+                approvals=approvals,
             )
             router = ChatRouter(sessions, deliveries, runtime, pool)
             return cls(
@@ -159,6 +167,7 @@ class TauWebServices:
                 broker=broker,
                 meters=meters,
                 dashboard=dashboard,
+                approvals=approvals,
                 pool=pool,
                 runtime=runtime,
                 router=router,
@@ -205,6 +214,13 @@ class TauWebServices:
             except BaseException as exc:
                 cleanup_failed = True
                 first_error = exc
+
+            try:
+                await self.approvals.shutdown()
+            except BaseException as exc:
+                cleanup_failed = True
+                if first_error is None:
+                    first_error = exc
 
             try:
                 await self.runtime.shutdown()

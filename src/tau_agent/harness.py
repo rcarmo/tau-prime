@@ -12,7 +12,7 @@ from typing import Literal
 from tau_agent.events import AgentEvent, MessageEndEvent, MessageStartEvent, QueueUpdateEvent
 from tau_agent.loop import run_agent_loop
 from tau_agent.messages import AgentMessage, AssistantMessage, ToolResultMessage, UserMessage
-from tau_agent.tools import AgentTool
+from tau_agent.tools import AgentTool, ToolApprovalCallback
 from tau_ai.provider import ModelProvider
 
 EventListener = Callable[[AgentEvent], Awaitable[None] | None]
@@ -42,6 +42,7 @@ class AgentHarnessConfig:
     tools: list[AgentTool] = field(default_factory=list)
     max_turns: int | None = None
     queue_mode: QueueMode = "one_at_a_time"
+    approve_tool: ToolApprovalCallback | None = None
 
 
 class SimpleCancellationToken:
@@ -221,6 +222,7 @@ class AgentHarness:
                 get_steering_messages=self._drain_steering_messages,
                 get_follow_up_messages=self._drain_follow_up_messages,
                 get_queue_update=self.queue_update_event,
+                approve_tool=self._config.approve_tool,
             ):
                 await self._notify(event)
                 yield event

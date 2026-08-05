@@ -32,7 +32,7 @@ from tau_agent.session import (
 )
 from tau_agent.session.entries import SessionEntry
 from tau_agent.session.tree import SessionTreeError, path_to_entry
-from tau_agent.tools import AgentTool
+from tau_agent.tools import AgentTool, ToolApprovalCallback
 from tau_agent.types import JSONValue
 from tau_ai import (
     REMOTE_COMPACTION_SENTINEL,
@@ -455,6 +455,10 @@ class CodingSession:
     def tools(self) -> tuple[AgentTool, ...]:
         """Return the tools available to the agent."""
         return tuple(self._harness.config.tools)
+
+    def set_tool_approval_callback(self, callback: ToolApprovalCallback | None) -> None:
+        """Install a host-owned approval policy for subsequent tool calls."""
+        self._harness.config.approve_tool = callback
 
     @property
     def messages(self) -> tuple[AgentMessage, ...]:
@@ -1637,6 +1641,7 @@ class CodingSession:
                 tools=self._harness.config.tools,
                 max_turns=self._harness.config.max_turns,
                 queue_mode=self._harness.config.queue_mode,
+                approve_tool=self._harness.config.approve_tool,
             ),
             messages=self._state.messages,
         )
