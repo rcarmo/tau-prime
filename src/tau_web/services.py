@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Self
 
 from tau_coding.agent_pool import AsyncAgentPool
+from tau_web.baseline_extensions.meters import HostMetersSampler
 from tau_web.chat_routing import ChatRouter
 from tau_web.config import WebConfig
 from tau_web.events import EventProjector, WebEventEnvelope
@@ -53,6 +54,7 @@ class TauWebServices:
     extensions: ExtensionDirectory
     projector: EventProjector
     broker: EventBroker
+    meters: HostMetersSampler
     pool: AsyncAgentPool
     runtime: DurableAgentRuntime
     router: ChatRouter
@@ -71,6 +73,7 @@ class TauWebServices:
         pool: AsyncAgentPool | None = None
         runtime: DurableAgentRuntime | None = None
         broker: EventBroker | None = None
+        meters: HostMetersSampler | None = None
         unsubscribe: Callable[[], None] | None = None
         try:
             await database.open()
@@ -92,6 +95,8 @@ class TauWebServices:
                 replay_capacity=config.sse_replay_capacity,
                 subscriber_capacity=config.sse_client_capacity,
             )
+            meters = HostMetersSampler(broker=broker)
+            await meters.open()
 
             async def publish_event(envelope: WebEventEnvelope) -> None:
                 await broker.publish(envelope)
@@ -124,6 +129,7 @@ class TauWebServices:
                 extensions=extensions,
                 projector=projector,
                 broker=broker,
+                meters=meters,
                 pool=pool,
                 runtime=runtime,
                 router=router,
@@ -138,6 +144,9 @@ class TauWebServices:
             with suppress(BaseException):
                 if unsubscribe is not None:
                     unsubscribe()
+            with suppress(BaseException):
+                if meters is not None:
+                    await meters.close()
             with suppress(BaseException):
                 if broker is not None:
                     broker.close()
@@ -159,10 +168,17 @@ class TauWebServices:
             first_error: BaseException | None = None
 
             try:
-                await self.runtime.shutdown()
+                await self.meters.close()
             except BaseException as exc:
                 cleanup_failed = True
                 first_error = exc
+
+            try:
+                await self.runtime.shutdown()
+            except BaseException as exc:
+                cleanup_failed = True
+                if first_error is None:
+                    first_error = exc
 
             try:
                 receipt_errors = await self.router.shutdown_receipts(cancel=True, timeout=1)

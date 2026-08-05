@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from tau_web import services as services_module
+from tau_web.baseline_extensions.meters import MeterSnapshot
 from tau_web.config import WebConfig
 from tau_web.services import TauWebServices
 from tau_web.sqlite.connection import SqliteDatabase
@@ -70,6 +72,32 @@ async def test_services_open_initializes_database_and_components(
         await services.close()
 
 
+class _FakeMetersSampler:
+    open_calls = 0
+    close_calls = 0
+
+    def __init__(self, *, broker: object) -> None:
+        self.broker = broker
+        self.snapshot = MeterSnapshot(
+            cpu_percent=1.0,
+            ram_percent=2.0,
+            swap_percent=3.0,
+            cpu_series=(1.0,),
+            ram_series=(2.0,),
+            swap_series=(3.0,),
+            process_rss_bytes=4,
+            process_rss_series_bytes=(4,),
+            sample_interval_ms=2_000,
+            platform="test",
+        )
+
+    async def open(self) -> None:
+        type(self).open_calls += 1
+
+    async def close(self) -> None:
+        type(self).close_calls += 1
+
+
 @pytest.mark.anyio
 async def test_services_open_exposes_recovered_run_count(web_config: WebConfig) -> None:
     assert web_config.database_path is not None
@@ -86,6 +114,47 @@ async def test_services_open_exposes_recovered_run_count(web_config: WebConfig) 
         assert recovered.error is not None
     finally:
         await services.close()
+
+
+@pytest.mark.anyio
+async def test_services_open_starts_meters_sampler_and_close_stops_it(
+    monkeypatch: pytest.MonkeyPatch,
+    web_config: WebConfig,
+) -> None:
+    _FakeMetersSampler.open_calls = 0
+    _FakeMetersSampler.close_calls = 0
+    monkeypatch.setattr(services_module, "HostMetersSampler", _FakeMetersSampler)
+
+    services = await TauWebServices.open(web_config)
+    try:
+        assert _FakeMetersSampler.open_calls == 1
+        assert services.meters.snapshot.sample_interval_ms == 2_000
+        assert services.meters.snapshot.platform == "test"
+    finally:
+        await services.close()
+
+    assert _FakeMetersSampler.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_services_open_closes_meters_sampler_on_partial_startup_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    web_config: WebConfig,
+) -> None:
+    _FakeMetersSampler.open_calls = 0
+    _FakeMetersSampler.close_calls = 0
+    monkeypatch.setattr(services_module, "HostMetersSampler", _FakeMetersSampler)
+
+    def fail_router(*_: object, **__: object) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(services_module, "ChatRouter", fail_router)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await TauWebServices.open(web_config)
+
+    assert _FakeMetersSampler.open_calls == 1
+    assert _FakeMetersSampler.close_calls == 1
 
 
 @pytest.mark.anyio

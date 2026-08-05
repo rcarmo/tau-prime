@@ -43,6 +43,54 @@
           </div>
         </dl>
         <div class="topbar-group topbar-actions">
+          <section
+            id="system-meters"
+            class="system-meters"
+            aria-label="System meters"
+            data-enabled="true"
+            data-collapsed="true"
+          >
+            <div class="meters-toolbar">
+              <output id="meters-summary" class="meters-summary" aria-live="polite">
+                Meters loading…
+              </output>
+              <button
+                id="meters-collapse-button"
+                class="meter-control"
+                type="button"
+                aria-controls="meters-details"
+                aria-expanded="false"
+              >
+                Expand
+              </button>
+              <button
+                id="meters-visibility-button"
+                class="meter-control"
+                type="button"
+                aria-pressed="true"
+              >
+                Hide
+              </button>
+            </div>
+            <div id="meters-details" class="meters-details">
+              <figure class="meter-tile">
+                <figcaption>CPU <output id="meter-cpu-value">--</output></figcaption>
+                <svg id="meter-cpu-sparkline" role="img" aria-label="CPU history"></svg>
+              </figure>
+              <figure class="meter-tile">
+                <figcaption>RAM <output id="meter-ram-value">--</output></figcaption>
+                <svg id="meter-ram-sparkline" role="img" aria-label="RAM history"></svg>
+              </figure>
+              <figure class="meter-tile">
+                <figcaption>RSS <output id="meter-rss-value">--</output></figcaption>
+                <svg id="meter-rss-sparkline" role="img" aria-label="Tau RSS history"></svg>
+              </figure>
+              <figure class="meter-tile">
+                <figcaption>Swap <output id="meter-swap-value">--</output></figcaption>
+                <svg id="meter-swap-sparkline" role="img" aria-label="Swap history"></svg>
+              </figure>
+            </div>
+          </section>
           <button
             id="mobile-panel-toggle"
             class="icon-button mobile-only"

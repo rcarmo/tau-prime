@@ -4,6 +4,8 @@ const STORAGE_KEYS = Object.freeze({
   model: "tau.web.model",
   selectedSessionId: "tau.web.selectedSessionId",
   sessionFilter: "tau.web.sessionFilter",
+  metersEnabled: "tau.web.metersEnabled",
+  metersCollapsed: "tau.web.metersCollapsed",
 });
 
 const API_PATHS = Object.freeze({
@@ -15,6 +17,7 @@ const API_PATHS = Object.freeze({
   media: "/api/media",
   search: "/api/search",
   events: "/api/events",
+  meters: "/meters",
 });
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -56,6 +59,10 @@ const state = {
   messages: [],
   liveDraft: null,
   settings: null,
+  meters: null,
+  metersEnabled: loadBooleanStorage(STORAGE_KEYS.metersEnabled, true),
+  metersCollapsed: loadBooleanStorage(STORAGE_KEYS.metersCollapsed, true),
+  metersTimer: null,
   models: [],
   commands: [],
   activeTab: "workspace",
@@ -95,6 +102,8 @@ async function init() {
     applySessionFilter(state.sessionFilter);
     closeDrawers();
     await refreshShell({ reconnect: true, announceMessage: "Tau shell ready." });
+    await refreshMeters();
+    startMetersPolling();
     await registerServiceWorker();
   } catch (error) {
     handleError(error, "Unable to load the Tau shell.");
@@ -107,6 +116,19 @@ function bindUi() {
     statusSession: requiredElement("status-session"),
     statusModel: requiredElement("status-model"),
     statusContext: requiredElement("status-context"),
+    systemMeters: requiredElement("system-meters"),
+    metersSummary: requiredElement("meters-summary"),
+    metersDetails: requiredElement("meters-details"),
+    metersCollapseButton: requiredElement("meters-collapse-button"),
+    metersVisibilityButton: requiredElement("meters-visibility-button"),
+    meterCpuValue: requiredElement("meter-cpu-value"),
+    meterRamValue: requiredElement("meter-ram-value"),
+    meterRssValue: requiredElement("meter-rss-value"),
+    meterSwapValue: requiredElement("meter-swap-value"),
+    meterCpuSparkline: requiredElement("meter-cpu-sparkline"),
+    meterRamSparkline: requiredElement("meter-ram-sparkline"),
+    meterRssSparkline: requiredElement("meter-rss-sparkline"),
+    meterSwapSparkline: requiredElement("meter-swap-sparkline"),
     mobileNavToggle: requiredElement("mobile-nav-toggle"),
     mobilePanelToggle: requiredElement("mobile-panel-toggle"),
     sessionNav: requiredElement("session-nav"),
@@ -189,6 +211,8 @@ function installEventHandlers() {
   ui.closeNavDrawer.addEventListener("click", closeDrawers);
   ui.closePanelDrawer.addEventListener("click", closeDrawers);
   ui.drawerBackdrop.addEventListener("click", closeDrawers);
+  ui.metersCollapseButton.addEventListener("click", toggleMetersCollapsed);
+  ui.metersVisibilityButton.addEventListener("click", toggleMetersEnabled);
 
   ui.newSessionButton.addEventListener("click", () => {
     void createSession({ focusComposer: true });
@@ -291,8 +315,10 @@ function installEventHandlers() {
   });
 
   window.addEventListener("keydown", handleKeyboardShortcuts);
+  document.addEventListener("visibilitychange", handleMetersVisibilityChange);
   window.addEventListener("beforeunload", () => {
     stopEventStream();
+    stopMetersPolling();
   });
   window.addEventListener("resize", () => {
     if (window.innerWidth > 960) {
@@ -837,6 +863,10 @@ async function handleStreamFrame(frame, sessionId) {
     setStreamStatus("Live");
     return;
   }
+  if (frame.event === "tau.meters.updated") {
+    applyMetersSnapshot(frame.data?.payload);
+    return;
+  }
   if (!frame.data || frame.data.session_id !== sessionId) {
     return;
   }
@@ -1070,6 +1100,7 @@ function setDrawerState(which, open) {
 }
 
 function renderShell() {
+  renderMeters();
   renderSessions();
   renderSessionDetails();
   renderBranches();
@@ -1079,6 +1110,173 @@ function renderShell() {
   renderPlan();
   renderSettings();
   renderControls();
+}
+
+async function refreshMeters() {
+  if (!state.metersEnabled || document.hidden) {
+    return;
+  }
+  try {
+    applyMetersSnapshot(await apiFetch(API_PATHS.meters));
+  } catch {
+    if (!state.meters) {
+      renderMeters();
+    }
+  }
+}
+
+function applyMetersSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") {
+    return;
+  }
+  state.meters = snapshot;
+  renderMeters();
+}
+
+function startMetersPolling() {
+  stopMetersPolling();
+  if (!state.metersEnabled || document.hidden) {
+    return;
+  }
+  const interval = Number(state.meters?.sample_interval_ms);
+  const delay = Number.isFinite(interval) && interval >= 500 ? interval : 2000;
+  state.metersTimer = window.setInterval(() => {
+    void refreshMeters();
+  }, delay);
+}
+
+function stopMetersPolling() {
+  if (state.metersTimer !== null) {
+    window.clearInterval(state.metersTimer);
+    state.metersTimer = null;
+  }
+}
+
+function handleMetersVisibilityChange() {
+  if (document.hidden) {
+    stopMetersPolling();
+    return;
+  }
+  void refreshMeters();
+  startMetersPolling();
+}
+
+function toggleMetersEnabled() {
+  state.metersEnabled = !state.metersEnabled;
+  persistStorage(STORAGE_KEYS.metersEnabled, String(state.metersEnabled));
+  renderMeters();
+  if (state.metersEnabled) {
+    void refreshMeters();
+    startMetersPolling();
+  } else {
+    stopMetersPolling();
+  }
+}
+
+function toggleMetersCollapsed() {
+  state.metersCollapsed = !state.metersCollapsed;
+  persistStorage(STORAGE_KEYS.metersCollapsed, String(state.metersCollapsed));
+  renderMeters();
+}
+
+function renderMeters() {
+  ui.systemMeters.dataset.enabled = String(state.metersEnabled);
+  ui.systemMeters.dataset.collapsed = String(state.metersCollapsed);
+  ui.metersCollapseButton.setAttribute("aria-expanded", String(!state.metersCollapsed));
+  ui.metersCollapseButton.textContent = state.metersCollapsed ? "Expand" : "Compact";
+  ui.metersVisibilityButton.setAttribute("aria-pressed", String(state.metersEnabled));
+  ui.metersVisibilityButton.textContent = state.metersEnabled ? "Hide" : "Show";
+
+  if (!state.metersEnabled) {
+    ui.metersSummary.textContent = "Meters hidden";
+    return;
+  }
+
+  const meters = state.meters;
+  if (!meters) {
+    ui.metersSummary.textContent = "Meters unavailable";
+    setMeterValues(null, null, null, null);
+    drawSparkline(ui.meterCpuSparkline, [], 100);
+    drawSparkline(ui.meterRamSparkline, [], 100);
+    drawSparkline(ui.meterRssSparkline, [], null);
+    drawSparkline(ui.meterSwapSparkline, [], 100);
+    return;
+  }
+
+  const cpu = finiteNumberOrNull(meters.cpu_percent);
+  const ram = finiteNumberOrNull(meters.ram_percent);
+  const rss = finiteNumberOrNull(meters.process_rss_bytes);
+  const swap = finiteNumberOrNull(meters.swap_percent);
+  ui.metersSummary.textContent = [
+    `CPU ${formatPercent(cpu)}`,
+    `RAM ${formatPercent(ram)}`,
+    `RSS ${formatBytes(rss)}`,
+    `Swap ${formatPercent(swap)}`,
+  ].join(" · ");
+  setMeterValues(cpu, ram, rss, swap);
+  drawSparkline(ui.meterCpuSparkline, meters.cpu_series, 100);
+  drawSparkline(ui.meterRamSparkline, meters.ram_series, 100);
+  drawSparkline(ui.meterRssSparkline, meters.process_rss_series_bytes, null);
+  drawSparkline(ui.meterSwapSparkline, meters.swap_series, 100);
+}
+
+function setMeterValues(cpu, ram, rss, swap) {
+  ui.meterCpuValue.textContent = formatPercent(cpu);
+  ui.meterRamValue.textContent = formatPercent(ram);
+  ui.meterRssValue.textContent = formatBytes(rss);
+  ui.meterSwapValue.textContent = formatPercent(swap);
+}
+
+function drawSparkline(svg, rawSeries, fixedMaximum) {
+  svg.replaceChildren();
+  svg.setAttribute("viewBox", "0 0 100 28");
+  const series = Array.isArray(rawSeries) ? rawSeries.map(finiteNumberOrNull) : [];
+  const values = series.filter((value) => value !== null);
+  if (values.length < 2) {
+    return;
+  }
+  const maximum = fixedMaximum ?? Math.max(...values, 1);
+  const divisor = Math.max(series.length - 1, 1);
+  const points = series
+    .map((value, index) => {
+      if (value === null) {
+        return null;
+      }
+      const x = (index / divisor) * 100;
+      const y = 27 - Math.min(Math.max(value / maximum, 0), 1) * 26;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .filter((point) => point !== null);
+  if (points.length < 2) {
+    return;
+  }
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  line.setAttribute("class", "meter-sparkline");
+  line.setAttribute("points", points.join(" "));
+  svg.append(line);
+}
+
+function finiteNumberOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function formatPercent(value) {
+  return value === null ? "--" : `${Math.round(value)}%`;
+}
+
+function formatBytes(value) {
+  if (value === null) {
+    return "--";
+  }
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let amount = value;
+  let unitIndex = 0;
+  while (amount >= 1024 && unitIndex < units.length - 1) {
+    amount /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex > 1 && amount < 10 ? 1 : 0;
+  return `${amount.toFixed(precision)} ${units[unitIndex]}`;
 }
 
 function renderPlan() {
@@ -2325,6 +2523,17 @@ function loadStorage(key) {
   } catch {
     return null;
   }
+}
+
+function loadBooleanStorage(key, fallback) {
+  const stored = loadStorage(key);
+  if (stored === "true") {
+    return true;
+  }
+  if (stored === "false") {
+    return false;
+  }
+  return fallback;
 }
 
 function persistStorage(key, value) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "tau-web-shell-v5";
+const CACHE_NAME = "tau-web-shell-v6";
 const SHELL_URLS = Object.freeze([
   "/",
   "/index.html",

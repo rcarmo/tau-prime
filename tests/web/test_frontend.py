@@ -142,6 +142,15 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         "plan-conflict",
         "plan-save-button",
         "plan-reload-button",
+        "system-meters",
+        "meters-summary",
+        "meters-collapse-button",
+        "meters-visibility-button",
+        "meters-details",
+        "meter-cpu-sparkline",
+        "meter-ram-sparkline",
+        "meter-rss-sparkline",
+        "meter-swap-sparkline",
     ):
         assert f'id="{element_id}"' in root_html
 
@@ -168,6 +177,7 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
         "/api/media",
         "/api/search",
         "/api/events",
+        "/meters",
         "/queue",
     ):
         assert endpoint in script
@@ -175,6 +185,11 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
     assert "readEventStream" in script
     assert "parseEventChunk" in script
     assert 'case "tau.plan.updated"' in script
+    assert 'frame.event === "tau.meters.updated"' in script
+    assert "startMetersPolling" in script
+    assert 'document.addEventListener("visibilitychange", handleMetersVisibilityChange)' in script
+    assert '"tau.web.metersEnabled"' in script
+    assert '"tau.web.metersCollapsed"' in script
     assert "expected_revision" in script
     assert 'navigator.serviceWorker.register("/sw.js", { scope: "/" });' in script
     assert ".innerHTML" not in script

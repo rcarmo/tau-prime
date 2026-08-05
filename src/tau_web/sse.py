@@ -10,7 +10,12 @@ from dataclasses import dataclass, field, replace
 from tau_agent.types import JSONObject
 from tau_web.events import WebEventEnvelope
 
-_LOW_EVENT_TYPES = frozenset({"message_delta", "thinking_delta", "tool_execution_update"})
+GLOBAL_EVENT_SESSION_ID = "__tau_global__"
+"""Internal pseudo-session id for host-wide events such as meters updates."""
+
+_LOW_EVENT_TYPES = frozenset(
+    {"message_delta", "thinking_delta", "tool_execution_update", "tau.meters.updated"}
+)
 _DELTA_EVENT_TYPES = frozenset({"message_delta", "thinking_delta"})
 
 
@@ -122,6 +127,7 @@ class EventBroker:
         self._replay: deque[BrokerEvent] = deque()
         self._subscriptions: list[_SubscriberState] = []
         self._replay_drop_floor = 0
+        self._global_drop_floor = 0
         self._session_drop_floors: dict[str, int] = {}
 
     @property
@@ -200,13 +206,19 @@ class EventBroker:
             dropped = self._replay.popleft()
             self._replay_drop_floor = dropped.cursor
             session_id = dropped.envelope.session_id
-            self._session_drop_floors[session_id] = dropped.cursor
+            if session_id == GLOBAL_EVENT_SESSION_ID:
+                self._global_drop_floor = dropped.cursor
+            else:
+                self._session_drop_floors[session_id] = dropped.cursor
         self._replay.append(broker_event)
 
     def _drop_floor_for(self, session_id: str | None) -> int:
         if session_id is None:
             return self._replay_drop_floor
-        return self._session_drop_floors.get(session_id, 0)
+        return max(
+            self._global_drop_floor,
+            self._session_drop_floors.get(session_id, 0),
+        )
 
     def _enqueue(self, state: _SubscriberState, broker_event: BrokerEvent) -> None:
         if state.closed:
@@ -264,6 +276,8 @@ class EventBroker:
 
 
 def _matches_session(expected: str | None, actual: str) -> bool:
+    if actual == GLOBAL_EVENT_SESSION_ID:
+        return True
     return expected is None or expected == actual
 
 
@@ -273,6 +287,8 @@ def _payload_event_type(envelope: WebEventEnvelope) -> str | None:
         return event_type
     if envelope.type.startswith("tau.agent."):
         return envelope.type.removeprefix("tau.agent.")
+    if envelope.type.startswith("tau."):
+        return envelope.type
     return None
 
 
@@ -319,7 +335,16 @@ def _coalesce_tail(existing: BrokerEvent, incoming: BrokerEvent) -> BrokerEvent 
             return None
         return incoming
 
+    if existing_type == "tau.meters.updated":
+        return incoming
+
     return None
 
 
-__all__ = ["BrokerEvent", "EventBroker", "EventSubscription", "ReplayResult"]
+__all__ = [
+    "BrokerEvent",
+    "EventBroker",
+    "EventSubscription",
+    "GLOBAL_EVENT_SESSION_ID",
+    "ReplayResult",
+]

@@ -16,8 +16,9 @@ from tau_agent import (
     TurnEndEvent,
     UserMessage,
 )
-from tau_web.events import WebEventEnvelope, build_web_event_envelope
-from tau_web.sse import BrokerEvent, EventBroker
+from tau_web.baseline_extensions.meters import METERS_EVENT_TYPE
+from tau_web.events import WebEventEnvelope, build_invalidation_envelope, build_web_event_envelope
+from tau_web.sse import GLOBAL_EVENT_SESSION_ID, BrokerEvent, EventBroker
 
 
 @pytest.fixture
@@ -184,6 +185,82 @@ async def test_slow_subscriber_never_blocks_other_subscribers() -> None:
     assert await slow_subscription.next(timeout=0.1) == first_high
     assert await slow_subscription.next(timeout=0.0) is None
     assert await fast_subscription.next(timeout=0.0) is None
+
+
+@pytest.mark.anyio
+async def test_event_broker_delivers_global_meter_events_to_all_subscriptions_and_replay() -> None:
+    broker = EventBroker(replay_capacity=4, subscriber_capacity=4)
+    global_envelope = build_invalidation_envelope(
+        event_type=METERS_EVENT_TYPE,
+        session_id=GLOBAL_EVENT_SESSION_ID,
+        payload={"cpu_percent": 12.5},
+    )
+
+    all_subscription, _ = broker.subscribe()
+    alpha_subscription, _ = broker.subscribe(session_id="alpha")
+    beta_subscription, _ = broker.subscribe(session_id="beta")
+
+    published = await broker.publish(global_envelope)
+
+    assert (await all_subscription.next(timeout=0.1)) == published
+    assert (await alpha_subscription.next(timeout=0.1)) == published
+    assert (await beta_subscription.next(timeout=0.1)) == published
+
+    replay_subscription, replay = broker.subscribe(session_id="alpha", last_event_id=0)
+
+    assert replay.snapshot_required is False
+    assert replay.events == (published,)
+    assert replay.events[0].envelope.session_id == GLOBAL_EVENT_SESSION_ID
+    assert await replay_subscription.next(timeout=0.0) is None
+
+
+@pytest.mark.anyio
+async def test_event_broker_marks_session_replay_stale_after_global_event_drops() -> None:
+    broker = EventBroker(replay_capacity=1, subscriber_capacity=2)
+    await broker.publish(
+        build_invalidation_envelope(
+            event_type=METERS_EVENT_TYPE,
+            session_id=GLOBAL_EVENT_SESSION_ID,
+            payload={"cpu_percent": 10.0},
+        )
+    )
+    await broker.publish(_envelope(TurnEndEvent(turn=1), session_id="beta", sequence=1))
+
+    subscription, replay = broker.subscribe(session_id="alpha", last_event_id=0)
+
+    assert replay.snapshot_required is True
+    assert replay.events == ()
+    assert await subscription.next(timeout=0.0) is None
+
+
+@pytest.mark.anyio
+async def test_event_broker_coalesces_global_meter_events_when_full() -> None:
+    broker = EventBroker(replay_capacity=8, subscriber_capacity=1)
+    subscription, _ = broker.subscribe(session_id="alpha")
+
+    first = await broker.publish(
+        build_invalidation_envelope(
+            event_type=METERS_EVENT_TYPE,
+            session_id=GLOBAL_EVENT_SESSION_ID,
+            payload={"cpu_percent": 10.0},
+        )
+    )
+    latest = await broker.publish(
+        build_invalidation_envelope(
+            event_type=METERS_EVENT_TYPE,
+            session_id=GLOBAL_EVENT_SESSION_ID,
+            payload={"cpu_percent": 20.0},
+        )
+    )
+
+    delivered = await subscription.next(timeout=0.1)
+
+    assert delivered is not None
+    assert delivered != first
+    assert delivered == latest
+    assert delivered.envelope.type == METERS_EVENT_TYPE
+    assert delivered.envelope.payload == {"cpu_percent": 20.0}
+    assert await subscription.next(timeout=0.0) is None
 
 
 @pytest.mark.anyio
