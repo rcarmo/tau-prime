@@ -35,6 +35,7 @@ FRONTEND_ASSETS = (
     ("/manifest.webmanifest", "application/manifest+json"),
     ("/sw.js", "application/javascript"),
     ("/static/app.css", "text/css"),
+    ("/static/piclaw-reference.css", "text/css"),
     ("/static/app.js", "application/javascript"),
     ("/static/live-ui.js", "application/javascript"),
     ("/static/extension-ui.js", "application/javascript"),
@@ -100,8 +101,17 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         await client.close()
 
     assert root_html == index_html
+    shell_html = (
+        Path(__file__).parents[2] / "src" / "tau_web" / "frontend" / "src" / "shell.html"
+    ).read_text(encoding="utf-8")
+    assert '<script type="module" src="/static/preact-shell.js"></script>' in root_html
+    preact_script = '<script type="module" src="/static/preact-shell.js"></script>'
+    live_script = '<script type="module" src="/static/live-ui.js"></script>'
+    assert root_html.index(preact_script) < root_html.index(live_script)
+    root_html += shell_html
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
     assert '<link rel="stylesheet" href="/static/app.css" />' in root_html
+    assert '<link rel="stylesheet" href="/static/piclaw-reference.css" />' in root_html
     assert '<script type="module" src="/static/live-ui.js"></script>' in root_html
     assert '<script type="module" src="/static/extension-ui.js"></script>' in root_html
     assert '<script type="module" src="/static/frontend-sdk.js"></script>' in root_html
@@ -511,6 +521,7 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "/index.html",
         "/manifest.webmanifest",
         "/static/app.css",
+        "/static/piclaw-reference.css",
         "/static/app.js",
         "/static/live-ui.js",
         "/static/extension-ui.js",

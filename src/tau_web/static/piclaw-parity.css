@@ -3,18 +3,18 @@
  * spacing, surfaces, typography, controls, and responsive behavior.
  */
 :root {
-  --bg-primary: #f7f8fa;
-  --bg-secondary: #ffffff;
-  --bg-hover: #eef1f5;
-  --text-primary: #17191d;
-  --text-secondary: #68707d;
-  --border-color: #dfe3e8;
-  --accent-color: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-color-alpha: rgba(79, 70, 229, 0.16);
-  --accent-soft: rgba(79, 70, 229, 0.08);
-  --accent-soft-strong: rgba(79, 70, 229, 0.14);
-  --accent-contrast-text: #ffffff;
+  --bg-primary: #0d0f12;
+  --bg-secondary: #15181d;
+  --bg-hover: #20242b;
+  --text-primary: #eef1f5;
+  --text-secondary: #9ca5b2;
+  --border-color: #2a2f37;
+  --accent-color: #8b86ff;
+  --accent-hover: #a7a3ff;
+  --accent-color-alpha: rgba(139, 134, 255, 0.18);
+  --accent-soft: rgba(139, 134, 255, 0.09);
+  --accent-soft-strong: rgba(139, 134, 255, 0.15);
+  --accent-contrast-text: #101116;
   --warning-color: #d97706;
   --danger-color: #dc2626;
   --success-color: #16a34a;
@@ -31,7 +31,7 @@
   --shadow-md: 0 10px 28px rgb(15 23 42 / 0.10);
   --chat-max-width: 920px;
   --ui-transition-fast: 140ms ease;
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -53,7 +53,9 @@
 * { box-sizing: border-box; }
 html, body { background: var(--bg-primary); color: var(--text-primary); }
 body { font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-button, input, textarea, select { font: inherit; }
+button, input, textarea, select { font: inherit; color: var(--text-primary); }
+select, option { background: var(--bg-secondary); color: var(--text-primary); -webkit-text-fill-color: var(--text-primary); }
+#compose-delivery-mode { appearance: none; -webkit-appearance: none; background: #0d0f12; color: #f5f7fa; -webkit-text-fill-color: #f5f7fa; }
 button, .button, input, textarea, select {
   border-color: var(--border-color);
   border-radius: var(--radius-md);
@@ -319,6 +321,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .compose-toolbar, .compose-input-row, .compose-actions { width: 100%; }
 .compose-form textarea { min-height: 58px; border: 0; background: transparent; box-shadow: none; }
 .compose-form textarea:focus { outline: 0; }
+.compose-form textarea:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--accent-color-alpha);
+}
 .compose-form button[type="submit"] { border-color: var(--accent-color); border-radius: var(--radius-full); background: var(--accent-color); color: var(--accent-contrast-text); }
 .workspace-entry-button { border: 0; background: transparent; border-radius: var(--radius-sm); }
 .workspace-entry-button:hover { background: var(--bg-hover); }

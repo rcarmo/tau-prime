@@ -12,6 +12,7 @@ await build({
   jsx: "automatic",
   jsxImportSource: "preact",
   legalComments: "none",
+  loader: { ".html": "text" },
   outfile,
   platform: "browser",
   target: ["es2022"],
