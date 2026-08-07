@@ -870,6 +870,31 @@ function SessionList({ filter, onSelectFilter }) {
   ] });
 }
 
+// src/components/SearchResults.tsx
+function SearchResults() {
+  const [items, setItems] = h2([]);
+  _2(() => {
+    const update = (event) => setItems(event.detail.items);
+    window.addEventListener("tau:search-render", update);
+    return () => window.removeEventListener("tau:search-render", update);
+  }, []);
+  return /* @__PURE__ */ u2("ol", { id: "search-results", className: "search-panel__results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite", children: [
+    !items.length && /* @__PURE__ */ u2("li", { children: "Search results will appear here." }),
+    items.map((result, index) => /* @__PURE__ */ u2("li", { className: "search-panel__item", children: /* @__PURE__ */ u2("article", { children: [
+      /* @__PURE__ */ u2("div", { className: "search-panel__item-header", children: [
+        /* @__PURE__ */ u2("strong", { className: "search-panel__item-type", children: [
+          result.entityType,
+          " \xB7 ",
+          result.entityId
+        ] }),
+        /* @__PURE__ */ u2("span", { className: "search-panel__item-time", children: result.meta })
+      ] }),
+      /* @__PURE__ */ u2("span", { className: "search-panel__item-text", children: result.text }),
+      result.sessionId && /* @__PURE__ */ u2("button", { type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
+    ] }) }, `${result.entityType}-${result.entityId}-${index}`))
+  ] });
+}
+
 // src/components/SidePanel.tsx
 var TITLES = {
   sessions: "Sessions",
@@ -942,7 +967,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
             /* @__PURE__ */ u2("button", { id: "search-submit-button", className: "search-panel__submit", type: "submit", children: "Search" })
           ] })
         ] }),
-        /* @__PURE__ */ u2("ol", { id: "search-results", className: "search-panel__results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite" })
+        /* @__PURE__ */ u2(SearchResults, {})
       ] }),
       /* @__PURE__ */ u2(PlanPanel, { hidden: activeTab !== "plan" }),
       /* @__PURE__ */ u2("section", { id: "panel-settings", className: "settings-panel", "aria-labelledby": "tab-settings", hidden: activeTab !== "settings", children: [

@@ -2,6 +2,7 @@ import type { SidebarTab } from "../hooks/useSidebarTabs";
 import type { SessionFilter } from "../hooks/useSessionFilter";
 import { PlanPanel } from "./PlanPanel";
 import { SessionList } from "./SessionList";
+import { SearchResults } from "./SearchResults";
 
 const TITLES: Record<SidebarTab, string> = {
   sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
@@ -82,7 +83,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
               <button id="search-submit-button" className="search-panel__submit" type="submit">Search</button>
             </div>
           </form>
-          <ol id="search-results" className="search-panel__results" tabIndex={0} aria-label="Search results" aria-live="polite" />
+          <SearchResults />
         </section>
 
         <PlanPanel hidden={activeTab !== "plan"} />

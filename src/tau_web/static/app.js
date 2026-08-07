@@ -180,7 +180,6 @@ function bindUi() {
     searchForm: requiredElement("search-form"),
     searchInput: requiredElement("search-input"),
     searchSubmitButton: requiredElement("search-submit-button"),
-    searchResults: requiredElement("search-results"),
     planForm: requiredElement("plan-form"),
     planEditor: requiredElement("plan-editor"),
     planRevision: requiredElement("plan-revision"),
@@ -239,6 +238,13 @@ function installEventHandlers() {
   window.addEventListener("tau:branch-select", (event) => {
     const leafId = event.detail?.leafId;
     if (typeof leafId === "string") void selectBranch(leafId);
+  });
+  window.addEventListener("tau:search-open-session", (event) => {
+    const sessionId = event.detail?.sessionId;
+    if (typeof sessionId === "string") {
+      switchTab("workspace");
+      void selectSession(sessionId, { reconnect: true });
+    }
   });
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
@@ -1735,53 +1741,18 @@ async function handleWidgetRefresh(event) {
 }
 
 function renderSearchResults() {
-  ui.searchResults.replaceChildren();
-  if (!state.searchResults.length) {
-    ui.searchResults.append(createPlaceholderItem("Search results will appear here."));
-    return;
-  }
-
-  for (const result of state.searchResults) {
-    const item = document.createElement("li");
-    item.className = "search-panel__item";
-    const card = document.createElement("article");
-
-    const header = document.createElement("div");
-    header.className = "search-panel__item-header";
-    const title = document.createElement("strong");
-    title.className = "search-panel__item-type";
-    title.textContent = `${result.entity_type} · ${result.entity_id}`;
-
-    const meta = document.createElement("span");
-    meta.className = "search-panel__item-time";
-    meta.textContent = [
-      result.session_id ? `Session ${shortId(result.session_id)}` : "Global",
-      typeof result.rank === "number" ? `Rank ${result.rank.toFixed(2)}` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-
-    const text = document.createElement("span");
-    text.className = "search-panel__item-text";
-    text.textContent = stringOrEmpty(result.text) || "(empty)";
-
-    header.append(title, meta);
-    card.append(header, text);
-
-    if (typeof result.session_id === "string" && result.session_id) {
-      const action = document.createElement("button");
-      action.type = "button";
-      action.textContent = "Open session";
-      action.addEventListener("click", () => {
-        switchTab("workspace");
-        void selectSession(result.session_id, { reconnect: true });
-      });
-      card.append(action);
-    }
-
-    item.append(card);
-    ui.searchResults.append(item);
-  }
+  window.dispatchEvent(new CustomEvent("tau:search-render", { detail: {
+    items: state.searchResults.map((result) => ({
+      entityType: stringOrEmpty(result.entity_type),
+      entityId: stringOrEmpty(result.entity_id),
+      meta: [
+        result.session_id ? `Session ${shortId(result.session_id)}` : "Global",
+        typeof result.rank === "number" ? `Rank ${result.rank.toFixed(2)}` : null,
+      ].filter(Boolean).join(" · "),
+      text: stringOrEmpty(result.text) || "(empty)",
+      sessionId: typeof result.session_id === "string" && result.session_id ? result.session_id : null,
+    })),
+  } }));
 }
 
 function renderSettings() {
