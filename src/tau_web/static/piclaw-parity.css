@@ -111,6 +111,15 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 
 /* Tau's multi-session dashboard is a wide Piclaw modal, not an in-flow
  * legacy dashboard region. Its generated cards retain Tau API ownership. */
+.modal-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-dialog__form .settings-panel__field {
+  grid-template-columns: 90px minmax(0, 1fr);
+}
+
 #session-dashboard[hidden] { display: none !important; }
 .session-dashboard__dialog {
   width: min(1080px, 94vw);

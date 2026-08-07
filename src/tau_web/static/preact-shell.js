@@ -1008,26 +1008,26 @@ function Onboarding() {
   if (!state && !error) return null;
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("button", { className: "provider-setup-trigger", type: "button", onClick: () => setOpen(true), children: "Provider setup" }),
-    open && state ? /* @__PURE__ */ u2("div", { className: "onboarding-backdrop", role: "presentation", children: /* @__PURE__ */ u2("section", { className: "onboarding-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "onboarding-title", children: [
-      /* @__PURE__ */ u2("h2", { id: "onboarding-title", children: "Connect a model provider" }),
-      /* @__PURE__ */ u2("p", { children: "Choose a provider and model. Credentials are stored locally and never returned by this API." }),
-      /* @__PURE__ */ u2("form", { onSubmit: submit, children: [
-        /* @__PURE__ */ u2("label", { children: [
-          "Provider",
-          /* @__PURE__ */ u2("select", { value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.name, children: item.name })) })
+    open && state ? /* @__PURE__ */ u2("div", { className: "modal-dialog__backdrop", role: "presentation", children: /* @__PURE__ */ u2("section", { className: "modal-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "onboarding-title", children: [
+      /* @__PURE__ */ u2("h2", { id: "onboarding-title", className: "modal-dialog__title", children: "Connect a model provider" }),
+      /* @__PURE__ */ u2("p", { className: "modal-dialog__description", children: "Choose a provider and model. Credentials are stored locally and never returned by this API." }),
+      /* @__PURE__ */ u2("form", { className: "modal-dialog__form", onSubmit: submit, children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
+          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "Provider" }),
+          /* @__PURE__ */ u2("select", { className: "settings-panel__select", value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.name, children: item.name })) })
         ] }),
-        /* @__PURE__ */ u2("label", { children: [
-          "Model",
-          /* @__PURE__ */ u2("select", { value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u2("option", { value: item, children: item })) })
+        /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
+          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "Model" }),
+          /* @__PURE__ */ u2("select", { className: "settings-panel__select", value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u2("option", { value: item, children: item })) })
         ] }),
-        selected?.credential_name ? /* @__PURE__ */ u2("label", { children: [
-          "API key",
-          /* @__PURE__ */ u2("input", { type: "password", value: credential, autocomplete: "off", onInput: (event) => setCredential(event.currentTarget.value), placeholder: selected.configured ? "Stored credential (leave blank to keep)" : "Required" })
+        selected?.credential_name ? /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
+          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "API key" }),
+          /* @__PURE__ */ u2("input", { className: "modal-dialog__input", type: "password", value: credential, autocomplete: "off", onInput: (event) => setCredential(event.currentTarget.value), placeholder: selected.configured ? "Stored credential (leave blank to keep)" : "Required" })
         ] }) : null,
-        error ? /* @__PURE__ */ u2("p", { className: "onboarding-error", role: "alert", children: error }) : null,
-        /* @__PURE__ */ u2("div", { className: "onboarding-actions", children: [
-          /* @__PURE__ */ u2("button", { type: "button", onClick: () => setOpen(false), children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { type: "submit", disabled: saving || !provider || !model || Boolean(selected?.credential_name && !selected.configured && !credential.trim()), children: saving ? "Saving\u2026" : "Save and continue" })
+        error ? /* @__PURE__ */ u2("p", { className: "modal-dialog__description onboarding-error", role: "alert", children: error }) : null,
+        /* @__PURE__ */ u2("div", { className: "modal-dialog__actions", children: [
+          /* @__PURE__ */ u2("button", { className: "modal-dialog__btn", type: "button", onClick: () => setOpen(false), children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { className: "modal-dialog__btn modal-dialog__btn--primary", type: "submit", disabled: saving || !provider || !model || Boolean(selected?.credential_name && !selected.configured && !credential.trim()), children: saving ? "Saving\u2026" : "Save and continue" })
         ] })
       ] })
     ] }) }) : null
