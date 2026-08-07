@@ -5,6 +5,7 @@ import { StatusBar } from "./components/StatusBar";
 import { Composer } from "./components/Composer";
 import { Dashboard } from "./components/Dashboard";
 import { SessionNav } from "./components/SessionNav";
+import { Timeline } from "./components/Timeline";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
@@ -22,6 +23,7 @@ function TauShell() {
                 <Dashboard />
                 <div className="shell-layout">
                   <SessionNav />
+                  <Timeline />
                   <div className="legacy-shell-regions" dangerouslySetInnerHTML={{ __html: appShellMarkup }} />
                 </div>
                 <Composer />
