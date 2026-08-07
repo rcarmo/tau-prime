@@ -26,6 +26,8 @@ Backoff is short, exponential, and capped by `max_retry_delay_seconds`.
 Cancellation is checked during the backoff delay so Escape/TUI cancellation does
 not wait for the entire retry sleep to finish.
 
+Anthropic may also encode an error event inside an otherwise successful HTTP 200 SSE response. Tau retries `api_error`, `overloaded_error`, `rate_limit_error`, and `timeout_error` stream events only when no content has been emitted and the retry budget remains. Exhausted errors retain the upstream event and attempt count; non-transient errors and errors after partial content are surfaced without replaying output. This behavior corresponds to upstream `809e0e6`, adapted to Tau Prime's existing provider-neutral retry events.
+
 ## Rendering
 
 Transcript, final-text CLI mode, and TUI renderers show retry progress as subtle

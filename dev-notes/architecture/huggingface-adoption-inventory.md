@@ -12,7 +12,7 @@ Direct cherry-picks are not the default. Tau Prime preserves its Python provider
 
 | Order | Upstream | Behavior | Classification | Tau Prime treatment |
 | ---: | --- | --- | --- | --- |
-| 1 | `809e0e6` | transient Anthropic stream retries | Manual port required | Adapt retry classification/backoff to Tau Prime's Anthropic provider; preserve cancellation and bounded delays. |
+| 1 | `809e0e6` | transient Anthropic stream retries | Already present; coverage completed | Tau Prime commit `479cd68` already implemented equivalent provider-layer behavior; adoption adds deterministic exhaustion, partial-content, and cancellation coverage. |
 | 2 | `3583456` | tool history across provider switches | Manual port required | Normalize at provider adapters/session projection; do not replace `tau_agent/loop.py` or SQLite recovery. |
 | 3 | `5bf70e5` | Anthropic one-hour cache-write billing | Manual port required | Extend Tau Prime usage/pricing records and backward-compatible SQLite projections. |
 | 4 | `1401fcd` | OpenAI prompt-cache affinity | Manual port required | Carry stable per-session affinity through current provider config/runtime seams only. |

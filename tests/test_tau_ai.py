@@ -2327,3 +2327,143 @@ async def test_openai_chat_completions_drops_empty_tool_name_pairs() -> None:
     payload = loads(requests[0].content)
     assert not [message for message in payload["messages"] if message["role"] == "assistant"]
     assert not [message for message in payload["messages"] if message["role"] == "tool"]
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_surfaces_stream_error_after_retry_exhaustion() -> None:
+    requests: list[httpx.Request] = []
+    error_event = {
+        "type": "error",
+        "error": {"type": "overloaded_error", "message": "Overloaded"},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"error","error":{"type":"overloaded_error",'
+                '"message":"Overloaded"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                max_retries=2,
+                max_retry_delay_seconds=0,
+            ),
+            client=client,
+        )
+        events = await _collect(
+            provider.stream_response(
+                model="claude-test",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+            )
+        )
+
+    assert len(requests) == 3
+    assert isinstance(events[-1], ProviderErrorEvent)
+    assert events[-1].message == "Overloaded"
+    assert events[-1].retryable is True
+    assert events[-1].data == {"event": error_event, "attempts": 3}
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_does_not_retry_stream_error_after_content() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"content_block_delta","index":0,'
+                '"delta":{"type":"text_delta","text":"partial"}}\n\n'
+                'data: {"type":"error","error":{"type":"overloaded_error",'
+                '"message":"Overloaded"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                max_retries=2,
+                max_retry_delay_seconds=0,
+            ),
+            client=client,
+        )
+        events = await _collect(
+            provider.stream_response(
+                model="claude-test",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+            )
+        )
+
+    assert len(requests) == 1
+    assert isinstance(events[-2], ProviderTextDeltaEvent)
+    assert events[-2].delta == "partial"
+    assert isinstance(events[-1], ProviderErrorEvent)
+    assert events[-1].message == "Overloaded"
+    assert events[-1].retryable is True
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_cancellation_stops_stream_error_retry_backoff() -> None:
+    requests: list[httpx.Request] = []
+
+    class CancelDuringBackoff(SimpleCancellationToken):
+        def __init__(self) -> None:
+            super().__init__()
+            self.checks = 0
+
+        def is_cancelled(self) -> bool:
+            self.checks += 1
+            return self.checks >= 2
+
+    signal = CancelDuringBackoff()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"error","error":{"type":"overloaded_error",'
+                '"message":"Overloaded"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                max_retries=2,
+                max_retry_delay_seconds=1,
+            ),
+            client=client,
+        )
+        events = await _collect(
+            provider.stream_response(
+                model="claude-test",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+                signal=signal,
+            )
+        )
+
+    assert len(requests) == 1
+    assert len(events) == 2
+    assert isinstance(events[-1], ProviderRetryEvent)
