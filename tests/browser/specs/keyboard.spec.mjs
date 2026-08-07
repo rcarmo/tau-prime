@@ -147,9 +147,9 @@ test('keyboard shortcuts, completion behavior, and focus traversal', async ({ pa
   await expect(composeInput).toBeFocused();
 
   await openSidePanelIfNeeded(page);
-  await page.locator('#tab-workspace').focus();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#tab-workspace')).toHaveAttribute('aria-selected', 'true');
+  const workspacePanelButton = page.locator('.activity-bar__button[aria-label="Workspace"]');
+  if (await workspacePanelButton.isVisible()) await workspacePanelButton.click();
+  await expect(page.locator('#panel-workspace')).toBeVisible();
 
   const reloadButton = page.locator('#workspace-reload-button');
   await expect(reloadButton).toBeEnabled();

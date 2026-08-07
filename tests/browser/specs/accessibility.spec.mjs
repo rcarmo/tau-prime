@@ -48,10 +48,11 @@ async function expectNoBlockingAxeViolations(page, label) {
 async function assertCoreAccessibleControls(page) {
   await expect(page.getByRole('combobox', { name: /send a prompt to tau/i })).toHaveCount(1);
   await expect(page.getByRole('button', { name: /^run$/i })).toHaveCount(1);
-  await expect(page.getByRole('complementary', { name: /session navigation/i })).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: /activity bar/i })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: /^sessions$/i })).toHaveCount(1);
 
-  for (const tabName of ['Workspace', 'Search', 'Plan', 'Settings']) {
-    await expect(page.getByRole('tab', { name: new RegExp(`^${tabName}$`, 'i') })).toHaveCount(1);
+  for (const panelName of ['Workspace', 'Search', 'Plan', 'Settings']) {
+    await expect(page.locator(`.activity-bar__button[aria-label="${panelName}"]`)).toHaveCount(1);
   }
 }
 

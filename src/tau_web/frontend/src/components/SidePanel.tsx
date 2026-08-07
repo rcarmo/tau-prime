@@ -1,4 +1,9 @@
 import type { SidebarTab } from "../hooks/useSidebarTabs";
+import type { SessionFilter } from "../hooks/useSessionFilter";
+
+const TITLES: Record<SidebarTab, string> = {
+  sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
+};
 
 const Tab = ({ name, selected, onSelect, children }: {
   name: SidebarTab;
@@ -9,24 +14,40 @@ const Tab = ({ name, selected, onSelect, children }: {
   <button id={`tab-${name}`} className="tab-button" type="button" role="tab" aria-controls={`panel-${name}`} aria-selected={selected} onClick={() => onSelect(name)}>{children}</button>
 );
 
-export function SidePanel({ activeTab, onSelectTab, onClose }: {
+export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter }: {
   activeTab: SidebarTab;
   onSelectTab: (tab: SidebarTab) => void;
   onClose: () => void;
+  sessionFilter: SessionFilter;
+  onSelectSessionFilter: (filter: SessionFilter) => void;
 }) {
   return (
     <aside id="side-panel" className="sidebar panel-side" aria-label="Workspace search and settings">
       <header className="sidebar__header">
-        <div><h2 className="sidebar__title">Workspace</h2><p className="muted">Files, search, and Tau settings.</p></div>
-        <button id="close-panel-drawer" className="icon-button mobile-only" type="button" aria-label="Close workspace drawer" onClick={onClose}>Close</button>
+        <h2 className="sidebar__title">{TITLES[activeTab]}</h2>
+        <button id="close-nav-drawer" className="icon-button mobile-only" type="button" aria-label="Close sessions drawer" hidden={activeTab !== "sessions"} onClick={onClose}>Close</button>
+        <button id="close-panel-drawer" className="icon-button mobile-only" type="button" aria-label="Close workspace drawer" hidden={activeTab === "sessions"} onClick={onClose}>Close</button>
       </header>
       <div className="sidebar__content">
-      <div className="tabs" role="tablist" aria-label="Sidebar sections">
+      <div hidden>
         <Tab name="workspace" selected={activeTab === "workspace"} onSelect={onSelectTab}>Workspace</Tab>
         <Tab name="search" selected={activeTab === "search"} onSelect={onSelectTab}>Search</Tab>
         <Tab name="plan" selected={activeTab === "plan"} onSelect={onSelectTab}>Plan</Tab>
         <Tab name="settings" selected={activeTab === "settings"} onSelect={onSelectTab}>Settings</Tab>
       </div>
+      <section id="panel-sessions" className="tab-panel" aria-label="Session navigation" hidden={activeTab !== "sessions"}>
+        <div className="button-row button-row-wrap" role="group" aria-label="Session actions">
+          <button id="new-session-button" type="button">New</button>
+          <button id="archive-session-button" type="button">Archive</button>
+          <button id="restore-session-button" type="button">Restore</button>
+        </div>
+        <div className="button-row" role="group" aria-label="Session list filter">
+          <button id="show-active-sessions" type="button" aria-pressed={sessionFilter === "active"} onClick={() => onSelectSessionFilter("active")}>Active</button>
+          <button id="show-archived-sessions" type="button" aria-pressed={sessionFilter === "archived"} onClick={() => onSelectSessionFilter("archived")}>Archived</button>
+        </div>
+        <p id="session-count" className="muted small-text">0 sessions</p>
+        <ul id="session-list" className="session-list" aria-label="Available sessions" />
+      </section>
       <section id="panel-workspace" className="tab-panel" role="tabpanel" aria-labelledby="tab-workspace" hidden={activeTab !== "workspace"}>
         <div className="toolbar-row"><button id="workspace-up-button" type="button">Up</button><button id="workspace-reload-button" type="button">Reload</button></div>
         <p id="workspace-path" className="muted small-text">.</p>

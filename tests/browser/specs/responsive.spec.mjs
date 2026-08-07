@@ -71,6 +71,7 @@ async function openWorkspacePanel(page) {
     await expect(panelToggle).toHaveAttribute('aria-expanded', 'true');
     await expect.poll(() => drawerState(page)).toEqual({ nav: 'false', panel: 'true' });
   } else {
+    await page.getByRole('button', { name: /^workspace$/i }).click();
     await expect(page.locator('#side-panel')).toBeVisible();
   }
 
@@ -80,7 +81,7 @@ async function openWorkspacePanel(page) {
     await expect(workspaceTab).toBeFocused();
     await page.keyboard.press('Enter');
   }
-  await expect(workspaceTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#panel-workspace')).toBeVisible();
 }
 
 async function activateWorkspaceEntry(page, button) {
@@ -105,16 +106,18 @@ test('responsive shell, nav drawers, and UTF-8 workspace file rendering', async 
   expect(overflow.doc).toBeLessThanOrEqual(1);
   expect(overflow.body).toBeLessThanOrEqual(1);
 
-  await expect(page.getByRole('banner', { name: /tau status bar/i })).toHaveCount(1);
+  await expect(page.locator('.app-layout__status-bar[aria-label="Tau status bar"]')).toHaveCount(1);
   await expect(page.getByRole('main')).toHaveCount(1);
-  await expect(page.getByRole('complementary', { name: /session navigation/i })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: /^new$/i })).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: /activity bar/i })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: /^sessions$/i })).toHaveCount(1);
   await expect(page.getByRole('button', { name: /^run$/i })).toHaveCount(1);
 
   const usedDrawerLayout = await openNavDrawerIfAvailable(page);
   if (!usedDrawerLayout) {
     await expect(page.locator('#mobile-nav-toggle')).toBeHidden();
-    await expect(page.locator('#session-nav')).toBeVisible();
+    await page.getByRole('button', { name: /^sessions$/i }).click();
+    await expect(page.locator('#side-panel')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^new$/i })).toBeVisible();
   }
 
   await openWorkspacePanel(page);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 
-export type SidebarTab = "workspace" | "search" | "plan" | "settings";
-const TABS = new Set<SidebarTab>(["workspace", "search", "plan", "settings"]);
+export type SidebarTab = "sessions" | "workspace" | "search" | "plan" | "settings";
+const TABS = new Set<SidebarTab>(["sessions", "workspace", "search", "plan", "settings"]);
 
 export function useSidebarTabs() {
   const [activeTab, setActiveTab] = useState<SidebarTab>("workspace");

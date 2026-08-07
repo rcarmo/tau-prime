@@ -5,12 +5,10 @@ const Meter = ({ id, label }: { id: string; label: string }) => (
   </figure>
 );
 
-export function StatusBar({ drawer, dashboardOpen, metersEnabled, metersCollapsed, onToggleDrawer, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }: {
-  drawer: "nav" | "panel" | null;
+export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }: {
   dashboardOpen: boolean;
   metersEnabled: boolean;
   metersCollapsed: boolean;
-  onToggleDrawer: (drawer: "nav" | "panel") => void;
   onToggleDashboard: () => void;
   onToggleMetersEnabled: () => void;
   onToggleMetersCollapsed: () => void;

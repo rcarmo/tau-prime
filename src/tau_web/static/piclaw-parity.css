@@ -84,6 +84,7 @@ option { background: var(--bg-secondary); }
 }
 body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 
+.app-layout__sidebar-backdrop[hidden] { display: none !important; }
 .provider-setup-trigger { display: none; }
 
 .app-layout__status-bar .system-meters,

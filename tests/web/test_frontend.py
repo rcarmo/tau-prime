@@ -566,8 +566,9 @@ def test_preact_owns_mobile_drawer_state() -> None:
 
     assert "document.body.dataset.navOpen" in hook
     assert 'window.addEventListener("keydown", keydown)' in hook
-    assert "<StatusBar drawer={drawer}" in shell
-    assert "hidden={drawer === null}" in shell
+    assert "const sidebarOpen = drawer !== null" in shell
+    assert 'style={{ width: sidebarOpen ? "300px" : "0" }}' in shell
+    assert 'className="app-layout__sidebar-wrapper"' in shell
     assert 'addEventListener("click", () => toggleDrawer' not in legacy
     assert 'new CustomEvent("tau:close-drawers")' in legacy
 
