@@ -15,6 +15,7 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/manifest.webmanifest",
         "/sw.js",
         "/static/app.css",
+        "/static/piclaw-parity.css",
         "/static/app.js",
         "/static/live-ui.js",
         "/static/extension-ui.js",
@@ -64,6 +65,12 @@ _ROOT_ASSETS: Final[dict[str, FrontendAsset]] = {
 _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
     "app.css": FrontendAsset(
         resource_name="app.css",
+        content_type="text/css",
+        charset="utf-8",
+        cache_control="public, max-age=3600, must-revalidate",
+    ),
+    "piclaw-parity.css": FrontendAsset(
+        resource_name="piclaw-parity.css",
         content_type="text/css",
         charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",

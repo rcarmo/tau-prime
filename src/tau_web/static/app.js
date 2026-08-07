@@ -2019,6 +2019,7 @@ function renderTimeline() {
     const listItem = document.createElement("li");
     const card = document.createElement("article");
     card.className = "timeline-card";
+    card.dataset.role = item.role;
 
     const role = document.createElement("p");
     role.className = "timeline-role";
