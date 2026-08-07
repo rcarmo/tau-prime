@@ -37,6 +37,7 @@ from tau_ai.observability import (
     observe_llm_request,
     observe_llm_response,
 )
+from tau_ai.openai_cache import is_direct_openai_url, openai_prompt_cache_key
 from tau_ai.provider import CancellationToken
 from tau_ai.remote_compaction import REMOTE_COMPACTION_SENTINEL, RemoteCompactionState
 from tau_ai.retry import (
@@ -78,6 +79,17 @@ class OpenAICompatibleProvider:
         self._owns_client = client is None
         self._observer = observer
         self._remote_compaction_state: RemoteCompactionState | None = None
+        self._session_id: str | None = None
+
+    def set_session_id(self, session_id: str | None) -> None:
+        """Set the stable session identity used for first-party OpenAI cache affinity."""
+        self._session_id = session_id
+
+    def _prompt_cache_key(self) -> str | None:
+        enabled = self._config.prompt_cache_affinity
+        if enabled is None:
+            enabled = is_direct_openai_url(self._config.base_url)
+        return openai_prompt_cache_key(self._session_id) if enabled else None
 
     def set_remote_compaction_state(self, state: RemoteCompactionState | None) -> None:
         """Configure canonical state to inject into subsequent Responses requests."""
@@ -132,6 +144,7 @@ class OpenAICompatibleProvider:
             tools=tools,
             reasoning_effort=self._config.reasoning_effort,
             reasoning_effort_parameter=self._config.reasoning_effort_parameter,
+            prompt_cache_key=self._prompt_cache_key(),
         )
         return self._stream(
             model=model,
@@ -157,6 +170,7 @@ class OpenAICompatibleProvider:
             messages=messages,
             tools=tools,
             reasoning_effort=self._config.reasoning_effort,
+            prompt_cache_key=self._prompt_cache_key(),
         )
         state = self._remote_compaction_state
         if state is not None:
@@ -708,6 +722,7 @@ def _build_chat_payload(
     tools: list[AgentTool],
     reasoning_effort: str | None = None,
     reasoning_effort_parameter: str = "reasoning_effort",
+    prompt_cache_key: str | None = None,
 ) -> dict[str, JSONValue]:
     payload: dict[str, JSONValue] = {
         "model": model,
@@ -717,6 +732,8 @@ def _build_chat_payload(
             *_messages_to_openai(messages),
         ],
     }
+    if prompt_cache_key is not None:
+        payload["prompt_cache_key"] = prompt_cache_key
     if reasoning_effort is not None:
         if reasoning_effort_parameter == "reasoning.effort":
             payload["reasoning"] = {"effort": reasoning_effort}
@@ -734,6 +751,7 @@ def _build_responses_payload(
     messages: list[AgentMessage],
     tools: list[AgentTool],
     reasoning_effort: str | None = None,
+    prompt_cache_key: str | None = None,
 ) -> dict[str, JSONValue]:
     payload: dict[str, JSONValue] = {
         "model": model,
@@ -745,6 +763,9 @@ def _build_responses_payload(
         "instructions": system,
         "input": _messages_to_responses_input(messages),
     }
+    if prompt_cache_key is not None:
+        payload["prompt_cache_key"] = prompt_cache_key
+        payload["session_id"] = prompt_cache_key
     effort = _normalize_responses_effort(reasoning_effort)
     if effort is not None:
         # ``summary: auto`` streams ``response.reasoning_summary_text.delta``

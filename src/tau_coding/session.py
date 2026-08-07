@@ -364,6 +364,9 @@ class CodingSession:
                 )
             )
         )
+        session_affinity_setter = getattr(config.provider, "set_session_id", None)
+        if callable(session_affinity_setter):
+            session_affinity_setter(config.session_id)
         harness = AgentHarness(
             AgentHarnessConfig(
                 provider=config.provider,
