@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
-from hashlib import sha1
 from json import loads
 from typing import Any
 
@@ -37,6 +36,7 @@ from tau_ai.retry import (
     retry_delay_seconds,
     wait_for_retry,
 )
+from tau_ai.tool_call_ids import portable_tool_call_id
 
 ANTHROPIC_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 4096
@@ -428,7 +428,7 @@ def _anthropic_message(
             content.append(
                 {
                     "type": "tool_use",
-                    "id": _anthropic_tool_id(tool_call.id),
+                    "id": portable_tool_call_id(tool_call.id),
                     "name": tool_call.name,
                     "input": tool_call.arguments,
                 }
@@ -444,7 +444,7 @@ def _anthropic_message(
             "content": [
                 {
                     "type": "tool_result",
-                    "tool_use_id": _anthropic_tool_id(message.tool_call_id),
+                    "tool_use_id": portable_tool_call_id(message.tool_call_id),
                     "content": message.content,
                     "is_error": not message.ok,
                 }
@@ -461,16 +461,6 @@ def _invalid_tool_call_ids(messages: list[AgentMessage]) -> set[str]:
         for tool_call in message.tool_calls
         if not tool_call.name.strip()
     }
-
-
-def _anthropic_tool_id(value: str) -> str:
-    """Return a tool-use id accepted by Anthropic's Messages API."""
-    cleaned = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value)
-    cleaned = cleaned.strip("_") or "tool_call"
-    if len(cleaned) <= 64:
-        return cleaned
-    suffix = "_" + sha1(value.encode("utf-8")).hexdigest()[:10]
-    return (cleaned[: 64 - len(suffix)].rstrip("_") or "tool_call") + suffix
 
 
 def _sanitize_anthropic_payload_tool_ids(payload: dict[str, JSONValue]) -> None:
@@ -491,13 +481,13 @@ def _sanitize_anthropic_payload_tool_ids(payload: dict[str, JSONValue]) -> None:
             if block.get("type") == "tool_use":
                 raw = block.get("id")
                 if isinstance(raw, str):
-                    clean = _anthropic_tool_id(raw)
+                    clean = portable_tool_call_id(raw)
                     id_map[raw] = clean
                     block["id"] = clean
             elif block.get("type") == "tool_result":
                 raw = block.get("tool_use_id")
                 if isinstance(raw, str):
-                    block["tool_use_id"] = id_map.get(raw, _anthropic_tool_id(raw))
+                    block["tool_use_id"] = id_map.get(raw, portable_tool_call_id(raw))
 
 
 def _anthropic_tool(tool: AgentTool) -> dict[str, JSONValue]:

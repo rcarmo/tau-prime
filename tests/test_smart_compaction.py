@@ -1,4 +1,5 @@
 from tau_agent.messages import AssistantMessage, ToolResultMessage, UserMessage
+from tau_agent.tools import ToolCall
 from tau_coding.pipelined_compaction import build_pipelined_compaction_prompt
 from tau_coding.smart_compaction import compaction_budget, serialize_compaction_source
 
@@ -36,6 +37,28 @@ def test_compaction_source_escapes_untrusted_delimiters() -> None:
 
     assert "</conversation_source_data>" not in source
     assert "&lt;/conversation_source_data&gt;" in source
+
+
+def test_compaction_serializes_foreign_tool_history_without_provider_ids() -> None:
+    foreign_id = "call_123|fc_opaque/provider"
+    source = serialize_compaction_source(
+        (
+            AssistantMessage(
+                tool_calls=[ToolCall(id=foreign_id, name="read", arguments={"path": "README.md"})]
+            ),
+            ToolResultMessage(
+                tool_call_id=foreign_id,
+                name="read",
+                content="contents",
+                ok=True,
+            ),
+        )
+    )
+
+    assert '<tool_call name="read">' in source
+    assert 'role="tool" name="read" ok="true"' in source
+    assert source.index("<tool_call") < source.index('role="tool"')
+    assert foreign_id not in source
 
 
 def test_pipelined_prompt_keeps_previous_summary_and_ordered_events_separate() -> None:

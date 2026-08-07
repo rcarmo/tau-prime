@@ -11,7 +11,6 @@ the original chat-completions path unchanged.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Mapping
-from hashlib import sha1
 from json import JSONDecodeError, dumps, loads
 from typing import Any, Protocol
 
@@ -46,6 +45,7 @@ from tau_ai.retry import (
     retry_delay_seconds,
     wait_for_retry,
 )
+from tau_ai.tool_call_ids import portable_tool_call_id
 
 # Models that reject function tools + reasoning_effort on /chat/completions and
 # must use the /v1/responses endpoint instead.
@@ -785,7 +785,7 @@ def _messages_to_responses_input(
                 items.append(
                     {
                         "type": "function_call",
-                        "call_id": _responses_call_id(tool_call.id),
+                        "call_id": portable_tool_call_id(tool_call.id),
                         "name": tool_call.name,
                         "arguments": dumps(tool_call.arguments),
                     }
@@ -796,26 +796,11 @@ def _messages_to_responses_input(
             items.append(
                 {
                     "type": "function_call_output",
-                    "call_id": _responses_call_id(message.tool_call_id),
+                    "call_id": portable_tool_call_id(message.tool_call_id),
                     "output": message.content,
                 }
             )
     return items
-
-
-def _responses_call_id(value: str) -> str:
-    """Return a Responses API call_id accepted by OpenAI-compatible backends.
-
-    Provider transcripts can persist foreign tool-call IDs with separators or
-    long opaque suffixes. Normalize separators and add a short hash suffix when
-    truncating so function_call/function_call_output pairs remain stable.
-    """
-    cleaned = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value)
-    cleaned = cleaned.strip("_") or "call"
-    if len(cleaned) <= 64:
-        return cleaned
-    suffix = "_" + sha1(value.encode("utf-8")).hexdigest()[:10]
-    return (cleaned[: 64 - len(suffix)].rstrip("_") or "call") + suffix
 
 
 def _tool_to_responses(tool: AgentTool) -> dict[str, JSONValue]:
@@ -967,7 +952,7 @@ def _message_to_openai(
             return None
         return {
             "role": "tool",
-            "tool_call_id": message.tool_call_id,
+            "tool_call_id": portable_tool_call_id(message.tool_call_id),
             "name": message.name or "tool",
             "content": message.content,
         }
@@ -996,7 +981,7 @@ def _tool_to_openai(tool: AgentTool) -> dict[str, JSONValue]:
 
 def _tool_call_to_openai(tool_call: ToolCall) -> dict[str, JSONValue]:
     return {
-        "id": tool_call.id,
+        "id": portable_tool_call_id(tool_call.id),
         "type": "function",
         "function": {
             "name": tool_call.name or "tool",

@@ -183,6 +183,34 @@ def test_build_web_event_envelope_preserves_agent_event_identity_and_payload(
     )
 
 
+def test_web_event_envelopes_preserve_foreign_tool_ids_for_live_rendering() -> None:
+    foreign_id = "call_123|fc_opaque/provider"
+    start = build_web_event_envelope(
+        session_id="session-1",
+        run_id="run-1",
+        sequence=1,
+        event=ToolExecutionStartEvent(
+            tool_call=ToolCall(id=foreign_id, name="read", arguments={"path": "README.md"})
+        ),
+    )
+    end = build_web_event_envelope(
+        session_id="session-1",
+        run_id="run-1",
+        sequence=2,
+        event=ToolExecutionEndEvent(
+            result=AgentToolResult(
+                tool_call_id=foreign_id,
+                name="read",
+                ok=True,
+                content="contents",
+            )
+        ),
+    )
+
+    assert start.payload["tool_call"]["id"] == foreign_id
+    assert end.payload["result"]["tool_call_id"] == foreign_id
+
+
 @pytest.mark.anyio
 async def test_event_projector_persists_message_end_idempotently_and_isolates_sessions(
     tmp_path: Path,

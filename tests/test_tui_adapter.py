@@ -169,6 +169,36 @@ def test_tui_adapter_renders_skill_file_reads_with_skill_style() -> None:
     ]
 
 
+def test_tui_adapter_renders_foreign_tool_ids_without_exposing_provider_details() -> None:
+    foreign_id = "call_123|fc_opaque/provider"
+    state = TuiState()
+    adapter = TuiEventAdapter(state)
+
+    adapter.apply(
+        ToolExecutionStartEvent(
+            tool_call=ToolCall(
+                id=foreign_id,
+                name="read",
+                arguments={"path": "/workspace/README.md"},
+            )
+        )
+    )
+    adapter.apply(
+        ToolExecutionEndEvent(
+            result=AgentToolResult(
+                tool_call_id=foreign_id,
+                name="read",
+                ok=True,
+                content="contents",
+            )
+        )
+    )
+
+    assert [(item.role, item.text, item.tool_result_text) for item in state.items] == [
+        ("tool", "→ read /workspace/README.md", "✓ read\ncontents")
+    ]
+
+
 def test_tui_adapter_leaves_ordinary_reads_as_tool_items() -> None:
     skill = Skill(
         name="review",

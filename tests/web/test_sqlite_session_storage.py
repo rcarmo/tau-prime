@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tau_agent import UserMessage
+from tau_agent import AssistantMessage, ToolCall, ToolResultMessage, UserMessage
 from tau_agent.session import (
     CompactionEntry,
     CustomEntry,
@@ -79,6 +79,44 @@ async def test_session_storage_round_trips_entries_and_leaf(tmp_path: Path) -> N
             return str(row[0]) if row[0] is not None else None
 
         assert await database.read(active_leaf) == "custom"
+
+
+@pytest.mark.anyio
+async def test_session_storage_preserves_foreign_tool_call_ids(tmp_path: Path) -> None:
+    foreign_id = "call_123|fc_opaque/provider"
+    assistant = MessageEntry(
+        id="assistant",
+        message=AssistantMessage(
+            tool_calls=[ToolCall(id=foreign_id, name="read", arguments={"path": "README.md"})]
+        ),
+    )
+    result = MessageEntry(
+        id="result",
+        parent_id="assistant",
+        message=ToolResultMessage(
+            tool_call_id=foreign_id,
+            name="read",
+            content="contents",
+            ok=True,
+        ),
+    )
+
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        await _seed_session(database)
+        storage = SqliteSessionStorage(database, "session")
+        await storage.append_many([assistant, result])
+
+        restored = await storage.read_all()
+
+    assert restored == [assistant, result]
+    restored_assistant = restored[0]
+    restored_result = restored[1]
+    assert isinstance(restored_assistant, MessageEntry)
+    assert isinstance(restored_assistant.message, AssistantMessage)
+    assert restored_assistant.message.tool_calls[0].id == foreign_id
+    assert isinstance(restored_result, MessageEntry)
+    assert isinstance(restored_result.message, ToolResultMessage)
+    assert restored_result.message.tool_call_id == foreign_id
 
 
 @pytest.mark.anyio
