@@ -64,9 +64,10 @@ A durable runtime layer bridges pool activity to persisted `session_runs`, queue
 - If a cursor cannot be replayed safely, the server falls back to a snapshot event.
 - Heartbeats and bounded client buffers protect server health.
 
-The browser UI is a static frontend shell served by `tau_web`.
+The browser UI is a TypeScript/Preact shell compiled to committed static assets and served by `tau_web`.
 
-- Static assets bootstrap the app.
+- Static assets bootstrap the app without a JavaScript toolchain at runtime.
+- Preact owns the shell hierarchy incrementally while legacy runtime adapters retain stable DOM IDs during migration.
 - The UI reads state through `/api/*`.
 - Live updates arrive through SSE.
 - Extension surfaces can mount declarative UI, sandboxed widgets, or trusted modules depending on trust tier.

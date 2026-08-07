@@ -125,7 +125,9 @@ The bundled browser shell reconnects automatically with exponential back-off fro
 
 ## PWA and frontend shell
 
-Tau Web serves these public shell assets: `/`, `/index.html`, `/manifest.webmanifest`, `/sw.js`, `/static/app.css`, `/static/app.js`, `/static/live-ui.js`, `/static/extension-ui.js`, `/static/widget-bridge.js`, and `/static/frontend-sdk.js`.
+Tau Web serves a committed TypeScript/Preact bundle from `/static/preact-shell.js`. Its component-owned shell currently covers the activity/status bars, session dashboard and navigation, central timeline, and composer; remaining panels are being migrated incrementally without changing the DOM IDs used by the established runtime adapters. Piclaw's vendored reference stylesheet is the visual source of truth, with a narrow Tau compatibility layer rather than a CSS mask over incompatible structure.
+
+Public shell assets include `/`, `/index.html`, `/manifest.webmanifest`, `/sw.js`, `/static/preact-shell.js`, `/static/piclaw-reference.css`, `/static/piclaw-parity.css`, `/static/app.css`, `/static/app.js`, `/static/live-ui.js`, `/static/extension-ui.js`, `/static/widget-bridge.js`, and `/static/frontend-sdk.js`.
 
 The manifest sets `start_url: "/"`, `scope: "/"` and `display: "standalone"`. The shell registers `/sw.js` as a service worker.
 
@@ -158,6 +160,7 @@ Current declarative UI limits enforced in source:
 
 ## Non-loopback cautions and known limits
 
+- Tau Web has bearer-token middleware but no browser login/provider-credential API or onboarding UI yet. Configure credentials through the TUI/CLI before using web sessions.
 - Default binding is deliberately loopback-only: `127.0.0.1`.
 - If you bind `tau web` to a non-loopback address such as `0.0.0.0`, the frontend shell and `/api/health` remain public.
 - Without a programmatically supplied `auth_token`, the API is fully open on that interface.

@@ -7,8 +7,8 @@ This directory contains an isolated Playwright harness for Tau web UI browser te
 From `tests/browser/`:
 
 ```bash
-npm install
-npm run install:browsers
+bun install --frozen-lockfile
+bun run install:browsers
 ```
 
 ### Linux browser dependencies
@@ -16,15 +16,15 @@ npm run install:browsers
 If system dependencies are missing, run:
 
 ```bash
-npx playwright install-deps chromium webkit
+bun x playwright install-deps chromium webkit
 ```
 
 ## Run tests
 
 ```bash
-npm test
-npm run test:chromium
-npm run test:webkit
+bun test
+bun run test:chromium
+bun run test:webkit
 ```
 
 ## Project matrix
@@ -38,7 +38,7 @@ Six required projects are configured:
 - WebKit tablet (820x1180)
 - WebKit desktop (1440x900)
 
-WebKit coverage is mandatory for release validation.
+WebKit coverage is mandatory for release validation. `responsive.spec.mjs` and `accessibility.spec.mjs` cover behavior at all six targets. Full-layout pixel baselines must be recreated and approved after the Preact structural migration; do not use masks or CSS overlays to accept structural differences.
 
 ## Server isolation
 

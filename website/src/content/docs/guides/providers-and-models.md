@@ -9,7 +9,7 @@ OpenAI-compatible endpoints (including local models).
 
 ## The fastest setup: `/login`
 
-Start Tau and use `/login` to connect a built-in provider:
+Start Tau and use `/login` to connect a built-in provider. A fresh installation opens this TUI onboarding path without requiring a preconfigured model or creating a fake provider entry:
 
 ```bash
 tau

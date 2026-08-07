@@ -164,9 +164,11 @@ If you touch Tau Web, SQLite-backed session import/export, or `tests/web`, insta
 ```bash
 python -m pip install ".[web]"
 PYTHONPATH=.:src python -m pytest tests/web
+cd src/tau_web/frontend && bun install --frozen-lockfile && bun run check && bun run build && cd ../../..
 node --check src/tau_web/static/app.js
 node --check src/tau_web/static/live-ui.js
 node --check src/tau_web/static/extension-ui.js
+cd tests/browser && bun install --frozen-lockfile && bun test && cd ../..
 ```
 
 For the documentation site:

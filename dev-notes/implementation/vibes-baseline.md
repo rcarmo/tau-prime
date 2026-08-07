@@ -18,6 +18,12 @@ PYTHONPATH=src /tmp/tau-venv/bin/python -m mypy src
 
 These counts are the comparison baseline. New or touched implementation modules must pass Ruff and mypy even while unrelated historical findings remain.
 
+## Adoption progress (2026-08-07)
+
+The browser foundation now builds a committed TypeScript/Preact bundle and serves Piclaw-derived reference CSS. Preact owns the activity/status bars, dashboard, session navigation, central timeline, and composer while preserving the IDs and extension slots consumed by the established runtime adapters. Side panels, settings, editor, and overlays remain transitional; full-layout visual baselines are intentionally deferred until that structural migration is complete.
+
+Bare `tau` now reaches TUI provider discovery with an empty configuration instead of rejecting an empty model. Configured defaults still resolve normally, and explicitly invalid provider/model requests still fail cleanly. Tau Web credential APIs and browser onboarding remain outstanding.
+
 ## Compatibility gates
 
 * TUI remains the default interactive mode and retains provider/model/thinking, command, tool, branch, compaction, queue and extension behaviour.

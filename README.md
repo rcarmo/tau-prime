@@ -63,6 +63,8 @@ cd ~/Documents/my-project
 tau
 ```
 
+A fresh installation does not require a preselected model. Bare `tau` opens the TUI, where `/login` and `/model` provide provider discovery and setup; Tau does not fabricate a provider configuration. An explicitly requested invalid provider/model still fails with an actionable error.
+
 Use `Ctrl+B` if you want the sidebar. `Ctrl+C` or `Cmd+.` cancels the active operation without discarding the session.
 
 ## Install on a desktop
@@ -116,7 +118,7 @@ python -m pip install ".[web]"
 
 Tau Prime has two distinct browser-facing modes:
 
-* `tau web` runs Tau Web's browser UI and HTTP API. It uses the same SQLite session store as the TUI and print mode.
+* `tau web` runs Tau Web's Preact browser shell and HTTP API. It uses the same SQLite session store as the TUI and print mode. The committed browser bundle is built reproducibly from TypeScript/Preact sources and requires no package registry at runtime.
 
 ```sh
 tau web
@@ -140,6 +142,8 @@ tau --web --web-host 0.0.0.0 --web-port 8000
 
 For `tau --web`, install Textual's optional web server package so that `textual-web` or `textual-serve` is available on your `PATH`.
 
+Tau Web currently consumes credentials and provider settings configured by the TUI/CLI. It does not yet expose a browser credential-login flow. Keep the default loopback binding unless authentication and origin policy are supplied programmatically; see [Tau Web operations](docs/web.md).
+
 ## macOS sandbox
 
 macOS runs are sandboxed by default. Tau Prime re-executes the `tau` command through the system `sandbox-exec` utility, and the restriction is inherited by shell commands, Python, tests and their child processes.
@@ -161,7 +165,7 @@ This behaviour is macOS-only. a-Shell and other platforms do not attempt to invo
 
 ## Configure a provider
 
-Start the interface and use `/login` or `/model`:
+Start the TUI—even on a fresh installation with no model selected—and use `/login` or `/model`:
 
 ```text
 /login

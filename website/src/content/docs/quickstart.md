@@ -86,6 +86,8 @@ This opens the interactive terminal UI. Type a request and press **Enter**:
 explain what this project does
 ```
 
+On a fresh installation, bare `tau` opens without requiring a model in advance. Use `/login` and `/model` inside the TUI to configure one; an invalid model explicitly supplied on the command line still fails with a clear error.
+
 Tau streams its response, and when it needs to, it reads files and runs commands
 to answer you. Try something that changes code:
 
@@ -133,7 +135,7 @@ For an ephemeral run:
 uvx --from "tau-prime[web]" tau web
 ```
 
-Open <http://127.0.0.1:8080/>. Binding to a non-loopback address needs deliberate authentication and origin configuration; see the repository's `docs/web.md` operations guide.
+Open <http://127.0.0.1:8080/>. Configure provider credentials through the TUI/CLI first; Tau Web does not yet provide browser credential onboarding. Binding to a non-loopback address needs deliberate authentication and origin configuration; see the repository's `docs/web.md` operations guide.
 
 ## One-shot mode
 
