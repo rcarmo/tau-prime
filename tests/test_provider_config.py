@@ -1284,3 +1284,36 @@ def test_github_copilot_provider_uses_stored_oauth_access_token(
     )
 
     assert config.api_key == "copilot-token"
+
+
+def test_huggingface_inference_provider_round_trip_and_runtime_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    provider = OpenAICompatibleProviderConfig(
+        name="huggingface",
+        base_url="https://router.huggingface.co/v1",
+        models=("org/model",),
+        default_model="org/model",
+        inference_providers={"org/model": "provider-a"},
+    )
+    restored = provider_settings_from_json(
+        ProviderSettings(default_provider="huggingface", providers=(provider,)).to_json()
+    ).get_provider("huggingface")
+    assert isinstance(restored, OpenAICompatibleProviderConfig)
+    assert restored.inference_providers == {"org/model": "provider-a"}
+    runtime = openai_compatible_config_from_provider(restored, model="org/model")
+    assert runtime.model_aliases == {"org/model": "org/model:provider-a"}
+
+
+@pytest.mark.parametrize("inference_provider", ["fastest", "bad provider", "a/b"])
+def test_huggingface_inference_provider_rejects_invalid_routes(
+    inference_provider: str,
+) -> None:
+    with pytest.raises(ProviderConfigError):
+        OpenAICompatibleProviderConfig(
+            name="huggingface",
+            models=("org/model",),
+            default_model="org/model",
+            inference_providers={"org/model": inference_provider},
+        )
