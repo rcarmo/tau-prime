@@ -1,39 +1,3 @@
-      <section
-        id="session-dashboard"
-        class="session-dashboard"
-        aria-labelledby="dashboard-title"
-        data-open="false"
-        hidden
-      >
-        <div class="dashboard-shell">
-          <header class="dashboard-header">
-            <div>
-              <h2 id="dashboard-title">Session dashboard</h2>
-              <p class="muted small-text">
-                Live Tau sessions, queue state, context estimates, and current activity.
-              </p>
-            </div>
-            <button id="dashboard-close" class="icon-button" type="button">Close</button>
-          </header>
-          <div
-            id="dashboard-grid"
-            class="dashboard-grid"
-            role="list"
-            aria-live="polite"
-            aria-busy="false"
-          ></div>
-          <footer class="dashboard-footer">
-            <p id="dashboard-age" class="muted small-text">Not refreshed yet.</p>
-            <div class="dashboard-pagination" role="group" aria-label="Dashboard pages">
-              <button id="dashboard-previous" type="button">Previous</button>
-              <output id="dashboard-page">Page 1 of 1</output>
-              <button id="dashboard-next" type="button">Next</button>
-              <button id="dashboard-manage" type="button">All sessions</button>
-            </div>
-          </footer>
-        </div>
-      </section>
-
       <div class="shell-layout">
         <aside id="session-nav" class="panel panel-nav" aria-label="Session navigation">
           <div class="panel-header sticky-header">
