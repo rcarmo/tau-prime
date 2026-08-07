@@ -99,37 +99,6 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 .app-layout__status-bar .status-grid dt { color: var(--text-secondary); }
 .app-layout__status-bar .status-grid dd { margin: 0; }
 
-.chat__compose { justify-content: center; }
-.chat__compose .compose-form {
-  width: min(900px, 100%);
-  padding: 8px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-.chat__compose .compose-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-.chat__compose .chat__input {
-  min-height: 54px;
-  padding: 8px;
-  border: 0;
-  background: transparent;
-  resize: none;
-}
-.chat__compose .chat__send-btn {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--accent-color);
-  color: white;
-  font-size: 18px;
-}
-
 .chat__session-details,
 .chat__prompt-options {
   border: 0;
@@ -158,11 +127,4 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
     width: 100vw;
     transform: translateX(-105%);
   }
-}
-
-/* Tau's Control+N shortcut focuses the composer; retain a WCAG-visible ring. */
-.compose-form textarea:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 1px;
-  box-shadow: 0 0 0 3px var(--accent-color-alpha);
 }

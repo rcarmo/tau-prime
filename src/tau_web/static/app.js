@@ -1964,29 +1964,39 @@ function renderTimeline() {
   }
 
   for (const item of timelineItems) {
+    const isUser = item.role === "user";
     const listItem = document.createElement("li");
-    const card = document.createElement("article");
-    card.className = "timeline-card";
-    card.dataset.role = item.role;
+    listItem.className = `message-list__item message-list__item--${isUser ? "user" : "agent"}`;
 
-    const role = document.createElement("p");
-    role.className = "timeline-role";
-    role.textContent = item.live ? `${item.role} · live` : item.role;
+    const avatar = document.createElement("div");
+    avatar.className = `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`;
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.textContent = isUser ? "Y" : "τ";
 
-    const meta = document.createElement("p");
-    meta.className = "timeline-entry-meta";
-    meta.textContent = item.meta;
+    const body = document.createElement("div");
+    body.className = item.live ? "message-list__body message-list__body--draft" : "message-list__body";
 
-    const content = document.createElement("p");
-    content.className = "timeline-content";
+    const header = document.createElement("div");
+    header.className = "message-list__header";
+    const name = document.createElement("span");
+    name.className = `message-list__name message-list__name--${isUser ? "user" : "agent"}`;
+    name.textContent = isUser ? "You" : "Tau";
+    const meta = document.createElement("span");
+    meta.className = "message-list__time";
+    meta.textContent = item.live ? "live" : item.meta;
+    header.append(name, meta);
+
+    const content = document.createElement("div");
+    content.className = "message-list__content";
     content.textContent = item.content || "(empty)";
+    body.append(header, content);
 
-    card.append(role, meta, content);
     const attachmentGallery = createTimelineAttachments(item.attachments ?? []);
     if (attachmentGallery) {
-      card.append(attachmentGallery);
+      attachmentGallery.classList.add("message-list__attachments");
+      body.append(attachmentGallery);
     }
-    listItem.append(card);
+    listItem.append(avatar, body);
     ui.timelineList.append(listItem);
   }
 }
@@ -2271,7 +2281,11 @@ function renderControls() {
   state.composer.deliveryMode = normalizeDeliveryMode(ui.composeDeliveryMode.value || state.composer.deliveryMode);
   ui.composeDeliveryMode.value = state.composer.deliveryMode;
   ui.composeContextReadout.textContent = composeContextReadoutText();
-  ui.composeAttachmentButton.textContent = state.uploadingAttachments ? "Uploading…" : "Attach files";
+  const attachmentLabel = state.uploadingAttachments ? "Uploading…" : "Attach file";
+  ui.composeAttachmentButton.setAttribute("aria-label", attachmentLabel);
+  ui.composeAttachmentButton.setAttribute("title", attachmentLabel);
+  const attachmentButtonText = ui.composeAttachmentButton.querySelector(".sr-only");
+  if (attachmentButtonText) attachmentButtonText.textContent = attachmentLabel;
   ui.archiveSessionButton.disabled = !session || archived;
   ui.restoreSessionButton.disabled = !session || !archived;
   ui.applyModelButton.disabled = !session || archived;
@@ -2281,9 +2295,13 @@ function renderControls() {
   ui.composeDeliveryMode.disabled = state.composing || state.uploadingAttachments;
   ui.composeAttachmentButton.disabled = archived || state.composing || state.uploadingAttachments;
   ui.composeFileInput.disabled = archived || state.composing || state.uploadingAttachments;
+  ui.composeClearAttachments.hidden = !state.composer.attachments.length;
   ui.composeClearAttachments.disabled = !state.composer.attachments.length || state.composing || state.uploadingAttachments;
   ui.composeSubmit.disabled = archived || state.composing || state.uploadingAttachments;
-  ui.composeSubmit.textContent = state.composer.deliveryMode === "run" ? "Run" : "Send";
+  const submitLabel = state.composer.deliveryMode === "run" ? "Run" : "Send";
+  ui.composeSubmit.setAttribute("aria-label", submitLabel);
+  const submitButtonText = ui.composeSubmit.querySelector(".sr-only");
+  if (submitButtonText) submitButtonText.textContent = submitLabel;
   renderComposerAttachments();
   renderComposerCompletion();
 }
@@ -2537,27 +2555,22 @@ function renderComposerCompletion() {
 
 function renderComposerAttachments() {
   ui.composeAttachmentList.replaceChildren();
-  if (!state.composer.attachments.length) {
-    const placeholder = document.createElement("li");
-    placeholder.append(createMutedText(`No attachments staged. Up to ${MAX_COMPOSER_ATTACHMENTS}.`));
-    ui.composeAttachmentList.append(placeholder);
-    return;
-  }
+  if (!state.composer.attachments.length) return;
 
   const fragment = document.createDocumentFragment();
   for (const attachment of state.composer.attachments) {
-    const item = document.createElement("li");
-    item.className = "attachment-chip";
+    const item = document.createElement("span");
+    item.className = "chat__attachment-pill";
 
     const label = document.createElement("span");
-    label.className = "attachment-chip-label";
+    label.className = "chat__attachment-name";
     label.textContent = attachmentLabel(attachment);
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "attachment-chip-remove";
+    button.className = "chat__attachment-remove";
     button.setAttribute("aria-label", `Remove attachment ${attachment.filename}`);
-    button.textContent = "Remove";
+    button.textContent = "✕";
     button.addEventListener("click", () => {
       removeComposerAttachment(attachment.media_id);
     });

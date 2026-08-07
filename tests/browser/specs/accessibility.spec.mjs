@@ -91,7 +91,8 @@ async function assertComposeFocusIndicatorAfterGlobalShortcut(page) {
     : 'Control';
 
   await page.locator('#timeline-main').focus();
-  const before = await composeInput.evaluate((element) => {
+  const composeSurface = page.locator('.chat__compose-container');
+  const before = await composeSurface.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       outlineStyle: style.outlineStyle,
@@ -108,7 +109,7 @@ async function assertComposeFocusIndicatorAfterGlobalShortcut(page) {
     .poll(() => page.evaluate(() => document.activeElement?.id ?? ''), { timeout: 15_000 })
     .toBe('compose-input');
 
-  const indicator = await composeInput.evaluate((element, previous) => {
+  const indicator = await composeSurface.evaluate((element, previous) => {
     const style = getComputedStyle(element);
     const outlineStyle = (style.outlineStyle || '').toLowerCase();
     const outlineWidth = Number.parseFloat(style.outlineWidth || '0');
