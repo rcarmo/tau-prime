@@ -85,6 +85,7 @@ from tau_coding.provider_catalog import (
 )
 from tau_coding.provider_config import (
     ProviderConfig,
+    ProviderConfigError,
     ProviderSelection,
     ensure_dynamic_provider_models,
     load_provider_settings,
@@ -4637,8 +4638,15 @@ def _resolve_tui_startup_selection(
 def _first_usable_startup_selection(settings: Any) -> ProviderSelection | None:
     credential_store = FileCredentialStore()
     for provider in settings.providers:
-        if provider_has_usable_credentials(provider, credential_reader=credential_store):
-            return ProviderSelection(provider=provider, model=provider.default_model)
+        if not provider_has_usable_credentials(provider, credential_reader=credential_store):
+            continue
+        try:
+            return resolve_provider_selection(settings, provider_name=provider.name)
+        except ProviderConfigError:
+            # Credential-free dynamic providers such as LM Studio can be usable
+            # before they have discovered a model. Skip them during implicit
+            # startup fallback so the TUI can open its login/onboarding flow.
+            continue
     return None
 
 

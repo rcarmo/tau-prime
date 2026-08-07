@@ -5850,3 +5850,16 @@ def test_github_copilot_is_subscription_login_provider() -> None:
 
     assert any(provider.name == "github-copilot" for provider in subscription)
     assert all(provider.name != "github-copilot" for provider in api_key)
+
+
+def test_first_usable_startup_selection_skips_provider_without_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = ProviderSettings()
+    monkeypatch.setattr(
+        tui_app,
+        "provider_has_usable_credentials",
+        lambda provider, **_kwargs: provider.name == "lmstudio",
+    )
+
+    assert tui_app._first_usable_startup_selection(settings) is None
