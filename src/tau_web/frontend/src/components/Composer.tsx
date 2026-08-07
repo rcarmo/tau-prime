@@ -9,10 +9,10 @@ const SelectControl = ({ id, name, label, children }: { id: string; name: string
 
 export function Composer() {
   return (
-    <footer className="composer-shell">
+    <footer className="chat__compose">
       <div className="extension-slot" data-extension-slot="compose_above" />
-      <form id="compose-form" className="compose-form">
-        <section className="compose-toolbar" aria-label="Prompt controls">
+      <form id="compose-form" className="compose-form chat__compose-container">
+        <section className="compose-toolbar chat__toolbar" aria-label="Prompt controls">
           <div className="compose-select-grid">
             <SelectControl id="compose-provider-select" name="provider_name" label="Provider" />
             <SelectControl id="compose-model-select" name="model" label="Model" />
@@ -32,8 +32,8 @@ export function Composer() {
         <label htmlFor="compose-input">Send a prompt to Tau</label>
         <div className="compose-editor-group">
           <div className="compose-row">
-            <textarea id="compose-input" name="prompt" rows={3} autoComplete="off" role="combobox" aria-autocomplete="list" aria-controls="compose-completion-listbox" aria-describedby="compose-help compose-completion-status" aria-expanded="false" aria-haspopup="listbox" placeholder="Select or create a session, then send a prompt." />
-            <button id="compose-submit" type="submit">Run</button>
+            <textarea id="compose-input" className="chat__input" name="prompt" rows={3} autoComplete="off" role="combobox" aria-autocomplete="list" aria-controls="compose-completion-listbox" aria-describedby="compose-help compose-completion-status" aria-expanded="false" aria-haspopup="listbox" placeholder="Select or create a session, then send a prompt." />
+            <button id="compose-submit" className="chat__send-btn" type="submit">Run</button>
           </div>
           <div id="compose-completion-popup" className="compose-completion-popup" hidden>
             <p id="compose-completion-status" className="muted small-text" aria-live="polite" />

@@ -15,11 +15,12 @@ export function SidePanel({ activeTab, onSelectTab, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <aside id="side-panel" className="panel panel-side" aria-label="Workspace search and settings">
-      <div className="panel-header sticky-header">
-        <div><h2>Workspace</h2><p className="muted">Files, search, and Tau settings.</p></div>
+    <aside id="side-panel" className="sidebar panel-side" aria-label="Workspace search and settings">
+      <header className="sidebar__header">
+        <div><h2 className="sidebar__title">Workspace</h2><p className="muted">Files, search, and Tau settings.</p></div>
         <button id="close-panel-drawer" className="icon-button mobile-only" type="button" aria-label="Close workspace drawer" onClick={onClose}>Close</button>
-      </div>
+      </header>
+      <div className="sidebar__content">
       <div className="tabs" role="tablist" aria-label="Sidebar sections">
         <Tab name="workspace" selected={activeTab === "workspace"} onSelect={onSelectTab}>Workspace</Tab>
         <Tab name="search" selected={activeTab === "search"} onSelect={onSelectTab}>Search</Tab>
@@ -77,6 +78,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose }: {
         <p id="streaming-note" className="muted small-text">Live streaming, queue controls, and persisted timeline playback are rendered with safe DOM updates only.</p>
         <div className="extension-slot" data-extension-slot="sidebar" />
       </section>
+      </div>
     </aside>
   );
 }

@@ -6,11 +6,12 @@ export function SessionNav({ filter, onSelectFilter, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <aside id="session-nav" className="panel panel-nav" aria-label="Session navigation">
-      <div className="panel-header sticky-header">
-        <div><h2>Sessions</h2><p className="muted">Persisted chats, archive, and restore.</p></div>
+    <aside id="session-nav" className="sidebar panel-nav" aria-label="Session navigation">
+      <header className="sidebar__header">
+        <div><h2 className="sidebar__title">Sessions</h2><p className="muted">Persisted chats, archive, and restore.</p></div>
         <button id="close-nav-drawer" className="icon-button mobile-only" type="button" aria-label="Close sessions drawer" onClick={onClose}>Close</button>
-      </div>
+      </header>
+      <div className="sidebar__content">
       <div className="button-row button-row-wrap" role="group" aria-label="Session actions">
         <button id="new-session-button" type="button">New</button>
         <button id="archive-session-button" type="button">Archive</button>
@@ -22,6 +23,7 @@ export function SessionNav({ filter, onSelectFilter, onClose }: {
       </div>
       <p id="session-count" className="muted small-text">0 sessions</p>
       <ul id="session-list" className="session-list" aria-label="Available sessions" />
+      </div>
     </aside>
   );
 }

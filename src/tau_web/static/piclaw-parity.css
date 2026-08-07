@@ -44,6 +44,16 @@ option { background: var(--bg-secondary); }
   background: var(--bg-primary);
 }
 
+/* Tau's former three-column breakpoint must not turn Piclaw's canonical
+ * session sidebar into an unreachable drawer at tablet widths. */
+@media (min-width: 640px) and (max-width: 960px) {
+  .app-layout__sidebar-wrapper .panel-nav {
+    position: static;
+    width: 100%;
+    transform: none;
+  }
+}
+
 /* Tau's Control+N shortcut focuses the composer; retain a WCAG-visible ring. */
 .compose-form textarea:focus-visible {
   outline: 2px solid var(--accent-color);

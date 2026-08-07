@@ -26,22 +26,31 @@ function TauShell() {
       <a className="skip-link" href="#timeline-main">Skip to timeline</a>
       <div className="app-layout">
         <ActivityBar activeTab={activeTab} onSelectTab={selectTab} onOpenPanel={() => open("panel")} />
-        <div className="app-layout__main">
+        <main className="app-layout__main">
           <div className="app-layout__content-area">
+            <div className="app-layout__sidebar-wrapper">
+              <SessionNav filter={sessionFilter} onSelectFilter={selectSessionFilter} onClose={close} />
+            </div>
             <div className="app-layout__panel">
-              <div className="app-shell">
-                <StatusBar drawer={drawer} dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onToggleDrawer={toggle} onToggleDashboard={() => setDashboardOpen((current) => !current)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />
-                <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
-                <div className="shell-layout">
-                  <SessionNav filter={sessionFilter} onSelectFilter={selectSessionFilter} onClose={close} />
-                  <Timeline />
-                  <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={close} />
+              <div className="app-layout__tab-viewport">
+                <div className="app-layout__tab-content">
+                  <section className="chat" aria-label="Tau chat">
+                    <Timeline />
+                    <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
+                    <Composer />
+                  </section>
                 </div>
-                <Composer />
               </div>
             </div>
+            <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={close} />
           </div>
-        </div>
+          <StatusBar drawer={drawer} dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onToggleDrawer={toggle} onToggleDashboard={() => setDashboardOpen((current) => !current)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />
+          <div className="mobile-toolbar" role="banner" aria-label="Tau status bar">
+            <button id="mobile-nav-toggle" className="mobile-toolbar__terminal-btn" type="button" aria-controls="session-nav" aria-expanded={drawer === "nav"} aria-label="Open sessions drawer" onClick={() => toggle("nav")}>Sessions</button>
+            <span className="mobile-toolbar__model-slot">Tau</span>
+            <button id="mobile-panel-toggle" className="mobile-toolbar__terminal-btn" type="button" aria-controls="side-panel" aria-expanded={drawer === "panel"} aria-label="Open workspace and settings drawer" onClick={() => toggle("panel")}>Panels</button>
+          </div>
+        </main>
       </div>
       <Onboarding />
       <button

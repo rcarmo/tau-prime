@@ -1,6 +1,6 @@
 export function Timeline() {
   return (
-    <main id="timeline-main" className="panel panel-main" tabIndex={-1}>
+    <div id="timeline-main" className="chat__messages" tabIndex={-1}>
       <div className="panel-header sticky-header">
         <div><h2>Timeline</h2><p id="timeline-meta" className="muted">Load a session to inspect persisted messages.</p></div>
       </div>
@@ -41,6 +41,6 @@ export function Timeline() {
       <div className="extension-slot" data-extension-slot="timeline_before" />
       <ol id="timeline-list" className="timeline-list" aria-live="polite" tabIndex={0} />
       <div className="extension-slot" data-extension-slot="timeline_after" />
-    </main>
+    </div>
   );
 }
