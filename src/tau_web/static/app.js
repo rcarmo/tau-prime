@@ -1664,25 +1664,20 @@ function formatBytes(value) {
 function renderPlan() {
   const session = state.selectedSession;
   const disabled = !session || Boolean(session.archived_at);
-  if (ui.planEditor.value !== state.planDraft) {
-    ui.planEditor.value = state.planDraft;
-  }
-  ui.planEditor.disabled = disabled;
-  ui.planSaveButton.disabled = disabled || !state.planDirty;
-  ui.planReloadButton.disabled = !session;
-  ui.planRevision.textContent = `Revision ${state.plan?.revision ?? 0}`;
-  ui.planConflict.hidden = !state.planConflict;
-  if (!session) {
-    ui.planStatus.textContent = "Select a session to edit its shared plan.";
-  } else if (session.archived_at) {
-    ui.planStatus.textContent = "Restore this session before editing its plan.";
-  } else if (state.planConflict) {
-    ui.planStatus.textContent = `Server revision ${state.planConflict.revision} is newer than your draft.`;
-  } else if (state.planDirty) {
-    ui.planStatus.textContent = "Unsaved local changes.";
-  } else {
-    ui.planStatus.textContent = "Shared with the agent and refreshed before each new turn.";
-  }
+  let status = "Shared with the agent and refreshed before each new turn.";
+  if (!session) status = "Select a session to edit its shared plan.";
+  else if (session.archived_at) status = "Restore this session before editing its plan.";
+  else if (state.planConflict) status = `Server revision ${state.planConflict.revision} is newer than your draft.`;
+  else if (state.planDirty) status = "Unsaved local changes.";
+  window.dispatchEvent(new CustomEvent("tau:plan-render", { detail: {
+    draft: state.planDraft,
+    revision: state.plan?.revision ?? 0,
+    dirty: state.planDirty,
+    disabled,
+    reloadDisabled: !session,
+    conflict: Boolean(state.planConflict),
+    status,
+  } }));
 }
 
 function renderSessions() {
