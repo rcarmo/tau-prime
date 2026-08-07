@@ -1,6 +1,7 @@
 import { Fragment, render } from "preact";
 import appShellMarkup from "./app-shell.html";
 import { ActivityBar } from "./components/ActivityBar";
+import { StatusBar } from "./components/StatusBar";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
@@ -13,7 +14,10 @@ function TauShell() {
         <div className="app-layout__main">
           <div className="app-layout__content-area">
             <div className="app-layout__panel">
-              <div className="app-shell" dangerouslySetInnerHTML={{ __html: appShellMarkup }} />
+              <div className="app-shell">
+                <StatusBar />
+                <div className="legacy-shell-regions" dangerouslySetInnerHTML={{ __html: appShellMarkup }} />
+              </div>
             </div>
           </div>
         </div>

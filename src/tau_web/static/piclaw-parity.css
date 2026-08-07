@@ -14,7 +14,8 @@
 }
 
 /* The Preact mount must not add a layout box around Piclaw's shell hierarchy. */
-#app { display: contents; }
+#app,
+.legacy-shell-regions { display: contents; }
 
 /* Map Tau's established shell regions onto Piclaw surface tokens during migration. */
 .app-shell,
