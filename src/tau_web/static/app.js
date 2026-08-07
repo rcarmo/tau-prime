@@ -186,9 +186,7 @@ function bindUi() {
     clearAuthButton: requiredElement("clear-auth-button"),
     modelForm: requiredElement("model-form"),
     providerInput: requiredElement("provider-input"),
-    providerOptions: requiredElement("provider-options"),
     modelInput: requiredElement("model-input"),
-    modelOptions: requiredElement("model-options"),
     applyModelButton: requiredElement("apply-model-button"),
     refreshButton: requiredElement("refresh-button"),
     thinkingForm: requiredElement("thinking-form"),
@@ -1770,10 +1768,10 @@ function renderModelOptions() {
 
   const providerItems = Array.from(providerValues).sort().map((value) => ({ value, label: value }));
   const modelItems = Array.from(modelValues).sort().map((value) => ({ value, label: value }));
-  replaceOptions(ui.providerOptions, providerItems.map((item) => item.value));
-  replaceOptions(ui.modelOptions, modelItems.map((item) => item.value));
-  replaceSelectOptions(ui.composeProviderSelect, providerItems);
-  replaceSelectOptions(ui.composeModelSelect, modelItems);
+  window.dispatchEvent(new CustomEvent("tau:model-options-render", { detail: {
+    providers: providerItems,
+    models: modelItems,
+  } }));
 }
 
 function renderControls() {
@@ -2313,7 +2311,7 @@ function renderThinkingOptions() {
     label: option.textContent || option.value || "Default",
   }));
   const sourceOptions = configuredOptions.length ? configuredOptions : DEFAULT_THINKING_LEVELS.map(([value, label]) => ({ value, label }));
-  replaceSelectOptions(ui.composeThinkingSelect, sourceOptions);
+  window.dispatchEvent(new CustomEvent("tau:thinking-options-render", { detail: { items: sourceOptions } }));
 }
 
 function currentProviderModelSelection() {
@@ -2608,36 +2606,11 @@ function expectsJson(response) {
   return contentType.includes("application/json");
 }
 
-function replaceSelectOptions(select, items) {
-  const currentValue = select.value;
-  select.replaceChildren();
-  for (const item of items) {
-    const option = document.createElement("option");
-    option.value = stringOrEmpty(item?.value);
-    option.textContent = stringOrEmpty(item?.label) || option.value || "Default";
-    select.append(option);
-  }
-  if (currentValue) {
-    syncSelectValue(select, currentValue, currentValue);
-  }
-}
-
-function syncSelectValue(select, value, fallbackLabel = null) {
+function syncSelectValue(select, value) {
   const normalized = stringOrEmpty(value);
-  if (!normalized) {
-    const emptyOption = Array.from(select.options).find((option) => option.value === "");
-    select.value = emptyOption ? "" : select.options[0]?.value ?? "";
-    return;
-  }
-
-  let option = Array.from(select.options).find((entry) => entry.value === normalized);
-  if (!option) {
-    option = document.createElement("option");
-    option.value = normalized;
-    option.textContent = fallbackLabel ?? normalized;
-    select.append(option);
-  }
-  select.value = normalized;
+  select.value = Array.from(select.options).some((option) => option.value === normalized)
+    ? normalized
+    : select.options[0]?.value ?? "";
 }
 
 function normalizeDeliveryMode(value) {
@@ -2807,21 +2780,6 @@ function requiredElement(id) {
     throw new Error(`Missing required element: ${id}`);
   }
   return element;
-}
-
-function replaceOptions(container, values) {
-  container.replaceChildren();
-  for (const value of values) {
-    const option = document.createElement("option");
-    option.value = value;
-    container.append(option);
-  }
-}
-
-function createPlaceholderItem(message) {
-  const item = document.createElement("li");
-  item.append(createMutedText(message));
-  return item;
 }
 
 function createMutedText(message) {

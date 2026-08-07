@@ -5,6 +5,7 @@ import { SessionList } from "./SessionList";
 import { SearchResults } from "./SearchResults";
 import { SettingsSummary } from "./SettingsSummary";
 import { WorkspacePanel } from "./WorkspacePanel";
+import { ModelControls } from "./ModelControls";
 
 const TITLES: Record<SidebarTab, string> = {
   sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
@@ -82,15 +83,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
             </section>
             <section id="tau-settings-model" className="settings-panel__section">
               <h2 className="settings-panel__section-title">Model</h2>
-              <form id="model-form">
-                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="provider-input">Provider</label><input id="provider-input" className="settings-panel__input" list="provider-options" autoComplete="off" /><datalist id="provider-options" /></div>
-                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="model-input">Model</label><input id="model-input" className="settings-panel__input" list="model-options" autoComplete="off" /><datalist id="model-options" /></div>
-                <div className="settings-panel__field"><span className="settings-panel__label" /><button id="apply-model-button" className="settings-panel__provider-btn" type="submit">Apply to session</button><button id="refresh-button" className="settings-panel__provider-btn" type="button">Refresh</button></div>
-              </form>
-              <form id="thinking-form">
-                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="thinking-level-select">Thinking level</label><select id="thinking-level-select" className="settings-panel__select" name="thinking_level" /><button id="apply-thinking-button" className="settings-panel__provider-btn" type="submit">Apply</button></div>
-                <p id="thinking-help" className="settings-panel__description">Updates session thinking with optimistic concurrency checks.</p>
-              </form>
+              <ModelControls />
             </section>
             <section id="tau-settings-runtime" className="settings-panel__section" aria-labelledby="settings-summary-title">
               <h2 id="settings-summary-title" className="settings-panel__section-title">Runtime</h2>

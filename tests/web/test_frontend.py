@@ -333,6 +333,20 @@ def test_app_js_trusted_frontend_source_contracts() -> None:
     assert "void window.tauFrontendSDK?.disposeAll?.();" in unload_block
 
 
+def test_preact_owns_model_and_thinking_options() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    controls = (root / "frontend/src/components/ModelControls.tsx").read_text(encoding="utf-8")
+    composer = (root / "frontend/src/components/Composer.tsx").read_text(encoding="utf-8")
+    app = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("tau:model-options-render"' in controls
+    assert 'window.addEventListener("tau:thinking-options-render"' in composer
+    assert 'new CustomEvent("tau:model-options-render"' in app
+    assert 'new CustomEvent("tau:thinking-options-render"' in app
+    assert "function replaceSelectOptions" not in app
+    assert "function replaceOptions" not in app
+
+
 def test_preact_runtime_replaces_legacy_live_ui() -> None:
     root = Path(__file__).parents[2] / "src" / "tau_web"
     index = (root / "static/index.html").read_text(encoding="utf-8")

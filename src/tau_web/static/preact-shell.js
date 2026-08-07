@@ -524,14 +524,21 @@ function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessio
 function Composer() {
   const [completion, setCompletion] = h2({ open: false, index: 0, items: [] });
   const [attachments, setAttachments] = h2({ items: [], busy: false });
+  const [adapterOptions, setAdapterOptions] = h2({ providers: [], models: [], thinking: [] });
   _2(() => {
     const update = (event) => setCompletion(event.detail);
     const updateAttachments = (event) => setAttachments(event.detail);
+    const updateModels = (event) => setAdapterOptions((current) => ({ ...current, ...event.detail }));
+    const updateThinking = (event) => setAdapterOptions((current) => ({ ...current, thinking: event.detail.items }));
     window.addEventListener("tau:completion-render", update);
     window.addEventListener("tau:attachments-render", updateAttachments);
+    window.addEventListener("tau:model-options-render", updateModels);
+    window.addEventListener("tau:thinking-options-render", updateThinking);
     return () => {
       window.removeEventListener("tau:completion-render", update);
       window.removeEventListener("tau:attachments-render", updateAttachments);
+      window.removeEventListener("tau:model-options-render", updateModels);
+      window.removeEventListener("tau:thinking-options-render", updateThinking);
     };
   }, []);
   const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : void 0;
@@ -554,9 +561,9 @@ function Composer() {
           /* @__PURE__ */ u2("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
         ] }),
         /* @__PURE__ */ u2("div", { className: "sr-only", "aria-hidden": "true", children: [
-          /* @__PURE__ */ u2("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter" }),
-          /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter" }),
-          /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter" })
+          /* @__PURE__ */ u2("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter", children: adapterOptions.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+          /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter", children: adapterOptions.models.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+          /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter", children: adapterOptions.thinking.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
         ] }),
         /* @__PURE__ */ u2("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u2("span", { className: "chat__attachment-pill", children: [
           /* @__PURE__ */ u2("span", { className: "chat__attachment-name", children: attachment.label }),
@@ -964,6 +971,52 @@ function WorkspacePanel({ hidden }) {
   ] });
 }
 
+// src/components/ModelControls.tsx
+var thinking = [
+  { value: "", label: "Default" },
+  { value: "off", label: "Off \u2014 no reasoning" },
+  { value: "minimal", label: "Minimal \u2014 very brief reasoning" },
+  { value: "low", label: "Low \u2014 light reasoning" },
+  { value: "medium", label: "Medium \u2014 moderate reasoning" },
+  { value: "high", label: "High \u2014 deep reasoning" },
+  { value: "xhigh", label: "XHigh \u2014 maximum reasoning" }
+];
+function ModelControls() {
+  const [options, setOptions] = h2({ providers: [], models: [] });
+  _2(() => {
+    const update = (event) => setOptions(event.detail);
+    window.addEventListener("tau:model-options-render", update);
+    return () => window.removeEventListener("tau:model-options-render", update);
+  }, []);
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("form", { id: "model-form", children: [
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "provider-input", children: "Provider" }),
+        /* @__PURE__ */ u2("input", { id: "provider-input", className: "settings-panel__input", list: "provider-options", autoComplete: "off" }),
+        /* @__PURE__ */ u2("datalist", { id: "provider-options", children: options.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
+      ] }),
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "model-input", children: "Model" }),
+        /* @__PURE__ */ u2("input", { id: "model-input", className: "settings-panel__input", list: "model-options", autoComplete: "off" }),
+        /* @__PURE__ */ u2("datalist", { id: "model-options", children: options.models.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
+      ] }),
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("span", { className: "settings-panel__label" }),
+        /* @__PURE__ */ u2("button", { id: "apply-model-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply to session" }),
+        /* @__PURE__ */ u2("button", { id: "refresh-button", className: "settings-panel__provider-btn", type: "button", children: "Refresh" })
+      ] })
+    ] }),
+    /* @__PURE__ */ u2("form", { id: "thinking-form", children: [
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "thinking-level-select", children: "Thinking level" }),
+        /* @__PURE__ */ u2("select", { id: "thinking-level-select", className: "settings-panel__select", name: "thinking_level", children: thinking.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+        /* @__PURE__ */ u2("button", { id: "apply-thinking-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply" })
+      ] }),
+      /* @__PURE__ */ u2("p", { id: "thinking-help", className: "settings-panel__description", children: "Updates session thinking with optimistic concurrency checks." })
+    ] })
+  ] });
+}
+
 // src/components/SidePanel.tsx
 var TITLES = {
   sessions: "Sessions",
@@ -1044,31 +1097,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
           ] }),
           /* @__PURE__ */ u2("section", { id: "tau-settings-model", className: "settings-panel__section", children: [
             /* @__PURE__ */ u2("h2", { className: "settings-panel__section-title", children: "Model" }),
-            /* @__PURE__ */ u2("form", { id: "model-form", children: [
-              /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-                /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "provider-input", children: "Provider" }),
-                /* @__PURE__ */ u2("input", { id: "provider-input", className: "settings-panel__input", list: "provider-options", autoComplete: "off" }),
-                /* @__PURE__ */ u2("datalist", { id: "provider-options" })
-              ] }),
-              /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-                /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "model-input", children: "Model" }),
-                /* @__PURE__ */ u2("input", { id: "model-input", className: "settings-panel__input", list: "model-options", autoComplete: "off" }),
-                /* @__PURE__ */ u2("datalist", { id: "model-options" })
-              ] }),
-              /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-                /* @__PURE__ */ u2("span", { className: "settings-panel__label" }),
-                /* @__PURE__ */ u2("button", { id: "apply-model-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply to session" }),
-                /* @__PURE__ */ u2("button", { id: "refresh-button", className: "settings-panel__provider-btn", type: "button", children: "Refresh" })
-              ] })
-            ] }),
-            /* @__PURE__ */ u2("form", { id: "thinking-form", children: [
-              /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-                /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "thinking-level-select", children: "Thinking level" }),
-                /* @__PURE__ */ u2("select", { id: "thinking-level-select", className: "settings-panel__select", name: "thinking_level" }),
-                /* @__PURE__ */ u2("button", { id: "apply-thinking-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply" })
-              ] }),
-              /* @__PURE__ */ u2("p", { id: "thinking-help", className: "settings-panel__description", children: "Updates session thinking with optimistic concurrency checks." })
-            ] })
+            /* @__PURE__ */ u2(ModelControls, {})
           ] }),
           /* @__PURE__ */ u2("section", { id: "tau-settings-runtime", className: "settings-panel__section", "aria-labelledby": "settings-summary-title", children: [
             /* @__PURE__ */ u2("h2", { id: "settings-summary-title", className: "settings-panel__section-title", children: "Runtime" }),

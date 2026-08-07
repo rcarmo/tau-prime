@@ -4,18 +4,26 @@ import { useLayoutEffect, useState } from "preact/hooks";
 type CompletionItem = { label: string; detail: string };
 type CompletionView = { open: boolean; index: number; items: CompletionItem[] };
 type AttachmentView = { items: Array<{ mediaId: string; filename: string; label: string }>; busy: boolean };
+type AdapterOptions = { providers: Array<{ value: string; label: string }>; models: Array<{ value: string; label: string }>; thinking: Array<{ value: string; label: string }> };
 
 export function Composer() {
   const [completion, setCompletion] = useState<CompletionView>({ open: false, index: 0, items: [] });
   const [attachments, setAttachments] = useState<AttachmentView>({ items: [], busy: false });
+  const [adapterOptions, setAdapterOptions] = useState<AdapterOptions>({ providers: [], models: [], thinking: [] });
   useLayoutEffect(() => {
     const update = (event: Event) => setCompletion((event as CustomEvent<CompletionView>).detail);
     const updateAttachments = (event: Event) => setAttachments((event as CustomEvent<AttachmentView>).detail);
+    const updateModels = (event: Event) => setAdapterOptions((current) => ({ ...current, ...(event as CustomEvent<Partial<AdapterOptions>>).detail }));
+    const updateThinking = (event: Event) => setAdapterOptions((current) => ({ ...current, thinking: (event as CustomEvent<{ items: AdapterOptions["thinking"] }>).detail.items }));
     window.addEventListener("tau:completion-render", update);
     window.addEventListener("tau:attachments-render", updateAttachments);
+    window.addEventListener("tau:model-options-render", updateModels);
+    window.addEventListener("tau:thinking-options-render", updateThinking);
     return () => {
       window.removeEventListener("tau:completion-render", update);
       window.removeEventListener("tau:attachments-render", updateAttachments);
+      window.removeEventListener("tau:model-options-render", updateModels);
+      window.removeEventListener("tau:thinking-options-render", updateThinking);
     };
   }, []);
   const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : undefined;
@@ -42,9 +50,9 @@ export function Composer() {
           </div>
 
           <div className="sr-only" aria-hidden="true">
-            <select id="compose-provider-select" name="provider_name" tabIndex={-1} aria-label="Provider adapter" />
-            <select id="compose-model-select" name="model" tabIndex={-1} aria-label="Model adapter" />
-            <select id="compose-thinking-select" name="compose_thinking_level" tabIndex={-1} aria-label="Thinking adapter" />
+            <select id="compose-provider-select" name="provider_name" tabIndex={-1} aria-label="Provider adapter">{adapterOptions.providers.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select>
+            <select id="compose-model-select" name="model" tabIndex={-1} aria-label="Model adapter">{adapterOptions.models.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select>
+            <select id="compose-thinking-select" name="compose_thinking_level" tabIndex={-1} aria-label="Thinking adapter">{adapterOptions.thinking.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select>
           </div>
 
           <div id="compose-attachment-list" className="chat__attachments" role="region" aria-live="polite" aria-label="Staged attachments">
