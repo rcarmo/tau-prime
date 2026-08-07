@@ -2,12 +2,12 @@ const Tab = ({ id, panel, selected, children }: { id: string; panel: string; sel
   <button id={id} className="tab-button" type="button" role="tab" aria-controls={panel} aria-selected={selected}>{children}</button>
 );
 
-export function SidePanel() {
+export function SidePanel({ onClose }: { onClose: () => void }) {
   return (
     <aside id="side-panel" className="panel panel-side" aria-label="Workspace search and settings">
       <div className="panel-header sticky-header">
         <div><h2>Workspace</h2><p className="muted">Files, search, and Tau settings.</p></div>
-        <button id="close-panel-drawer" className="icon-button mobile-only" type="button" aria-label="Close workspace drawer">Close</button>
+        <button id="close-panel-drawer" className="icon-button mobile-only" type="button" aria-label="Close workspace drawer" onClick={onClose}>Close</button>
       </div>
       <div className="tabs" role="tablist" aria-label="Sidebar sections">
         <Tab id="tab-workspace" panel="panel-workspace" selected>Workspace</Tab>

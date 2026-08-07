@@ -556,3 +556,17 @@ async def test_unknown_or_traversal_frontend_paths_return_404(
         await client.close()
 
     assert payload["error"]["code"] == "not_found"
+
+
+def test_preact_owns_mobile_drawer_state() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    hook = (root / "frontend/src/hooks/useDrawers.ts").read_text(encoding="utf-8")
+    shell = (root / "frontend/src/index.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert "document.body.dataset.navOpen" in hook
+    assert 'window.addEventListener("keydown", keydown)' in hook
+    assert "<StatusBar drawer={drawer}" in shell
+    assert "hidden={drawer === null}" in shell
+    assert 'addEventListener("click", () => toggleDrawer' not in legacy
+    assert 'new CustomEvent("tau:close-drawers")' in legacy

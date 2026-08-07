@@ -437,10 +437,10 @@ var Meter = ({ id: id2, label }) => /* @__PURE__ */ u3("figure", { className: "m
   ] }),
   /* @__PURE__ */ u3("svg", { id: `meter-${id2}-sparkline`, role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
 ] });
-function StatusBar() {
+function StatusBar({ drawer, onToggleDrawer }) {
   return /* @__PURE__ */ u3("header", { className: "topbar", "aria-label": "Tau status bar", children: [
     /* @__PURE__ */ u3("div", { className: "topbar-group topbar-branding", children: [
-      /* @__PURE__ */ u3("button", { id: "mobile-nav-toggle", className: "icon-button mobile-only", type: "button", "aria-controls": "session-nav", "aria-expanded": "false", "aria-label": "Open sessions drawer", children: "Sessions" }),
+      /* @__PURE__ */ u3("button", { id: "mobile-nav-toggle", className: "icon-button mobile-only", type: "button", "aria-controls": "session-nav", "aria-expanded": drawer === "nav", "aria-label": "Open sessions drawer", onClick: () => onToggleDrawer("nav"), children: "Sessions" }),
       /* @__PURE__ */ u3("div", { className: "brand-block", children: [
         /* @__PURE__ */ u3("h1", { children: "Tau" }),
         /* @__PURE__ */ u3("p", { id: "status-stream", className: "muted", children: "Connecting\u2026" })
@@ -478,7 +478,7 @@ function StatusBar() {
           /* @__PURE__ */ u3(Meter, { id: "swap", label: "Swap" })
         ] })
       ] }),
-      /* @__PURE__ */ u3("button", { id: "mobile-panel-toggle", className: "icon-button mobile-only", type: "button", "aria-controls": "side-panel", "aria-expanded": "false", "aria-label": "Open workspace and settings drawer", children: "Panels" })
+      /* @__PURE__ */ u3("button", { id: "mobile-panel-toggle", className: "icon-button mobile-only", type: "button", "aria-controls": "side-panel", "aria-expanded": drawer === "panel", "aria-label": "Open workspace and settings drawer", onClick: () => onToggleDrawer("panel"), children: "Panels" })
     ] })
   ] });
 }
@@ -555,14 +555,14 @@ function Dashboard() {
 }
 
 // src/components/SessionNav.tsx
-function SessionNav() {
+function SessionNav({ onClose }) {
   return /* @__PURE__ */ u3("aside", { id: "session-nav", className: "panel panel-nav", "aria-label": "Session navigation", children: [
     /* @__PURE__ */ u3("div", { className: "panel-header sticky-header", children: [
       /* @__PURE__ */ u3("div", { children: [
         /* @__PURE__ */ u3("h2", { children: "Sessions" }),
         /* @__PURE__ */ u3("p", { className: "muted", children: "Persisted chats, archive, and restore." })
       ] }),
-      /* @__PURE__ */ u3("button", { id: "close-nav-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close sessions drawer", children: "Close" })
+      /* @__PURE__ */ u3("button", { id: "close-nav-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close sessions drawer", onClick: onClose, children: "Close" })
     ] }),
     /* @__PURE__ */ u3("div", { className: "button-row button-row-wrap", role: "group", "aria-label": "Session actions", children: [
       /* @__PURE__ */ u3("button", { id: "new-session-button", type: "button", children: "New" }),
@@ -642,14 +642,14 @@ function Timeline() {
 
 // src/components/SidePanel.tsx
 var Tab = ({ id: id2, panel, selected, children }) => /* @__PURE__ */ u3("button", { id: id2, className: "tab-button", type: "button", role: "tab", "aria-controls": panel, "aria-selected": selected, children });
-function SidePanel() {
+function SidePanel({ onClose }) {
   return /* @__PURE__ */ u3("aside", { id: "side-panel", className: "panel panel-side", "aria-label": "Workspace search and settings", children: [
     /* @__PURE__ */ u3("div", { className: "panel-header sticky-header", children: [
       /* @__PURE__ */ u3("div", { children: [
         /* @__PURE__ */ u3("h2", { children: "Workspace" }),
         /* @__PURE__ */ u3("p", { className: "muted", children: "Files, search, and Tau settings." })
       ] }),
-      /* @__PURE__ */ u3("button", { id: "close-panel-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close workspace drawer", children: "Close" })
+      /* @__PURE__ */ u3("button", { id: "close-panel-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close workspace drawer", onClick: onClose, children: "Close" })
     ] }),
     /* @__PURE__ */ u3("div", { className: "tabs", role: "tablist", "aria-label": "Sidebar sections", children: [
       /* @__PURE__ */ u3(Tab, { id: "tab-workspace", panel: "panel-workspace", selected: true, children: "Workspace" }),
@@ -992,19 +992,51 @@ function Onboarding() {
   ] });
 }
 
+// src/hooks/useDrawers.ts
+function useDrawers() {
+  const [drawer, setDrawer] = h2(null);
+  const close = () => setDrawer(null);
+  const toggle = (next) => {
+    setDrawer((current) => current === next ? null : next);
+  };
+  y2(() => {
+    document.body.dataset.navOpen = String(drawer === "nav");
+    document.body.dataset.panelOpen = String(drawer === "panel");
+  }, [drawer]);
+  y2(() => {
+    const closeRequested = () => close();
+    const resize = () => {
+      if (window.innerWidth > 960) close();
+    };
+    const keydown = (event) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("tau:close-drawers", closeRequested);
+    window.addEventListener("resize", resize);
+    window.addEventListener("keydown", keydown);
+    return () => {
+      window.removeEventListener("tau:close-drawers", closeRequested);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("keydown", keydown);
+    };
+  }, []);
+  return { drawer, close, toggle };
+}
+
 // src/index.tsx
 function TauShell() {
+  const { drawer, close, toggle } = useDrawers();
   return /* @__PURE__ */ u3(b, { children: [
     /* @__PURE__ */ u3("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
     /* @__PURE__ */ u3("div", { className: "app-layout", children: [
       /* @__PURE__ */ u3(ActivityBar, {}),
       /* @__PURE__ */ u3("div", { className: "app-layout__main", children: /* @__PURE__ */ u3("div", { className: "app-layout__content-area", children: /* @__PURE__ */ u3("div", { className: "app-layout__panel", children: /* @__PURE__ */ u3("div", { className: "app-shell", children: [
-        /* @__PURE__ */ u3(StatusBar, {}),
+        /* @__PURE__ */ u3(StatusBar, { drawer, onToggleDrawer: toggle }),
         /* @__PURE__ */ u3(Dashboard, {}),
         /* @__PURE__ */ u3("div", { className: "shell-layout", children: [
-          /* @__PURE__ */ u3(SessionNav, {}),
+          /* @__PURE__ */ u3(SessionNav, { onClose: close }),
           /* @__PURE__ */ u3(Timeline, {}),
-          /* @__PURE__ */ u3(SidePanel, {})
+          /* @__PURE__ */ u3(SidePanel, { onClose: close })
         ] }),
         /* @__PURE__ */ u3(Composer, {})
       ] }) }) }) })
@@ -1016,8 +1048,9 @@ function TauShell() {
         id: "drawer-backdrop",
         className: "drawer-backdrop",
         type: "button",
-        hidden: true,
-        "aria-label": "Close open drawers"
+        hidden: drawer === null,
+        "aria-label": "Close open drawers",
+        onClick: close
       }
     ),
     /* @__PURE__ */ u3("noscript", { children: /* @__PURE__ */ u3("p", { className: "noscript-banner", children: "Tau Web Shell requires JavaScript to load persisted sessions." }) })

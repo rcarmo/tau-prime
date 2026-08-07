@@ -243,11 +243,6 @@ function bindUi() {
 }
 
 function installEventHandlers() {
-  ui.mobileNavToggle.addEventListener("click", () => toggleDrawer("nav"));
-  ui.mobilePanelToggle.addEventListener("click", () => toggleDrawer("panel"));
-  ui.closeNavDrawer.addEventListener("click", closeDrawers);
-  ui.closePanelDrawer.addEventListener("click", closeDrawers);
-  ui.drawerBackdrop.addEventListener("click", closeDrawers);
   ui.metersCollapseButton.addEventListener("click", toggleMetersCollapsed);
   ui.metersVisibilityButton.addEventListener("click", toggleMetersEnabled);
   ui.dashboardToggle.addEventListener("click", toggleDashboard);
@@ -1233,31 +1228,8 @@ function switchTab(name) {
   }
 }
 
-function toggleDrawer(which) {
-  if (which === "nav") {
-    const open = document.body.dataset.navOpen === "true";
-    setDrawerState("nav", !open);
-  }
-  if (which === "panel") {
-    const open = document.body.dataset.panelOpen === "true";
-    setDrawerState("panel", !open);
-  }
-}
-
 function closeDrawers() {
-  setDrawerState("nav", false);
-  setDrawerState("panel", false);
-}
-
-function setDrawerState(which, open) {
-  const key = which === "nav" ? "navOpen" : "panelOpen";
-  document.body.dataset[key] = open ? "true" : "false";
-  ui.drawerBackdrop.hidden = !(document.body.dataset.navOpen === "true" || document.body.dataset.panelOpen === "true");
-  if (which === "nav") {
-    ui.mobileNavToggle.setAttribute("aria-expanded", String(open));
-  } else {
-    ui.mobilePanelToggle.setAttribute("aria-expanded", String(open));
-  }
+  window.dispatchEvent(new CustomEvent("tau:close-drawers"));
 }
 
 function renderShell() {

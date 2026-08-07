@@ -7,10 +7,12 @@ import { SessionNav } from "./components/SessionNav";
 import { Timeline } from "./components/Timeline";
 import { SidePanel } from "./components/SidePanel";
 import { Onboarding } from "./components/Onboarding";
+import { useDrawers } from "./hooks/useDrawers";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
 function TauShell() {
+  const { drawer, close, toggle } = useDrawers();
   return (
     <Fragment>
       <a className="skip-link" href="#timeline-main">Skip to timeline</a>
@@ -20,12 +22,12 @@ function TauShell() {
           <div className="app-layout__content-area">
             <div className="app-layout__panel">
               <div className="app-shell">
-                <StatusBar />
+                <StatusBar drawer={drawer} onToggleDrawer={toggle} />
                 <Dashboard />
                 <div className="shell-layout">
-                  <SessionNav />
+                  <SessionNav onClose={close} />
                   <Timeline />
-                  <SidePanel />
+                  <SidePanel onClose={close} />
                 </div>
                 <Composer />
               </div>
@@ -38,8 +40,9 @@ function TauShell() {
         id="drawer-backdrop"
         className="drawer-backdrop"
         type="button"
-        hidden
+        hidden={drawer === null}
         aria-label="Close open drawers"
+        onClick={close}
       />
       <noscript><p className="noscript-banner">Tau Web Shell requires JavaScript to load persisted sessions.</p></noscript>
     </Fragment>

@@ -1,9 +1,9 @@
-export function SessionNav() {
+export function SessionNav({ onClose }: { onClose: () => void }) {
   return (
     <aside id="session-nav" className="panel panel-nav" aria-label="Session navigation">
       <div className="panel-header sticky-header">
         <div><h2>Sessions</h2><p className="muted">Persisted chats, archive, and restore.</p></div>
-        <button id="close-nav-drawer" className="icon-button mobile-only" type="button" aria-label="Close sessions drawer">Close</button>
+        <button id="close-nav-drawer" className="icon-button mobile-only" type="button" aria-label="Close sessions drawer" onClick={onClose}>Close</button>
       </div>
       <div className="button-row button-row-wrap" role="group" aria-label="Session actions">
         <button id="new-session-button" type="button">New</button>

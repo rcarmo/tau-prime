@@ -5,11 +5,14 @@ const Meter = ({ id, label }: { id: string; label: string }) => (
   </figure>
 );
 
-export function StatusBar() {
+export function StatusBar({ drawer, onToggleDrawer }: {
+  drawer: "nav" | "panel" | null;
+  onToggleDrawer: (drawer: "nav" | "panel") => void;
+}) {
   return (
     <header className="topbar" aria-label="Tau status bar">
       <div className="topbar-group topbar-branding">
-        <button id="mobile-nav-toggle" className="icon-button mobile-only" type="button" aria-controls="session-nav" aria-expanded="false" aria-label="Open sessions drawer">Sessions</button>
+        <button id="mobile-nav-toggle" className="icon-button mobile-only" type="button" aria-controls="session-nav" aria-expanded={drawer === "nav"} aria-label="Open sessions drawer" onClick={() => onToggleDrawer("nav")}>Sessions</button>
         <div className="brand-block"><h1>Tau</h1><p id="status-stream" className="muted">Connecting…</p></div>
       </div>
       <dl className="status-grid" aria-label="Current Tau status">
@@ -31,7 +34,7 @@ export function StatusBar() {
             <Meter id="cpu" label="CPU" /><Meter id="ram" label="RAM" /><Meter id="rss" label="RSS" /><Meter id="swap" label="Swap" />
           </div>
         </section>
-        <button id="mobile-panel-toggle" className="icon-button mobile-only" type="button" aria-controls="side-panel" aria-expanded="false" aria-label="Open workspace and settings drawer">Panels</button>
+        <button id="mobile-panel-toggle" className="icon-button mobile-only" type="button" aria-controls="side-panel" aria-expanded={drawer === "panel"} aria-label="Open workspace and settings drawer" onClick={() => onToggleDrawer("panel")}>Panels</button>
       </div>
     </header>
   );
