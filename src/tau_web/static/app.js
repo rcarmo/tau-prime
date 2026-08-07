@@ -222,9 +222,6 @@ function bindUi() {
     composeAttachmentList: requiredElement("compose-attachment-list"),
     composeClearAttachments: requiredElement("compose-clear-attachments"),
     composeInput: requiredElement("compose-input"),
-    composeCompletionPopup: requiredElement("compose-completion-popup"),
-    composeCompletionListbox: requiredElement("compose-completion-listbox"),
-    composeCompletionStatus: requiredElement("compose-completion-status"),
     composeSubmit: requiredElement("compose-submit"),
     appStatus: requiredElement("app-status"),
     drawerBackdrop: requiredElement("drawer-backdrop"),
@@ -241,6 +238,10 @@ function installEventHandlers() {
   });
   window.addEventListener("tau:meter-controls", (event) => {
     applyMeterControls(Boolean(event.detail?.enabled), Boolean(event.detail?.collapsed));
+  });
+  window.addEventListener("tau:completion-select", (event) => {
+    const index = Number(event.detail?.index);
+    if (Number.isInteger(index)) void chooseComposerCompletion(index);
   });
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
@@ -2271,45 +2272,11 @@ function updateComposerCompletion() {
 
 function renderComposerCompletion() {
   const completion = state.composer.completion;
-  ui.composeCompletionListbox.replaceChildren();
-  ui.composeCompletionPopup.hidden = !completion.open;
-  ui.composeInput.setAttribute("aria-expanded", String(completion.open));
-
-  if (!completion.open) {
-    ui.composeCompletionStatus.textContent = "";
-    ui.composeInput.removeAttribute("aria-activedescendant");
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  for (const [index, item] of completion.items.entries()) {
-    const option = document.createElement("li");
-    option.id = `compose-completion-option-${index}`;
-    option.className = `command-palette__row${index === completion.index ? " is-active" : ""}`;
-    option.setAttribute("role", "option");
-    option.setAttribute("aria-selected", String(index === completion.index));
-    option.dataset.active = String(index === completion.index);
-    option.addEventListener("mousedown", (event) => {
-      event.preventDefault();
-    });
-    option.addEventListener("click", () => {
-      void chooseComposerCompletion(index);
-    });
-
-    const title = document.createElement("strong");
-    title.className = "command-palette__label";
-    title.textContent = item.label;
-
-    const detail = document.createElement("p");
-    detail.className = "command-palette__description";
-    detail.textContent = item.detail;
-
-    option.append(title, detail);
-    fragment.append(option);
-  }
-  ui.composeCompletionListbox.append(fragment);
-  ui.composeCompletionStatus.textContent = `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.`;
-  ui.composeInput.setAttribute("aria-activedescendant", `compose-completion-option-${completion.index}`);
+  window.dispatchEvent(new CustomEvent("tau:completion-render", { detail: {
+    open: completion.open,
+    index: completion.index,
+    items: completion.items.map((item) => ({ label: item.label, detail: item.detail })),
+  } }));
 }
 
 function renderComposerAttachments() {

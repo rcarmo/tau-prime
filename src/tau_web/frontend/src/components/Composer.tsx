@@ -1,6 +1,18 @@
 import { Fragment } from "preact";
+import { useLayoutEffect, useState } from "preact/hooks";
+
+type CompletionItem = { label: string; detail: string };
+type CompletionView = { open: boolean; index: number; items: CompletionItem[] };
 
 export function Composer() {
+  const [completion, setCompletion] = useState<CompletionView>({ open: false, index: 0, items: [] });
+  useLayoutEffect(() => {
+    const update = (event: Event) => setCompletion((event as CustomEvent<CompletionView>).detail);
+    window.addEventListener("tau:completion-render", update);
+    return () => window.removeEventListener("tau:completion-render", update);
+  }, []);
+  const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : undefined;
+  const choose = (index: number) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
   return (
     <Fragment>
       <div className="extension-slot" data-extension-slot="compose_above" />
@@ -42,13 +54,24 @@ export function Composer() {
             aria-autocomplete="list"
             aria-controls="compose-completion-listbox"
             aria-describedby="compose-help compose-completion-status"
-            aria-expanded="false"
+            aria-expanded={completion.open}
+            aria-activedescendant={activeDescendant}
             aria-haspopup="listbox"
             placeholder="Type a message..."
           />
-          <div id="compose-completion-popup" className="command-palette compose-completion-popup" hidden>
-            <p id="compose-completion-status" className="command-palette__step-hint" aria-live="polite" />
-            <ul id="compose-completion-listbox" className="command-palette__results" role="listbox" aria-label="Composer completions" />
+          <div id="compose-completion-popup" className="command-palette compose-completion-popup" hidden={!completion.open}>
+            <p id="compose-completion-status" className="command-palette__step-hint" aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
+            <ul id="compose-completion-listbox" className="command-palette__results" role="listbox" aria-label="Composer completions">
+              {completion.items.map((item, index) => <li
+                id={`compose-completion-option-${index}`}
+                className={`command-palette__row${index === completion.index ? " is-active" : ""}`}
+                role="option"
+                aria-selected={index === completion.index}
+                data-active={String(index === completion.index)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(index)}
+              ><strong className="command-palette__label">{item.label}</strong><p className="command-palette__description">{item.detail}</p></li>)}
+            </ul>
           </div>
         </div>
 

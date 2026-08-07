@@ -522,6 +522,14 @@ function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessio
 
 // src/components/Composer.tsx
 function Composer() {
+  const [completion, setCompletion] = h2({ open: false, index: 0, items: [] });
+  _2(() => {
+    const update = (event) => setCompletion(event.detail);
+    window.addEventListener("tau:completion-render", update);
+    return () => window.removeEventListener("tau:completion-render", update);
+  }, []);
+  const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : void 0;
+  const choose = (index) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
     /* @__PURE__ */ u2("form", { id: "compose-form", className: "chat__compose", children: [
@@ -559,14 +567,30 @@ function Composer() {
             "aria-autocomplete": "list",
             "aria-controls": "compose-completion-listbox",
             "aria-describedby": "compose-help compose-completion-status",
-            "aria-expanded": "false",
+            "aria-expanded": completion.open,
+            "aria-activedescendant": activeDescendant,
             "aria-haspopup": "listbox",
             placeholder: "Type a message..."
           }
         ),
-        /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: true, children: [
-          /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite" }),
-          /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions" })
+        /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: !completion.open, children: [
+          /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite", children: completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : "" }),
+          /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions", children: completion.items.map((item, index) => /* @__PURE__ */ u2(
+            "li",
+            {
+              id: `compose-completion-option-${index}`,
+              className: `command-palette__row${index === completion.index ? " is-active" : ""}`,
+              role: "option",
+              "aria-selected": index === completion.index,
+              "data-active": String(index === completion.index),
+              onMouseDown: (event) => event.preventDefault(),
+              onClick: () => choose(index),
+              children: [
+                /* @__PURE__ */ u2("strong", { className: "command-palette__label", children: item.label }),
+                /* @__PURE__ */ u2("p", { className: "command-palette__description", children: item.detail })
+              ]
+            }
+          )) })
         ] })
       ] }),
       /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })

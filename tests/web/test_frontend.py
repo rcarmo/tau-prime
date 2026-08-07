@@ -563,6 +563,19 @@ def test_preact_owns_dashboard_visibility() -> None:
     assert "ui.sessionDashboard.hidden" not in legacy
 
 
+def test_preact_owns_composer_completion_markup() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    composer = (root / "frontend/src/components/Composer.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("tau:completion-render"' in composer
+    assert 'new CustomEvent("tau:completion-select"' in composer
+    assert 'new CustomEvent("tau:completion-render"' in legacy
+    assert 'window.addEventListener("tau:completion-select"' in legacy
+    assert "composeCompletionListbox.replaceChildren" not in legacy
+    assert 'document.createElement("li")' not in legacy[legacy.index("function renderComposerCompletion"):legacy.index("function renderComposerAttachments")]
+
+
 def test_preact_owns_meter_controls() -> None:
     root = Path(__file__).parents[2] / "src" / "tau_web"
     hook = (root / "frontend/src/hooks/useMeterControls.ts").read_text(encoding="utf-8")
