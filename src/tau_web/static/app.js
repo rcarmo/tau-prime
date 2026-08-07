@@ -263,11 +263,8 @@ function installEventHandlers() {
     void restoreSelectedSession();
   });
 
-  ui.showActiveSessions.addEventListener("click", () => {
-    applySessionFilter("active");
-  });
-  ui.showArchivedSessions.addEventListener("click", () => {
-    applySessionFilter("archived");
+  window.addEventListener("tau:session-filter", (event) => {
+    applySessionFilter(event.detail?.filter);
   });
 
   ui.workspaceUpButton.addEventListener("click", () => {
@@ -1728,9 +1725,6 @@ function renderPlan() {
 }
 
 function renderSessions() {
-  ui.showActiveSessions.setAttribute("aria-pressed", String(state.sessionFilter === "active"));
-  ui.showArchivedSessions.setAttribute("aria-pressed", String(state.sessionFilter === "archived"));
-
   const sessions = visibleSessions();
   ui.sessionCount.textContent = `${sessions.length} session${sessions.length === 1 ? "" : "s"}`;
   ui.sessionList.replaceChildren();

@@ -424,7 +424,7 @@ function Dashboard({ open, onClose }) {
 }
 
 // src/components/SessionNav.tsx
-function SessionNav({ onClose }) {
+function SessionNav({ filter, onSelectFilter, onClose }) {
   return /* @__PURE__ */ u2("aside", { id: "session-nav", className: "panel panel-nav", "aria-label": "Session navigation", children: [
     /* @__PURE__ */ u2("div", { className: "panel-header sticky-header", children: [
       /* @__PURE__ */ u2("div", { children: [
@@ -439,8 +439,8 @@ function SessionNav({ onClose }) {
       /* @__PURE__ */ u2("button", { id: "restore-session-button", type: "button", children: "Restore" })
     ] }),
     /* @__PURE__ */ u2("div", { className: "button-row", role: "group", "aria-label": "Session list filter", children: [
-      /* @__PURE__ */ u2("button", { id: "show-active-sessions", type: "button", "aria-pressed": "true", children: "Active" }),
-      /* @__PURE__ */ u2("button", { id: "show-archived-sessions", type: "button", "aria-pressed": "false", children: "Archived" })
+      /* @__PURE__ */ u2("button", { id: "show-active-sessions", type: "button", "aria-pressed": filter === "active", onClick: () => onSelectFilter("active"), children: "Active" }),
+      /* @__PURE__ */ u2("button", { id: "show-archived-sessions", type: "button", "aria-pressed": filter === "archived", onClick: () => onSelectFilter("archived"), children: "Archived" })
     ] }),
     /* @__PURE__ */ u2("p", { id: "session-count", className: "muted small-text", children: "0 sessions" }),
     /* @__PURE__ */ u2("ul", { id: "session-list", className: "session-list", "aria-label": "Available sessions" })
@@ -1089,12 +1089,26 @@ function useMeterControls() {
   };
 }
 
+// src/hooks/useSessionFilter.ts
+function useSessionFilter() {
+  const [filter, setFilter] = h2(
+    () => window.localStorage.getItem("tau.web.sessionFilter") === "archived" ? "archived" : "active"
+  );
+  const selectFilter = (next) => {
+    setFilter(next);
+    window.localStorage.setItem("tau.web.sessionFilter", next);
+    window.dispatchEvent(new CustomEvent("tau:session-filter", { detail: { filter: next } }));
+  };
+  return { sessionFilter: filter, selectSessionFilter: selectFilter };
+}
+
 // src/index.tsx
 function TauShell() {
   const { drawer, close, open, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
   const { dashboardOpen, setDashboardOpen } = useDashboardVisibility();
   const { metersEnabled, metersCollapsed, toggleMetersEnabled, toggleMetersCollapsed } = useMeterControls();
+  const { sessionFilter, selectSessionFilter } = useSessionFilter();
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
     /* @__PURE__ */ u2("div", { className: "app-layout", children: [
@@ -1103,7 +1117,7 @@ function TauShell() {
         /* @__PURE__ */ u2(StatusBar, { drawer, dashboardOpen, metersEnabled, metersCollapsed, onToggleDrawer: toggle, onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
         /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
         /* @__PURE__ */ u2("div", { className: "shell-layout", children: [
-          /* @__PURE__ */ u2(SessionNav, { onClose: close }),
+          /* @__PURE__ */ u2(SessionNav, { filter: sessionFilter, onSelectFilter: selectSessionFilter, onClose: close }),
           /* @__PURE__ */ u2(Timeline, {}),
           /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close })
         ] }),

@@ -1,4 +1,10 @@
-export function SessionNav({ onClose }: { onClose: () => void }) {
+import type { SessionFilter } from "../hooks/useSessionFilter";
+
+export function SessionNav({ filter, onSelectFilter, onClose }: {
+  filter: SessionFilter;
+  onSelectFilter: (filter: SessionFilter) => void;
+  onClose: () => void;
+}) {
   return (
     <aside id="session-nav" className="panel panel-nav" aria-label="Session navigation">
       <div className="panel-header sticky-header">
@@ -11,8 +17,8 @@ export function SessionNav({ onClose }: { onClose: () => void }) {
         <button id="restore-session-button" type="button">Restore</button>
       </div>
       <div className="button-row" role="group" aria-label="Session list filter">
-        <button id="show-active-sessions" type="button" aria-pressed="true">Active</button>
-        <button id="show-archived-sessions" type="button" aria-pressed="false">Archived</button>
+        <button id="show-active-sessions" type="button" aria-pressed={filter === "active"} onClick={() => onSelectFilter("active")}>Active</button>
+        <button id="show-archived-sessions" type="button" aria-pressed={filter === "archived"} onClick={() => onSelectFilter("archived")}>Archived</button>
       </div>
       <p id="session-count" className="muted small-text">0 sessions</p>
       <ul id="session-list" className="session-list" aria-label="Available sessions" />
