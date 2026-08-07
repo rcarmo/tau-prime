@@ -163,7 +163,6 @@ function bindUi() {
     timelineMeta: requiredElement("timeline-meta"),
     agentStatusIndicator: requiredElement("agent-status-indicator"),
     agentStatusText: requiredElement("agent-status-text"),
-    branchList: requiredElement("branch-list"),
     timelineList: requiredElement("timeline-list"),
     sidePanel: requiredElement("side-panel"),
     closePanelDrawer: requiredElement("close-panel-drawer"),
@@ -242,6 +241,10 @@ function installEventHandlers() {
   window.addEventListener("tau:session-select", (event) => {
     const sessionId = event.detail?.sessionId;
     if (typeof sessionId === "string") void selectSession(sessionId, { reconnect: true });
+  });
+  window.addEventListener("tau:branch-select", (event) => {
+    const leafId = event.detail?.leafId;
+    if (typeof leafId === "string") void selectBranch(leafId);
   });
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
@@ -1620,27 +1623,13 @@ function renderSessionDetails() {
 }
 
 function renderBranches() {
-  ui.branchList.replaceChildren();
-  if (!state.selectedSessionId) {
-    ui.branchList.append(createMutedText("Select a session to load branches."));
-    return;
-  }
-  if (!state.branches.length) {
-    ui.branchList.append(createMutedText("No persisted branches yet."));
-    return;
-  }
-
-  for (const branch of state.branches) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "branch-button";
-    button.dataset.active = String(Boolean(branch.active));
-    button.textContent = `Depth ${numberOrZero(branch.depth)} · ${shortId(branch.leaf_entry_id)}`;
-    button.addEventListener("click", () => {
-      void selectBranch(branch.leaf_entry_id);
-    });
-    ui.branchList.append(button);
-  }
+  window.dispatchEvent(new CustomEvent("tau:branches-render", { detail: {
+    items: state.branches.map((branch) => ({
+      leafId: branch.leaf_entry_id,
+      label: `Depth ${numberOrZero(branch.depth)} · ${shortId(branch.leaf_entry_id)}`,
+      active: Boolean(branch.active),
+    })),
+  } }));
 }
 
 async function selectBranch(leafEntryId) {

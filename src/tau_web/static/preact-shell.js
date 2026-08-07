@@ -981,6 +981,12 @@ function Timeline() {
   ] });
 }
 function SessionRuntime() {
+  const [branches, setBranches] = h2([]);
+  _2(() => {
+    const update = (event) => setBranches(event.detail.items);
+    window.addEventListener("tau:branches-render", update);
+    return () => window.removeEventListener("tau:branches-render", update);
+  }, []);
   return /* @__PURE__ */ u2("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
     /* @__PURE__ */ u2("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
       /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
@@ -988,7 +994,10 @@ function SessionRuntime() {
     ] }),
     /* @__PURE__ */ u2("section", { className: "agent-status-panel__section", children: [
       /* @__PURE__ */ u2("div", { className: "agent-status-panel__title", children: "Session branch" }),
-      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools" })
+      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools", children: [
+        branches.map((branch) => /* @__PURE__ */ u2("button", { type: "button", className: "branch-button", "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })),
+        !branches.length && /* @__PURE__ */ u2("span", { className: "muted-text", children: "No persisted branches yet." })
+      ] })
     ] })
   ] });
 }

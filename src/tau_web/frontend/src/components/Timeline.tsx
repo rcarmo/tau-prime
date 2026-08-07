@@ -146,6 +146,12 @@ export function Timeline() {
 
 /** Tau branch selection mapped to Piclaw's between-timeline-and-compose status surface. */
 export function SessionRuntime() {
+  const [branches, setBranches] = useState<Array<{ leafId: string; label: string; active: boolean }>>([]);
+  useLayoutEffect(() => {
+    const update = (event: Event) => setBranches((event as CustomEvent<{ items: Array<{ leafId: string; label: string; active: boolean }> }>).detail.items);
+    window.addEventListener("tau:branches-render", update);
+    return () => window.removeEventListener("tau:branches-render", update);
+  }, []);
   return (
     <div className="agent-status-panel" aria-label="Session runtime">
       <div className="agent-status-panel__status" aria-live="polite">
@@ -154,7 +160,10 @@ export function SessionRuntime() {
       </div>
       <section className="agent-status-panel__section">
         <div className="agent-status-panel__title">Session branch</div>
-        <div id="branch-list" className="agent-status-panel__tools" />
+        <div id="branch-list" className="agent-status-panel__tools">
+          {branches.map((branch) => <button type="button" className="branch-button" data-active={String(branch.active)} onClick={() => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } }))}>{branch.label}</button>)}
+          {!branches.length && <span className="muted-text">No persisted branches yet.</span>}
+        </div>
       </section>
     </div>
   );
