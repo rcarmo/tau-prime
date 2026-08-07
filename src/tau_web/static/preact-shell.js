@@ -523,10 +523,16 @@ function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessio
 // src/components/Composer.tsx
 function Composer() {
   const [completion, setCompletion] = h2({ open: false, index: 0, items: [] });
+  const [attachments, setAttachments] = h2({ items: [], busy: false });
   _2(() => {
     const update = (event) => setCompletion(event.detail);
+    const updateAttachments = (event) => setAttachments(event.detail);
     window.addEventListener("tau:completion-render", update);
-    return () => window.removeEventListener("tau:completion-render", update);
+    window.addEventListener("tau:attachments-render", updateAttachments);
+    return () => {
+      window.removeEventListener("tau:completion-render", update);
+      window.removeEventListener("tau:attachments-render", updateAttachments);
+    };
   }, []);
   const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : void 0;
   const choose = (index) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
@@ -552,8 +558,11 @@ function Composer() {
           /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter" }),
           /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter" })
         ] }),
-        /* @__PURE__ */ u2("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments" }),
-        /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", className: "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: true, children: "Clear all" }),
+        /* @__PURE__ */ u2("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u2("span", { className: "chat__attachment-pill", children: [
+          /* @__PURE__ */ u2("span", { className: "chat__attachment-name", children: attachment.label }),
+          /* @__PURE__ */ u2("button", { className: "chat__attachment-remove", type: "button", "aria-label": `Remove attachment ${attachment.filename}`, disabled: attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } })), children: "\u2715" })
+        ] }, attachment.mediaId)) }),
+        /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", className: "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: !attachments.items.length, disabled: !attachments.items.length || attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachments-clear")), children: "Clear all" }),
         /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "compose-input", children: "Send a prompt to Tau" }),
         /* @__PURE__ */ u2(
           "textarea",

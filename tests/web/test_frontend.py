@@ -563,6 +563,18 @@ def test_preact_owns_dashboard_visibility() -> None:
     assert "ui.sessionDashboard.hidden" not in legacy
 
 
+def test_preact_owns_composer_attachment_markup() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    composer = (root / "frontend/src/components/Composer.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("tau:attachments-render"' in composer
+    assert 'new CustomEvent("tau:attachment-remove"' in composer
+    assert 'new CustomEvent("tau:attachments-render"' in legacy
+    assert 'window.addEventListener("tau:attachment-remove"' in legacy
+    assert "composeAttachmentList.replaceChildren" not in legacy
+
+
 def test_preact_owns_composer_completion_markup() -> None:
     root = Path(__file__).parents[2] / "src" / "tau_web"
     composer = (root / "frontend/src/components/Composer.tsx").read_text(encoding="utf-8")

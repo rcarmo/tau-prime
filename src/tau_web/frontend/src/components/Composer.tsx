@@ -3,13 +3,20 @@ import { useLayoutEffect, useState } from "preact/hooks";
 
 type CompletionItem = { label: string; detail: string };
 type CompletionView = { open: boolean; index: number; items: CompletionItem[] };
+type AttachmentView = { items: Array<{ mediaId: string; filename: string; label: string }>; busy: boolean };
 
 export function Composer() {
   const [completion, setCompletion] = useState<CompletionView>({ open: false, index: 0, items: [] });
+  const [attachments, setAttachments] = useState<AttachmentView>({ items: [], busy: false });
   useLayoutEffect(() => {
     const update = (event: Event) => setCompletion((event as CustomEvent<CompletionView>).detail);
+    const updateAttachments = (event: Event) => setAttachments((event as CustomEvent<AttachmentView>).detail);
     window.addEventListener("tau:completion-render", update);
-    return () => window.removeEventListener("tau:completion-render", update);
+    window.addEventListener("tau:attachments-render", updateAttachments);
+    return () => {
+      window.removeEventListener("tau:completion-render", update);
+      window.removeEventListener("tau:attachments-render", updateAttachments);
+    };
   }, []);
   const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : undefined;
   const choose = (index: number) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
@@ -40,8 +47,13 @@ export function Composer() {
             <select id="compose-thinking-select" name="compose_thinking_level" tabIndex={-1} aria-label="Thinking adapter" />
           </div>
 
-          <div id="compose-attachment-list" className="chat__attachments" role="region" aria-live="polite" aria-label="Staged attachments" />
-          <button id="compose-clear-attachments" className="chat__attachment-clear" type="button" aria-label="Clear all attachments" hidden>Clear all</button>
+          <div id="compose-attachment-list" className="chat__attachments" role="region" aria-live="polite" aria-label="Staged attachments">
+            {attachments.items.map((attachment) => <span className="chat__attachment-pill" key={attachment.mediaId}>
+              <span className="chat__attachment-name">{attachment.label}</span>
+              <button className="chat__attachment-remove" type="button" aria-label={`Remove attachment ${attachment.filename}`} disabled={attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } }))}>✕</button>
+            </span>)}
+          </div>
+          <button id="compose-clear-attachments" className="chat__attachment-clear" type="button" aria-label="Clear all attachments" hidden={!attachments.items.length} disabled={!attachments.items.length || attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachments-clear"))}>Clear all</button>
 
           <label className="sr-only" htmlFor="compose-input">Send a prompt to Tau</label>
           <textarea

@@ -219,8 +219,6 @@ function bindUi() {
     composeContextReadout: requiredElement("compose-context-readout"),
     composeAttachmentButton: requiredElement("compose-attachment-button"),
     composeFileInput: requiredElement("compose-file-input"),
-    composeAttachmentList: requiredElement("compose-attachment-list"),
-    composeClearAttachments: requiredElement("compose-clear-attachments"),
     composeInput: requiredElement("compose-input"),
     composeSubmit: requiredElement("compose-submit"),
     appStatus: requiredElement("app-status"),
@@ -328,8 +326,12 @@ function installEventHandlers() {
   ui.composeFileInput.addEventListener("change", () => {
     void handleComposerFileSelection();
   });
-  ui.composeClearAttachments.addEventListener("click", () => {
+  window.addEventListener("tau:attachments-clear", () => {
     clearComposerAttachments({ announceMessage: "Cleared staged attachments." });
+  });
+  window.addEventListener("tau:attachment-remove", (event) => {
+    const mediaId = event.detail?.mediaId;
+    if (typeof mediaId === "string") removeComposerAttachment(mediaId);
   });
   ui.composeInput.addEventListener("input", handleComposeInputChange);
   ui.composeInput.addEventListener("click", updateComposerCompletion);
@@ -2055,8 +2057,6 @@ function renderControls() {
   ui.composeDeliveryMode.disabled = state.composing || state.uploadingAttachments;
   ui.composeAttachmentButton.disabled = archived || state.composing || state.uploadingAttachments;
   ui.composeFileInput.disabled = archived || state.composing || state.uploadingAttachments;
-  ui.composeClearAttachments.hidden = !state.composer.attachments.length;
-  ui.composeClearAttachments.disabled = !state.composer.attachments.length || state.composing || state.uploadingAttachments;
   ui.composeSubmit.disabled = archived || state.composing || state.uploadingAttachments;
   const submitLabel = state.composer.deliveryMode === "run" ? "Run" : "Send";
   ui.composeSubmit.setAttribute("aria-label", submitLabel);
@@ -2280,31 +2280,14 @@ function renderComposerCompletion() {
 }
 
 function renderComposerAttachments() {
-  ui.composeAttachmentList.replaceChildren();
-  if (!state.composer.attachments.length) return;
-
-  const fragment = document.createDocumentFragment();
-  for (const attachment of state.composer.attachments) {
-    const item = document.createElement("span");
-    item.className = "chat__attachment-pill";
-
-    const label = document.createElement("span");
-    label.className = "chat__attachment-name";
-    label.textContent = attachmentLabel(attachment);
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "chat__attachment-remove";
-    button.setAttribute("aria-label", `Remove attachment ${attachment.filename}`);
-    button.textContent = "✕";
-    button.addEventListener("click", () => {
-      removeComposerAttachment(attachment.media_id);
-    });
-
-    item.append(label, button);
-    fragment.append(item);
-  }
-  ui.composeAttachmentList.append(fragment);
+  window.dispatchEvent(new CustomEvent("tau:attachments-render", { detail: {
+    busy: state.composing || state.uploadingAttachments,
+    items: state.composer.attachments.map((attachment) => ({
+      mediaId: attachment.media_id,
+      filename: attachment.filename,
+      label: attachmentLabel(attachment),
+    })),
+  } }));
 }
 
 async function chooseComposerCompletion(index) {
