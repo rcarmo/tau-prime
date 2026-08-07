@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('workspace tree and annotations render through Preact', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeVisible();
+  await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancel = page.getByRole('button', { name: 'Cancel' });
   await cancel.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await cancel.isVisible()) await cancel.click();
