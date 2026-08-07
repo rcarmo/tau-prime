@@ -34,7 +34,6 @@ FRONTEND_ASSETS = (
     ("/index.html", "text/html"),
     ("/manifest.webmanifest", "application/manifest+json"),
     ("/sw.js", "application/javascript"),
-    ("/static/app.css", "text/css"),
     ("/static/piclaw-reference.css", "text/css"),
     ("/static/app.js", "application/javascript"),
     ("/static/live-ui.js", "application/javascript"),
@@ -110,7 +109,7 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     assert root_html.index(preact_script) < root_html.index(live_script)
     root_html += shell_html
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
-    assert '<link rel="stylesheet" href="/static/app.css" />' in root_html
+    assert '<link rel="stylesheet" href="/static/app.css" />' not in root_html
     assert '<link rel="stylesheet" href="/static/piclaw-reference.css" />' in root_html
     assert '<script type="module" src="/static/live-ui.js"></script>' in root_html
     assert '<script type="module" src="/static/extension-ui.js"></script>' in root_html
@@ -450,43 +449,6 @@ def test_frontend_sdk_node_vm_contracts() -> None:
 
 
 @pytest.mark.anyio
-async def test_app_css_contains_responsive_media_queries(web_config: WebConfig) -> None:
-    app = create_app(web_config)
-    client = await _start_client(app)
-
-    try:
-        async with client.get("/static/app.css") as response:
-            stylesheet = await response.text()
-    finally:
-        await client.close()
-
-    assert "@media (max-width: 960px)" in stylesheet
-    assert "@media (max-width: 720px)" in stylesheet
-    assert "@media (max-width: 1079px)" in stylesheet
-    assert "@media (max-width: 759px)" in stylesheet
-    assert ".shell-layout" in stylesheet
-    assert ".mobile-only" in stylesheet
-    assert ".extension-slot" in stylesheet
-    assert ".tau-extension-view" in stylesheet
-    assert ".tau-extension-stack" in stylesheet
-    assert ".compose-select-grid" in stylesheet
-    assert ".compose-attachment-list" in stylesheet
-    assert ".compose-completion-popup" in stylesheet
-    assert ".attachment-chip" in stylesheet
-    assert ".session-dashboard" in stylesheet
-    assert ".dashboard-shell" in stylesheet
-    assert ".dashboard-grid" in stylesheet
-    assert "grid-template-columns: repeat(4, minmax(0, 1fr));" in stylesheet
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in stylesheet
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in stylesheet
-    assert ".topbar-dashboard-control" in stylesheet
-    assert "grid-template-rows: auto auto minmax(0, 1fr) auto;" in stylesheet
-    assert '[data-extension-slot="dashboard"]' in stylesheet
-    assert '[data-extension-slot="compose_above"]' in stylesheet
-    assert '[data-extension-slot="compose_below"]' in stylesheet
-
-
-@pytest.mark.anyio
 async def test_manifest_and_service_worker_match_shell_asset_references(
     web_config: WebConfig,
 ) -> None:
@@ -520,7 +482,6 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "/",
         "/index.html",
         "/manifest.webmanifest",
-        "/static/app.css",
         "/static/piclaw-reference.css",
         "/static/app.js",
         "/static/live-ui.js",

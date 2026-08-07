@@ -3,7 +3,6 @@ const SHELL_URLS = Object.freeze([
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/static/app.css",
   "/static/piclaw-reference.css",
   "/static/piclaw-parity.css",
   "/static/app.js",

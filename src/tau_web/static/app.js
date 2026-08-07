@@ -619,10 +619,10 @@ function renderApprovalPrompt() {
   existing?.remove();
 
   const backdrop = document.createElement("div");
-  backdrop.className = "approval-backdrop";
+  backdrop.className = "modal-dialog__backdrop approval-backdrop";
   backdrop.dataset.approvalId = approval.approval_id;
   const panel = document.createElement("section");
-  panel.className = "approval-prompt";
+  panel.className = "modal-dialog approval-prompt";
   panel.setAttribute("role", "alertdialog");
   panel.setAttribute("aria-modal", "true");
   panel.setAttribute("aria-labelledby", "approval-title");
@@ -630,22 +630,24 @@ function renderApprovalPrompt() {
 
   const title = document.createElement("h2");
   title.id = "approval-title";
+  title.className = "modal-dialog__title";
   title.textContent = `Allow ${approval.tool_name}?`;
   const description = document.createElement("p");
   description.id = "approval-description";
+  description.className = "modal-dialog__description";
   description.textContent = approval.description || "The agent requested permission to run this tool.";
   const argumentsView = document.createElement("pre");
-  argumentsView.className = "approval-arguments";
+  argumentsView.className = "modal-dialog__description approval-arguments";
   argumentsView.textContent = JSON.stringify(approval.arguments ?? {}, null, 2);
   const actions = document.createElement("div");
-  actions.className = "approval-actions";
+  actions.className = "modal-dialog__actions approval-actions";
   const denyButton = document.createElement("button");
   denyButton.type = "button";
-  denyButton.className = "secondary-button";
+  denyButton.className = "modal-dialog__btn";
   denyButton.textContent = "Deny";
   const allowButton = document.createElement("button");
   allowButton.type = "button";
-  allowButton.className = "primary-button";
+  allowButton.className = "modal-dialog__btn modal-dialog__btn--primary";
   allowButton.textContent = "Allow once";
   denyButton.addEventListener("click", () => void settleApproval(approval.approval_id, "deny"));
   allowButton.addEventListener("click", () => void settleApproval(approval.approval_id, "allow"));
@@ -2930,8 +2932,10 @@ function handleKeyboardShortcuts(event) {
     event.preventDefault();
     switchTab("search");
     window.dispatchEvent(new CustomEvent("tau:open-drawer", { detail: { drawer: "panel" } }));
-    ui.searchInput.focus();
-    ui.searchInput.select();
+    window.queueMicrotask(() => {
+      ui.searchInput.focus();
+      ui.searchInput.select();
+    });
     return;
   }
   if (isModifier && event.key.toLowerCase() === "n") {
