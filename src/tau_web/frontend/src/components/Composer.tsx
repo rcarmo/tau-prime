@@ -36,7 +36,7 @@ export function Composer() {
         <div className="compose-editor-group">
           <div className="compose-row">
             <textarea id="compose-input" className="chat__input" name="prompt" rows={3} autoComplete="off" role="combobox" aria-autocomplete="list" aria-controls="compose-completion-listbox" aria-describedby="compose-help compose-completion-status" aria-expanded="false" aria-haspopup="listbox" placeholder="Select or create a session, then send a prompt." />
-            <button id="compose-submit" className="chat__send-btn" type="submit">Run</button>
+            <button id="compose-submit" className="chat__send-btn" type="submit" aria-label="Run">↑</button>
           </div>
           <div id="compose-completion-popup" className="compose-completion-popup" hidden>
             <p id="compose-completion-status" className="muted small-text" aria-live="polite" />

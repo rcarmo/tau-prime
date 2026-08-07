@@ -60,6 +60,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose }: {
         </form>
       </section>
       <section id="panel-settings" className="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden={activeTab !== "settings"}>
+        <button className="settings-provider-setup" type="button" onClick={() => document.querySelector<HTMLButtonElement>(".provider-setup-trigger")?.click()}>Provider setup</button>
         <form id="auth-form" className="stack-form">
           <label htmlFor="auth-token">Bearer token</label><input id="auth-token" type="password" autoComplete="off" />
           <div className="button-row button-row-wrap"><button id="save-auth-button" type="submit">Save token</button><button id="clear-auth-button" type="button">Clear token</button></div>

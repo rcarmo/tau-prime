@@ -389,7 +389,7 @@ function Composer() {
       /* @__PURE__ */ u2("div", { className: "compose-editor-group", children: [
         /* @__PURE__ */ u2("div", { className: "compose-row", children: [
           /* @__PURE__ */ u2("textarea", { id: "compose-input", className: "chat__input", name: "prompt", rows: 3, autoComplete: "off", role: "combobox", "aria-autocomplete": "list", "aria-controls": "compose-completion-listbox", "aria-describedby": "compose-help compose-completion-status", "aria-expanded": "false", "aria-haspopup": "listbox", placeholder: "Select or create a session, then send a prompt." }),
-          /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", children: "Run" })
+          /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", children: "\u2191" })
         ] }),
         /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "compose-completion-popup", hidden: true, children: [
           /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "muted small-text", "aria-live": "polite" }),
@@ -586,6 +586,7 @@ function SidePanel({ activeTab, onSelectTab, onClose }) {
         ] })
       ] }) }),
       /* @__PURE__ */ u2("section", { id: "panel-settings", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-settings", hidden: activeTab !== "settings", children: [
+        /* @__PURE__ */ u2("button", { className: "settings-provider-setup", type: "button", onClick: () => document.querySelector(".provider-setup-trigger")?.click(), children: "Provider setup" }),
         /* @__PURE__ */ u2("form", { id: "auth-form", className: "stack-form", children: [
           /* @__PURE__ */ u2("label", { htmlFor: "auth-token", children: "Bearer token" }),
           /* @__PURE__ */ u2("input", { id: "auth-token", type: "password", autoComplete: "off" }),

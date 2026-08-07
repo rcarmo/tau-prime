@@ -2,15 +2,24 @@
  * Keep this file small: visual primitives belong in piclaw-reference.css.
  */
 :root {
-  color-scheme: dark;
-  --bg-primary: var(--vscode-editor-background, #0d0f12);
-  --bg-secondary: var(--vscode-sideBar-background, #15181d);
-  --bg-hover: var(--vscode-list-hoverBackground, #20242b);
-  --text-primary: var(--vscode-foreground, #eef1f5);
-  --text-secondary: var(--vscode-descriptionForeground, #9ca5b2);
-  --border-color: var(--vscode-panel-border, #2a2f37);
-  --accent-color: var(--vscode-focusBorder, #8b86ff);
-  --accent-color-alpha: rgb(139 134 255 / 0.18);
+  color-scheme: light;
+  --bg: var(--bg-primary);
+  --panel: var(--bg-secondary);
+  --panel-strong: var(--bg-primary);
+  --panel-soft: var(--bg-hover);
+  --border: var(--border-color);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --accent: var(--accent-color);
+  --accent-strong: var(--accent-hover);
+  --shadow: var(--shadow-md);
+}
+
+html,
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
 }
 
 /* The Preact mount must not add a layout box around Piclaw's shell hierarchy. */
@@ -74,6 +83,51 @@ option { background: var(--bg-secondary); }
   transition: transform 180ms ease;
 }
 body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
+
+.provider-setup-trigger { display: none; }
+
+.app-layout__status-bar .system-meters,
+.app-layout__status-bar .topbar-dashboard-control { display: none; }
+.app-layout__status-bar .status-grid {
+  display: inline-flex;
+  gap: 12px;
+  margin: 0;
+  font-size: 11px;
+}
+.app-layout__status-bar .status-grid > div { display: inline-flex; gap: 4px; }
+.app-layout__status-bar .status-grid dt { color: var(--text-secondary); }
+.app-layout__status-bar .status-grid dd { margin: 0; }
+
+.chat__compose { justify-content: center; }
+.chat__compose .compose-form {
+  width: min(900px, 100%);
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.chat__compose .compose-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.chat__compose .chat__input {
+  min-height: 54px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  resize: none;
+}
+.chat__compose .chat__send-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: white;
+  font-size: 18px;
+}
 
 .chat__session-details,
 .chat__prompt-options {
