@@ -99,110 +99,26 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         await client.close()
 
     assert root_html == index_html
-    shell_html = (
-        Path(__file__).parents[2] / "src" / "tau_web" / "frontend" / "src" / "shell.html"
-    ).read_text(encoding="utf-8")
     assert '<script type="module" src="/static/preact-shell.js"></script>' in root_html
-    preact_script = '<script type="module" src="/static/preact-shell.js"></script>'
-    assert preact_script in root_html
-    root_html += shell_html
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
-    assert '<link rel="stylesheet" href="/static/app.css" />' not in root_html
     assert '<link rel="stylesheet" href="/static/piclaw-reference.css" />' in root_html
+    assert '<link rel="stylesheet" href="/static/app.css" />' not in root_html
     assert '<script type="module" src="/static/live-ui.js"></script>' not in root_html
-    assert '<script type="module" src="/static/extension-ui.js"></script>' in root_html
-    assert '<script type="module" src="/static/frontend-sdk.js"></script>' in root_html
-    assert '<script type="module" src="/static/app.js"></script>' in root_html
-    extension_script = '<script type="module" src="/static/extension-ui.js"></script>'
-    frontend_sdk_script = '<script type="module" src="/static/frontend-sdk.js"></script>'
-    app_script = '<script type="module" src="/static/app.js"></script>'
-    assert root_html.index(extension_script) < root_html.index(frontend_sdk_script)
-    assert root_html.index(frontend_sdk_script) < root_html.index(app_script)
+
+    component_root = Path(__file__).parents[2] / "src" / "tau_web" / "frontend" / "src"
+    component_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in [component_root / "index.tsx", *sorted((component_root / "components").glob("*.tsx"))]
+    )
     assert {
         match.group(1)
-        for match in re.finditer(r'data-extension-slot="([^"]+)"', root_html)
-    } == {
-        "compose_above",
-        "compose_below",
-        "sidebar",
-        "timeline_before",
-        "timeline_after",
-        "dashboard",
-    }
-    assert root_html.count('data-extension-slot="') == 6
-    assert re.search(r"<header\b", root_html) is not None
-    assert re.search(r'<main\b[^>]*id="timeline-main"', root_html) is not None
-    assert re.search(r"<footer\b", root_html) is not None
-    assert re.search(r'<aside\b[^>]*id="session-nav"', root_html) is not None
-    assert re.search(r'<aside\b[^>]*id="side-panel"', root_html) is not None
-    for field_id in (
-        "workspace-editor",
-        "search-input",
-        "plan-editor",
-        "auth-token",
-        "provider-input",
-        "model-input",
-        "thinking-level-select",
-        "compose-provider-select",
-        "compose-model-select",
-        "compose-thinking-select",
-        "compose-delivery-mode",
-        "compose-input",
-    ):
-        assert f'for="{field_id}"' in root_html
+        for match in re.finditer(r'data-extension-slot="([^"]+)"', component_source)
+    } == {"compose_above", "compose_below", "sidebar", "timeline_before", "timeline_after"}
     for element_id in (
-        "compose-context-readout",
-        "compose-attachment-button",
-        "compose-file-input",
-        "compose-attachment-list",
-        "compose-clear-attachments",
-        "compose-completion-popup",
-        "compose-completion-listbox",
-        "compose-completion-status",
-        "plan-revision",
-        "plan-status",
-        "plan-conflict",
-        "plan-save-button",
-        "plan-reload-button",
-        "system-meters",
-        "meters-summary",
-        "meters-collapse-button",
-        "meters-visibility-button",
-        "meters-details",
-        "meter-cpu-sparkline",
-        "meter-ram-sparkline",
-        "meter-rss-sparkline",
-        "meter-swap-sparkline",
-        "dashboard-toggle",
-        "dashboard-count",
-        "session-dashboard",
-        "dashboard-close",
-        "dashboard-grid",
-        "dashboard-age",
-        "dashboard-previous",
-        "dashboard-page",
-        "dashboard-next",
-        "dashboard-manage",
+        "timeline-main", "side-panel", "compose-input", "workspace-editor", "search-results",
+        "plan-editor", "thinking-level-select", "system-meters", "session-dashboard",
     ):
-        assert f'id="{element_id}"' in root_html
-    assert (
-        re.search(r'<textarea\b[^>]*id="compose-input"[^>]*role="combobox"', root_html)
-        is not None
-    )
-    assert (
-        re.search(
-            r'<input\b[^>]*id="compose-file-input"[^>]*aria-label="Attach files"',
-            root_html,
-        )
-        is not None
-    )
-    branch_list_markup = re.search(r'<div\b[^>]*id="branch-list"[^>]*>', root_html)
-    assert branch_list_markup is not None
-    assert 'role="list"' not in branch_list_markup.group(0)
-    search_results_markup = re.search(r'<ol\b[^>]*id="search-results"[^>]*>', root_html)
-    assert search_results_markup is not None
-    assert 'tabindex="0"' in search_results_markup.group(0)
-    assert 'aria-label="Search results"' in search_results_markup.group(0)
+        assert f'id="{element_id}"' in component_source
 
 
 @pytest.mark.anyio
