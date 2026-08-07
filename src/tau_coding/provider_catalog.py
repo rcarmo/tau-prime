@@ -234,10 +234,25 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
             "kimi-k2-thinking": 262_144,
         },
         headers={"User-Agent": "KimiCLI/1.5"},
-        thinking_levels=("low", "medium", "high"),
+        thinking_levels=("low", "medium", "high", "xhigh"),
         thinking_models=("kimi-k3", "kimi-for-coding", "kimi-k2-thinking"),
-        thinking_default="medium",
+        thinking_default="xhigh",
         thinking_parameter="anthropic.thinking",
+        model_overrides={
+            "kimi-k3": ProviderModelOverride(
+                thinking_modes={
+                    "low": ThinkingMode(api_value="low"),
+                    "high": ThinkingMode(api_value="high"),
+                    "xhigh": ThinkingMode(api_value="max", label="max"),
+                },
+                thinking_default="xhigh",
+            ),
+            "kimi-for-coding": ProviderModelOverride(
+                thinking_modes={"medium": ThinkingMode()},
+                thinking_default="medium",
+            ),
+            "kimi-k2-thinking": ProviderModelOverride(always_thinking=True),
+        },
     ),
     ProviderCatalogEntry(
         name="zai",
