@@ -77,7 +77,7 @@ async function openSidePanelIfNeeded(page) {
 }
 
 async function ensureSessionSelected(page) {
-  const sessionButtons = page.locator('#session-list .session-button');
+  const sessionButtons = page.locator('#session-list .sessions-panel__session');
   if ((await sessionButtons.count()) === 0) {
     await openNavIfNeeded(page);
     await page.locator('#new-session-button').click();
@@ -87,7 +87,7 @@ async function ensureSessionSelected(page) {
   await openNavIfNeeded(page);
   await sessionButtons.first().click();
   await expect
-    .poll(() => page.locator('#session-list .session-button[data-active="true"]').count())
+    .poll(() => page.locator('#session-list .sessions-panel__session[data-active="true"]').count())
     .toBeGreaterThan(0);
 }
 

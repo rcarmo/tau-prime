@@ -122,15 +122,15 @@ test('responsive shell, nav drawers, and UTF-8 workspace file rendering', async 
 
   await openWorkspacePanel(page);
 
-  const readmeButton = page.getByRole('button', { name: /README\.md/i });
-  const notesButton = page.getByRole('button', { name: /^notes\b/i });
+  const readmeButton = page.getByRole('treeitem', { name: /README\.md/i });
+  const notesButton = page.getByRole('treeitem', { name: /^notes\b/i });
   await expect(readmeButton).toBeVisible();
   await expect(notesButton).toBeVisible();
 
   await activateWorkspaceEntry(page, notesButton);
   await expect(page.locator('#workspace-path')).toContainText(/notes/);
 
-  const welcomeButton = page.getByRole('button', { name: /welcome\.txt/i });
+  const welcomeButton = page.getByRole('treeitem', { name: /welcome\.txt/i });
   await activateWorkspaceEntry(page, welcomeButton);
   await expect(page.locator('#workspace-editor-path')).toContainText(/notes\/welcome\.txt/i);
   await expect(page.locator('#workspace-editor')).toHaveValue(/café/);

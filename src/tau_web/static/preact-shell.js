@@ -447,50 +447,58 @@ var TITLES = {
   plan: "Plan",
   settings: "Settings"
 };
-var Tab = ({ name, selected, onSelect, children }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, className: "tab-button", type: "button", role: "tab", "aria-controls": `panel-${name}`, "aria-selected": selected, onClick: () => onSelect(name), children });
+var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-selected": selected, onClick: () => onSelect(name), children: TITLES[name] });
 function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter }) {
-  return /* @__PURE__ */ u2("aside", { id: "side-panel", className: "sidebar panel-side", "aria-label": "Workspace search and settings", children: [
+  return /* @__PURE__ */ u2("aside", { id: "side-panel", className: "sidebar", "aria-label": `${TITLES[activeTab]} sidebar`, children: [
     /* @__PURE__ */ u2("header", { className: "sidebar__header", children: [
-      /* @__PURE__ */ u2("h2", { className: "sidebar__title", children: TITLES[activeTab] }),
-      /* @__PURE__ */ u2("button", { id: "close-nav-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "Close" }),
-      /* @__PURE__ */ u2("button", { id: "close-panel-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "Close" })
+      /* @__PURE__ */ u2("span", { className: "sidebar__title", children: TITLES[activeTab].toUpperCase() }),
+      /* @__PURE__ */ u2("button", { id: "close-nav-drawer", className: "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
+      /* @__PURE__ */ u2("button", { id: "close-panel-drawer", className: "sidebar__close mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
     ] }),
     /* @__PURE__ */ u2("div", { className: "sidebar__content", children: [
       /* @__PURE__ */ u2("div", { hidden: true, children: [
-        /* @__PURE__ */ u2(Tab, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab, children: "Workspace" }),
-        /* @__PURE__ */ u2(Tab, { name: "search", selected: activeTab === "search", onSelect: onSelectTab, children: "Search" }),
-        /* @__PURE__ */ u2(Tab, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab, children: "Plan" }),
-        /* @__PURE__ */ u2(Tab, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab, children: "Settings" })
+        /* @__PURE__ */ u2(LegacyTabAnchor, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab }),
+        /* @__PURE__ */ u2(LegacyTabAnchor, { name: "search", selected: activeTab === "search", onSelect: onSelectTab }),
+        /* @__PURE__ */ u2(LegacyTabAnchor, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab }),
+        /* @__PURE__ */ u2(LegacyTabAnchor, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab })
       ] }),
-      /* @__PURE__ */ u2("section", { id: "panel-sessions", className: "tab-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
-        /* @__PURE__ */ u2("div", { className: "button-row button-row-wrap", role: "group", "aria-label": "Session actions", children: [
-          /* @__PURE__ */ u2("button", { id: "new-session-button", type: "button", children: "New" }),
-          /* @__PURE__ */ u2("button", { id: "archive-session-button", type: "button", children: "Archive" }),
-          /* @__PURE__ */ u2("button", { id: "restore-session-button", type: "button", children: "Restore" })
+      /* @__PURE__ */ u2("section", { id: "panel-sessions", className: "sessions-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
+        /* @__PURE__ */ u2("div", { className: "sessions-panel__toolbar", role: "group", "aria-label": "Session actions", children: [
+          /* @__PURE__ */ u2("button", { id: "new-session-button", className: "sessions-panel__new", type: "button", children: [
+            /* @__PURE__ */ u2("i", { className: "codicon codicon-add", "aria-hidden": "true" }),
+            " New"
+          ] }),
+          /* @__PURE__ */ u2("button", { id: "archive-session-button", className: "sessions-panel__action", type: "button", children: "Archive" }),
+          /* @__PURE__ */ u2("button", { id: "restore-session-button", className: "sessions-panel__action", type: "button", children: "Restore" })
         ] }),
-        /* @__PURE__ */ u2("div", { className: "button-row", role: "group", "aria-label": "Session list filter", children: [
+        /* @__PURE__ */ u2("div", { className: "sessions-panel__filters", role: "group", "aria-label": "Session list filter", children: [
           /* @__PURE__ */ u2("button", { id: "show-active-sessions", type: "button", "aria-pressed": sessionFilter === "active", onClick: () => onSelectSessionFilter("active"), children: "Active" }),
-          /* @__PURE__ */ u2("button", { id: "show-archived-sessions", type: "button", "aria-pressed": sessionFilter === "archived", onClick: () => onSelectSessionFilter("archived"), children: "Archived" })
+          /* @__PURE__ */ u2("button", { id: "show-archived-sessions", type: "button", "aria-pressed": sessionFilter === "archived", onClick: () => onSelectSessionFilter("archived"), children: "Archived" }),
+          /* @__PURE__ */ u2("span", { id: "session-count", className: "sessions-panel__count", children: "0 sessions" })
         ] }),
-        /* @__PURE__ */ u2("p", { id: "session-count", className: "muted small-text", children: "0 sessions" }),
-        /* @__PURE__ */ u2("ul", { id: "session-list", className: "session-list", "aria-label": "Available sessions" })
+        /* @__PURE__ */ u2("ul", { id: "session-list", className: "sessions-panel__list", "aria-label": "Available sessions" })
       ] }),
-      /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-workspace", hidden: activeTab !== "workspace", children: [
-        /* @__PURE__ */ u2("div", { className: "toolbar-row", children: [
-          /* @__PURE__ */ u2("button", { id: "workspace-up-button", type: "button", children: "Up" }),
-          /* @__PURE__ */ u2("button", { id: "workspace-reload-button", type: "button", children: "Reload" })
+      /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden: activeTab !== "workspace", children: [
+        /* @__PURE__ */ u2("div", { className: "workspace__pane-top", children: [
+          /* @__PURE__ */ u2("div", { className: "workspace__section-header workspace__section-header--padded", children: [
+            /* @__PURE__ */ u2("span", { children: "Files" }),
+            /* @__PURE__ */ u2("div", { className: "workspace__files-toolbar", children: [
+              /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "workspace__files-toolbar-icon codicon codicon-arrow-up", type: "button", title: "Parent directory", "aria-label": "Parent directory" }),
+              /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "workspace__files-toolbar-icon codicon codicon-refresh", type: "button", title: "Refresh", "aria-label": "Refresh workspace" })
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: "." }),
+          /* @__PURE__ */ u2("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree" })
         ] }),
-        /* @__PURE__ */ u2("p", { id: "workspace-path", className: "muted small-text", children: "." }),
-        /* @__PURE__ */ u2("div", { className: "workspace-split", children: [
-          /* @__PURE__ */ u2("nav", { className: "workspace-browser", "aria-label": "Workspace tree", children: /* @__PURE__ */ u2("ul", { id: "workspace-list", className: "workspace-list" }) }),
-          /* @__PURE__ */ u2("section", { className: "workspace-editor-panel", "aria-labelledby": "workspace-editor-title", children: [
-            /* @__PURE__ */ u2("div", { className: "workspace-editor-header", children: [
-              /* @__PURE__ */ u2("h3", { id: "workspace-editor-title", children: "Editor" }),
-              /* @__PURE__ */ u2("p", { id: "workspace-editor-path", className: "muted small-text", children: "No file selected" })
-            ] }),
+        /* @__PURE__ */ u2("div", { className: "workspace__drag-handle", role: "separator", "aria-orientation": "horizontal" }),
+        /* @__PURE__ */ u2("div", { className: "workspace__pane-bottom", children: [
+          /* @__PURE__ */ u2("div", { className: "workspace__preview-header", children: "Preview" }),
+          /* @__PURE__ */ u2("section", { className: "workspace__preview-info", "aria-labelledby": "workspace-editor-title", children: [
+            /* @__PURE__ */ u2("div", { id: "workspace-editor-title", className: "workspace__preview-name", children: "Selected file" }),
+            /* @__PURE__ */ u2("div", { id: "workspace-editor-path", className: "workspace__preview-path", children: "No file selected" }),
             /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
-            /* @__PURE__ */ u2("textarea", { id: "workspace-editor", spellcheck: false, "aria-describedby": "workspace-editor-note" }),
-            /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "muted small-text", children: "Local edits are not yet persisted through the web shell." }),
+            /* @__PURE__ */ u2("textarea", { id: "workspace-editor", className: "workspace__preview-content", spellcheck: false, "aria-describedby": "workspace-editor-note" }),
+            /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "workspace__preview-meta", children: "Local edits are not yet persisted through the web shell." }),
             /* @__PURE__ */ u2("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: true, children: [
               /* @__PURE__ */ u2("h4", { children: "Annotations" }),
               /* @__PURE__ */ u2("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list" })
@@ -499,18 +507,18 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ u2("section", { id: "panel-search", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
-        /* @__PURE__ */ u2("form", { id: "search-form", className: "stack-form", children: [
-          /* @__PURE__ */ u2("label", { htmlFor: "search-input", children: "Search persisted content" }),
-          /* @__PURE__ */ u2("div", { className: "toolbar-row", children: [
-            /* @__PURE__ */ u2("input", { id: "search-input", name: "query", type: "search", autoComplete: "off", placeholder: "Search messages and indexed content" }),
-            /* @__PURE__ */ u2("button", { id: "search-submit-button", type: "submit", children: "Search" })
-          ] }),
-          /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Shortcut: Ctrl/Cmd+K" })
+      /* @__PURE__ */ u2("section", { id: "panel-search", className: "search-panel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
+        /* @__PURE__ */ u2("form", { id: "search-form", children: [
+          /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "search-input", children: "Search persisted content" }),
+          /* @__PURE__ */ u2("div", { className: "search-panel__input-wrapper", children: [
+            /* @__PURE__ */ u2("span", { className: "search-panel__icon", "aria-hidden": "true", children: "\u2315" }),
+            /* @__PURE__ */ u2("input", { id: "search-input", className: "search-panel__input", name: "query", type: "search", autoComplete: "off", spellcheck: false, placeholder: "Search messages\u2026" }),
+            /* @__PURE__ */ u2("button", { id: "search-submit-button", className: "search-panel__submit", type: "submit", children: "Search" })
+          ] })
         ] }),
-        /* @__PURE__ */ u2("ol", { id: "search-results", className: "search-results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite" })
+        /* @__PURE__ */ u2("ol", { id: "search-results", className: "search-panel__results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite" })
       ] }),
-      /* @__PURE__ */ u2("section", { id: "panel-plan", className: "tab-panel plan-panel", role: "tabpanel", "aria-labelledby": "tab-plan", hidden: activeTab !== "plan", children: /* @__PURE__ */ u2("form", { id: "plan-form", className: "stack-form", children: [
+      /* @__PURE__ */ u2("section", { id: "panel-plan", className: "plan-panel", "aria-labelledby": "tab-plan", hidden: activeTab !== "plan", children: /* @__PURE__ */ u2("form", { id: "plan-form", className: "stack-form", children: [
         /* @__PURE__ */ u2("div", { className: "plan-editor-header", children: [
           /* @__PURE__ */ u2("label", { htmlFor: "plan-editor", children: "Session plan" }),
           /* @__PURE__ */ u2("span", { id: "plan-revision", className: "muted small-text", children: "Revision 0" })
@@ -523,7 +531,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
           /* @__PURE__ */ u2("button", { id: "plan-reload-button", type: "button", children: "Reload server plan" })
         ] })
       ] }) }),
-      /* @__PURE__ */ u2("section", { id: "panel-settings", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-settings", hidden: activeTab !== "settings", children: [
+      /* @__PURE__ */ u2("section", { id: "panel-settings", className: "settings-panel", "aria-labelledby": "tab-settings", hidden: activeTab !== "settings", children: [
         /* @__PURE__ */ u2("button", { className: "settings-provider-setup", type: "button", onClick: () => document.querySelector(".provider-setup-trigger")?.click(), children: "Provider setup" }),
         /* @__PURE__ */ u2("form", { id: "auth-form", className: "stack-form", children: [
           /* @__PURE__ */ u2("label", { htmlFor: "auth-token", children: "Bearer token" }),
@@ -557,7 +565,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
           /* @__PURE__ */ u2("h3", { id: "settings-summary-title", children: "Runtime summary" }),
           /* @__PURE__ */ u2("dl", { id: "settings-summary", className: "settings-summary" })
         ] }),
-        /* @__PURE__ */ u2("p", { id: "streaming-note", className: "muted small-text", children: "Live streaming, queue controls, and persisted timeline playback are rendered with safe DOM updates only." }),
+        /* @__PURE__ */ u2("p", { id: "streaming-note", className: "muted small-text", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
         /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "sidebar" })
       ] })
     ] })

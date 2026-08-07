@@ -1736,23 +1736,25 @@ function renderSessions() {
 
   for (const session of sessions) {
     const item = document.createElement("li");
+    item.className = "sessions-panel__item";
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "session-button";
+    button.className = "sessions-panel__session";
     button.dataset.active = String(session.session_id === state.selectedSessionId);
     button.addEventListener("click", () => {
       void selectSession(session.session_id, { reconnect: true });
     });
 
     const card = document.createElement("div");
-    card.className = "session-card";
+    card.className = "sessions-panel__session-body";
 
     const title = document.createElement("strong");
+    title.className = "sessions-panel__session-title";
     title.textContent = sessionLabel(session);
     card.append(title);
 
-    const meta = document.createElement("p");
-    meta.className = "session-meta";
+    const meta = document.createElement("span");
+    meta.className = "sessions-panel__session-meta";
     meta.textContent = sessionMeta(session);
     card.append(meta);
 
@@ -2015,23 +2017,29 @@ function renderWorkspace() {
   }
 
   for (const entry of state.workspaceEntries) {
-    const item = document.createElement("li");
+    const item = document.createElement("div");
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "workspace-entry-button";
+    button.className = "file-tree__item";
+    button.setAttribute("role", "treeitem");
     button.disabled = entry.kind !== "directory" && entry.kind !== "file";
     button.addEventListener("click", () => {
       void openWorkspaceEntry(entry);
     });
 
+    const icon = document.createElement("span");
+    icon.className = `file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`;
+    icon.setAttribute("aria-hidden", "true");
+
     const label = document.createElement("span");
+    label.className = "file-tree__name";
     label.textContent = entry.name;
 
     const kind = document.createElement("span");
-    kind.className = "workspace-entry-kind";
+    kind.className = "file-tree__meta";
     kind.textContent = entry.kind;
 
-    button.append(label, kind);
+    button.append(icon, label, kind);
     item.append(button);
     ui.workspaceList.append(item);
   }
@@ -2169,14 +2177,17 @@ function renderSearchResults() {
 
   for (const result of state.searchResults) {
     const item = document.createElement("li");
+    item.className = "search-panel__item";
     const card = document.createElement("article");
-    card.className = "search-card";
 
+    const header = document.createElement("div");
+    header.className = "search-panel__item-header";
     const title = document.createElement("strong");
+    title.className = "search-panel__item-type";
     title.textContent = `${result.entity_type} · ${result.entity_id}`;
 
-    const meta = document.createElement("p");
-    meta.className = "search-meta";
+    const meta = document.createElement("span");
+    meta.className = "search-panel__item-time";
     meta.textContent = [
       result.session_id ? `Session ${shortId(result.session_id)}` : "Global",
       typeof result.rank === "number" ? `Rank ${result.rank.toFixed(2)}` : null,
@@ -2184,11 +2195,12 @@ function renderSearchResults() {
       .filter(Boolean)
       .join(" · ");
 
-    const text = document.createElement("p");
-    text.className = "timeline-content";
+    const text = document.createElement("span");
+    text.className = "search-panel__item-text";
     text.textContent = stringOrEmpty(result.text) || "(empty)";
 
-    card.append(title, meta, text);
+    header.append(title, meta);
+    card.append(header, text);
 
     if (typeof result.session_id === "string" && result.session_id) {
       const action = document.createElement("button");
