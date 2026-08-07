@@ -62,8 +62,8 @@ function M() {
   M.__r = 0;
 }
 function P(n2, l3, u4, t3, i4, o3, r3, f4, e3, c3, s3) {
-  var a3, p3, y3, d3, w3, _2 = t3 && t3.__k || v, g2 = l3.length;
-  for (u4.__d = e3, $(u4, l3, _2), e3 = u4.__d, a3 = 0; a3 < g2; a3++) null != (y3 = u4.__k[a3]) && (p3 = -1 === y3.__i ? h : _2[y3.__i] || h, y3.__i = a3, O(n2, y3, p3, i4, o3, r3, f4, e3, c3, s3), d3 = y3.__e, y3.ref && p3.ref != y3.ref && (p3.ref && N(p3.ref, null, y3), s3.push(y3.ref, y3.__c || d3, y3)), null == w3 && null != d3 && (w3 = d3), 65536 & y3.__u || p3.__k === y3.__k ? e3 = I(y3, e3, n2) : "function" == typeof y3.type && void 0 !== y3.__d ? e3 = y3.__d : d3 && (e3 = d3.nextSibling), y3.__d = void 0, y3.__u &= -196609);
+  var a3, p3, y3, d3, w3, _3 = t3 && t3.__k || v, g2 = l3.length;
+  for (u4.__d = e3, $(u4, l3, _3), e3 = u4.__d, a3 = 0; a3 < g2; a3++) null != (y3 = u4.__k[a3]) && (p3 = -1 === y3.__i ? h : _3[y3.__i] || h, y3.__i = a3, O(n2, y3, p3, i4, o3, r3, f4, e3, c3, s3), d3 = y3.__e, y3.ref && p3.ref != y3.ref && (p3.ref && N(p3.ref, null, y3), s3.push(y3.ref, y3.__c || d3, y3)), null == w3 && null != d3 && (w3 = d3), 65536 & y3.__u || p3.__k === y3.__k ? e3 = I(y3, e3, n2) : "function" == typeof y3.type && void 0 !== y3.__d ? e3 = y3.__d : d3 && (e3 = d3.nextSibling), y3.__d = void 0, y3.__u &= -196609);
   u4.__d = e3, u4.__e = w3;
 }
 function $(n2, l3, u4) {
@@ -130,7 +130,7 @@ function F(n2) {
   };
 }
 function O(n2, u4, t3, i4, o3, r3, f4, e3, c3, s3) {
-  var a3, h3, v3, p3, w3, _2, g2, m2, x2, C3, S2, M2, $2, I2, H, L2, T3 = u4.type;
+  var a3, h3, v3, p3, w3, _3, g2, m2, x2, C3, S2, M2, $2, I2, H, L2, T3 = u4.type;
   if (void 0 !== u4.constructor) return null;
   128 & t3.__u && (c3 = !!(32 & t3.__u), r3 = [e3 = u4.__e = t3.__e]), (a3 = l.__b) && a3(u4);
   n: if ("function" == typeof T3) try {
@@ -144,7 +144,7 @@ function O(n2, u4, t3, i4, o3, r3, f4, e3, c3, s3) {
         break n;
       }
       null != h3.componentWillUpdate && h3.componentWillUpdate(m2, h3.__s, S2), x2 && null != h3.componentDidUpdate && h3.__h.push(function() {
-        h3.componentDidUpdate(p3, w3, _2);
+        h3.componentDidUpdate(p3, w3, _3);
       });
     }
     if (h3.context = S2, h3.props = m2, h3.__P = n2, h3.__e = false, $2 = l.__r, I2 = 0, x2) {
@@ -153,7 +153,7 @@ function O(n2, u4, t3, i4, o3, r3, f4, e3, c3, s3) {
     } else do {
       h3.__d = false, $2 && $2(u4), a3 = h3.render(h3.props, h3.state, h3.context), h3.state = h3.__s;
     } while (h3.__d && ++I2 < 25);
-    h3.state = h3.__s, null != h3.getChildContext && (i4 = d(d({}, i4), h3.getChildContext())), x2 && !v3 && null != h3.getSnapshotBeforeUpdate && (_2 = h3.getSnapshotBeforeUpdate(p3, w3)), P(n2, y(L2 = null != a3 && a3.type === b && null == a3.key ? a3.props.children : a3) ? L2 : [L2], u4, t3, i4, o3, r3, f4, e3, c3, s3), h3.base = u4.__e, u4.__u &= -161, h3.__h.length && f4.push(h3), g2 && (h3.__E = h3.__ = null);
+    h3.state = h3.__s, null != h3.getChildContext && (i4 = d(d({}, i4), h3.getChildContext())), x2 && !v3 && null != h3.getSnapshotBeforeUpdate && (_3 = h3.getSnapshotBeforeUpdate(p3, w3)), P(n2, y(L2 = null != a3 && a3.type === b && null == a3.key ? a3.props.children : a3) ? L2 : [L2], u4, t3, i4, o3, r3, f4, e3, c3, s3), h3.base = u4.__e, u4.__u &= -161, h3.__h.length && f4.push(h3), g2 && (h3.__E = h3.__ = null);
   } catch (n3) {
     if (u4.__v = null, c3 || null != r3) {
       for (u4.__u |= c3 ? 160 : 128; e3 && 8 === e3.nodeType && e3.nextSibling; ) e3 = e3.nextSibling;
@@ -178,10 +178,10 @@ function j(n2, u4, t3) {
   });
 }
 function z(u4, t3, i4, o3, r3, f4, e3, c3, s3) {
-  var a3, v3, p3, d3, _2, g2, m2, b2 = i4.props, k3 = t3.props, C3 = t3.type;
+  var a3, v3, p3, d3, _3, g2, m2, b2 = i4.props, k3 = t3.props, C3 = t3.type;
   if ("svg" === C3 ? r3 = "http://www.w3.org/2000/svg" : "math" === C3 ? r3 = "http://www.w3.org/1998/Math/MathML" : r3 || (r3 = "http://www.w3.org/1999/xhtml"), null != f4) {
-    for (a3 = 0; a3 < f4.length; a3++) if ((_2 = f4[a3]) && "setAttribute" in _2 == !!C3 && (C3 ? _2.localName === C3 : 3 === _2.nodeType)) {
-      u4 = _2, f4[a3] = null;
+    for (a3 = 0; a3 < f4.length; a3++) if ((_3 = f4[a3]) && "setAttribute" in _3 == !!C3 && (C3 ? _3.localName === C3 : 3 === _3.nodeType)) {
+      u4 = _3, f4[a3] = null;
       break;
     }
   }
@@ -191,14 +191,14 @@ function z(u4, t3, i4, o3, r3, f4, e3, c3, s3) {
   }
   if (null === C3) b2 === k3 || c3 && u4.data === k3 || (u4.data = k3);
   else {
-    if (f4 = f4 && n.call(u4.childNodes), b2 = i4.props || h, !c3 && null != f4) for (b2 = {}, a3 = 0; a3 < u4.attributes.length; a3++) b2[(_2 = u4.attributes[a3]).name] = _2.value;
-    for (a3 in b2) if (_2 = b2[a3], "children" == a3) ;
-    else if ("dangerouslySetInnerHTML" == a3) p3 = _2;
+    if (f4 = f4 && n.call(u4.childNodes), b2 = i4.props || h, !c3 && null != f4) for (b2 = {}, a3 = 0; a3 < u4.attributes.length; a3++) b2[(_3 = u4.attributes[a3]).name] = _3.value;
+    for (a3 in b2) if (_3 = b2[a3], "children" == a3) ;
+    else if ("dangerouslySetInnerHTML" == a3) p3 = _3;
     else if (!(a3 in k3)) {
       if ("value" == a3 && "defaultValue" in k3 || "checked" == a3 && "defaultChecked" in k3) continue;
-      A(u4, a3, null, _2, r3);
+      A(u4, a3, null, _3, r3);
     }
-    for (a3 in k3) _2 = k3[a3], "children" == a3 ? d3 = _2 : "dangerouslySetInnerHTML" == a3 ? v3 = _2 : "value" == a3 ? g2 = _2 : "checked" == a3 ? m2 = _2 : c3 && "function" != typeof _2 || b2[a3] === _2 || A(u4, a3, _2, b2[a3], r3);
+    for (a3 in k3) _3 = k3[a3], "children" == a3 ? d3 = _3 : "dangerouslySetInnerHTML" == a3 ? v3 = _3 : "value" == a3 ? g2 = _3 : "checked" == a3 ? m2 = _3 : c3 && "function" != typeof _3 || b2[a3] === _3 || A(u4, a3, _3, b2[a3], r3);
     if (v3) c3 || p3 && (v3.__html === p3.__html || v3.__html === u4.innerHTML) || (u4.innerHTML = v3.__html), t3.__k = [];
     else if (p3 && (u4.innerHTML = ""), P(u4, y(d3) ? d3 : [d3], t3, i4, o3, "foreignObject" === C3 ? "http://www.w3.org/1999/xhtml" : r3, f4, e3, f4 ? f4[0] : i4.__k && x(i4, 0), c3, s3), null != f4) for (a3 = f4.length; a3--; ) w(f4[a3]);
     c3 || (a3 = "value", "progress" === C3 && null == g2 ? u4.removeAttribute("value") : void 0 !== g2 && (g2 !== u4[a3] || "progress" === C3 && !g2 || "option" === C3 && g2 !== b2[a3]) && A(u4, a3, g2, b2[a3], r3), a3 = "checked", void 0 !== m2 && m2 !== u4[a3] && A(u4, a3, m2, b2[a3], r3));
@@ -689,9 +689,18 @@ function y2(n2, u4) {
   var i4 = d2(t2++, 3);
   !c2.__s && C2(i4.__H, u4) && (i4.__ = n2, i4.i = u4, r2.__H.__h.push(i4));
 }
+function _2(n2, u4) {
+  var i4 = d2(t2++, 4);
+  !c2.__s && C2(i4.__H, u4) && (i4.__ = n2, i4.i = u4, r2.__h.push(i4));
+}
 function T2(n2, r3) {
   var u4 = d2(t2++, 7);
   return C2(u4.__H, r3) && (u4.__ = n2(), u4.__H = r3, u4.__h = n2), u4.__;
+}
+function q2(n2, t3) {
+  return o2 = 8, T2(function() {
+    return n2;
+  }, t3);
 }
 function j2() {
   for (var n2; n2 = f3.shift(); ) if (n2.__P && n2.__H) try {
@@ -872,8 +881,9 @@ var TauApi = class {
   usage(sessionId) {
     return this.client.request(`/api/sessions/${id(sessionId)}/usage`);
   }
-  runs(sessionId) {
-    return this.client.request(`/api/sessions/${id(sessionId)}/runs`);
+  async runs(sessionId) {
+    const response = await this.client.request(`/api/sessions/${id(sessionId)}/runs`);
+    return response.runs;
   }
   submitRun(sessionId, input) {
     return this.client.request(`/api/sessions/${id(sessionId)}/runs`, { method: "POST", json: input });
@@ -881,11 +891,19 @@ var TauApi = class {
   runAction(runId, action) {
     return this.client.request(`/api/runs/${id(runId)}/${action}`, { method: "POST" });
   }
-  queue(sessionId) {
-    return this.client.request(`/api/sessions/${id(sessionId)}/queue`);
+  async queue(sessionId, kind) {
+    const query = kind ? `?kind=${id(kind)}` : "";
+    const response = await this.client.request(`/api/sessions/${id(sessionId)}/queue${query}`);
+    return response.queue;
   }
   enqueue(sessionId, content, kind) {
     return this.client.request(`/api/sessions/${id(sessionId)}/queue`, { method: "POST", json: { content, kind } });
+  }
+  queueRunMessage(runId, content, kind) {
+    return this.client.request(`/api/runs/${id(runId)}/messages`, { method: "POST", json: { content, kind } });
+  }
+  dispatchNext(runId, kind) {
+    return this.client.request(`/api/runs/${id(runId)}/queue/${id(kind)}/dispatch`, { method: "POST" });
   }
   plan(sessionId) {
     return this.client.request(`/api/sessions/${id(sessionId)}/plan`);
@@ -1008,6 +1026,98 @@ function Onboarding() {
         ] })
       ] })
     ] }) }) : null
+  ] });
+}
+
+// src/components/QueueStack.tsx
+var api2 = new TauApi();
+var ACTIVE_RUN_STATUSES = /* @__PURE__ */ new Set(["pending", "running"]);
+function queueText(content) {
+  if (typeof content === "string") return content;
+  try {
+    return JSON.stringify(content);
+  } catch {
+    return String(content);
+  }
+}
+function findActiveRun(runs) {
+  return runs.find((run) => ACTIVE_RUN_STATUSES.has(run.status)) ?? null;
+}
+function QueueStack() {
+  const [state, setState] = h2({ sessionId: null, items: [], activeRun: null });
+  const [busyKind, setBusyKind] = h2(null);
+  const [error, setError] = h2("");
+  const refresh = q2(async (sessionId) => {
+    if (!sessionId) {
+      setState({ sessionId: null, items: [], activeRun: null });
+      return;
+    }
+    try {
+      const [items2, runs] = await Promise.all([api2.queue(sessionId), api2.runs(sessionId)]);
+      setState({ sessionId, items: items2, activeRun: findActiveRun(runs) });
+      setError("");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to load queued messages.");
+    }
+  }, []);
+  _2(() => {
+    const selected = (event) => {
+      const sessionId = event.detail?.sessionId ?? null;
+      void refresh(sessionId);
+    };
+    const changed = () => void refresh(state.sessionId);
+    window.addEventListener("tau:session-selected", selected);
+    window.addEventListener("tau:queue-changed", changed);
+    return () => {
+      window.removeEventListener("tau:session-selected", selected);
+      window.removeEventListener("tau:queue-changed", changed);
+    };
+  }, [refresh, state.sessionId]);
+  const items = T2(
+    () => [...state.items].sort((left, right) => left.queue_kind.localeCompare(right.queue_kind) || left.position - right.position),
+    [state.items]
+  );
+  const dispatch = q2(async (kind) => {
+    if (!state.activeRun) return;
+    setBusyKind(kind);
+    try {
+      await api2.dispatchNext(state.activeRun.run_id, kind);
+      await refresh(state.sessionId);
+      window.dispatchEvent(new CustomEvent("tau:queue-dispatched", { detail: { kind } }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to dispatch queued message.");
+    } finally {
+      setBusyKind(null);
+    }
+  }, [refresh, state.activeRun, state.sessionId]);
+  const copyToComposer = q2((item) => {
+    const input = document.getElementById("compose-input");
+    if (!input) return;
+    input.value = queueText(item.content);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  }, []);
+  if (items.length === 0 && !error) return null;
+  const firstByKind = /* @__PURE__ */ new Map();
+  for (const item of items) {
+    if (!firstByKind.has(item.queue_kind)) firstByKind.set(item.queue_kind, item.queue_id);
+  }
+  return /* @__PURE__ */ u2("div", { className: "queue-stack", "aria-label": "Queued messages", children: [
+    error && /* @__PURE__ */ u2("div", { className: "queue-stack__error", role: "status", children: error }),
+    items.map((item) => {
+      const text = queueText(item.content);
+      const isHead = firstByKind.get(item.queue_kind) === item.queue_id;
+      return /* @__PURE__ */ u2("div", { className: "queue-stack__item", children: [
+        /* @__PURE__ */ u2("div", { className: "queue-stack__content", title: text, children: [
+          /* @__PURE__ */ u2("span", { className: "queue-stack__kind", children: item.queue_kind === "follow_up" ? "Follow-up" : "Steer" }),
+          text.length > 80 ? `${text.slice(0, 80)}\u2026` : text
+        ] }),
+        /* @__PURE__ */ u2("div", { className: "queue-stack__actions", children: [
+          /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--edit", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-edit", "aria-hidden": "true" }) }),
+          isHead && /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--steer", disabled: !state.activeRun || busyKind === item.queue_kind, onClick: () => void dispatch(item.queue_kind), title: state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required", children: "\u21B5 Dispatch" })
+        ] })
+      ] }, item.queue_id);
+    })
   ] });
 }
 
@@ -1151,6 +1261,7 @@ function TauShell() {
             /* @__PURE__ */ u2("div", { className: "app-layout__tab-viewport", children: /* @__PURE__ */ u2("div", { className: "app-layout__tab-content", children: /* @__PURE__ */ u2("section", { className: "chat", "aria-label": "Tau chat", children: [
               /* @__PURE__ */ u2("div", { className: "chat__messages", children: /* @__PURE__ */ u2(Timeline, {}) }),
               /* @__PURE__ */ u2(SessionRuntime, {}),
+              /* @__PURE__ */ u2(QueueStack, {}),
               /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
               /* @__PURE__ */ u2(Composer, {})
             ] }) }) })

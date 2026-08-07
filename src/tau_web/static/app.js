@@ -1004,6 +1004,7 @@ async function handleStreamFrame(frame, sessionId) {
     mergeSnapshot(frame.data);
     renderSessions();
     await refreshSelectedSessionData({ reconnect: false });
+    window.dispatchEvent(new CustomEvent("tau:queue-changed"));
     setStreamStatus("Live");
     return;
   }
@@ -1017,6 +1018,9 @@ async function handleStreamFrame(frame, sessionId) {
   }
   if (!frame.data || frame.data.session_id !== sessionId) {
     return;
+  }
+  if (frame.event.startsWith("tau.queue.")) {
+    window.dispatchEvent(new CustomEvent("tau:queue-changed"));
   }
 
   switch (frame.event) {
@@ -2865,12 +2869,13 @@ async function submitComposerQueuedMessage(runId, kind, content) {
   const liveUi = window.tauLiveUI;
   if (liveUi && typeof liveUi.submitComposerMessage === "function") {
     await liveUi.submitComposerMessage({ runId, kind, content });
-    return;
+  } else {
+    await apiFetch(`/api/runs/${encodeURIComponent(runId)}/messages`, {
+      method: "POST",
+      json: { content, kind },
+    });
   }
-  await apiFetch(`/api/runs/${encodeURIComponent(runId)}/messages`, {
-    method: "POST",
-    json: { content, kind },
-  });
+  window.dispatchEvent(new CustomEvent("tau:queue-changed"));
 }
 
 async function enqueueComposerSessionMessage(sessionId, kind, content) {
@@ -2878,6 +2883,7 @@ async function enqueueComposerSessionMessage(sessionId, kind, content) {
     method: "POST",
     json: { content, kind },
   });
+  window.dispatchEvent(new CustomEvent("tau:queue-changed"));
 }
 
 function renderThinkingOptions() {

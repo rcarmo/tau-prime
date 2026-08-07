@@ -1,7 +1,7 @@
 import { ApiClient } from "./client";
 import type {
   ApprovalRecord, CommandDescriptor, MediaRecord, ModelDescriptor, OnboardingState,
-  PlanDocument, QueueItem, RunRecord, SessionRecord, TimelineItem,
+  PlanDocument, QueueItem, QueueKind, RunRecord, SessionRecord, TimelineItem,
 } from "./types";
 
 const id = encodeURIComponent;
@@ -38,16 +38,29 @@ export class TauApi {
   }
   context(sessionId: string) { return this.client.request<Record<string, unknown>>(`/api/sessions/${id(sessionId)}/context`); }
   usage(sessionId: string) { return this.client.request<Record<string, unknown>>(`/api/sessions/${id(sessionId)}/usage`); }
-  runs(sessionId: string) { return this.client.request<RunRecord[]>(`/api/sessions/${id(sessionId)}/runs`); }
+  async runs(sessionId: string) {
+    const response = await this.client.request<{ runs: RunRecord[] }>(`/api/sessions/${id(sessionId)}/runs`);
+    return response.runs;
+  }
   submitRun(sessionId: string, input: Record<string, unknown>) {
     return this.client.request<RunRecord>(`/api/sessions/${id(sessionId)}/runs`, { method: "POST", json: input });
   }
   runAction(runId: string, action: "cancel" | "abort" | "retry") {
     return this.client.request<RunRecord>(`/api/runs/${id(runId)}/${action}`, { method: "POST" });
   }
-  queue(sessionId: string) { return this.client.request<QueueItem[]>(`/api/sessions/${id(sessionId)}/queue`); }
-  enqueue(sessionId: string, content: string, kind: QueueItem["kind"]) {
+  async queue(sessionId: string, kind?: QueueKind) {
+    const query = kind ? `?kind=${id(kind)}` : "";
+    const response = await this.client.request<{ queue: QueueItem[] }>(`/api/sessions/${id(sessionId)}/queue${query}`);
+    return response.queue;
+  }
+  enqueue(sessionId: string, content: string, kind: QueueKind) {
     return this.client.request<QueueItem>(`/api/sessions/${id(sessionId)}/queue`, { method: "POST", json: { content, kind } });
+  }
+  queueRunMessage(runId: string, content: string, kind: QueueKind) {
+    return this.client.request<QueueItem>(`/api/runs/${id(runId)}/messages`, { method: "POST", json: { content, kind } });
+  }
+  dispatchNext(runId: string, kind: QueueKind) {
+    return this.client.request<QueueItem | null>(`/api/runs/${id(runId)}/queue/${id(kind)}/dispatch`, { method: "POST" });
   }
   plan(sessionId: string) { return this.client.request<PlanDocument>(`/api/sessions/${id(sessionId)}/plan`); }
   savePlan(sessionId: string, plan: PlanDocument) {

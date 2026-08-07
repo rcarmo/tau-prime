@@ -6,6 +6,7 @@ import { Dashboard } from "./components/Dashboard";
 import { SidePanel } from "./components/SidePanel";
 import { SessionRuntime, Timeline } from "./components/Timeline";
 import { Onboarding } from "./components/Onboarding";
+import { QueueStack } from "./components/QueueStack";
 import { useDashboardVisibility } from "./hooks/useDashboardVisibility";
 import { useDrawers } from "./hooks/useDrawers";
 import { useMeterControls } from "./hooks/useMeterControls";
@@ -52,6 +53,7 @@ function TauShell() {
                   <section className="chat" aria-label="Tau chat">
                     <div className="chat__messages"><Timeline /></div>
                     <SessionRuntime />
+                    <QueueStack />
                     <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
                     <Composer />
                   </section>

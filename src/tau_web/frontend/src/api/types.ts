@@ -38,7 +38,17 @@ export type RunRecord = {
   status: string;
   [key: string]: unknown;
 };
-export type QueueItem = { id?: string; kind: "follow_up" | "steer"; content: string; [key: string]: unknown };
+export type QueueKind = "follow_up" | "steer";
+export type QueueItem = {
+  queue_id: string;
+  session_id: string;
+  queue_kind: QueueKind;
+  position: number;
+  content: unknown;
+  source_session_id?: string | null;
+  created_at?: string;
+  consumed_at?: string | null;
+};
 export type PlanDocument = { content?: string; markdown?: string; updated_at?: string; [key: string]: unknown };
 export type ApprovalRecord = { approval_id: string; status: string; [key: string]: unknown };
 export type MediaRecord = { media_id: string; filename?: string; content_type?: string; [key: string]: unknown };
