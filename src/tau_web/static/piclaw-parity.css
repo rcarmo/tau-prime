@@ -1,337 +1,51 @@
-/* Tau Web visual parity layer.
- * Keeps Tau's API/DOM contract while adopting Piclaw's chat-first shell,
- * spacing, surfaces, typography, controls, and responsive behavior.
+/* Tau-only compatibility bridges for the vendored Piclaw reference CSS.
+ * Keep this file small: visual primitives belong in piclaw-reference.css.
  */
 :root {
-  --bg-primary: #0d0f12;
-  --bg-secondary: #15181d;
-  --bg-hover: #20242b;
-  --text-primary: #eef1f5;
-  --text-secondary: #9ca5b2;
-  --border-color: #2a2f37;
-  --accent-color: #8b86ff;
-  --accent-hover: #a7a3ff;
-  --accent-color-alpha: rgba(139, 134, 255, 0.18);
-  --accent-soft: rgba(139, 134, 255, 0.09);
-  --accent-soft-strong: rgba(139, 134, 255, 0.15);
-  --accent-contrast-text: #101116;
-  --warning-color: #d97706;
-  --danger-color: #dc2626;
-  --success-color: #16a34a;
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 0.75rem;
-  --spacing-lg: 1rem;
-  --spacing-xl: 1.5rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-full: 999px;
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
-  --shadow-md: 0 10px 28px rgb(15 23 42 / 0.10);
-  --chat-max-width: 920px;
-  --ui-transition-fast: 140ms ease;
   color-scheme: dark;
+  --bg-primary: var(--vscode-editor-background, #0d0f12);
+  --bg-secondary: var(--vscode-sideBar-background, #15181d);
+  --bg-hover: var(--vscode-list-hoverBackground, #20242b);
+  --text-primary: var(--vscode-foreground, #eef1f5);
+  --text-secondary: var(--vscode-descriptionForeground, #9ca5b2);
+  --border-color: var(--vscode-panel-border, #2a2f37);
+  --accent-color: var(--vscode-focusBorder, #8b86ff);
+  --accent-color-alpha: rgb(139 134 255 / 0.18);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #0d0f12;
-    --bg-secondary: #15181d;
-    --bg-hover: #20242b;
-    --text-primary: #eef1f5;
-    --text-secondary: #9ca5b2;
-    --border-color: #2a2f37;
-    --accent-color: #8b86ff;
-    --accent-hover: #a7a3ff;
-    --accent-color-alpha: rgba(139, 134, 255, 0.18);
-    --accent-soft: rgba(139, 134, 255, 0.09);
-    --accent-soft-strong: rgba(139, 134, 255, 0.15);
-    --accent-contrast-text: #101116;
-    --shadow-md: 0 12px 34px rgb(0 0 0 / 0.35);
-  }
-}
-* { box-sizing: border-box; }
-html, body { background: var(--bg-primary); color: var(--text-primary); }
-body { font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-button, input, textarea, select { font: inherit; color: var(--text-primary); }
-select, option { background: var(--bg-secondary); color: var(--text-primary); -webkit-text-fill-color: var(--text-primary); }
-#compose-delivery-mode { appearance: none; -webkit-appearance: none; background: #0d0f12; color: #f5f7fa; -webkit-text-fill-color: #f5f7fa; }
-button, .button, input, textarea, select {
+
+/* The Preact mount must not add a layout box around Piclaw's shell hierarchy. */
+#app { display: contents; }
+
+/* Map Tau's established shell regions onto Piclaw surface tokens during migration. */
+.app-shell,
+.topbar,
+.composer-shell { background: var(--bg-primary); color: var(--text-primary); }
+.panel,
+.session-nav,
+.side-panel,
+.compose-form { background: var(--bg-secondary); border-color: var(--border-color); }
+.muted { color: var(--text-secondary); }
+
+button,
+input,
+textarea,
+select,
+option {
+  color: var(--text-primary);
   border-color: var(--border-color);
-  border-radius: var(--radius-md);
-  transition: border-color var(--ui-transition-fast), background var(--ui-transition-fast), color var(--ui-transition-fast), transform var(--ui-transition-fast);
+  -webkit-text-fill-color: var(--text-primary);
 }
-button:hover, .button:hover { border-color: var(--accent-color); }
-button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 2px solid var(--accent-color-alpha);
-  outline-offset: 2px;
-  border-color: var(--accent-color);
-}
-
-/* Piclaw-like compact header and floating status. */
-.topbar {
-  min-height: 48px;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: none;
-  backdrop-filter: blur(16px);
-}
-.brand { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; }
-.brand-mark { width: 24px; height: 24px; border-radius: 7px; background: var(--accent-color); }
-.status-grid { gap: var(--spacing-xs); }
-.status-grid > * { border: 0; background: transparent; padding: 0 var(--spacing-sm); color: var(--text-secondary); }
-.meter-strip { border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
-
-/* Chat-first shell: quieter side rails, centered conversation. */
-.shell-layout {
-  gap: 0;
-  min-height: calc(100vh - 49px);
+select,
+option { background: var(--bg-secondary); }
+#compose-delivery-mode {
+  appearance: none;
+  -webkit-appearance: none;
   background: var(--bg-primary);
 }
-.sidebar, .workspace-panel {
-  background: var(--bg-secondary);
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-}
-.sidebar { border-right: 1px solid var(--border-color); }
-.workspace-panel { border-left: 1px solid var(--border-color); }
-.main-panel { background: var(--bg-primary); padding: 0; min-width: 0; }
-.main-panel > .panel-section, .main-panel > section {
-  width: min(100%, var(--chat-max-width));
-  margin-inline: auto;
-}
-.panel, .panel-section, .card {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
-.panel-heading, .section-heading { color: var(--text-secondary); text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
 
-/* Session rail and dashboard use compact Piclaw rows rather than cards. */
-.session-list, .dashboard-list { gap: 2px; }
-.session-item, .dashboard-item, .session-button {
-  min-height: 38px;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-primary);
-  box-shadow: none;
-}
-.session-item:hover, .dashboard-item:hover, .session-button:hover { background: var(--bg-hover); border-color: transparent; }
-.session-item.active, .session-button.active, [aria-current="true"] { background: var(--accent-soft); color: var(--accent-color); }
-.badge, .chip, .pill, .context-badge, .queue-badge {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-full);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  padding: 0.12rem 0.5rem;
-}
-
-/* Conversation anatomy inspired by Piclaw posts. */
-.timeline-list {
-  width: min(100%, var(--chat-max-width));
-  margin: 0 auto;
-  padding: var(--spacing-xl) clamp(var(--spacing-md), 3vw, 2rem) 12rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-.timeline-card, .timeline-entry {
-  position: relative;
-  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-lg) 3.35rem;
-  border: 0;
-  border-bottom: 1px solid var(--border-color);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-.timeline-card::before, .timeline-entry::before {
-  content: attr(data-role);
-  position: absolute;
-  left: var(--spacing-md);
-  top: var(--spacing-lg);
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--accent-soft-strong);
-  color: var(--accent-color);
-  font-size: 0;
-  font-weight: 700;
-}
-.timeline-card::after, .timeline-entry::after {
-  content: "τ";
-  position: absolute;
-  left: calc(var(--spacing-md) + 8px);
-  top: calc(var(--spacing-lg) + 3px);
-  color: var(--accent-color);
-  font-weight: 800;
-}
-.timeline-card[data-role="user"]::after, .timeline-entry[data-role="user"]::after { content: "U"; font-size: 0.7rem; top: calc(var(--spacing-lg) + 6px); }
-.timeline-meta { color: var(--text-secondary); font-size: 0.74rem; margin-bottom: var(--spacing-sm); }
-.timeline-text { color: var(--text-primary); font-size: 0.94rem; line-height: 1.62; }
-.timeline-text pre, .timeline-text code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
-.timeline-text pre { padding: var(--spacing-md); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: auto; }
-.tool-block, .thinking-block, .agent-status {
-  margin-top: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-}
-.attachment-card, .attachment-pill {
-  display: inline-flex;
-  width: auto;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 0.35rem 0.65rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-full);
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-sm);
-}
-
-/* Piclaw-style compact compose surface pinned to the chat lane. */
-.composer-wrap, .composer-panel {
-  position: sticky;
-  z-index: 20;
-  bottom: 0;
-  width: min(100%, var(--chat-max-width));
-  margin: 0 auto;
-  padding: var(--spacing-sm) clamp(var(--spacing-md), 3vw, 2rem) var(--spacing-lg);
-  background: linear-gradient(transparent, var(--bg-primary) 22%);
-  border: 0;
-}
-.composer, .compose-box {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-md);
-}
-.composer textarea, .compose-input {
-  flex: 1 1 100%;
-  min-height: 52px;
-  max-height: 220px;
-  resize: vertical;
-  padding: var(--spacing-sm);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-primary);
-  box-shadow: none;
-}
-.composer textarea:focus { outline: 0; }
-.composer-controls, .composer-toolbar, .toolbar-row { gap: var(--spacing-sm); }
-.composer select, .composer button, .composer .button { min-height: 32px; padding: 0.35rem 0.6rem; }
-.composer button[type="submit"], .send-button, .send-btn {
-  margin-left: auto;
-  border-color: var(--accent-color);
-  border-radius: var(--radius-full);
-  background: var(--accent-color);
-  color: var(--accent-contrast-text);
-  font-weight: 650;
-}
-.queue-stack { border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-secondary); }
-
-/* Workspace explorer chrome. */
-.workspace-header { min-height: 44px; padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--border-color); }
-.workspace-tree, .workspace-list { padding: var(--spacing-sm); }
-.workspace-row, .workspace-item { min-height: 32px; padding: 0.35rem var(--spacing-sm); border-radius: var(--radius-sm); border: 0; background: transparent; }
-.workspace-row:hover, .workspace-item:hover { background: var(--bg-hover); }
-.workspace-preview, .editor-surface { background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary); }
-
-.modal, dialog, .approval-modal { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
-
-@media (max-width: 960px) {
-  .shell-layout { grid-template-columns: minmax(0, 1fr); }
-  .sidebar, .workspace-panel { box-shadow: var(--shadow-md); }
-  .timeline-list { padding-inline: var(--spacing-md); }
-  .composer-wrap, .composer-panel { padding-inline: var(--spacing-md); }
-}
-@media (max-width: 600px) {
-  .topbar { padding-inline: var(--spacing-sm); }
-  .status-grid { display: none; }
-  .timeline-list { padding: var(--spacing-md) var(--spacing-sm) 10rem; }
-  .timeline-card, .timeline-entry { padding-left: 2.75rem; padding-right: var(--spacing-sm); }
-  .timeline-card::before, .timeline-entry::before { left: var(--spacing-xs); }
-  .timeline-card::after, .timeline-entry::after { left: calc(var(--spacing-xs) + 8px); }
-  .composer-wrap, .composer-panel { padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-sm); }
-  .composer, .compose-box { border-radius: var(--radius-md); }
-  .composer-controls select { max-width: 9rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
-}
-
-/* Tau's concrete shell class mapping. */
-.panel-nav, .panel-side {
-  background: var(--bg-secondary);
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-}
-.panel-nav { border-right: 1px solid var(--border-color); }
-.panel-side { border-left: 1px solid var(--border-color); }
-.panel-main {
-  border: 0;
-  border-radius: 0;
-  background: var(--bg-primary);
-  box-shadow: none;
-}
-.panel-main .panel-header {
-  width: min(100%, var(--chat-max-width));
-  margin-inline: auto;
-  padding-inline: clamp(var(--spacing-md), 3vw, 2rem);
-  background: color-mix(in srgb, var(--bg-primary) 94%, transparent);
-  border-bottom: 1px solid var(--border-color);
-}
-.panel-nav .panel-header, .panel-side .panel-header { background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); }
-.timeline-role { margin: 0 0 0.15rem; color: var(--text-primary); font-weight: 650; text-transform: capitalize; }
-.timeline-entry-meta { margin: 0 0 var(--spacing-sm); color: var(--text-secondary); font-size: 0.74rem; }
-.timeline-content { margin: 0; white-space: pre-wrap; color: var(--text-primary); font-size: 0.94rem; line-height: 1.62; }
-.composer-shell {
-  position: sticky;
-  z-index: 25;
-  bottom: 0;
-  width: 100%;
-  padding: var(--spacing-sm) max(var(--spacing-md), calc((100vw - var(--chat-max-width)) / 2)) var(--spacing-lg);
-  background: linear-gradient(transparent, var(--bg-primary) 18%);
-  border: 0;
-}
-.compose-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-md);
-}
-.compose-toolbar, .compose-input-row, .compose-actions { width: 100%; }
-.compose-form textarea { min-height: 58px; border: 0; background: transparent; box-shadow: none; }
-.compose-form textarea:focus { outline: 0; }
+/* Tau's Control+N shortcut focuses the composer; retain a WCAG-visible ring. */
 .compose-form textarea:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 1px;
   box-shadow: 0 0 0 3px var(--accent-color-alpha);
-}
-.compose-form button[type="submit"] { border-color: var(--accent-color); border-radius: var(--radius-full); background: var(--accent-color); color: var(--accent-contrast-text); }
-.workspace-entry-button { border: 0; background: transparent; border-radius: var(--radius-sm); }
-.workspace-entry-button:hover { background: var(--bg-hover); }
-@media (min-width: 1101px) {
-  .shell-layout { grid-template-columns: 16rem minmax(0, 1fr) 20rem; padding: 0; }
-}
-@media (max-width: 1100px) {
-  .composer-shell { padding-inline: var(--spacing-md); }
 }
