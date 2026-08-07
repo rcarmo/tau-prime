@@ -140,19 +140,6 @@ function bindUi() {
     statusSession: requiredElement("status-session"),
     statusModel: requiredElement("status-model"),
     statusContext: requiredElement("status-context"),
-    systemMeters: requiredElement("system-meters"),
-    metersSummary: requiredElement("meters-summary"),
-    metersDetails: requiredElement("meters-details"),
-    metersCollapseButton: requiredElement("meters-collapse-button"),
-    metersVisibilityButton: requiredElement("meters-visibility-button"),
-    meterCpuValue: requiredElement("meter-cpu-value"),
-    meterRamValue: requiredElement("meter-ram-value"),
-    meterRssValue: requiredElement("meter-rss-value"),
-    meterSwapValue: requiredElement("meter-swap-value"),
-    meterCpuSparkline: requiredElement("meter-cpu-sparkline"),
-    meterRamSparkline: requiredElement("meter-ram-sparkline"),
-    meterRssSparkline: requiredElement("meter-rss-sparkline"),
-    meterSwapSparkline: requiredElement("meter-swap-sparkline"),
     dashboardToggle: requiredElement("dashboard-toggle"),
     dashboardCount: requiredElement("dashboard-count"),
     sessionDashboard: requiredElement("session-dashboard"),
@@ -1569,96 +1556,11 @@ function applyMeterControls(enabled, collapsed) {
 }
 
 function renderMeters() {
-  if (!state.metersEnabled) {
-    ui.metersSummary.textContent = "Meters hidden";
-    return;
-  }
-
-  const meters = state.meters;
-  if (!meters) {
-    ui.metersSummary.textContent = "Meters unavailable";
-    setMeterValues(null, null, null, null);
-    drawSparkline(ui.meterCpuSparkline, [], 100);
-    drawSparkline(ui.meterRamSparkline, [], 100);
-    drawSparkline(ui.meterRssSparkline, [], null);
-    drawSparkline(ui.meterSwapSparkline, [], 100);
-    return;
-  }
-
-  const cpu = finiteNumberOrNull(meters.cpu_percent);
-  const ram = finiteNumberOrNull(meters.ram_percent);
-  const rss = finiteNumberOrNull(meters.process_rss_bytes);
-  const swap = finiteNumberOrNull(meters.swap_percent);
-  ui.metersSummary.textContent = [
-    `CPU ${formatPercent(cpu)}`,
-    `RAM ${formatPercent(ram)}`,
-    `RSS ${formatBytes(rss)}`,
-    `Swap ${formatPercent(swap)}`,
-  ].join(" · ");
-  setMeterValues(cpu, ram, rss, swap);
-  drawSparkline(ui.meterCpuSparkline, meters.cpu_series, 100);
-  drawSparkline(ui.meterRamSparkline, meters.ram_series, 100);
-  drawSparkline(ui.meterRssSparkline, meters.process_rss_series_bytes, null);
-  drawSparkline(ui.meterSwapSparkline, meters.swap_series, 100);
-}
-
-function setMeterValues(cpu, ram, rss, swap) {
-  ui.meterCpuValue.textContent = formatPercent(cpu);
-  ui.meterRamValue.textContent = formatPercent(ram);
-  ui.meterRssValue.textContent = formatBytes(rss);
-  ui.meterSwapValue.textContent = formatPercent(swap);
-}
-
-function drawSparkline(svg, rawSeries, fixedMaximum) {
-  svg.replaceChildren();
-  svg.setAttribute("viewBox", "0 0 100 28");
-  const series = Array.isArray(rawSeries) ? rawSeries.map(finiteNumberOrNull) : [];
-  const values = series.filter((value) => value !== null);
-  if (values.length < 2) {
-    return;
-  }
-  const maximum = fixedMaximum ?? Math.max(...values, 1);
-  const divisor = Math.max(series.length - 1, 1);
-  const points = series
-    .map((value, index) => {
-      if (value === null) {
-        return null;
-      }
-      const x = (index / divisor) * 100;
-      const y = 27 - Math.min(Math.max(value / maximum, 0), 1) * 26;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .filter((point) => point !== null);
-  if (points.length < 2) {
-    return;
-  }
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-  line.setAttribute("class", "meter-sparkline");
-  line.setAttribute("points", points.join(" "));
-  svg.append(line);
-}
-
-function finiteNumberOrNull(value) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
-}
-
-function formatPercent(value) {
-  return value === null ? "--" : `${Math.round(value)}%`;
-}
-
-function formatBytes(value) {
-  if (value === null) {
-    return "--";
-  }
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let amount = value;
-  let unitIndex = 0;
-  while (amount >= 1024 && unitIndex < units.length - 1) {
-    amount /= 1024;
-    unitIndex += 1;
-  }
-  const precision = unitIndex > 1 && amount < 10 ? 1 : 0;
-  return `${amount.toFixed(precision)} ${units[unitIndex]}`;
+  window.dispatchEvent(new CustomEvent("tau:meters-render", { detail: {
+    enabled: state.metersEnabled,
+    collapsed: state.metersCollapsed,
+    meters: state.meters,
+  } }));
 }
 
 function renderPlan() {

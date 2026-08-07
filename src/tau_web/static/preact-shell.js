@@ -293,151 +293,6 @@ function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
   }) });
 }
 
-// src/components/StatusBar.tsx
-var Meter = ({ id: id2, label, icon }) => /* @__PURE__ */ u2("span", { className: "sys-stats__metric", title: `${label} usage`, children: [
-  /* @__PURE__ */ u2("i", { className: `sys-stats__icon codicon ${icon}`, "aria-hidden": "true" }),
-  /* @__PURE__ */ u2("span", { className: "sys-stats__label", children: label }),
-  /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, className: "sys-stats__value", children: "--" }),
-  /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, className: "sys-stats__sparkline", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
-] });
-function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
-  return /* @__PURE__ */ u2("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
-    /* @__PURE__ */ u2("span", { className: "status-bar__conn", children: [
-      /* @__PURE__ */ u2("span", { className: "status-bar__conn-dot status-bar__conn-dot--disconnected", "aria-hidden": "true" }),
-      /* @__PURE__ */ u2("span", { id: "status-stream", className: "status-bar__conn-text", children: "Connecting\u2026" })
-    ] }),
-    /* @__PURE__ */ u2("span", { className: "session-pill-wrap", children: /* @__PURE__ */ u2("button", { className: "session-pill", type: "button", title: "Open sessions", onClick: onOpenSessions, children: [
-      /* @__PURE__ */ u2("span", { className: "session-pill__dot session-pill__dot--current", "aria-hidden": "true" }),
-      /* @__PURE__ */ u2("span", { id: "status-session", className: "session-pill__label", children: "No session selected" })
-    ] }) }),
-    /* @__PURE__ */ u2("span", { className: "model-badge-wrapper", children: [
-      /* @__PURE__ */ u2("span", { id: "status-model", className: "model-badge model-badge--empty", children: "Unset" }),
-      /* @__PURE__ */ u2("span", { id: "status-context", className: "usage-badge", children: "No context loaded" })
-    ] }),
-    /* @__PURE__ */ u2("span", { className: "status-bar__right", children: [
-      /* @__PURE__ */ u2("span", { id: "system-meters", className: "sys-stats-bar", "data-enabled": String(metersEnabled), "data-collapsed": String(metersCollapsed), children: [
-        /* @__PURE__ */ u2("span", { className: "sys-stats-bar__inline", children: /* @__PURE__ */ u2("span", { id: "meters-details", className: "sys-stats", children: [
-          /* @__PURE__ */ u2(Meter, { id: "cpu", label: "CPU", icon: "codicon-pulse" }),
-          /* @__PURE__ */ u2(Meter, { id: "ram", label: "RAM", icon: "codicon-circuit-board" }),
-          /* @__PURE__ */ u2(Meter, { id: "rss", label: "RSS", icon: "codicon-package" }),
-          /* @__PURE__ */ u2(Meter, { id: "swap", label: "SWP", icon: "codicon-arrow-swap" })
-        ] }) }),
-        /* @__PURE__ */ u2("output", { id: "meters-summary", className: "sys-stats-bar__compact", "aria-live": "polite", children: "Meters loading\u2026" }),
-        /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "status-bar__terminal-btn", type: "button", "aria-controls": "meters-details", "aria-expanded": !metersCollapsed, title: metersCollapsed ? "Expand system meters" : "Compact system meters", onClick: onToggleMetersCollapsed, children: /* @__PURE__ */ u2("i", { className: `codicon ${metersCollapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`, "aria-hidden": "true" }) }),
-        /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "status-bar__terminal-btn", type: "button", "aria-pressed": metersEnabled, title: metersEnabled ? "Hide system meters" : "Show system meters", onClick: onToggleMetersEnabled, children: /* @__PURE__ */ u2("i", { className: `codicon ${metersEnabled ? "codicon-eye" : "codicon-eye-closed"}`, "aria-hidden": "true" }) })
-      ] }),
-      /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "status-bar__terminal-btn", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
-        /* @__PURE__ */ u2("i", { className: "codicon codicon-dashboard", "aria-hidden": "true" }),
-        /* @__PURE__ */ u2("span", { id: "dashboard-count", children: "0" })
-      ] })
-    ] })
-  ] });
-}
-
-// src/components/Composer.tsx
-function Composer() {
-  return /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
-    /* @__PURE__ */ u2("form", { id: "compose-form", className: "chat__compose", children: [
-      /* @__PURE__ */ u2("div", { className: "chat__compose-container", children: [
-        /* @__PURE__ */ u2("div", { className: "chat__toolbar", "aria-label": "Prompt controls", children: [
-          /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
-          /* @__PURE__ */ u2("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" }),
-          /* @__PURE__ */ u2("label", { className: "thinking-badge-wrapper", title: "Message delivery", children: [
-            /* @__PURE__ */ u2("span", { className: "sr-only", children: "Delivery" }),
-            /* @__PURE__ */ u2("select", { id: "compose-delivery-mode", className: "thinking-badge", name: "delivery_mode", "aria-label": "Message delivery", children: [
-              /* @__PURE__ */ u2("option", { value: "run", children: "Run" }),
-              /* @__PURE__ */ u2("option", { value: "follow_up", children: "Follow-up" }),
-              /* @__PURE__ */ u2("option", { value: "steer", children: "Steer" })
-            ] })
-          ] }),
-          /* @__PURE__ */ u2("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
-        ] }),
-        /* @__PURE__ */ u2("div", { className: "sr-only", "aria-hidden": "true", children: [
-          /* @__PURE__ */ u2("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter" }),
-          /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter" }),
-          /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter" })
-        ] }),
-        /* @__PURE__ */ u2("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments" }),
-        /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", className: "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: true, children: "Clear all" }),
-        /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "compose-input", children: "Send a prompt to Tau" }),
-        /* @__PURE__ */ u2(
-          "textarea",
-          {
-            id: "compose-input",
-            className: "chat__input",
-            name: "prompt",
-            rows: 3,
-            autoComplete: "off",
-            role: "combobox",
-            "aria-autocomplete": "list",
-            "aria-controls": "compose-completion-listbox",
-            "aria-describedby": "compose-help compose-completion-status",
-            "aria-expanded": "false",
-            "aria-haspopup": "listbox",
-            placeholder: "Type a message..."
-          }
-        ),
-        /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: true, children: [
-          /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite" }),
-          /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions" })
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
-    ] }),
-    /* @__PURE__ */ u2("div", { className: "sr-only", children: [
-      /* @__PURE__ */ u2("p", { id: "compose-help", children: "Enter sends. Shift+Enter inserts a newline." }),
-      /* @__PURE__ */ u2("p", { id: "app-status", "aria-live": "polite", children: "Loading Tau shell\u2026" })
-    ] }),
-    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_below" })
-  ] });
-}
-
-// src/components/Dashboard.tsx
-function Dashboard({ open, onClose }) {
-  return /* @__PURE__ */ u2(
-    "div",
-    {
-      id: "session-dashboard",
-      className: "modal-dialog__backdrop",
-      "data-open": String(open),
-      hidden: !open,
-      onMouseDown: (event) => {
-        if (event.target === event.currentTarget) onClose();
-      },
-      children: /* @__PURE__ */ u2(
-        "section",
-        {
-          className: "modal-dialog session-dashboard__dialog",
-          role: "dialog",
-          "aria-modal": "true",
-          "aria-labelledby": "dashboard-title",
-          onMouseDown: (event) => event.stopPropagation(),
-          children: [
-            /* @__PURE__ */ u2("header", { className: "session-dashboard__header", children: [
-              /* @__PURE__ */ u2("div", { children: [
-                /* @__PURE__ */ u2("h2", { id: "dashboard-title", className: "modal-dialog__title", children: "Session dashboard" }),
-                /* @__PURE__ */ u2("p", { className: "modal-dialog__description", children: "Live Tau sessions, queue state, context estimates, and current activity." })
-              ] }),
-              /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "modal-dialog__btn", type: "button", onClick: onClose, children: "Close" })
-            ] }),
-            /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": "false" }),
-            /* @__PURE__ */ u2("footer", { className: "session-dashboard__footer", children: [
-              /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "modal-dialog__description", children: "Not refreshed yet." }),
-              /* @__PURE__ */ u2("div", { className: "modal-dialog__actions", role: "group", "aria-label": "Dashboard pages", children: [
-                /* @__PURE__ */ u2("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", children: "Previous" }),
-                /* @__PURE__ */ u2("output", { id: "dashboard-page", children: "Page 1 of 1" }),
-                /* @__PURE__ */ u2("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", children: "Next" }),
-                /* @__PURE__ */ u2("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", children: "All sessions" })
-              ] })
-            ] })
-          ]
-        }
-      )
-    }
-  );
-}
-
 // node_modules/preact/hooks/dist/hooks.module.js
 var t2;
 var r2;
@@ -584,6 +439,189 @@ function C2(n2, t3) {
 }
 function D(n2, t3) {
   return "function" == typeof t3 ? t3(n2) : t3;
+}
+
+// src/components/SystemStats.tsx
+var formatPercent = (value) => Number.isFinite(value) ? `${Math.round(value)}%` : "--";
+var formatBytes = (value) => {
+  if (!Number.isFinite(value)) return "--";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let amount = value;
+  let unit = 0;
+  while (amount >= 1024 && unit < units.length - 1) {
+    amount /= 1024;
+    unit += 1;
+  }
+  return `${amount.toFixed(unit > 1 && amount < 10 ? 1 : 0)} ${units[unit]}`;
+};
+var severity = (value) => value != null && value > 85 ? "error" : value != null && value >= 60 ? "warning" : "normal";
+var points = (series, maximum) => {
+  const values = (series ?? []).filter(Number.isFinite);
+  if (values.length < 2) return "";
+  const max = maximum ?? Math.max(...values, 1);
+  return values.map((value, index) => `${index / (values.length - 1) * 48},${12 - Math.min(1, Math.max(0, value / max)) * 12}`).join(" ");
+};
+function Metric({ id: id2, label, icon, value, series, maximum }) {
+  const numeric = series?.at(-1);
+  const level = id2 === "swap" && numeric && numeric > 0 ? "warning" : severity(numeric);
+  return /* @__PURE__ */ u2("span", { className: "sys-stats__metric", title: `${label} usage`, children: [
+    /* @__PURE__ */ u2("i", { className: `sys-stats__icon codicon ${icon}`, "aria-hidden": "true" }),
+    /* @__PURE__ */ u2("span", { className: "sys-stats__label", children: label }),
+    /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, className: `sys-stats__value${level === "normal" ? "" : ` sys-stats__value--${level}`}`, children: value }),
+    /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, className: "sys-stats__sparkline", viewBox: "0 0 48 12", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history`, children: points(series, maximum) && /* @__PURE__ */ u2("polyline", { className: "meter-sparkline", points: points(series, maximum) }) })
+  ] });
+}
+function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed }) {
+  const [state, setState] = h2({ enabled, collapsed, meters: null });
+  _2(() => {
+    const update = (event) => setState(event.detail);
+    window.addEventListener("tau:meters-render", update);
+    return () => window.removeEventListener("tau:meters-render", update);
+  }, []);
+  const meters = state.meters;
+  const cpu = formatPercent(meters?.cpu_percent), ram = formatPercent(meters?.ram_percent);
+  const rss = formatBytes(meters?.process_rss_bytes), swap = formatPercent(meters?.swap_percent);
+  const summary = !state.enabled ? "Meters hidden" : !meters ? "Meters unavailable" : `CPU ${cpu} \xB7 RAM ${ram} \xB7 RSS ${rss} \xB7 Swap ${swap}`;
+  return /* @__PURE__ */ u2("span", { id: "system-meters", className: "sys-stats-bar", "data-enabled": String(state.enabled), "data-collapsed": String(state.collapsed), children: [
+    /* @__PURE__ */ u2("span", { className: "sys-stats-bar__inline", children: /* @__PURE__ */ u2("span", { id: "meters-details", className: "sys-stats", children: [
+      /* @__PURE__ */ u2(Metric, { id: "cpu", label: "CPU", icon: "codicon-pulse", value: cpu, series: meters?.cpu_series, maximum: 100 }),
+      /* @__PURE__ */ u2(Metric, { id: "ram", label: "RAM", icon: "codicon-circuit-board", value: ram, series: meters?.ram_series, maximum: 100 }),
+      /* @__PURE__ */ u2(Metric, { id: "rss", label: "RSS", icon: "codicon-package", value: rss, series: meters?.process_rss_series_bytes, maximum: null }),
+      /* @__PURE__ */ u2(Metric, { id: "swap", label: "SWP", icon: "codicon-arrow-swap", value: swap, series: meters?.swap_series, maximum: 100 })
+    ] }) }),
+    /* @__PURE__ */ u2("output", { id: "meters-summary", className: "sys-stats-bar__compact", "aria-live": "polite", children: summary }),
+    /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "status-bar__terminal-btn", type: "button", "aria-controls": "meters-details", "aria-expanded": !state.collapsed, title: state.collapsed ? "Expand system meters" : "Compact system meters", onClick: onToggleCollapsed, children: /* @__PURE__ */ u2("i", { className: `codicon ${state.collapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`, "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "status-bar__terminal-btn", type: "button", "aria-pressed": state.enabled, title: state.enabled ? "Hide system meters" : "Show system meters", onClick: onToggleEnabled, children: /* @__PURE__ */ u2("i", { className: `codicon ${state.enabled ? "codicon-eye" : "codicon-eye-closed"}`, "aria-hidden": "true" }) })
+  ] });
+}
+
+// src/components/StatusBar.tsx
+function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
+  return /* @__PURE__ */ u2("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
+    /* @__PURE__ */ u2("span", { className: "status-bar__conn", children: [
+      /* @__PURE__ */ u2("span", { className: "status-bar__conn-dot status-bar__conn-dot--disconnected", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "status-stream", className: "status-bar__conn-text", children: "Connecting\u2026" })
+    ] }),
+    /* @__PURE__ */ u2("span", { className: "session-pill-wrap", children: /* @__PURE__ */ u2("button", { className: "session-pill", type: "button", title: "Open sessions", onClick: onOpenSessions, children: [
+      /* @__PURE__ */ u2("span", { className: "session-pill__dot session-pill__dot--current", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "status-session", className: "session-pill__label", children: "No session selected" })
+    ] }) }),
+    /* @__PURE__ */ u2("span", { className: "model-badge-wrapper", children: [
+      /* @__PURE__ */ u2("span", { id: "status-model", className: "model-badge model-badge--empty", children: "Unset" }),
+      /* @__PURE__ */ u2("span", { id: "status-context", className: "usage-badge", children: "No context loaded" })
+    ] }),
+    /* @__PURE__ */ u2("span", { className: "status-bar__right", children: [
+      /* @__PURE__ */ u2(SystemStats, { enabled: metersEnabled, collapsed: metersCollapsed, onToggleEnabled: onToggleMetersEnabled, onToggleCollapsed: onToggleMetersCollapsed }),
+      /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "status-bar__terminal-btn", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
+        /* @__PURE__ */ u2("i", { className: "codicon codicon-dashboard", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("span", { id: "dashboard-count", children: "0" })
+      ] })
+    ] })
+  ] });
+}
+
+// src/components/Composer.tsx
+function Composer() {
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
+    /* @__PURE__ */ u2("form", { id: "compose-form", className: "chat__compose", children: [
+      /* @__PURE__ */ u2("div", { className: "chat__compose-container", children: [
+        /* @__PURE__ */ u2("div", { className: "chat__toolbar", "aria-label": "Prompt controls", children: [
+          /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
+          /* @__PURE__ */ u2("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" }),
+          /* @__PURE__ */ u2("label", { className: "thinking-badge-wrapper", title: "Message delivery", children: [
+            /* @__PURE__ */ u2("span", { className: "sr-only", children: "Delivery" }),
+            /* @__PURE__ */ u2("select", { id: "compose-delivery-mode", className: "thinking-badge", name: "delivery_mode", "aria-label": "Message delivery", children: [
+              /* @__PURE__ */ u2("option", { value: "run", children: "Run" }),
+              /* @__PURE__ */ u2("option", { value: "follow_up", children: "Follow-up" }),
+              /* @__PURE__ */ u2("option", { value: "steer", children: "Steer" })
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
+        ] }),
+        /* @__PURE__ */ u2("div", { className: "sr-only", "aria-hidden": "true", children: [
+          /* @__PURE__ */ u2("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter" }),
+          /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter" }),
+          /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter" })
+        ] }),
+        /* @__PURE__ */ u2("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments" }),
+        /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", className: "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: true, children: "Clear all" }),
+        /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "compose-input", children: "Send a prompt to Tau" }),
+        /* @__PURE__ */ u2(
+          "textarea",
+          {
+            id: "compose-input",
+            className: "chat__input",
+            name: "prompt",
+            rows: 3,
+            autoComplete: "off",
+            role: "combobox",
+            "aria-autocomplete": "list",
+            "aria-controls": "compose-completion-listbox",
+            "aria-describedby": "compose-help compose-completion-status",
+            "aria-expanded": "false",
+            "aria-haspopup": "listbox",
+            placeholder: "Type a message..."
+          }
+        ),
+        /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: true, children: [
+          /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite" }),
+          /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
+    ] }),
+    /* @__PURE__ */ u2("div", { className: "sr-only", children: [
+      /* @__PURE__ */ u2("p", { id: "compose-help", children: "Enter sends. Shift+Enter inserts a newline." }),
+      /* @__PURE__ */ u2("p", { id: "app-status", "aria-live": "polite", children: "Loading Tau shell\u2026" })
+    ] }),
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_below" })
+  ] });
+}
+
+// src/components/Dashboard.tsx
+function Dashboard({ open, onClose }) {
+  return /* @__PURE__ */ u2(
+    "div",
+    {
+      id: "session-dashboard",
+      className: "modal-dialog__backdrop",
+      "data-open": String(open),
+      hidden: !open,
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) onClose();
+      },
+      children: /* @__PURE__ */ u2(
+        "section",
+        {
+          className: "modal-dialog session-dashboard__dialog",
+          role: "dialog",
+          "aria-modal": "true",
+          "aria-labelledby": "dashboard-title",
+          onMouseDown: (event) => event.stopPropagation(),
+          children: [
+            /* @__PURE__ */ u2("header", { className: "session-dashboard__header", children: [
+              /* @__PURE__ */ u2("div", { children: [
+                /* @__PURE__ */ u2("h2", { id: "dashboard-title", className: "modal-dialog__title", children: "Session dashboard" }),
+                /* @__PURE__ */ u2("p", { className: "modal-dialog__description", children: "Live Tau sessions, queue state, context estimates, and current activity." })
+              ] }),
+              /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "modal-dialog__btn", type: "button", onClick: onClose, children: "Close" })
+            ] }),
+            /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": "false" }),
+            /* @__PURE__ */ u2("footer", { className: "session-dashboard__footer", children: [
+              /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "modal-dialog__description", children: "Not refreshed yet." }),
+              /* @__PURE__ */ u2("div", { className: "modal-dialog__actions", role: "group", "aria-label": "Dashboard pages", children: [
+                /* @__PURE__ */ u2("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", children: "Previous" }),
+                /* @__PURE__ */ u2("output", { id: "dashboard-page", children: "Page 1 of 1" }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", children: "Next" }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", children: "All sessions" })
+              ] })
+            ] })
+          ]
+        }
+      )
+    }
+  );
 }
 
 // src/components/PlanPanel.tsx

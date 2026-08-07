@@ -1,11 +1,4 @@
-const Meter = ({ id, label, icon }: { id: string; label: string; icon: string }) => (
-  <span className="sys-stats__metric" title={`${label} usage`}>
-    <i className={`sys-stats__icon codicon ${icon}`} aria-hidden="true" />
-    <span className="sys-stats__label">{label}</span>
-    <output id={`meter-${id}-value`} className="sys-stats__value">--</output>
-    <svg id={`meter-${id}-sparkline`} className="sys-stats__sparkline" role="img" aria-label={`${label === "RSS" ? "Tau RSS" : label} history`} />
-  </span>
-);
+import { SystemStats } from "./SystemStats";
 
 export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }: {
   dashboardOpen: boolean;
@@ -36,23 +29,7 @@ export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpe
       </span>
 
       <span className="status-bar__right">
-        <span id="system-meters" className="sys-stats-bar" data-enabled={String(metersEnabled)} data-collapsed={String(metersCollapsed)}>
-          <span className="sys-stats-bar__inline">
-            <span id="meters-details" className="sys-stats">
-              <Meter id="cpu" label="CPU" icon="codicon-pulse" />
-              <Meter id="ram" label="RAM" icon="codicon-circuit-board" />
-              <Meter id="rss" label="RSS" icon="codicon-package" />
-              <Meter id="swap" label="SWP" icon="codicon-arrow-swap" />
-            </span>
-          </span>
-          <output id="meters-summary" className="sys-stats-bar__compact" aria-live="polite">Meters loading…</output>
-          <button id="meters-collapse-button" className="status-bar__terminal-btn" type="button" aria-controls="meters-details" aria-expanded={!metersCollapsed} title={metersCollapsed ? "Expand system meters" : "Compact system meters"} onClick={onToggleMetersCollapsed}>
-            <i className={`codicon ${metersCollapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`} aria-hidden="true" />
-          </button>
-          <button id="meters-visibility-button" className="status-bar__terminal-btn" type="button" aria-pressed={metersEnabled} title={metersEnabled ? "Hide system meters" : "Show system meters"} onClick={onToggleMetersEnabled}>
-            <i className={`codicon ${metersEnabled ? "codicon-eye" : "codicon-eye-closed"}`} aria-hidden="true" />
-          </button>
-        </span>
+        <SystemStats enabled={metersEnabled} collapsed={metersCollapsed} onToggleEnabled={onToggleMetersEnabled} onToggleCollapsed={onToggleMetersCollapsed} />
         <button id="dashboard-toggle" className="status-bar__terminal-btn" type="button" aria-controls="session-dashboard" aria-expanded={dashboardOpen} title="Toggle dashboard (`)" onClick={onToggleDashboard}>
           <i className="codicon codicon-dashboard" aria-hidden="true" />
           <span id="dashboard-count">0</span>
