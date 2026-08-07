@@ -1,8 +1,19 @@
-const Tab = ({ id, panel, selected, children }: { id: string; panel: string; selected: boolean; children: string }) => (
-  <button id={id} className="tab-button" type="button" role="tab" aria-controls={panel} aria-selected={selected}>{children}</button>
+import type { SidebarTab } from "../hooks/useSidebarTabs";
+
+const Tab = ({ name, selected, onSelect, children }: {
+  name: SidebarTab;
+  selected: boolean;
+  onSelect: (tab: SidebarTab) => void;
+  children: string;
+}) => (
+  <button id={`tab-${name}`} className="tab-button" type="button" role="tab" aria-controls={`panel-${name}`} aria-selected={selected} onClick={() => onSelect(name)}>{children}</button>
 );
 
-export function SidePanel({ onClose }: { onClose: () => void }) {
+export function SidePanel({ activeTab, onSelectTab, onClose }: {
+  activeTab: SidebarTab;
+  onSelectTab: (tab: SidebarTab) => void;
+  onClose: () => void;
+}) {
   return (
     <aside id="side-panel" className="panel panel-side" aria-label="Workspace search and settings">
       <div className="panel-header sticky-header">
@@ -10,12 +21,12 @@ export function SidePanel({ onClose }: { onClose: () => void }) {
         <button id="close-panel-drawer" className="icon-button mobile-only" type="button" aria-label="Close workspace drawer" onClick={onClose}>Close</button>
       </div>
       <div className="tabs" role="tablist" aria-label="Sidebar sections">
-        <Tab id="tab-workspace" panel="panel-workspace" selected>Workspace</Tab>
-        <Tab id="tab-search" panel="panel-search" selected={false}>Search</Tab>
-        <Tab id="tab-plan" panel="panel-plan" selected={false}>Plan</Tab>
-        <Tab id="tab-settings" panel="panel-settings" selected={false}>Settings</Tab>
+        <Tab name="workspace" selected={activeTab === "workspace"} onSelect={onSelectTab}>Workspace</Tab>
+        <Tab name="search" selected={activeTab === "search"} onSelect={onSelectTab}>Search</Tab>
+        <Tab name="plan" selected={activeTab === "plan"} onSelect={onSelectTab}>Plan</Tab>
+        <Tab name="settings" selected={activeTab === "settings"} onSelect={onSelectTab}>Settings</Tab>
       </div>
-      <section id="panel-workspace" className="tab-panel" role="tabpanel" aria-labelledby="tab-workspace">
+      <section id="panel-workspace" className="tab-panel" role="tabpanel" aria-labelledby="tab-workspace" hidden={activeTab !== "workspace"}>
         <div className="toolbar-row"><button id="workspace-up-button" type="button">Up</button><button id="workspace-reload-button" type="button">Reload</button></div>
         <p id="workspace-path" className="muted small-text">.</p>
         <div className="workspace-split">
@@ -30,7 +41,7 @@ export function SidePanel({ onClose }: { onClose: () => void }) {
           </section>
         </div>
       </section>
-      <section id="panel-search" className="tab-panel" role="tabpanel" aria-labelledby="tab-search" hidden>
+      <section id="panel-search" className="tab-panel" role="tabpanel" aria-labelledby="tab-search" hidden={activeTab !== "search"}>
         <form id="search-form" className="stack-form">
           <label htmlFor="search-input">Search persisted content</label>
           <div className="toolbar-row"><input id="search-input" name="query" type="search" autoComplete="off" placeholder="Search messages and indexed content" /><button id="search-submit-button" type="submit">Search</button></div>
@@ -38,7 +49,7 @@ export function SidePanel({ onClose }: { onClose: () => void }) {
         </form>
         <ol id="search-results" className="search-results" tabIndex={0} aria-label="Search results" aria-live="polite" />
       </section>
-      <section id="panel-plan" className="tab-panel plan-panel" role="tabpanel" aria-labelledby="tab-plan" hidden>
+      <section id="panel-plan" className="tab-panel plan-panel" role="tabpanel" aria-labelledby="tab-plan" hidden={activeTab !== "plan"}>
         <form id="plan-form" className="stack-form">
           <div className="plan-editor-header"><label htmlFor="plan-editor">Session plan</label><span id="plan-revision" className="muted small-text">Revision 0</span></div>
           <textarea id="plan-editor" className="plan-editor" spellcheck placeholder="- [ ] Add a concrete next step" aria-describedby="plan-status" />
@@ -47,7 +58,7 @@ export function SidePanel({ onClose }: { onClose: () => void }) {
           <div className="button-row button-row-wrap"><button id="plan-save-button" type="submit">Save plan</button><button id="plan-reload-button" type="button">Reload server plan</button></div>
         </form>
       </section>
-      <section id="panel-settings" className="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <section id="panel-settings" className="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden={activeTab !== "settings"}>
         <form id="auth-form" className="stack-form">
           <label htmlFor="auth-token">Bearer token</label><input id="auth-token" type="password" autoComplete="off" />
           <div className="button-row button-row-wrap"><button id="save-auth-button" type="submit">Save token</button><button id="clear-auth-button" type="button">Clear token</button></div>

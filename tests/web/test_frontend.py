@@ -570,3 +570,17 @@ def test_preact_owns_mobile_drawer_state() -> None:
     assert "hidden={drawer === null}" in shell
     assert 'addEventListener("click", () => toggleDrawer' not in legacy
     assert 'new CustomEvent("tau:close-drawers")' in legacy
+
+
+def test_preact_owns_sidebar_tab_state() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    hook = (root / "frontend/src/hooks/useSidebarTabs.ts").read_text(encoding="utf-8")
+    panel = (root / "frontend/src/components/SidePanel.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("tau:switch-tab", requested)' in hook
+    assert 'hidden={activeTab !== "workspace"}' in panel
+    assert 'addEventListener("click", () => switchTab' not in legacy
+    assert 'new CustomEvent("tau:switch-tab"' in legacy
+    assert 'new CustomEvent("tau:open-drawer"' in legacy
+    assert "setDrawerState" not in legacy

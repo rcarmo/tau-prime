@@ -268,11 +268,6 @@ function installEventHandlers() {
     applySessionFilter("archived");
   });
 
-  ui.tabWorkspace.addEventListener("click", () => switchTab("workspace"));
-  ui.tabSearch.addEventListener("click", () => switchTab("search"));
-  ui.tabPlan.addEventListener("click", () => switchTab("plan"));
-  ui.tabSettings.addEventListener("click", () => switchTab("settings"));
-
   ui.workspaceUpButton.addEventListener("click", () => {
     void loadWorkspaceDirectory(parentPath(state.workspacePath));
   });
@@ -1215,17 +1210,7 @@ function switchTab(name) {
     return;
   }
   state.activeTab = name;
-  const mappings = [
-    ["workspace", ui.tabWorkspace, ui.panelWorkspace],
-    ["search", ui.tabSearch, ui.panelSearch],
-    ["plan", ui.tabPlan, ui.panelPlan],
-    ["settings", ui.tabSettings, ui.panelSettings],
-  ];
-  for (const [tabName, button, panel] of mappings) {
-    const selected = tabName === name;
-    button.setAttribute("aria-selected", String(selected));
-    panel.hidden = !selected;
-  }
+  window.dispatchEvent(new CustomEvent("tau:switch-tab", { detail: { tab: name } }));
 }
 
 function closeDrawers() {
@@ -1539,9 +1524,9 @@ function handleDashboardResize() {
 
 function openSessionManager() {
   setDashboardOpen(false);
-  setDrawerState("panel", false);
+  closeDrawers();
   if (window.innerWidth <= 960) {
-    setDrawerState("nav", true);
+    window.dispatchEvent(new CustomEvent("tau:open-drawer", { detail: { drawer: "nav" } }));
   }
   const target = ui.sessionList.querySelector("button") ?? ui.newSessionButton;
   if (target instanceof HTMLElement) {
@@ -2921,7 +2906,7 @@ function handleKeyboardShortcuts(event) {
   if (isModifier && event.key.toLowerCase() === "k") {
     event.preventDefault();
     switchTab("search");
-    setDrawerState("panel", true);
+    window.dispatchEvent(new CustomEvent("tau:open-drawer", { detail: { drawer: "panel" } }));
     ui.searchInput.focus();
     ui.searchInput.select();
     return;
