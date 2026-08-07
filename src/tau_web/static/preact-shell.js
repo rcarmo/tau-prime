@@ -306,7 +306,7 @@ var Meter = ({ id: id2, label }) => /* @__PURE__ */ u2("figure", { className: "m
   ] }),
   /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
 ] });
-function StatusBar({ drawer, onToggleDrawer }) {
+function StatusBar({ drawer, dashboardOpen, onToggleDrawer, onToggleDashboard }) {
   return /* @__PURE__ */ u2("header", { className: "topbar", "aria-label": "Tau status bar", children: [
     /* @__PURE__ */ u2("div", { className: "topbar-group topbar-branding", children: [
       /* @__PURE__ */ u2("button", { id: "mobile-nav-toggle", className: "icon-button mobile-only", type: "button", "aria-controls": "session-nav", "aria-expanded": drawer === "nav", "aria-label": "Open sessions drawer", onClick: () => onToggleDrawer("nav"), children: "Sessions" }),
@@ -329,7 +329,7 @@ function StatusBar({ drawer, onToggleDrawer }) {
         /* @__PURE__ */ u2("dd", { id: "status-context", children: "No context loaded" })
       ] })
     ] }),
-    /* @__PURE__ */ u2("div", { className: "topbar-group topbar-dashboard-control", children: /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "dashboard-toggle", type: "button", "aria-controls": "session-dashboard", "aria-expanded": "false", title: "Toggle dashboard (`)", children: [
+    /* @__PURE__ */ u2("div", { className: "topbar-group topbar-dashboard-control", children: /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "dashboard-toggle", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
       "Dashboard ",
       /* @__PURE__ */ u2("span", { id: "dashboard-count", className: "dashboard-count", children: "0" })
     ] }) }),
@@ -401,14 +401,14 @@ function Composer() {
 }
 
 // src/components/Dashboard.tsx
-function Dashboard() {
-  return /* @__PURE__ */ u2("section", { id: "session-dashboard", className: "session-dashboard", "aria-labelledby": "dashboard-title", "data-open": "false", hidden: true, children: /* @__PURE__ */ u2("div", { className: "dashboard-shell", children: [
+function Dashboard({ open, onClose }) {
+  return /* @__PURE__ */ u2("section", { id: "session-dashboard", className: "session-dashboard", "aria-labelledby": "dashboard-title", "data-open": String(open), hidden: !open, children: /* @__PURE__ */ u2("div", { className: "dashboard-shell", children: [
     /* @__PURE__ */ u2("header", { className: "dashboard-header", children: [
       /* @__PURE__ */ u2("div", { children: [
         /* @__PURE__ */ u2("h2", { id: "dashboard-title", children: "Session dashboard" }),
         /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Live Tau sessions, queue state, context estimates, and current activity." })
       ] }),
-      /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "icon-button", type: "button", children: "Close" })
+      /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "icon-button", type: "button", onClick: onClose, children: "Close" })
     ] }),
     /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "dashboard-grid", role: "list", "aria-live": "polite", "aria-busy": "false" }),
     /* @__PURE__ */ u2("footer", { className: "dashboard-footer", children: [
@@ -1052,17 +1052,34 @@ function useSidebarTabs() {
   return { activeTab, selectTab };
 }
 
+// src/hooks/useDashboardVisibility.ts
+function useDashboardVisibility() {
+  const [open, setOpen] = h2(false);
+  y2(() => {
+    window.dispatchEvent(new CustomEvent("tau:dashboard-visibility", { detail: { open } }));
+  }, [open]);
+  y2(() => {
+    const requested = (event) => {
+      setOpen(Boolean(event.detail?.open));
+    };
+    window.addEventListener("tau:set-dashboard", requested);
+    return () => window.removeEventListener("tau:set-dashboard", requested);
+  }, []);
+  return { dashboardOpen: open, setDashboardOpen: setOpen };
+}
+
 // src/index.tsx
 function TauShell() {
   const { drawer, close, open, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
+  const { dashboardOpen, setDashboardOpen } = useDashboardVisibility();
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
     /* @__PURE__ */ u2("div", { className: "app-layout", children: [
       /* @__PURE__ */ u2(ActivityBar, { activeTab, onSelectTab: selectTab, onOpenPanel: () => open("panel") }),
       /* @__PURE__ */ u2("div", { className: "app-layout__main", children: /* @__PURE__ */ u2("div", { className: "app-layout__content-area", children: /* @__PURE__ */ u2("div", { className: "app-layout__panel", children: /* @__PURE__ */ u2("div", { className: "app-shell", children: [
-        /* @__PURE__ */ u2(StatusBar, { drawer, onToggleDrawer: toggle }),
-        /* @__PURE__ */ u2(Dashboard, {}),
+        /* @__PURE__ */ u2(StatusBar, { drawer, dashboardOpen, onToggleDrawer: toggle, onToggleDashboard: () => setDashboardOpen((current) => !current) }),
+        /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
         /* @__PURE__ */ u2("div", { className: "shell-layout", children: [
           /* @__PURE__ */ u2(SessionNav, { onClose: close }),
           /* @__PURE__ */ u2(Timeline, {}),

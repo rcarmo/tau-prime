@@ -584,3 +584,18 @@ def test_preact_owns_sidebar_tab_state() -> None:
     assert 'new CustomEvent("tau:switch-tab"' in legacy
     assert 'new CustomEvent("tau:open-drawer"' in legacy
     assert "setDrawerState" not in legacy
+
+
+def test_preact_owns_dashboard_visibility() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    hook = (root / "frontend/src/hooks/useDashboardVisibility.ts").read_text(encoding="utf-8")
+    dashboard = (root / "frontend/src/components/Dashboard.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'new CustomEvent("tau:dashboard-visibility"' in hook
+    assert 'window.addEventListener("tau:set-dashboard", requested)' in hook
+    assert "hidden={!open}" in dashboard
+    assert 'dashboardToggle.addEventListener("click"' not in legacy
+    assert 'dashboardClose.addEventListener("click"' not in legacy
+    assert 'new CustomEvent("tau:set-dashboard"' in legacy
+    assert "ui.sessionDashboard.hidden" not in legacy

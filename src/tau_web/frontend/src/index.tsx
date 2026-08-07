@@ -9,12 +9,14 @@ import { SidePanel } from "./components/SidePanel";
 import { Onboarding } from "./components/Onboarding";
 import { useDrawers } from "./hooks/useDrawers";
 import { useSidebarTabs } from "./hooks/useSidebarTabs";
+import { useDashboardVisibility } from "./hooks/useDashboardVisibility";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
 function TauShell() {
   const { drawer, close, open, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
+  const { dashboardOpen, setDashboardOpen } = useDashboardVisibility();
   return (
     <Fragment>
       <a className="skip-link" href="#timeline-main">Skip to timeline</a>
@@ -24,8 +26,8 @@ function TauShell() {
           <div className="app-layout__content-area">
             <div className="app-layout__panel">
               <div className="app-shell">
-                <StatusBar drawer={drawer} onToggleDrawer={toggle} />
-                <Dashboard />
+                <StatusBar drawer={drawer} dashboardOpen={dashboardOpen} onToggleDrawer={toggle} onToggleDashboard={() => setDashboardOpen((current) => !current)} />
+                <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
                 <div className="shell-layout">
                   <SessionNav onClose={close} />
                   <Timeline />

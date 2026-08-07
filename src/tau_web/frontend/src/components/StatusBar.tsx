@@ -5,9 +5,11 @@ const Meter = ({ id, label }: { id: string; label: string }) => (
   </figure>
 );
 
-export function StatusBar({ drawer, onToggleDrawer }: {
+export function StatusBar({ drawer, dashboardOpen, onToggleDrawer, onToggleDashboard }: {
   drawer: "nav" | "panel" | null;
+  dashboardOpen: boolean;
   onToggleDrawer: (drawer: "nav" | "panel") => void;
+  onToggleDashboard: () => void;
 }) {
   return (
     <header className="topbar" aria-label="Tau status bar">
@@ -21,7 +23,7 @@ export function StatusBar({ drawer, onToggleDrawer }: {
         <div><dt>Context</dt><dd id="status-context">No context loaded</dd></div>
       </dl>
       <div className="topbar-group topbar-dashboard-control">
-        <button id="dashboard-toggle" className="dashboard-toggle" type="button" aria-controls="session-dashboard" aria-expanded="false" title="Toggle dashboard (`)">Dashboard <span id="dashboard-count" className="dashboard-count">0</span></button>
+        <button id="dashboard-toggle" className="dashboard-toggle" type="button" aria-controls="session-dashboard" aria-expanded={dashboardOpen} title="Toggle dashboard (`)" onClick={onToggleDashboard}>Dashboard <span id="dashboard-count" className="dashboard-count">0</span></button>
       </div>
       <div className="topbar-group topbar-actions">
         <section id="system-meters" className="system-meters" aria-label="System meters" data-enabled="true" data-collapsed="true">

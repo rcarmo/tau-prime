@@ -245,8 +245,9 @@ function bindUi() {
 function installEventHandlers() {
   ui.metersCollapseButton.addEventListener("click", toggleMetersCollapsed);
   ui.metersVisibilityButton.addEventListener("click", toggleMetersEnabled);
-  ui.dashboardToggle.addEventListener("click", toggleDashboard);
-  ui.dashboardClose.addEventListener("click", () => setDashboardOpen(false));
+  window.addEventListener("tau:dashboard-visibility", (event) => {
+    applyDashboardOpen(Boolean(event.detail?.open));
+  });
   ui.dashboardPrevious.addEventListener("click", () => changeDashboardPage(-1));
   ui.dashboardNext.addEventListener("click", () => changeDashboardPage(1));
   ui.dashboardManage.addEventListener("click", openSessionManager);
@@ -1237,6 +1238,11 @@ function toggleDashboard() {
 
 function setDashboardOpen(open) {
   const nextOpen = Boolean(open);
+  applyDashboardOpen(nextOpen);
+  window.dispatchEvent(new CustomEvent("tau:set-dashboard", { detail: { open: nextOpen } }));
+}
+
+function applyDashboardOpen(nextOpen) {
   state.dashboard.open = nextOpen;
   state.dashboard.pageSize = dashboardCapacity();
   renderDashboard();
@@ -1254,9 +1260,6 @@ function renderDashboard() {
   const activeSessionCount = currentActiveSessions().length;
   const total = hasSnapshot ? dashboard.total : activeSessionCount;
 
-  ui.sessionDashboard.hidden = !dashboard.open;
-  ui.sessionDashboard.dataset.open = String(dashboard.open);
-  ui.dashboardToggle.setAttribute("aria-expanded", String(dashboard.open));
   ui.dashboardCount.textContent = String(total);
   ui.dashboardGrid.setAttribute("aria-busy", String(dashboard.loading));
   ui.dashboardPage.textContent = `Page ${dashboard.page} of ${dashboard.totalPages}`;
