@@ -125,7 +125,7 @@ The bundled browser shell reconnects automatically with exponential back-off fro
 
 ## PWA and frontend shell
 
-Tau Web serves a committed TypeScript/Preact bundle from `/static/preact-shell.js`. Its component-owned shell currently covers the activity/status bars, session dashboard and navigation, central timeline, and composer; remaining panels are being migrated incrementally without changing the DOM IDs used by the established runtime adapters. Piclaw's vendored reference stylesheet is the visual source of truth, with a narrow Tau compatibility layer rather than a CSS mask over incompatible structure.
+Tau Web serves a committed TypeScript/Preact bundle from `/static/preact-shell.js`. Its component-owned shell covers the activity/status bars, session dashboard and navigation, central timeline, composer, and workspace/search/plan/settings side panel; remaining overlays are being migrated incrementally without changing the DOM IDs used by the established runtime adapters. Piclaw's vendored reference stylesheet is the visual source of truth, with a narrow Tau compatibility layer rather than a CSS mask over incompatible structure.
 
 Public shell assets include `/`, `/index.html`, `/manifest.webmanifest`, `/sw.js`, `/static/preact-shell.js`, `/static/piclaw-reference.css`, `/static/piclaw-parity.css`, `/static/app.css`, `/static/app.js`, `/static/live-ui.js`, `/static/extension-ui.js`, `/static/widget-bridge.js`, and `/static/frontend-sdk.js`.
 

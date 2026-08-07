@@ -1,11 +1,11 @@
 import { Fragment, render } from "preact";
-import appShellMarkup from "./app-shell.html";
 import { ActivityBar } from "./components/ActivityBar";
 import { StatusBar } from "./components/StatusBar";
 import { Composer } from "./components/Composer";
 import { Dashboard } from "./components/Dashboard";
 import { SessionNav } from "./components/SessionNav";
 import { Timeline } from "./components/Timeline";
+import { SidePanel } from "./components/SidePanel";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
@@ -24,7 +24,7 @@ function TauShell() {
                 <div className="shell-layout">
                   <SessionNav />
                   <Timeline />
-                  <div className="legacy-shell-regions" dangerouslySetInnerHTML={{ __html: appShellMarkup }} />
+                  <SidePanel />
                 </div>
                 <Composer />
               </div>

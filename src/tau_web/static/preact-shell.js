@@ -253,9 +253,6 @@ n = v.slice, l = { __e: function(n2, l3, u4, t3) {
   return n2.__v.__b - l3.__v.__b;
 }, M.__r = 0, e = 0, c = F(false), s = F(true), a = 0;
 
-// src/app-shell.html
-var app_shell_default = '        <aside id="side-panel" class="panel panel-side" aria-label="Workspace search and settings">\n          <div class="panel-header sticky-header">\n            <div>\n              <h2>Workspace</h2>\n              <p class="muted">Files, search, and Tau settings.</p>\n            </div>\n            <button\n              id="close-panel-drawer"\n              class="icon-button mobile-only"\n              type="button"\n              aria-label="Close workspace drawer"\n            >\n              Close\n            </button>\n          </div>\n\n          <div class="tabs" role="tablist" aria-label="Sidebar sections">\n            <button\n              id="tab-workspace"\n              class="tab-button"\n              type="button"\n              role="tab"\n              aria-controls="panel-workspace"\n              aria-selected="true"\n            >\n              Workspace\n            </button>\n            <button\n              id="tab-search"\n              class="tab-button"\n              type="button"\n              role="tab"\n              aria-controls="panel-search"\n              aria-selected="false"\n            >\n              Search\n            </button>\n            <button\n              id="tab-plan"\n              class="tab-button"\n              type="button"\n              role="tab"\n              aria-controls="panel-plan"\n              aria-selected="false"\n            >\n              Plan\n            </button>\n            <button\n              id="tab-settings"\n              class="tab-button"\n              type="button"\n              role="tab"\n              aria-controls="panel-settings"\n              aria-selected="false"\n            >\n              Settings\n            </button>\n          </div>\n\n          <section\n            id="panel-workspace"\n            class="tab-panel"\n            role="tabpanel"\n            aria-labelledby="tab-workspace"\n          >\n            <div class="toolbar-row">\n              <button id="workspace-up-button" type="button">Up</button>\n              <button id="workspace-reload-button" type="button">Reload</button>\n            </div>\n            <p id="workspace-path" class="muted small-text">.</p>\n            <div class="workspace-split">\n              <nav class="workspace-browser" aria-label="Workspace tree">\n                <ul id="workspace-list" class="workspace-list"></ul>\n              </nav>\n              <section class="workspace-editor-panel" aria-labelledby="workspace-editor-title">\n                <div class="workspace-editor-header">\n                  <h3 id="workspace-editor-title">Editor</h3>\n                  <p id="workspace-editor-path" class="muted small-text">No file selected</p>\n                </div>\n                <label class="sr-only" for="workspace-editor">Workspace file editor</label>\n                <textarea\n                  id="workspace-editor"\n                  spellcheck="false"\n                  aria-describedby="workspace-editor-note"\n                ></textarea>\n                <p id="workspace-editor-note" class="muted small-text">\n                  Local edits are not yet persisted through the web shell.\n                </p>\n                <section id="workspace-annotations" class="workspace-annotations" hidden>\n                  <h4>Annotations</h4>\n                  <ul id="workspace-annotation-list" class="workspace-annotation-list"></ul>\n                </section>\n                <section\n                  id="workspace-renderer"\n                  class="workspace-renderer"\n                  aria-label="Extension file preview"\n                  hidden\n                ></section>\n              </section>\n            </div>\n          </section>\n\n          <section\n            id="panel-search"\n            class="tab-panel"\n            role="tabpanel"\n            aria-labelledby="tab-search"\n            hidden\n          >\n            <form id="search-form" class="stack-form">\n              <label for="search-input">Search persisted content</label>\n              <div class="toolbar-row">\n                <input\n                  id="search-input"\n                  name="query"\n                  type="search"\n                  autocomplete="off"\n                  placeholder="Search messages and indexed content"\n                />\n                <button id="search-submit-button" type="submit">Search</button>\n              </div>\n              <p class="muted small-text">Shortcut: Ctrl/Cmd+K</p>\n            </form>\n            <ol\n              id="search-results"\n              class="search-results"\n              tabindex="0"\n              aria-label="Search results"\n              aria-live="polite"\n            ></ol>\n          </section>\n\n          <section\n            id="panel-plan"\n            class="tab-panel plan-panel"\n            role="tabpanel"\n            aria-labelledby="tab-plan"\n            hidden\n          >\n            <form id="plan-form" class="stack-form">\n              <div class="plan-editor-header">\n                <label for="plan-editor">Session plan</label>\n                <span id="plan-revision" class="muted small-text">Revision 0</span>\n              </div>\n              <textarea\n                id="plan-editor"\n                class="plan-editor"\n                spellcheck="true"\n                placeholder="- [ ] Add a concrete next step"\n                aria-describedby="plan-status"\n              ></textarea>\n              <p id="plan-status" class="muted small-text" aria-live="polite">\n                Select a session to edit its shared plan.\n              </p>\n              <div id="plan-conflict" class="plan-conflict" role="alert" hidden>\n                The plan changed elsewhere while you had local edits. Reload the server version or\n                save again after reviewing it.\n              </div>\n              <div class="button-row button-row-wrap">\n                <button id="plan-save-button" type="submit">Save plan</button>\n                <button id="plan-reload-button" type="button">Reload server plan</button>\n              </div>\n            </form>\n          </section>\n\n          <section\n            id="panel-settings"\n            class="tab-panel"\n            role="tabpanel"\n            aria-labelledby="tab-settings"\n            hidden\n          >\n            <form id="auth-form" class="stack-form">\n              <label for="auth-token">Bearer token</label>\n              <input id="auth-token" type="password" autocomplete="off" />\n              <div class="button-row button-row-wrap">\n                <button id="save-auth-button" type="submit">Save token</button>\n                <button id="clear-auth-button" type="button">Clear token</button>\n              </div>\n            </form>\n\n            <form id="model-form" class="stack-form">\n              <label for="provider-input">Provider</label>\n              <input id="provider-input" list="provider-options" autocomplete="off" />\n              <datalist id="provider-options"></datalist>\n\n              <label for="model-input">Model</label>\n              <input id="model-input" list="model-options" autocomplete="off" />\n              <datalist id="model-options"></datalist>\n\n              <div class="button-row button-row-wrap">\n                <button id="apply-model-button" type="submit">Apply to session</button>\n                <button id="refresh-button" type="button">Refresh shell</button>\n              </div>\n            </form>\n\n            <form id="thinking-form" class="stack-form">\n              <label for="thinking-level-select">Thinking level</label>\n              <div class="toolbar-row toolbar-row-wrap">\n                <select id="thinking-level-select" name="thinking_level"></select>\n                <button id="apply-thinking-button" type="submit">Apply thinking</button>\n              </div>\n              <p id="thinking-help" class="muted small-text">\n                Updates session thinking with optimistic concurrency checks.\n              </p>\n            </form>\n\n            <section aria-labelledby="settings-summary-title">\n              <h3 id="settings-summary-title">Runtime summary</h3>\n              <dl id="settings-summary" class="settings-summary"></dl>\n            </section>\n\n            <p id="streaming-note" class="muted small-text">\n              Live streaming, queue controls, and persisted timeline playback are rendered with safe\n              DOM updates only.\n            </p>\n            <div class="extension-slot" data-extension-slot="sidebar"></div>\n          </section>\n        </aside>\n';
-
 // node_modules/preact/hooks/dist/hooks.module.js
 var t2;
 var r2;
@@ -630,6 +627,110 @@ function Timeline() {
   ] });
 }
 
+// src/components/SidePanel.tsx
+var Tab = ({ id, panel, selected, children }) => /* @__PURE__ */ u3("button", { id, className: "tab-button", type: "button", role: "tab", "aria-controls": panel, "aria-selected": selected, children });
+function SidePanel() {
+  return /* @__PURE__ */ u3("aside", { id: "side-panel", className: "panel panel-side", "aria-label": "Workspace search and settings", children: [
+    /* @__PURE__ */ u3("div", { className: "panel-header sticky-header", children: [
+      /* @__PURE__ */ u3("div", { children: [
+        /* @__PURE__ */ u3("h2", { children: "Workspace" }),
+        /* @__PURE__ */ u3("p", { className: "muted", children: "Files, search, and Tau settings." })
+      ] }),
+      /* @__PURE__ */ u3("button", { id: "close-panel-drawer", className: "icon-button mobile-only", type: "button", "aria-label": "Close workspace drawer", children: "Close" })
+    ] }),
+    /* @__PURE__ */ u3("div", { className: "tabs", role: "tablist", "aria-label": "Sidebar sections", children: [
+      /* @__PURE__ */ u3(Tab, { id: "tab-workspace", panel: "panel-workspace", selected: true, children: "Workspace" }),
+      /* @__PURE__ */ u3(Tab, { id: "tab-search", panel: "panel-search", selected: false, children: "Search" }),
+      /* @__PURE__ */ u3(Tab, { id: "tab-plan", panel: "panel-plan", selected: false, children: "Plan" }),
+      /* @__PURE__ */ u3(Tab, { id: "tab-settings", panel: "panel-settings", selected: false, children: "Settings" })
+    ] }),
+    /* @__PURE__ */ u3("section", { id: "panel-workspace", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-workspace", children: [
+      /* @__PURE__ */ u3("div", { className: "toolbar-row", children: [
+        /* @__PURE__ */ u3("button", { id: "workspace-up-button", type: "button", children: "Up" }),
+        /* @__PURE__ */ u3("button", { id: "workspace-reload-button", type: "button", children: "Reload" })
+      ] }),
+      /* @__PURE__ */ u3("p", { id: "workspace-path", className: "muted small-text", children: "." }),
+      /* @__PURE__ */ u3("div", { className: "workspace-split", children: [
+        /* @__PURE__ */ u3("nav", { className: "workspace-browser", "aria-label": "Workspace tree", children: /* @__PURE__ */ u3("ul", { id: "workspace-list", className: "workspace-list" }) }),
+        /* @__PURE__ */ u3("section", { className: "workspace-editor-panel", "aria-labelledby": "workspace-editor-title", children: [
+          /* @__PURE__ */ u3("div", { className: "workspace-editor-header", children: [
+            /* @__PURE__ */ u3("h3", { id: "workspace-editor-title", children: "Editor" }),
+            /* @__PURE__ */ u3("p", { id: "workspace-editor-path", className: "muted small-text", children: "No file selected" })
+          ] }),
+          /* @__PURE__ */ u3("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
+          /* @__PURE__ */ u3("textarea", { id: "workspace-editor", spellcheck: false, "aria-describedby": "workspace-editor-note" }),
+          /* @__PURE__ */ u3("p", { id: "workspace-editor-note", className: "muted small-text", children: "Local edits are not yet persisted through the web shell." }),
+          /* @__PURE__ */ u3("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: true, children: [
+            /* @__PURE__ */ u3("h4", { children: "Annotations" }),
+            /* @__PURE__ */ u3("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list" })
+          ] }),
+          /* @__PURE__ */ u3("section", { id: "workspace-renderer", className: "workspace-renderer", "aria-label": "Extension file preview", hidden: true })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ u3("section", { id: "panel-search", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-search", hidden: true, children: [
+      /* @__PURE__ */ u3("form", { id: "search-form", className: "stack-form", children: [
+        /* @__PURE__ */ u3("label", { htmlFor: "search-input", children: "Search persisted content" }),
+        /* @__PURE__ */ u3("div", { className: "toolbar-row", children: [
+          /* @__PURE__ */ u3("input", { id: "search-input", name: "query", type: "search", autoComplete: "off", placeholder: "Search messages and indexed content" }),
+          /* @__PURE__ */ u3("button", { id: "search-submit-button", type: "submit", children: "Search" })
+        ] }),
+        /* @__PURE__ */ u3("p", { className: "muted small-text", children: "Shortcut: Ctrl/Cmd+K" })
+      ] }),
+      /* @__PURE__ */ u3("ol", { id: "search-results", className: "search-results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite" })
+    ] }),
+    /* @__PURE__ */ u3("section", { id: "panel-plan", className: "tab-panel plan-panel", role: "tabpanel", "aria-labelledby": "tab-plan", hidden: true, children: /* @__PURE__ */ u3("form", { id: "plan-form", className: "stack-form", children: [
+      /* @__PURE__ */ u3("div", { className: "plan-editor-header", children: [
+        /* @__PURE__ */ u3("label", { htmlFor: "plan-editor", children: "Session plan" }),
+        /* @__PURE__ */ u3("span", { id: "plan-revision", className: "muted small-text", children: "Revision 0" })
+      ] }),
+      /* @__PURE__ */ u3("textarea", { id: "plan-editor", className: "plan-editor", spellcheck: true, placeholder: "- [ ] Add a concrete next step", "aria-describedby": "plan-status" }),
+      /* @__PURE__ */ u3("p", { id: "plan-status", className: "muted small-text", "aria-live": "polite", children: "Select a session to edit its shared plan." }),
+      /* @__PURE__ */ u3("div", { id: "plan-conflict", className: "plan-conflict", role: "alert", hidden: true, children: "The plan changed elsewhere while you had local edits. Reload the server version or save again after reviewing it." }),
+      /* @__PURE__ */ u3("div", { className: "button-row button-row-wrap", children: [
+        /* @__PURE__ */ u3("button", { id: "plan-save-button", type: "submit", children: "Save plan" }),
+        /* @__PURE__ */ u3("button", { id: "plan-reload-button", type: "button", children: "Reload server plan" })
+      ] })
+    ] }) }),
+    /* @__PURE__ */ u3("section", { id: "panel-settings", className: "tab-panel", role: "tabpanel", "aria-labelledby": "tab-settings", hidden: true, children: [
+      /* @__PURE__ */ u3("form", { id: "auth-form", className: "stack-form", children: [
+        /* @__PURE__ */ u3("label", { htmlFor: "auth-token", children: "Bearer token" }),
+        /* @__PURE__ */ u3("input", { id: "auth-token", type: "password", autoComplete: "off" }),
+        /* @__PURE__ */ u3("div", { className: "button-row button-row-wrap", children: [
+          /* @__PURE__ */ u3("button", { id: "save-auth-button", type: "submit", children: "Save token" }),
+          /* @__PURE__ */ u3("button", { id: "clear-auth-button", type: "button", children: "Clear token" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u3("form", { id: "model-form", className: "stack-form", children: [
+        /* @__PURE__ */ u3("label", { htmlFor: "provider-input", children: "Provider" }),
+        /* @__PURE__ */ u3("input", { id: "provider-input", list: "provider-options", autoComplete: "off" }),
+        /* @__PURE__ */ u3("datalist", { id: "provider-options" }),
+        /* @__PURE__ */ u3("label", { htmlFor: "model-input", children: "Model" }),
+        /* @__PURE__ */ u3("input", { id: "model-input", list: "model-options", autoComplete: "off" }),
+        /* @__PURE__ */ u3("datalist", { id: "model-options" }),
+        /* @__PURE__ */ u3("div", { className: "button-row button-row-wrap", children: [
+          /* @__PURE__ */ u3("button", { id: "apply-model-button", type: "submit", children: "Apply to session" }),
+          /* @__PURE__ */ u3("button", { id: "refresh-button", type: "button", children: "Refresh shell" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u3("form", { id: "thinking-form", className: "stack-form", children: [
+        /* @__PURE__ */ u3("label", { htmlFor: "thinking-level-select", children: "Thinking level" }),
+        /* @__PURE__ */ u3("div", { className: "toolbar-row toolbar-row-wrap", children: [
+          /* @__PURE__ */ u3("select", { id: "thinking-level-select", name: "thinking_level" }),
+          /* @__PURE__ */ u3("button", { id: "apply-thinking-button", type: "submit", children: "Apply thinking" })
+        ] }),
+        /* @__PURE__ */ u3("p", { id: "thinking-help", className: "muted small-text", children: "Updates session thinking with optimistic concurrency checks." })
+      ] }),
+      /* @__PURE__ */ u3("section", { "aria-labelledby": "settings-summary-title", children: [
+        /* @__PURE__ */ u3("h3", { id: "settings-summary-title", children: "Runtime summary" }),
+        /* @__PURE__ */ u3("dl", { id: "settings-summary", className: "settings-summary" })
+      ] }),
+      /* @__PURE__ */ u3("p", { id: "streaming-note", className: "muted small-text", children: "Live streaming, queue controls, and persisted timeline playback are rendered with safe DOM updates only." }),
+      /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "sidebar" })
+    ] })
+  ] });
+}
+
 // src/index.tsx
 function TauShell() {
   return /* @__PURE__ */ u3(b, { children: [
@@ -642,7 +743,7 @@ function TauShell() {
         /* @__PURE__ */ u3("div", { className: "shell-layout", children: [
           /* @__PURE__ */ u3(SessionNav, {}),
           /* @__PURE__ */ u3(Timeline, {}),
-          /* @__PURE__ */ u3("div", { className: "legacy-shell-regions", dangerouslySetInnerHTML: { __html: app_shell_default } })
+          /* @__PURE__ */ u3(SidePanel, {})
         ] }),
         /* @__PURE__ */ u3(Composer, {})
       ] }) }) }) })

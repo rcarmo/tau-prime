@@ -27,4 +27,4 @@ The Preact shell is replacing the historical static HTML region by region. Compo
 
 Piclaw's vendored `piclaw-reference.css` is the visual source of truth. Keep `piclaw-parity.css` limited to Tau-specific compatibility and accessibility bridges; do not hide structural differences with broad CSS overlays.
 
-Current component-owned regions include the activity bar, status bar, session dashboard, session navigation, central timeline, and composer. Side panels, settings, editor, and overlays remain transitional.
+Current component-owned regions include the activity bar, status bar, session dashboard, session navigation, central timeline, composer, workspace/search/plan/settings side panel, and editor shell. Only overlays remain transitional.
