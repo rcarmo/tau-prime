@@ -7,6 +7,7 @@ import { SidePanel } from "./components/SidePanel";
 import { SessionRuntime, Timeline } from "./components/Timeline";
 import { Onboarding } from "./components/Onboarding";
 import { QueueStack } from "./components/QueueStack";
+import { ApprovalDialog } from "./components/ApprovalDialog";
 import { useDashboardVisibility } from "./hooks/useDashboardVisibility";
 import { useDrawers } from "./hooks/useDrawers";
 import { useMeterControls } from "./hooks/useMeterControls";
@@ -70,6 +71,7 @@ function TauShell() {
         </main>
       </div>
       <Onboarding />
+      <ApprovalDialog />
       {/* Temporary event-adapter anchors; visible shell markup is Piclaw-owned. */}
       <aside id="session-nav" hidden />
       <noscript><p className="noscript-banner">Tau Web requires JavaScript.</p></noscript>

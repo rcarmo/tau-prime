@@ -669,6 +669,11 @@ function _2(n2, u4) {
   var i4 = d2(t2++, 4);
   !c2.__s && C2(i4.__H, u4) && (i4.__ = n2, i4.i = u4, r2.__h.push(i4));
 }
+function A2(n2) {
+  return o2 = 5, T2(function() {
+    return { current: n2 };
+  }, []);
+}
 function T2(n2, r3) {
   var u4 = d2(t2++, 7);
   return C2(u4.__H, r3) && (u4.__ = n2(), u4.__H = r3, u4.__h = n2), u4.__;
@@ -1216,6 +1221,51 @@ function QueueStack() {
   ] });
 }
 
+// src/components/ApprovalDialog.tsx
+function ApprovalDialog() {
+  const [approval, setApproval] = h2(null);
+  const [busy, setBusy] = h2(false);
+  const denyRef = A2(null);
+  _2(() => {
+    const update = (event) => {
+      setBusy(false);
+      setApproval(event.detail?.approval ?? null);
+    };
+    window.addEventListener("tau:approval-render", update);
+    return () => window.removeEventListener("tau:approval-render", update);
+  }, []);
+  y2(() => {
+    if (!approval) return;
+    denyRef.current?.focus();
+    const escape = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      respond("deny");
+    };
+    window.addEventListener("keydown", escape, true);
+    return () => window.removeEventListener("keydown", escape, true);
+  }, [approval]);
+  const respond = (decision) => {
+    if (!approval || busy) return;
+    setBusy(true);
+    window.dispatchEvent(new CustomEvent("tau:approval-response", { detail: { approvalId: approval.approval_id, decision } }));
+  };
+  if (!approval) return null;
+  return /* @__PURE__ */ u2("div", { className: "modal-dialog__backdrop approval-backdrop", "data-approval-id": approval.approval_id, role: "presentation", children: /* @__PURE__ */ u2("section", { className: "modal-dialog approval-prompt", role: "alertdialog", "aria-modal": "true", "aria-labelledby": "approval-title", "aria-describedby": "approval-description", onMouseDown: (event) => event.stopPropagation(), children: [
+    /* @__PURE__ */ u2("h2", { id: "approval-title", className: "modal-dialog__title", children: [
+      "Allow ",
+      approval.tool_name || "tool",
+      "?"
+    ] }),
+    /* @__PURE__ */ u2("p", { id: "approval-description", className: "modal-dialog__description", children: approval.description || "The agent requested permission to run this tool." }),
+    /* @__PURE__ */ u2("pre", { className: "modal-dialog__description approval-arguments", children: JSON.stringify(approval.arguments ?? {}, null, 2) }),
+    /* @__PURE__ */ u2("div", { className: "modal-dialog__actions approval-actions", children: [
+      /* @__PURE__ */ u2("button", { ref: denyRef, type: "button", className: "modal-dialog__btn modal-dialog__btn--destructive", disabled: busy, onClick: () => respond("deny"), children: "Deny" }),
+      /* @__PURE__ */ u2("button", { type: "button", className: "modal-dialog__btn modal-dialog__btn--primary", disabled: busy, onClick: () => respond("allow"), children: "Allow once" })
+    ] })
+  ] }) });
+}
+
 // src/hooks/useDashboardVisibility.ts
 function useDashboardVisibility() {
   const [open, setOpen] = h2(false);
@@ -1371,6 +1421,7 @@ function TauShell() {
       ] })
     ] }),
     /* @__PURE__ */ u2(Onboarding, {}),
+    /* @__PURE__ */ u2(ApprovalDialog, {}),
     /* @__PURE__ */ u2("aside", { id: "session-nav", hidden: true }),
     /* @__PURE__ */ u2("noscript", { children: /* @__PURE__ */ u2("p", { className: "noscript-banner", children: "Tau Web requires JavaScript." }) })
   ] });

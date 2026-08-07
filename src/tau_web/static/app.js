@@ -245,6 +245,13 @@ function bindUi() {
 }
 
 function installEventHandlers() {
+  window.addEventListener("tau:approval-response", (event) => {
+    const approvalId = event.detail?.approvalId;
+    const decision = event.detail?.decision;
+    if (typeof approvalId === "string" && (decision === "allow" || decision === "deny")) {
+      void settleApproval(approvalId, decision);
+    }
+  });
   window.addEventListener("tau:meter-controls", (event) => {
     applyMeterControls(Boolean(event.detail?.enabled), Boolean(event.detail?.collapsed));
   });
@@ -607,66 +614,12 @@ async function loadApprovals() {
 }
 
 function renderApprovalPrompt() {
-  const existing = document.querySelector(".approval-backdrop");
-  const approval = state.approvals[0];
-  if (!approval) {
-    existing?.remove();
-    return;
-  }
-  if (existing?.dataset.approvalId === approval.approval_id) {
-    return;
-  }
-  existing?.remove();
-
-  const backdrop = document.createElement("div");
-  backdrop.className = "modal-dialog__backdrop approval-backdrop";
-  backdrop.dataset.approvalId = approval.approval_id;
-  const panel = document.createElement("section");
-  panel.className = "modal-dialog approval-prompt";
-  panel.setAttribute("role", "alertdialog");
-  panel.setAttribute("aria-modal", "true");
-  panel.setAttribute("aria-labelledby", "approval-title");
-  panel.setAttribute("aria-describedby", "approval-description");
-
-  const title = document.createElement("h2");
-  title.id = "approval-title";
-  title.className = "modal-dialog__title";
-  title.textContent = `Allow ${approval.tool_name}?`;
-  const description = document.createElement("p");
-  description.id = "approval-description";
-  description.className = "modal-dialog__description";
-  description.textContent = approval.description || "The agent requested permission to run this tool.";
-  const argumentsView = document.createElement("pre");
-  argumentsView.className = "modal-dialog__description approval-arguments";
-  argumentsView.textContent = JSON.stringify(approval.arguments ?? {}, null, 2);
-  const actions = document.createElement("div");
-  actions.className = "modal-dialog__actions approval-actions";
-  const denyButton = document.createElement("button");
-  denyButton.type = "button";
-  denyButton.className = "modal-dialog__btn";
-  denyButton.textContent = "Deny";
-  const allowButton = document.createElement("button");
-  allowButton.type = "button";
-  allowButton.className = "modal-dialog__btn modal-dialog__btn--primary";
-  allowButton.textContent = "Allow once";
-  denyButton.addEventListener("click", () => void settleApproval(approval.approval_id, "deny"));
-  allowButton.addEventListener("click", () => void settleApproval(approval.approval_id, "allow"));
-  actions.append(denyButton, allowButton);
-  panel.append(title, description, argumentsView, actions);
-  backdrop.append(panel);
-  document.body.append(backdrop);
-  denyButton.focus();
-}
-
-function setApprovalButtonsDisabled(disabled) {
-  const buttons = document.querySelectorAll(".approval-prompt button");
-  for (const button of buttons) {
-    button.disabled = disabled;
-  }
+  window.dispatchEvent(new CustomEvent("tau:approval-render", {
+    detail: { approval: state.approvals[0] ?? null },
+  }));
 }
 
 async function settleApproval(approvalId, decision) {
-  setApprovalButtonsDisabled(true);
   try {
     await apiFetch(`/api/approvals/${encodeURIComponent(approvalId)}`, {
       method: "POST",
@@ -676,7 +629,7 @@ async function settleApproval(approvalId, decision) {
     renderApprovalPrompt();
     announce(`Tool request ${decision === "allow" ? "allowed" : "denied"}.`);
   } catch (error) {
-    setApprovalButtonsDisabled(false);
+    renderApprovalPrompt();
     handleError(error, "Unable to resolve the tool request.");
   }
 }
