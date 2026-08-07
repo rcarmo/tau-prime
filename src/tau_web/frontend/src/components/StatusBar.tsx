@@ -5,11 +5,15 @@ const Meter = ({ id, label }: { id: string; label: string }) => (
   </figure>
 );
 
-export function StatusBar({ drawer, dashboardOpen, onToggleDrawer, onToggleDashboard }: {
+export function StatusBar({ drawer, dashboardOpen, metersEnabled, metersCollapsed, onToggleDrawer, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }: {
   drawer: "nav" | "panel" | null;
   dashboardOpen: boolean;
+  metersEnabled: boolean;
+  metersCollapsed: boolean;
   onToggleDrawer: (drawer: "nav" | "panel") => void;
   onToggleDashboard: () => void;
+  onToggleMetersEnabled: () => void;
+  onToggleMetersCollapsed: () => void;
 }) {
   return (
     <header className="topbar" aria-label="Tau status bar">
@@ -26,11 +30,11 @@ export function StatusBar({ drawer, dashboardOpen, onToggleDrawer, onToggleDashb
         <button id="dashboard-toggle" className="dashboard-toggle" type="button" aria-controls="session-dashboard" aria-expanded={dashboardOpen} title="Toggle dashboard (`)" onClick={onToggleDashboard}>Dashboard <span id="dashboard-count" className="dashboard-count">0</span></button>
       </div>
       <div className="topbar-group topbar-actions">
-        <section id="system-meters" className="system-meters" aria-label="System meters" data-enabled="true" data-collapsed="true">
+        <section id="system-meters" className="system-meters" aria-label="System meters" data-enabled={String(metersEnabled)} data-collapsed={String(metersCollapsed)}>
           <div className="meters-toolbar">
             <output id="meters-summary" className="meters-summary" aria-live="polite">Meters loading…</output>
-            <button id="meters-collapse-button" className="meter-control" type="button" aria-controls="meters-details" aria-expanded="false">Expand</button>
-            <button id="meters-visibility-button" className="meter-control" type="button" aria-pressed="true">Hide</button>
+            <button id="meters-collapse-button" className="meter-control" type="button" aria-controls="meters-details" aria-expanded={!metersCollapsed} onClick={onToggleMetersCollapsed}>{metersCollapsed ? "Expand" : "Compact"}</button>
+            <button id="meters-visibility-button" className="meter-control" type="button" aria-pressed={metersEnabled} onClick={onToggleMetersEnabled}>{metersEnabled ? "Hide" : "Show"}</button>
           </div>
           <div id="meters-details" className="meters-details">
             <Meter id="cpu" label="CPU" /><Meter id="ram" label="RAM" /><Meter id="rss" label="RSS" /><Meter id="swap" label="Swap" />

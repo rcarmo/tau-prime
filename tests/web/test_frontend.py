@@ -599,3 +599,18 @@ def test_preact_owns_dashboard_visibility() -> None:
     assert 'dashboardClose.addEventListener("click"' not in legacy
     assert 'new CustomEvent("tau:set-dashboard"' in legacy
     assert "ui.sessionDashboard.hidden" not in legacy
+
+
+def test_preact_owns_meter_controls() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    hook = (root / "frontend/src/hooks/useMeterControls.ts").read_text(encoding="utf-8")
+    status = (root / "frontend/src/components/StatusBar.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'new CustomEvent("tau:meter-controls"' in hook
+    assert "data-enabled={String(metersEnabled)}" in status
+    assert "aria-expanded={!metersCollapsed}" in status
+    assert 'metersCollapseButton.addEventListener("click"' not in legacy
+    assert 'metersVisibilityButton.addEventListener("click"' not in legacy
+    assert "ui.systemMeters.dataset.enabled" not in legacy
+    assert "function applyMeterControls" in legacy

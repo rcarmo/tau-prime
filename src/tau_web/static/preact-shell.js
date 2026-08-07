@@ -306,7 +306,7 @@ var Meter = ({ id: id2, label }) => /* @__PURE__ */ u2("figure", { className: "m
   ] }),
   /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
 ] });
-function StatusBar({ drawer, dashboardOpen, onToggleDrawer, onToggleDashboard }) {
+function StatusBar({ drawer, dashboardOpen, metersEnabled, metersCollapsed, onToggleDrawer, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
   return /* @__PURE__ */ u2("header", { className: "topbar", "aria-label": "Tau status bar", children: [
     /* @__PURE__ */ u2("div", { className: "topbar-group topbar-branding", children: [
       /* @__PURE__ */ u2("button", { id: "mobile-nav-toggle", className: "icon-button mobile-only", type: "button", "aria-controls": "session-nav", "aria-expanded": drawer === "nav", "aria-label": "Open sessions drawer", onClick: () => onToggleDrawer("nav"), children: "Sessions" }),
@@ -334,11 +334,11 @@ function StatusBar({ drawer, dashboardOpen, onToggleDrawer, onToggleDashboard })
       /* @__PURE__ */ u2("span", { id: "dashboard-count", className: "dashboard-count", children: "0" })
     ] }) }),
     /* @__PURE__ */ u2("div", { className: "topbar-group topbar-actions", children: [
-      /* @__PURE__ */ u2("section", { id: "system-meters", className: "system-meters", "aria-label": "System meters", "data-enabled": "true", "data-collapsed": "true", children: [
+      /* @__PURE__ */ u2("section", { id: "system-meters", className: "system-meters", "aria-label": "System meters", "data-enabled": String(metersEnabled), "data-collapsed": String(metersCollapsed), children: [
         /* @__PURE__ */ u2("div", { className: "meters-toolbar", children: [
           /* @__PURE__ */ u2("output", { id: "meters-summary", className: "meters-summary", "aria-live": "polite", children: "Meters loading\u2026" }),
-          /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "meter-control", type: "button", "aria-controls": "meters-details", "aria-expanded": "false", children: "Expand" }),
-          /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "meter-control", type: "button", "aria-pressed": "true", children: "Hide" })
+          /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "meter-control", type: "button", "aria-controls": "meters-details", "aria-expanded": !metersCollapsed, onClick: onToggleMetersCollapsed, children: metersCollapsed ? "Expand" : "Compact" }),
+          /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "meter-control", type: "button", "aria-pressed": metersEnabled, onClick: onToggleMetersEnabled, children: metersEnabled ? "Hide" : "Show" })
         ] }),
         /* @__PURE__ */ u2("div", { id: "meters-details", className: "meters-details", children: [
           /* @__PURE__ */ u2(Meter, { id: "cpu", label: "CPU" }),
@@ -1068,17 +1068,39 @@ function useDashboardVisibility() {
   return { dashboardOpen: open, setDashboardOpen: setOpen };
 }
 
+// src/hooks/useMeterControls.ts
+var readBoolean = (key, fallback) => {
+  const value = window.localStorage.getItem(key);
+  return value === null ? fallback : value === "true";
+};
+function useMeterControls() {
+  const [enabled, setEnabled] = h2(() => readBoolean("tau.web.metersEnabled", true));
+  const [collapsed, setCollapsed] = h2(() => readBoolean("tau.web.metersCollapsed", true));
+  y2(() => {
+    window.localStorage.setItem("tau.web.metersEnabled", String(enabled));
+    window.localStorage.setItem("tau.web.metersCollapsed", String(collapsed));
+    window.dispatchEvent(new CustomEvent("tau:meter-controls", { detail: { enabled, collapsed } }));
+  }, [enabled, collapsed]);
+  return {
+    metersEnabled: enabled,
+    metersCollapsed: collapsed,
+    toggleMetersEnabled: () => setEnabled((current) => !current),
+    toggleMetersCollapsed: () => setCollapsed((current) => !current)
+  };
+}
+
 // src/index.tsx
 function TauShell() {
   const { drawer, close, open, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
   const { dashboardOpen, setDashboardOpen } = useDashboardVisibility();
+  const { metersEnabled, metersCollapsed, toggleMetersEnabled, toggleMetersCollapsed } = useMeterControls();
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
     /* @__PURE__ */ u2("div", { className: "app-layout", children: [
       /* @__PURE__ */ u2(ActivityBar, { activeTab, onSelectTab: selectTab, onOpenPanel: () => open("panel") }),
       /* @__PURE__ */ u2("div", { className: "app-layout__main", children: /* @__PURE__ */ u2("div", { className: "app-layout__content-area", children: /* @__PURE__ */ u2("div", { className: "app-layout__panel", children: /* @__PURE__ */ u2("div", { className: "app-shell", children: [
-        /* @__PURE__ */ u2(StatusBar, { drawer, dashboardOpen, onToggleDrawer: toggle, onToggleDashboard: () => setDashboardOpen((current) => !current) }),
+        /* @__PURE__ */ u2(StatusBar, { drawer, dashboardOpen, metersEnabled, metersCollapsed, onToggleDrawer: toggle, onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
         /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
         /* @__PURE__ */ u2("div", { className: "shell-layout", children: [
           /* @__PURE__ */ u2(SessionNav, { onClose: close }),

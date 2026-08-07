@@ -243,8 +243,9 @@ function bindUi() {
 }
 
 function installEventHandlers() {
-  ui.metersCollapseButton.addEventListener("click", toggleMetersCollapsed);
-  ui.metersVisibilityButton.addEventListener("click", toggleMetersEnabled);
+  window.addEventListener("tau:meter-controls", (event) => {
+    applyMeterControls(Boolean(event.detail?.enabled), Boolean(event.detail?.collapsed));
+  });
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
   });
@@ -1591,11 +1592,17 @@ function handleMetersVisibilityChange() {
   }
 }
 
-function toggleMetersEnabled() {
-  state.metersEnabled = !state.metersEnabled;
-  persistStorage(STORAGE_KEYS.metersEnabled, String(state.metersEnabled));
+function applyMeterControls(enabled, collapsed) {
+  const enabledChanged = state.metersEnabled !== enabled;
+  state.metersEnabled = enabled;
+  state.metersCollapsed = collapsed;
+  persistStorage(STORAGE_KEYS.metersEnabled, String(enabled));
+  persistStorage(STORAGE_KEYS.metersCollapsed, String(collapsed));
   renderMeters();
-  if (state.metersEnabled) {
+  if (!enabledChanged) {
+    return;
+  }
+  if (enabled) {
     void refreshMeters();
     startMetersPolling();
   } else {
@@ -1603,20 +1610,7 @@ function toggleMetersEnabled() {
   }
 }
 
-function toggleMetersCollapsed() {
-  state.metersCollapsed = !state.metersCollapsed;
-  persistStorage(STORAGE_KEYS.metersCollapsed, String(state.metersCollapsed));
-  renderMeters();
-}
-
 function renderMeters() {
-  ui.systemMeters.dataset.enabled = String(state.metersEnabled);
-  ui.systemMeters.dataset.collapsed = String(state.metersCollapsed);
-  ui.metersCollapseButton.setAttribute("aria-expanded", String(!state.metersCollapsed));
-  ui.metersCollapseButton.textContent = state.metersCollapsed ? "Expand" : "Compact";
-  ui.metersVisibilityButton.setAttribute("aria-pressed", String(state.metersEnabled));
-  ui.metersVisibilityButton.textContent = state.metersEnabled ? "Hide" : "Show";
-
   if (!state.metersEnabled) {
     ui.metersSummary.textContent = "Meters hidden";
     return;

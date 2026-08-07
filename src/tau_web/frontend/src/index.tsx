@@ -10,6 +10,7 @@ import { Onboarding } from "./components/Onboarding";
 import { useDrawers } from "./hooks/useDrawers";
 import { useSidebarTabs } from "./hooks/useSidebarTabs";
 import { useDashboardVisibility } from "./hooks/useDashboardVisibility";
+import { useMeterControls } from "./hooks/useMeterControls";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
@@ -17,6 +18,7 @@ function TauShell() {
   const { drawer, close, open, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
   const { dashboardOpen, setDashboardOpen } = useDashboardVisibility();
+  const { metersEnabled, metersCollapsed, toggleMetersEnabled, toggleMetersCollapsed } = useMeterControls();
   return (
     <Fragment>
       <a className="skip-link" href="#timeline-main">Skip to timeline</a>
@@ -26,7 +28,7 @@ function TauShell() {
           <div className="app-layout__content-area">
             <div className="app-layout__panel">
               <div className="app-shell">
-                <StatusBar drawer={drawer} dashboardOpen={dashboardOpen} onToggleDrawer={toggle} onToggleDashboard={() => setDashboardOpen((current) => !current)} />
+                <StatusBar drawer={drawer} dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onToggleDrawer={toggle} onToggleDashboard={() => setDashboardOpen((current) => !current)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />
                 <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
                 <div className="shell-layout">
                   <SessionNav onClose={close} />
