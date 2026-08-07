@@ -101,6 +101,7 @@ const state = {
   composing: false,
   uploadingAttachments: false,
   composer: createComposerState(),
+  activeRun: null,
   stream: {
     controller: null,
     reconnectTimer: null,
@@ -297,6 +298,15 @@ function installEventHandlers() {
   ui.modelForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void applyModelSettings();
+  });
+  ui.thinkingForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void applyThinkingSettings();
+  });
+  window.addEventListener("tau:active-run", (event) => {
+    const run = event.detail?.run;
+    state.activeRun = run && typeof run.run_id === "string" ? run : null;
+    renderControls();
   });
   ui.providerInput.addEventListener("input", handleProviderModelInputChange);
   ui.modelInput.addEventListener("input", handleProviderModelInputChange);
@@ -686,6 +696,26 @@ async function applyModelSettings() {
     announce("Session model updated.");
   } catch (error) {
     handleError(error, "Unable to update the session model.");
+  }
+}
+
+async function applyThinkingSettings() {
+  if (!state.selectedSession) {
+    announce("Select a session before updating thinking.");
+    return;
+  }
+  const value = ui.thinkingLevelSelect.value;
+  try {
+    const updated = await apiFetch(`${sessionPath(state.selectedSession.session_id)}/thinking`, {
+      method: "PATCH",
+      json: { thinking_level: value || null, expected_updated_at: state.selectedSession.updated_at },
+    });
+    mergeSessions([updated]);
+    state.selectedSession = updated;
+    renderShell();
+    announce(`Thinking updated to ${value || "default"}.`);
+  } catch (error) {
+    handleError(error, "Unable to update session thinking.");
   }
 }
 
@@ -2258,24 +2288,14 @@ function buildAttachmentReferenceBlock() {
 }
 
 function currentComposerActiveRun() {
-  const liveUi = window.tauLiveUI;
-  if (!liveUi || typeof liveUi.getActiveRun !== "function") {
-    return null;
-  }
-  const run = liveUi.getActiveRun();
-  return run && typeof run.run_id === "string" ? run : null;
+  return state.activeRun;
 }
 
 async function submitComposerQueuedMessage(runId, kind, content) {
-  const liveUi = window.tauLiveUI;
-  if (liveUi && typeof liveUi.submitComposerMessage === "function") {
-    await liveUi.submitComposerMessage({ runId, kind, content });
-  } else {
-    await apiFetch(`/api/runs/${encodeURIComponent(runId)}/messages`, {
-      method: "POST",
-      json: { content, kind },
-    });
-  }
+  await apiFetch(`/api/runs/${encodeURIComponent(runId)}/messages`, {
+    method: "POST",
+    json: { content, kind },
+  });
   window.dispatchEvent(new CustomEvent("tau:queue-changed"));
 }
 

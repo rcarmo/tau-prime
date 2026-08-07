@@ -17,7 +17,6 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/static/piclaw-reference.css",
         "/static/piclaw-parity.css",
         "/static/app.js",
-        "/static/live-ui.js",
         "/static/extension-ui.js",
         "/static/widget-bridge.js",
         "/static/frontend-sdk.js",
@@ -78,12 +77,6 @@ _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
     ),
     "app.js": FrontendAsset(
         resource_name="app.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "live-ui.js": FrontendAsset(
-        resource_name="live-ui.js",
         content_type="application/javascript",
         charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",

@@ -36,7 +36,6 @@ FRONTEND_ASSETS = (
     ("/sw.js", "application/javascript"),
     ("/static/piclaw-reference.css", "text/css"),
     ("/static/app.js", "application/javascript"),
-    ("/static/live-ui.js", "application/javascript"),
     ("/static/extension-ui.js", "application/javascript"),
     ("/static/widget-bridge.js", "application/javascript"),
     ("/static/frontend-sdk.js", "application/javascript"),
@@ -105,13 +104,12 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     ).read_text(encoding="utf-8")
     assert '<script type="module" src="/static/preact-shell.js"></script>' in root_html
     preact_script = '<script type="module" src="/static/preact-shell.js"></script>'
-    live_script = '<script type="module" src="/static/live-ui.js"></script>'
-    assert root_html.index(preact_script) < root_html.index(live_script)
+    assert preact_script in root_html
     root_html += shell_html
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
     assert '<link rel="stylesheet" href="/static/app.css" />' not in root_html
     assert '<link rel="stylesheet" href="/static/piclaw-reference.css" />' in root_html
-    assert '<script type="module" src="/static/live-ui.js"></script>' in root_html
+    assert '<script type="module" src="/static/live-ui.js"></script>' not in root_html
     assert '<script type="module" src="/static/extension-ui.js"></script>' in root_html
     assert '<script type="module" src="/static/frontend-sdk.js"></script>' in root_html
     assert '<script type="module" src="/static/app.js"></script>' in root_html
@@ -335,33 +333,17 @@ def test_app_js_trusted_frontend_source_contracts() -> None:
     assert "void window.tauFrontendSDK?.disposeAll?.();" in unload_block
 
 
-@pytest.mark.anyio
-async def test_live_ui_wires_runtime_controls_and_stream_events(web_config: WebConfig) -> None:
-    app = create_app(web_config)
-    client = await _start_client(app)
-    try:
-        async with client.get("/static/live-ui.js") as response:
-            script = await response.text()
-    finally:
-        await client.close()
+def test_preact_runtime_replaces_legacy_live_ui() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    index = (root / "static/index.html").read_text(encoding="utf-8")
+    app = (root / "static/app.js").read_text(encoding="utf-8")
+    queue = (root / "frontend/src/components/QueueStack.tsx").read_text(encoding="utf-8")
 
-    for endpoint in ("/thinking", "/usage", "/runs", "/queue"):
-        assert endpoint in script
-    assert 'mutateRun(activeRun.run_id, "cancel")' in script
-    assert 'mutateRun(activeRun.run_id, "abort")' in script
-    assert "window.tauLiveUI = Object.freeze" in script
-    assert "submitComposerMessage" in script
-    assert "handleComposeIntercept" not in script
-    for event_type in (
-        "thinking_delta",
-        "tool_execution_start",
-        "tool_execution_update",
-        "tool_execution_end",
-        "queue_update",
-        "message_end",
-    ):
-        assert event_type in script
-    assert ".innerHTML" not in script
+    assert "/static/live-ui.js" not in index
+    assert 'new CustomEvent("tau:active-run"' in queue
+    assert 'window.addEventListener("tau:active-run"' in app
+    assert "/thinking" in app
+    assert "window.tauLiveUI" not in app
 
 
 @pytest.mark.anyio
@@ -484,7 +466,6 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "/manifest.webmanifest",
         "/static/piclaw-reference.css",
         "/static/app.js",
-        "/static/live-ui.js",
         "/static/extension-ui.js",
         "/static/widget-bridge.js",
         "/static/frontend-sdk.js",

@@ -23,8 +23,8 @@ PYTHONPATH=.:src pytest -q tests/web/test_frontend.py tests/web/test_routes_asse
 
 ## Migration contract
 
-The Preact shell is replacing the historical static HTML region by region. Components must preserve IDs, extension slots, accessibility attributes, and event attachment points consumed by `app.js`, `live-ui.js`, `extension-ui.js`, and `frontend-sdk.js` until those interactions are component-owned too.
+The Preact shell owns the visible application markup. Components preserve IDs, extension slots, accessibility attributes, and event attachment points consumed by the headless `app.js` adapter, `extension-ui.js`, and `frontend-sdk.js`. Imperative DOM is restricted to extension/widget hosts.
 
 Piclaw's vendored `piclaw-reference.css` is the visual source of truth. Keep `piclaw-parity.css` limited to Tau-specific compatibility and accessibility bridges; do not hide structural differences with broad CSS overlays.
 
-Current component-owned regions include the activity bar, status bar, session dashboard, session navigation, central timeline, composer, workspace/search/plan/settings side panel, and editor shell. Only overlays remain transitional.
+Component-owned regions include the activity bar, status bar, session dashboard, session navigation, central timeline, composer, workspace/search/plan/settings side panel, editor shell, queue stack, and overlays.

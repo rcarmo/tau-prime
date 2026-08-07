@@ -1499,8 +1499,12 @@ function QueueStack() {
     }
   }, []);
   _2(() => {
+    window.dispatchEvent(new CustomEvent("tau:active-run", { detail: { run: state.activeRun } }));
+  }, [state.activeRun]);
+  _2(() => {
     const selected = (event) => {
       const sessionId = event.detail?.sessionId ?? null;
+      setState({ sessionId, items: [], activeRun: null });
       void refresh(sessionId);
     };
     const changed = () => void refresh(state.sessionId);

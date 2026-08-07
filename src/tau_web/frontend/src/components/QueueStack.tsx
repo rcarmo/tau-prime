@@ -44,8 +44,13 @@ export function QueueStack() {
   }, []);
 
   useLayoutEffect(() => {
+    window.dispatchEvent(new CustomEvent("tau:active-run", { detail: { run: state.activeRun } }));
+  }, [state.activeRun]);
+
+  useLayoutEffect(() => {
     const selected = (event: Event) => {
       const sessionId = (event as CustomEvent<{ sessionId?: string | null }>).detail?.sessionId ?? null;
+      setState({ sessionId, items: [], activeRun: null });
       void refresh(sessionId);
     };
     const changed = () => void refresh(state.sessionId);

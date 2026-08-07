@@ -6,7 +6,6 @@ const SHELL_URLS = Object.freeze([
   "/static/piclaw-reference.css",
   "/static/piclaw-parity.css",
   "/static/app.js",
-  "/static/live-ui.js",
   "/static/extension-ui.js",
   "/static/widget-bridge.js",
   "/static/frontend-sdk.js",
