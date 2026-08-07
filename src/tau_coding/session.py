@@ -44,6 +44,7 @@ from tau_ai import (
 )
 from tau_ai.events import ProviderErrorEvent, ProviderResponseEndEvent, ProviderTextDeltaEvent
 from tau_ai.model_limits import RuntimeModelLimits
+from tau_ai.usage import ProviderUsage
 from tau_coding.branch_summary import summarize_branch_messages_with_model
 from tau_coding.commands import (
     CommandContext,
@@ -289,6 +290,7 @@ class CodingSession:
             credentials_path(self._resource_paths.paths) if self._resource_paths.paths else None
         )
         self._last_diagnostic_log_path: Path | None = None
+        self._provider_usage = ProviderUsage()
 
     @classmethod
     async def load(cls, config: CodingSessionConfig) -> CodingSession:
@@ -631,6 +633,7 @@ class CodingSession:
             title=_session_export_title(self),
             source=str(session_path) if session_path is not None else self.session_id,
             format=export_format,
+            usage=self._provider_usage,
         )
 
     @property
@@ -647,6 +650,11 @@ class CodingSession:
     def context_files(self) -> tuple[ProjectContextFile, ...]:
         """Return active project context files."""
         return self._context_files
+
+    @property
+    def provider_usage(self) -> ProviderUsage:
+        """Return provider-reported usage accumulated during this process."""
+        return self._provider_usage
 
     @property
     def context_token_estimate(self) -> int:
@@ -1511,6 +1519,7 @@ class CodingSession:
                 self._dispatch_extension_event(event)
                 yield event
                 if isinstance(event, MessageEndEvent):
+                    self._accumulate_provider_usage(event)
                     persisted_count = await self._persist_messages_since(persisted_count)
             persisted_count = await self._persist_messages_since(persisted_count)
             if overflow_event is not None:
@@ -1529,6 +1538,7 @@ class CodingSession:
                         self._dispatch_extension_event(retry_event)
                         yield retry_event
                         if isinstance(retry_event, MessageEndEvent):
+                            self._accumulate_provider_usage(retry_event)
                             retry_persisted_count = await self._persist_messages_since(
                                 retry_persisted_count
                             )
@@ -1560,6 +1570,7 @@ class CodingSession:
                 self._dispatch_extension_event(event)
                 yield event
                 if isinstance(event, MessageEndEvent):
+                    self._accumulate_provider_usage(event)
                     persisted_count = await self._persist_messages_since(persisted_count)
             await self._persist_messages_since(persisted_count)
             await self._try_auto_compact(context=context, phase="auto_compact_after_continue")
@@ -1570,6 +1581,10 @@ class CodingSession:
                 exc=exc,
             )
             raise
+
+    def _accumulate_provider_usage(self, event: MessageEndEvent) -> None:
+        if event.usage is not None:
+            self._provider_usage = self._provider_usage + event.usage
 
     async def _refresh_runtime_model_limits(self) -> None:
         provider = self._harness.config.provider

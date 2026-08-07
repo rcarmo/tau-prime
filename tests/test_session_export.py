@@ -9,6 +9,7 @@ from tau_agent import (
     ToolResultMessage,
     UserMessage,
 )
+from tau_ai.usage import ProviderUsage
 from tau_coding.session_export import export_session_html, render_session_html
 
 
@@ -79,6 +80,24 @@ def test_render_session_html_uses_static_document_layout() -> None:
     assert "border-left: 1px solid var(--line);" in html
     assert "<script" not in html.lower()
     assert "<link" not in html.lower()
+
+
+def test_render_session_html_exports_provider_cache_usage() -> None:
+    rendered = render_session_html(
+        [],
+        usage=ProviderUsage(
+            input_tokens=12,
+            output_tokens=3,
+            cache_read_tokens=4,
+            cache_write_tokens=5,
+            cache_write_1h_tokens=2,
+        ),
+    )
+
+    assert (
+        "Provider usage: input=12, output=3, cache read=4, "
+        "cache write=5, one-hour cache write=2"
+    ) in rendered
 
 
 def test_export_session_html_writes_file(tmp_path: Path) -> None:

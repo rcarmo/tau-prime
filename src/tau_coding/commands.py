@@ -466,6 +466,16 @@ def _status_command(context: CommandContext) -> CommandResult:
             f"messages={context_usage.message_tokens}, "
             f"tools={context_usage.tool_tokens}",
         )
+    provider_usage = getattr(session, "provider_usage", None)
+    if provider_usage is not None:
+        lines.append(
+            "Provider usage: "
+            f"input={provider_usage.input_tokens}, "
+            f"output={provider_usage.output_tokens}, "
+            f"cache_read={provider_usage.cache_read_tokens}, "
+            f"cache_write={provider_usage.cache_write_tokens}, "
+            f"cache_write_1h={provider_usage.cache_write_1h_tokens}",
+        )
     lines.extend(_thinking_status_lines(session))
     lines.append(f"Resource diagnostics: {len(session.resource_diagnostics)}")
     if session.auto_compact_token_threshold is not None:

@@ -25,6 +25,7 @@ from tau_agent.session import (
     path_to_entry,
 )
 from tau_agent.types import JSONValue
+from tau_ai.usage import ProviderUsage
 
 
 class SessionExportError(ValueError):
@@ -61,11 +62,12 @@ def export_session_html(
     *,
     title: str = "Tau Session Export",
     source: str | None = None,
+    usage: ProviderUsage | None = None,
 ) -> Path:
     """Write a self-contained HTML session export and return its path."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
-        render_session_html(entries, title=title, source=source),
+        render_session_html(entries, title=title, source=source, usage=usage),
         encoding="utf-8",
     )
     return output_path
@@ -78,12 +80,13 @@ def export_session_artifact(
     title: str = "Tau Session Export",
     source: str | None = None,
     format: str | None = None,
+    usage: ProviderUsage | None = None,
 ) -> Path:
     """Write a session export in the requested or inferred format."""
     export_format = normalize_export_format(format or output_path.suffix.removeprefix("."))
     if export_format == "jsonl":
         return export_session_jsonl(entries, output_path)
-    return export_session_html(entries, output_path, title=title, source=source)
+    return export_session_html(entries, output_path, title=title, source=source, usage=usage)
 
 
 def normalize_export_format(value: str | None) -> str:
@@ -105,6 +108,7 @@ def render_session_html(
     *,
     title: str = "Tau Session Export",
     source: str | None = None,
+    usage: ProviderUsage | None = None,
 ) -> str:
     """Render a session transcript/tree as standalone HTML."""
     entry_list = list(entries)
@@ -114,6 +118,14 @@ def render_session_html(
     details_html = _render_entry_details(entry_list, active_path_ids, active_leaf_id)
     source_html = f'<p class="source">Source: <code>{_escape(source)}</code></p>' if source else ""
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    usage_html = ""
+    if usage is not None:
+        usage_html = (
+            '<p class="generated">Provider usage: '
+            f"input={usage.input_tokens}, output={usage.output_tokens}, "
+            f"cache read={usage.cache_read_tokens}, cache write={usage.cache_write_tokens}, "
+            f"one-hour cache write={usage.cache_write_1h_tokens}</p>"
+        )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -335,6 +347,7 @@ def render_session_html(
       <p class="generated">
         Generated: <time datetime="{_attr(generated_at)}">{_escape(generated_at)}</time>
       </p>
+      {usage_html}
     </div>
   </header>
   <main class="session-shell">

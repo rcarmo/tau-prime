@@ -11,6 +11,8 @@ from uuid import UUID, uuid4
 
 from tau_agent import AgentEvent, MessageEndEvent
 from tau_agent.types import JSONObject
+from tau_ai.usage import usage_cost_microunits
+from tau_coding.provider_catalog import catalog_model_pricing
 from tau_web.sqlite.repositories import TimelineMessageRepository, UsageRepository
 from tau_web.sqlite.sessions import SessionRepository
 
@@ -126,6 +128,12 @@ class EventProjector:
             if event.usage is not None and self._usage is not None and self._sessions is not None:
                 session = await self._sessions.get(session_id)
                 if session is not None:
+                    pricing = catalog_model_pricing(session.provider_name, session.model)
+                    cost = (
+                        usage_cost_microunits(event.usage, pricing)
+                        if pricing is not None
+                        else None
+                    )
                     await self._usage.record(
                         session_id,
                         run_id=run_id,
@@ -136,6 +144,7 @@ class EventProjector:
                         cached_input_tokens=event.usage.cache_read_tokens,
                         cache_write_tokens=event.usage.cache_write_tokens,
                         cache_write_1h_tokens=event.usage.cache_write_1h_tokens,
+                        cost_microunits=cost,
                     )
         await self._notify_observers(envelope)
 

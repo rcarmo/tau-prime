@@ -43,11 +43,18 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-async def _create_session(database: SqliteDatabase, tmp_path: Path, session_id: str) -> None:
+async def _create_session(
+    database: SqliteDatabase,
+    tmp_path: Path,
+    session_id: str,
+    *,
+    provider_name: str = "test",
+    model: str = "model",
+) -> None:
     await SessionRepository(database).create(
         workspace_root=tmp_path,
-        provider_name="test",
-        model="model",
+        provider_name=provider_name,
+        model=model,
         agent_name=session_id,
         session_id=session_id,
     )
@@ -215,7 +222,13 @@ def test_web_event_envelopes_preserve_foreign_tool_ids_for_live_rendering() -> N
 @pytest.mark.anyio
 async def test_event_projector_persists_provider_usage(tmp_path: Path) -> None:
     async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
-        await _create_session(database, tmp_path, "alpha")
+        await _create_session(
+            database,
+            tmp_path,
+            "alpha",
+            provider_name="anthropic",
+            model="claude-sonnet-4-6",
+        )
         await RunRepository(database).create("alpha", run_id="run-1")
         timeline = TimelineMessageRepository(database)
         usage = UsageRepository(database)
@@ -240,10 +253,11 @@ async def test_event_projector_persists_provider_usage(tmp_path: Path) -> None:
 
         records = await usage.list(session_id="alpha")
         assert len(records) == 1
-        assert records[0].provider_name == "test"
-        assert records[0].model == "model"
+        assert records[0].provider_name == "anthropic"
+        assert records[0].model == "claude-sonnet-4-6"
         assert records[0].cache_write_tokens == 8
         assert records[0].cache_write_1h_tokens == 2
+        assert records[0].cost_microunits == 125
 
 
 @pytest.mark.anyio

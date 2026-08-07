@@ -27,6 +27,17 @@ class ProviderUsage:
         if any(value < 0 for value in values):
             raise ValueError("Usage token counts must not be negative")
 
+    def __add__(self, other: ProviderUsage) -> ProviderUsage:
+        if not isinstance(other, ProviderUsage):
+            return NotImplemented
+        return ProviderUsage(
+            input_tokens=self.input_tokens + other.input_tokens,
+            output_tokens=self.output_tokens + other.output_tokens,
+            cache_read_tokens=self.cache_read_tokens + other.cache_read_tokens,
+            cache_write_tokens=self.cache_write_tokens + other.cache_write_tokens,
+            cache_write_1h_tokens=self.cache_write_1h_tokens + other.cache_write_1h_tokens,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class UsagePricing:
@@ -37,6 +48,25 @@ class UsagePricing:
     cache_read: Decimal
     cache_write: Decimal
     cache_write_1h: Decimal | None = None
+
+    @classmethod
+    def from_rates(
+        cls,
+        *,
+        input: str,
+        output: str,
+        cache_read: str,
+        cache_write: str,
+        cache_write_1h: str | None = None,
+    ) -> UsagePricing:
+        """Build exact decimal rates from catalog strings."""
+        return cls(
+            input=Decimal(input),
+            output=Decimal(output),
+            cache_read=Decimal(cache_read),
+            cache_write=Decimal(cache_write),
+            cache_write_1h=Decimal(cache_write_1h) if cache_write_1h is not None else None,
+        )
 
 
 def usage_cost_microunits(usage: ProviderUsage, pricing: UsagePricing) -> int:

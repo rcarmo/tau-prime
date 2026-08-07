@@ -6,9 +6,20 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
+from tau_ai.usage import UsagePricing
 from tau_coding.thinking import ThinkingLevel, ThinkingParameter
 
 ProviderKind = Literal["openai-compatible", "anthropic", "openai-codex"]
+
+
+_MODEL_PRICING: dict[tuple[str, str], UsagePricing] = {
+    ("anthropic", "claude-haiku-4-5"): UsagePricing.from_rates(
+        input="1", output="5", cache_read="0.1", cache_write="1.25", cache_write_1h="2"
+    ),
+    ("anthropic", "claude-sonnet-4-6"): UsagePricing.from_rates(
+        input="3", output="15", cache_read="0.3", cache_write="3.75", cache_write_1h="6"
+    ),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -703,6 +714,11 @@ def builtin_provider_entry(name: str) -> ProviderCatalogEntry | None:
         if entry.name == name:
             return entry
     return None
+
+
+def catalog_model_pricing(provider_name: str, model: str) -> UsagePricing | None:
+    """Return exact built-in pricing for a provider/model pair when known."""
+    return _MODEL_PRICING.get((provider_name, model))
 
 
 def catalog_model_override(provider_name: str, model: str | None) -> ProviderModelOverride | None:
