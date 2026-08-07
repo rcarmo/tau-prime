@@ -267,12 +267,12 @@ function u2(e3, t3, n2, o3, i4, u4) {
 
 // src/components/ActivityBar.tsx
 var PANELS = [
-  { id: "sessions", label: "Sessions", icon: "\u2630" },
-  { id: "workspace", label: "Workspace", icon: "\u25B1" },
-  { id: "search", label: "Search", icon: "\u2315" },
-  { id: "plan", label: "Plan", icon: "\u2637" },
-  { id: "dashboard", label: "Dashboard", icon: "\u2301" },
-  { id: "settings", label: "Settings", icon: "\u2699", alignBottom: true }
+  { id: "sessions", label: "Sessions", icon: "codicon-comment-discussion" },
+  { id: "workspace", label: "Workspace", icon: "codicon-files" },
+  { id: "search", label: "Search", icon: "codicon-search" },
+  { id: "plan", label: "Plan", icon: "codicon-checklist" },
+  { id: "dashboard", label: "Dashboard", icon: "codicon-dashboard" },
+  { id: "settings", label: "Settings", icon: "codicon-settings-gear", alignBottom: true }
 ];
 function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
   return /* @__PURE__ */ u2("nav", { className: "activity-bar", "aria-label": "Activity bar", children: PANELS.map((panel) => {
@@ -286,7 +286,7 @@ function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
         "aria-label": panel.label,
         "aria-pressed": active,
         onClick: () => panel.id === "dashboard" ? onDashboard() : onPanelChange(panel.id),
-        children: /* @__PURE__ */ u2("span", { className: "activity-bar__icon", "aria-hidden": "true", children: panel.icon })
+        children: /* @__PURE__ */ u2("i", { className: `codicon ${panel.icon} activity-bar__icon`, "aria-hidden": "true" })
       },
       panel.id
     );
