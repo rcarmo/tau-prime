@@ -613,7 +613,104 @@ function Composer() {
 }
 
 // src/components/Dashboard.tsx
+var EMPTY_DASHBOARD = {
+  sessions: [],
+  page: 1,
+  totalPages: 1,
+  generatedAt: null,
+  loading: false,
+  selectedSessionId: null
+};
+var stringOrEmpty = (value) => typeof value === "string" ? value : "";
+var numberOrZero = (value) => typeof value === "number" && Number.isFinite(value) ? value : 0;
+function shortId(value) {
+  const text = stringOrEmpty(value);
+  return text ? text.slice(0, 8) : "unknown";
+}
+function sentenceCase(value) {
+  const text = stringOrEmpty(value).replace(/_/g, " ").trim();
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : "Unknown";
+}
+function sessionLabel(session) {
+  const title = stringOrEmpty(session.title).trim();
+  if (title) return title;
+  const agentName = stringOrEmpty(session.agent_name).trim();
+  if (agentName) return agentName;
+  return shortId(session.session_id);
+}
+function buildSessionUrl(sessionId) {
+  const url = new URL(window.location.href);
+  if (sessionId) url.searchParams.set("session_id", sessionId);
+  else url.searchParams.delete("session_id");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+function dashboardPreviewKindLabel(value) {
+  switch (value) {
+    case "draft":
+      return "Draft";
+    case "thinking":
+      return "Thinking";
+    case "tool":
+      return "Tool";
+    case "summary":
+      return "Summary";
+    default:
+      return "Preview";
+  }
+}
+function dashboardActivityLabel(session) {
+  return sentenceCase(stringOrEmpty(session.activity_state) || "idle");
+}
+function formatDashboardContextPercent(session) {
+  const value = typeof session.context_percent === "number" && Number.isFinite(session.context_percent) ? session.context_percent : 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+function formatDashboardContext(session) {
+  const used = numberOrZero(session.context_used_tokens).toLocaleString();
+  const windowTokens = numberOrZero(session.context_window_tokens).toLocaleString();
+  return `${used} / ${windowTokens} \xB7 ${formatDashboardContextPercent(session)}%`;
+}
+function relativeTimeText(value, now) {
+  const date = new Date(value ?? "");
+  if (Number.isNaN(date.valueOf())) return "just now";
+  const elapsedSeconds = Math.max(0, Math.round((now - date.valueOf()) / 1e3));
+  if (elapsedSeconds < 5) return "just now";
+  if (elapsedSeconds < 60) return `${elapsedSeconds}s ago`;
+  const elapsedMinutes = Math.round(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+  const elapsedHours = Math.round(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours}h ago`;
+  return `${Math.round(elapsedHours / 24)}d ago`;
+}
 function Dashboard({ open, onClose }) {
+  const [view, setView] = h2(EMPTY_DASHBOARD);
+  const [now, setNow] = h2(() => Date.now());
+  _2(() => {
+    const update = (event) => {
+      const detail = event.detail;
+      if (!detail) return;
+      setView({
+        sessions: Array.isArray(detail.sessions) ? detail.sessions : [],
+        page: Number.isInteger(detail.page) && detail.page > 0 ? detail.page : 1,
+        totalPages: Number.isInteger(detail.totalPages) && detail.totalPages > 0 ? detail.totalPages : 1,
+        generatedAt: stringOrEmpty(detail.generatedAt) || null,
+        loading: Boolean(detail.loading),
+        selectedSessionId: stringOrEmpty(detail.selectedSessionId) || null
+      });
+    };
+    window.addEventListener("tau:dashboard-render", update);
+    return () => window.removeEventListener("tau:dashboard-render", update);
+  }, []);
+  y2(() => {
+    if (!open) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1e3);
+    return () => window.clearInterval(timer);
+  }, [open, view.generatedAt, view.sessions]);
+  const dashboardAge = !view.generatedAt ? view.loading ? "Refreshing dashboard\u2026" : "Not refreshed yet." : view.loading ? `Refreshing\u2026 last updated ${relativeTimeText(view.generatedAt, now)}.` : `Updated ${relativeTimeText(view.generatedAt, now)}.`;
+  const selectSession = (sessionId) => {
+    window.dispatchEvent(new CustomEvent("tau:session-select", { detail: { sessionId } }));
+  };
   return /* @__PURE__ */ u2(
     "div",
     {
@@ -640,14 +737,59 @@ function Dashboard({ open, onClose }) {
               ] }),
               /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "modal-dialog__btn", type: "button", onClick: onClose, children: "Close" })
             ] }),
-            /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": "false" }),
+            /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": view.loading, children: [
+              !view.sessions.length && /* @__PURE__ */ u2("p", { className: "dashboard-empty", children: view.loading ? "Loading dashboard sessions\u2026" : "No active sessions." }),
+              view.sessions.map((session) => {
+                const sessionId = stringOrEmpty(session.session_id);
+                const selected = sessionId !== "" && sessionId === view.selectedSessionId;
+                return /* @__PURE__ */ u2("article", { className: "dashboard-tile", "data-selected": String(selected), role: "listitem", children: /* @__PURE__ */ u2(
+                  "a",
+                  {
+                    href: buildSessionUrl(sessionId),
+                    className: "dashboard-tile-button",
+                    "aria-current": selected ? "page" : "false",
+                    title: "Open this session. Ctrl-click or Cmd-click opens it in a new tab.",
+                    onClick: (event) => {
+                      if (!sessionId || event.metaKey || event.ctrlKey) return;
+                      event.preventDefault();
+                      selectSession(sessionId);
+                    },
+                    children: [
+                      /* @__PURE__ */ u2("div", { className: "dashboard-tile-header", children: [
+                        /* @__PURE__ */ u2("p", { className: "dashboard-agent", children: sessionLabel(session) }),
+                        /* @__PURE__ */ u2("span", { className: "dashboard-state", "data-state": stringOrEmpty(session.activity_state) || "idle", "data-error": String(Boolean(session.has_error)), children: dashboardActivityLabel(session) })
+                      ] }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-identity", children: [session.agent_name ? `@${session.agent_name}` : null, shortId(session.session_id)].filter(Boolean).join(" \xB7 ") }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-workspace", children: stringOrEmpty(session.workspace) || "Workspace unavailable" }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-model", children: stringOrEmpty(session.model) || "Model unavailable" }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-preview-kind", children: dashboardPreviewKindLabel(session.preview_kind) }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-preview", children: stringOrEmpty(session.preview) || "No assistant summary yet." }),
+                      /* @__PURE__ */ u2("div", { className: "dashboard-indicators", children: [
+                        /* @__PURE__ */ u2("span", { children: `Queue ${numberOrZero(session.queue_count)}` }),
+                        /* @__PURE__ */ u2("div", { className: "dashboard-context", children: [
+                          /* @__PURE__ */ u2("span", { children: `Context ${formatDashboardContext(session)}` }),
+                          /* @__PURE__ */ u2("span", { className: "dashboard-context-track", children: /* @__PURE__ */ u2("span", { className: "dashboard-context-fill", style: { width: `${formatDashboardContextPercent(session)}%` } }) })
+                        ] }),
+                        session.has_error && /* @__PURE__ */ u2("span", { className: "dashboard-error", children: "Error" }),
+                        /* @__PURE__ */ u2("p", { className: "dashboard-tile-age", children: session.last_activity ? `Activity ${relativeTimeText(session.last_activity, now)}` : "Activity unknown" })
+                      ] })
+                    ]
+                  }
+                ) }, sessionId || `${sessionLabel(session)}-${stringOrEmpty(session.last_activity)}`);
+              })
+            ] }),
             /* @__PURE__ */ u2("footer", { className: "session-dashboard__footer", children: [
-              /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "modal-dialog__description", children: "Not refreshed yet." }),
+              /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "modal-dialog__description", children: dashboardAge }),
               /* @__PURE__ */ u2("div", { className: "modal-dialog__actions", role: "group", "aria-label": "Dashboard pages", children: [
-                /* @__PURE__ */ u2("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", children: "Previous" }),
-                /* @__PURE__ */ u2("output", { id: "dashboard-page", children: "Page 1 of 1" }),
-                /* @__PURE__ */ u2("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", children: "Next" }),
-                /* @__PURE__ */ u2("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", children: "All sessions" })
+                /* @__PURE__ */ u2("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", disabled: view.loading || view.page <= 1, onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-page", { detail: { delta: -1 } })), children: "Previous" }),
+                /* @__PURE__ */ u2("output", { id: "dashboard-page", children: [
+                  "Page ",
+                  view.page,
+                  " of ",
+                  view.totalPages
+                ] }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", disabled: view.loading || view.page >= view.totalPages, onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-page", { detail: { delta: 1 } })), children: "Next" }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-manage")), children: "All sessions" })
               ] })
             ] })
           ]

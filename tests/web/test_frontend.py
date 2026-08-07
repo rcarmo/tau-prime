@@ -255,14 +255,14 @@ async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
     assert '"tau.web.metersCollapsed"' in script
     assert 'new URL(window.location.href).searchParams.get("session_id")' in script
     assert 'window.history.replaceState(null, "", nextUrl);' in script
-    assert 'window.open(buildSessionUrl(session.session_id), "_blank", "noopener")' in script
-    assert (
-        "void selectSession(session.session_id, "
-        "{ reconnect: true, focusTimeline: true });"
-    ) in script
+    dashboard_component = (Path(__file__).parents[2] / "src" / "tau_web/frontend/src/components/Dashboard.tsx").read_text(encoding="utf-8")
+    assert "href={buildSessionUrl(sessionId)}" in dashboard_component
+    assert "event.metaKey || event.ctrlKey" in dashboard_component
+    assert 'new CustomEvent("tau:session-select"' in dashboard_component
+    assert 'window.addEventListener("tau:session-select"' in script
     assert 'event.code === "Backquote"' in script
     assert 'setDashboardOpen(false);' in script
-    assert 'window.setInterval(updateDashboardAgeLabels, 1000);' in script
+    assert 'window.setInterval(renderDashboard, 1000);' in script
     assert "15000" in script
     assert "3000" in script
     assert "expected_revision" in script

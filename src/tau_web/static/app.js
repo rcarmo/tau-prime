@@ -144,12 +144,6 @@ function bindUi() {
     dashboardCount: requiredElement("dashboard-count"),
     sessionDashboard: requiredElement("session-dashboard"),
     dashboardClose: requiredElement("dashboard-close"),
-    dashboardGrid: requiredElement("dashboard-grid"),
-    dashboardAge: requiredElement("dashboard-age"),
-    dashboardPrevious: requiredElement("dashboard-previous"),
-    dashboardPage: requiredElement("dashboard-page"),
-    dashboardNext: requiredElement("dashboard-next"),
-    dashboardManage: requiredElement("dashboard-manage"),
     mobileNavToggle: requiredElement("mobile-nav-toggle"),
     mobilePanelToggle: requiredElement("mobile-panel-toggle"),
     sessionNav: requiredElement("session-nav"),
@@ -249,9 +243,8 @@ function installEventHandlers() {
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
   });
-  ui.dashboardPrevious.addEventListener("click", () => changeDashboardPage(-1));
-  ui.dashboardNext.addEventListener("click", () => changeDashboardPage(1));
-  ui.dashboardManage.addEventListener("click", openSessionManager);
+  window.addEventListener("tau:dashboard-page", (event) => changeDashboardPage(Number(event.detail?.delta) || 0));
+  window.addEventListener("tau:dashboard-manage", openSessionManager);
 
   ui.newSessionButton.addEventListener("click", () => {
     void createSession({ focusComposer: true });
@@ -1211,135 +1204,16 @@ function applyDashboardOpen(nextOpen) {
 function renderDashboard() {
   const dashboard = state.dashboard;
   const hasSnapshot = dashboard.generatedAt !== null || dashboard.sessions.length > 0 || dashboard.loading;
-  const activeSessionCount = currentActiveSessions().length;
-  const total = hasSnapshot ? dashboard.total : activeSessionCount;
-
+  const total = hasSnapshot ? dashboard.total : currentActiveSessions().length;
   ui.dashboardCount.textContent = String(total);
-  ui.dashboardGrid.setAttribute("aria-busy", String(dashboard.loading));
-  ui.dashboardPage.textContent = `Page ${dashboard.page} of ${dashboard.totalPages}`;
-  ui.dashboardPrevious.disabled = dashboard.loading || dashboard.page <= 1;
-  ui.dashboardNext.disabled = dashboard.loading || dashboard.page >= dashboard.totalPages;
-
-  if (!dashboard.open) {
-    return;
-  }
-
-  const tiles = [];
-  if (!dashboard.sessions.length) {
-    const empty = document.createElement("p");
-    empty.className = "dashboard-empty";
-    empty.textContent = dashboard.loading ? "Loading dashboard sessions…" : "No active sessions.";
-    tiles.push(empty);
-  } else {
-    for (const session of dashboard.sessions) {
-      tiles.push(renderDashboardTile(session));
-    }
-  }
-
-  ui.dashboardGrid.replaceChildren(...tiles);
-  updateDashboardAgeLabels();
-}
-
-function renderDashboardTile(session) {
-  const selected = session?.session_id === state.selectedSessionId;
-  const tile = document.createElement("article");
-  tile.className = "dashboard-tile";
-  tile.dataset.selected = String(selected);
-  tile.setAttribute("role", "listitem");
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "dashboard-tile-button";
-  button.setAttribute("aria-current", selected ? "page" : "false");
-  button.title = "Open this session. Ctrl-click or Cmd-click opens it in a new tab.";
-  button.addEventListener("click", (event) => {
-    if (event.metaKey || event.ctrlKey) {
-      window.open(buildSessionUrl(session.session_id), "_blank", "noopener");
-      return;
-    }
-    void selectSession(session.session_id, { reconnect: true, focusTimeline: true });
-  });
-
-  const header = document.createElement("div");
-  header.className = "dashboard-tile-header";
-
-  const agent = document.createElement("p");
-  agent.className = "dashboard-agent";
-  agent.textContent = sessionLabel(session);
-
-  const status = document.createElement("span");
-  status.className = "dashboard-state";
-  status.dataset.state = stringOrEmpty(session?.activity_state) || "idle";
-  status.dataset.error = String(Boolean(session?.has_error));
-  status.textContent = dashboardActivityLabel(session);
-
-  header.append(agent, status);
-
-  const identity = document.createElement("p");
-  identity.className = "dashboard-identity";
-  const agentName = stringOrEmpty(session?.agent_name);
-  identity.textContent = [
-    agentName ? `@${agentName}` : null,
-    shortId(session?.session_id),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  const workspace = document.createElement("p");
-  workspace.className = "dashboard-workspace";
-  workspace.textContent = stringOrEmpty(session?.workspace) || "Workspace unavailable";
-
-  const model = document.createElement("p");
-  model.className = "dashboard-model";
-  model.textContent = stringOrEmpty(session?.model) || "Model unavailable";
-
-  const previewKind = document.createElement("p");
-  previewKind.className = "dashboard-preview-kind";
-  previewKind.textContent = dashboardPreviewKindLabel(session?.preview_kind);
-
-  const preview = document.createElement("p");
-  preview.className = "dashboard-preview";
-  preview.textContent = stringOrEmpty(session?.preview) || "No assistant summary yet.";
-
-  const indicators = document.createElement("div");
-  indicators.className = "dashboard-indicators";
-
-  const queue = document.createElement("span");
-  queue.textContent = `Queue ${numberOrZero(session?.queue_count)}`;
-
-  const context = document.createElement("div");
-  context.className = "dashboard-context";
-
-  const contextLabel = document.createElement("span");
-  contextLabel.textContent = `Context ${formatDashboardContext(session)}`;
-
-  const contextTrack = document.createElement("span");
-  contextTrack.className = "dashboard-context-track";
-
-  const contextFill = document.createElement("span");
-  contextFill.className = "dashboard-context-fill";
-  contextFill.style.width = `${formatDashboardContextPercent(session)}%`;
-  contextTrack.append(contextFill);
-  context.append(contextLabel, contextTrack);
-
-  indicators.append(queue, context);
-
-  if (session?.has_error) {
-    const error = document.createElement("span");
-    error.className = "dashboard-error";
-    error.textContent = "Error";
-    indicators.append(error);
-  }
-
-  const age = document.createElement("p");
-  age.className = "dashboard-tile-age";
-  age.dataset.dashboardAgeSource = stringOrEmpty(session?.last_activity);
-  age.textContent = "Activity unknown";
-  indicators.append(age);
-
-  button.append(header, identity, workspace, model, previewKind, preview, indicators);
-  tile.append(button);
-  return tile;
+  window.dispatchEvent(new CustomEvent("tau:dashboard-render", { detail: {
+    sessions: dashboard.sessions,
+    page: dashboard.page,
+    totalPages: dashboard.totalPages,
+    generatedAt: dashboard.generatedAt,
+    loading: dashboard.loading,
+    selectedSessionId: state.selectedSessionId,
+  } }));
 }
 
 async function refreshDashboard({ announceError = false } = {}) {
@@ -1400,8 +1274,7 @@ function startDashboardTimers() {
   state.dashboard.previewRefreshTimer = window.setInterval(() => {
     void refreshDashboard({ announceError: false });
   }, 3000);
-  updateDashboardAgeLabels();
-  state.dashboard.ageTimer = window.setInterval(updateDashboardAgeLabels, 1000);
+  state.dashboard.ageTimer = window.setInterval(renderDashboard, 1000);
 }
 
 function stopDashboardTimers() {
@@ -1434,25 +1307,6 @@ function scheduleDashboardInvalidation() {
     state.dashboard.invalidationTimer = null;
     void refreshDashboard({ announceError: false });
   }, 400);
-}
-
-function updateDashboardAgeLabels() {
-  if (!state.dashboard.open) {
-    return;
-  }
-
-  if (!state.dashboard.generatedAt) {
-    ui.dashboardAge.textContent = state.dashboard.loading ? "Refreshing dashboard…" : "Not refreshed yet.";
-  } else if (state.dashboard.loading) {
-    ui.dashboardAge.textContent = `Refreshing… last updated ${relativeTimeText(state.dashboard.generatedAt)}.`;
-  } else {
-    ui.dashboardAge.textContent = `Updated ${relativeTimeText(state.dashboard.generatedAt)}.`;
-  }
-
-  for (const element of ui.dashboardGrid.querySelectorAll(".dashboard-tile-age")) {
-    const timestamp = stringOrEmpty(element.dataset.dashboardAgeSource);
-    element.textContent = timestamp ? `Activity ${relativeTimeText(timestamp)}` : "Activity unknown";
-  }
 }
 
 function changeDashboardPage(delta) {
