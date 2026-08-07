@@ -198,6 +198,8 @@ def _package_files() -> list[tuple[Path, str]]:
         ".css",
         ".js",
         ".json",
+        ".ts",
+        ".tsx",
         ".webmanifest",
         ".svg",
         ".png",

@@ -21,6 +21,7 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/static/extension-ui.js",
         "/static/widget-bridge.js",
         "/static/frontend-sdk.js",
+        "/static/preact-shell.js",
     }
 )
 
@@ -101,6 +102,12 @@ _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
     ),
     "frontend-sdk.js": FrontendAsset(
         resource_name="frontend-sdk.js",
+        content_type="application/javascript",
+        charset="utf-8",
+        cache_control="public, max-age=3600, must-revalidate",
+    ),
+    "preact-shell.js": FrontendAsset(
+        resource_name="preact-shell.js",
         content_type="application/javascript",
         charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",

@@ -61,6 +61,20 @@ def test_wheel_includes_frontend_static_assets() -> None:
     assert expected_assets <= archive_names
     assert "tau_web/static/widget-bridge.js" in archive_names
     assert "tau_web/static/frontend-sdk.js" in archive_names
+    assert "tau_web/static/preact-shell.js" in archive_names
+
+
+def test_wheel_includes_preact_frontend_sources() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    for expected in (
+        "tau_web/frontend/README.md",
+        "tau_web/frontend/build.ts",
+        "tau_web/frontend/package.json",
+        "tau_web/frontend/src/index.tsx",
+        "tau_web/frontend/tsconfig.json",
+    ):
+        assert expected in archive_names
 
 
 def test_wheel_declares_tau_console_script(tmp_path: Path) -> None:
