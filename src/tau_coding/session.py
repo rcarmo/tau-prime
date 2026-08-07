@@ -21,6 +21,7 @@ from tau_agent.messages import AgentMessage, AssistantMessage, ToolResultMessage
 from tau_agent.session import (
     BranchSummaryEntry,
     CompactionEntry,
+    CustomEntry,
     JsonlSessionStorage,
     LeafEntry,
     MessageEntry,
@@ -297,6 +298,7 @@ class CodingSession:
         """Load a coding session from append-only storage."""
         entries = await config.storage.read_all()
         pending_initial_entries: tuple[SessionEntry, ...] = ()
+        inference_provider = _session_inference_provider(config, entries)
         if not entries:
             info = SessionInfoEntry(cwd=str(config.cwd))
             model = ModelChangeEntry(parent_id=info.id, model=config.model)
@@ -304,10 +306,27 @@ class CodingSession:
                 parent_id=model.id,
                 thinking_level=config.thinking_level,
             )
-            entries = [info, model, thinking]
-            pending_initial_entries = (info, model, thinking)
+            initial_entries: list[SessionEntry] = [info, model, thinking]
+            if inference_provider is not None:
+                initial_entries.append(
+                    CustomEntry(
+                        parent_id=thinking.id,
+                        namespace="tau.huggingface-routing",
+                        data={
+                            "model": config.model,
+                            "inference_provider": inference_provider,
+                        },
+                    )
+                )
+            entries = initial_entries
+            pending_initial_entries = tuple(initial_entries)
         else:
             entries = _detach_missing_parents(entries)
+
+        if inference_provider is not None:
+            alias_setter = getattr(config.provider, "set_model_alias", None)
+            if callable(alias_setter):
+                alias_setter(config.model, f"{config.model}:{inference_provider}")
 
         linear_state = SessionState.from_entries(entries)
         latest_leaf = _latest_leaf_entry(entries)
@@ -2313,6 +2332,32 @@ def _infer_provider_for_model(
     if len(matches) == 1:
         return matches[0]
     return None
+
+
+def _session_inference_provider(
+    config: CodingSessionConfig,
+    entries: list[SessionEntry],
+) -> str | None:
+    """Resolve a session-local Hugging Face route, preferring durable history."""
+    if config.provider_name != "huggingface":
+        return None
+    for entry in reversed(entries):
+        if not isinstance(entry, CustomEntry) or entry.namespace != "tau.huggingface-routing":
+            continue
+        model = entry.data.get("model")
+        inference_provider = entry.data.get("inference_provider")
+        if model == config.model and isinstance(inference_provider, str):
+            return inference_provider
+    settings = config.provider_settings
+    if settings is None:
+        return None
+    try:
+        provider = settings.get_provider("huggingface")
+    except KeyError:
+        return None
+    inference_providers = getattr(provider, "inference_providers", {})
+    inference_provider = inference_providers.get(config.model)
+    return inference_provider if isinstance(inference_provider, str) else None
 
 
 def _state_thinking_level(

@@ -79,6 +79,15 @@ def _sqlite_paths(tmp_path: Path) -> TauPaths:
     return TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
 
 
+class RoutingFakeProvider(FakeProvider):
+    def __init__(self) -> None:
+        super().__init__([])
+        self.aliases: dict[str, str] = {}
+
+    def set_model_alias(self, model: str, alias: str) -> None:
+        self.aliases[model] = alias
+
+
 class SwitchableFakeProvider:
     def __init__(self, config: object) -> None:
         self.config = config
@@ -3494,3 +3503,151 @@ def test_branch_summary_hides_raw_argument_fallbacks() -> None:
     assert "{not valid json" not in summary
     assert "read()" in summary
     assert 'custom(path="README.md")' in summary
+
+
+@pytest.mark.anyio
+async def test_huggingface_route_is_pinned_in_session_history_on_resume(tmp_path: Path) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    provider = RoutingFakeProvider()
+    settings = ProviderSettings(
+        default_provider="huggingface",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="huggingface",
+                models=("org/model",),
+                default_model="org/model",
+                inference_providers={"org/model": "provider-a"},
+            ),
+        ),
+    )
+    session = await CodingSession.load(
+        CodingSessionConfig(
+            provider=provider,
+            model="org/model",
+            storage=storage,
+            cwd=tmp_path,
+            provider_name="huggingface",
+            provider_settings=settings,
+        )
+    )
+    await session._ensure_session_initialized()
+    assert provider.aliases == {"org/model": "org/model:provider-a"}
+
+    resumed_provider = RoutingFakeProvider()
+    changed_settings = ProviderSettings(
+        default_provider="huggingface",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="huggingface",
+                models=("org/model",),
+                default_model="org/model",
+                inference_providers={"org/model": "provider-b"},
+            ),
+        ),
+    )
+    await CodingSession.load(
+        CodingSessionConfig(
+            provider=resumed_provider,
+            model="org/model",
+            storage=storage,
+            cwd=tmp_path,
+            provider_name="huggingface",
+            provider_settings=changed_settings,
+        )
+    )
+    assert resumed_provider.aliases == {"org/model": "org/model:provider-a"}
+
+
+@pytest.mark.anyio
+async def test_huggingface_route_round_trips_through_sqlite_entries(tmp_path: Path) -> None:
+    paths = _sqlite_paths(tmp_path)
+    settings = ProviderSettings(
+        default_provider="huggingface",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="huggingface",
+                models=("org/model",),
+                default_model="org/model",
+                inference_providers={"org/model": "provider-a"},
+            ),
+        ),
+    )
+    async with (
+        SqliteDatabase(paths.home / "tau.sqlite3") as database,
+        SqliteCodingSessionManager(
+            paths=paths,
+            database=database,
+            manage_database_lifecycle=False,
+        ) as manager,
+    ):
+        record = await manager.create_session(
+            cwd=tmp_path,
+            model="org/model",
+            provider_name="huggingface",
+            session_id="hf-sqlite",
+        )
+        storage = SqliteSessionStorage(database, record.id)
+        provider = RoutingFakeProvider()
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model="org/model",
+                storage=storage,
+                cwd=tmp_path,
+                provider_name="huggingface",
+                provider_settings=settings,
+            )
+        )
+        await session._ensure_session_initialized()
+        resumed_provider = RoutingFakeProvider()
+        await CodingSession.load(
+            CodingSessionConfig(
+                provider=resumed_provider,
+                model="org/model",
+                storage=storage,
+                cwd=tmp_path,
+                provider_name="huggingface",
+                provider_settings=None,
+            )
+        )
+    assert resumed_provider.aliases == {"org/model": "org/model:provider-a"}
+
+
+@pytest.mark.anyio
+async def test_huggingface_routes_are_isolated_and_unpinned_models_fall_back(
+    tmp_path: Path,
+) -> None:
+    async def load(name: str, route: str | None) -> RoutingFakeProvider:
+        model = "org/model"
+        provider = RoutingFakeProvider()
+        settings = ProviderSettings(
+            default_provider="huggingface",
+            providers=(
+                OpenAICompatibleProviderConfig(
+                    name="huggingface",
+                    models=(model,),
+                    default_model=model,
+                    inference_providers={model: route} if route is not None else {},
+                ),
+            ),
+        )
+        await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model=model,
+                storage=JsonlSessionStorage(tmp_path / f"{name}.jsonl"),
+                cwd=tmp_path,
+                provider_name="huggingface",
+                provider_settings=settings,
+            )
+        )
+        return provider
+
+    first, second, fallback = await asyncio.gather(
+        load("first", "provider-a"),
+        load("second", "provider-b"),
+        load("fallback", None),
+    )
+    assert first.aliases == {"org/model": "org/model:provider-a"}
+    assert second.aliases == {"org/model": "org/model:provider-b"}
+    assert fallback.aliases == {}

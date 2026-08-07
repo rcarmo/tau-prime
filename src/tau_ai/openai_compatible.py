@@ -80,6 +80,11 @@ class OpenAICompatibleProvider:
         self._observer = observer
         self._remote_compaction_state: RemoteCompactionState | None = None
         self._session_id: str | None = None
+        self._model_aliases = dict(config.model_aliases or {})
+
+    def set_model_alias(self, model: str, alias: str) -> None:
+        """Pin one canonical model identity to a provider-specific request alias."""
+        self._model_aliases[model] = alias
 
     def set_session_id(self, session_id: str | None) -> None:
         """Set the stable session identity used for first-party OpenAI cache affinity."""
@@ -137,7 +142,7 @@ class OpenAICompatibleProvider:
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
         """Stream one chat completion response as provider-neutral events."""
-        request_model = (self._config.model_aliases or {}).get(model, model)
+        request_model = self._model_aliases.get(model, model)
         payload = _build_chat_payload(
             model=request_model,
             system=system,
@@ -165,7 +170,7 @@ class OpenAICompatibleProvider:
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
         """Stream one `/v1/responses` response as provider-neutral events."""
-        request_model = (self._config.model_aliases or {}).get(model, model)
+        request_model = self._model_aliases.get(model, model)
         payload = _build_responses_payload(
             model=request_model,
             system=system,
