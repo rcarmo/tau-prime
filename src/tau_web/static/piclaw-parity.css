@@ -99,25 +99,39 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 .app-layout__status-bar .status-grid dt { color: var(--text-secondary); }
 .app-layout__status-bar .status-grid dd { margin: 0; }
 
-.chat__session-details,
-.chat__prompt-options {
-  border: 0;
-}
-.chat__session-details > summary,
+.chat__prompt-options { border: 0; }
 .chat__prompt-options > summary {
+  padding: 2px 0 6px;
   cursor: pointer;
   color: var(--text-secondary);
   font-size: 12px;
   list-style: none;
 }
-.chat__session-details > summary {
-  margin: 6px 12px;
-}
-.chat__prompt-options > summary {
-  padding: 2px 0 6px;
-}
-.chat__session-details > summary::-webkit-details-marker,
 .chat__prompt-options > summary::-webkit-details-marker { display: none; }
+
+/* Tau's multi-session dashboard is a wide Piclaw modal, not an in-flow
+ * legacy dashboard region. Its generated cards retain Tau API ownership. */
+#session-dashboard[hidden] { display: none !important; }
+.session-dashboard__dialog {
+  width: min(1080px, 94vw);
+  max-width: none;
+  max-height: min(780px, 90vh);
+  overflow: auto;
+}
+.session-dashboard__header,
+.session-dashboard__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.session-dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  min-height: 120px;
+  overflow: auto;
+}
 
 @media (max-width: 639px) {
   .app-layout__sidebar-wrapper.is-open { width: 100vw; }

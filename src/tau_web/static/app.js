@@ -176,6 +176,8 @@ function bindUi() {
     sessionList: requiredElement("session-list"),
     timelineMain: requiredElement("timeline-main"),
     timelineMeta: requiredElement("timeline-meta"),
+    agentStatusIndicator: requiredElement("agent-status-indicator"),
+    agentStatusText: requiredElement("agent-status-text"),
     branchList: requiredElement("branch-list"),
     timelineList: requiredElement("timeline-list"),
     sidePanel: requiredElement("side-panel"),
@@ -1770,14 +1772,19 @@ function renderSessionDetails() {
     ui.statusModel.textContent = ui.modelInput.value.trim() ? `${ui.providerInput.value.trim()}/${ui.modelInput.value.trim()}` : "Unset";
     ui.statusContext.textContent = "No context loaded";
     ui.timelineMeta.textContent = "Load a session to inspect persisted messages.";
+    ui.agentStatusText.textContent = "No session selected";
+    ui.agentStatusIndicator.hidden = true;
     return;
   }
 
   const session = state.selectedSession;
+  const activeRun = currentComposerActiveRun();
   ui.statusSession.textContent = sessionLabel(session);
   ui.statusModel.textContent = `${session.provider_name}/${state.context?.model ?? session.model}`;
   ui.statusContext.textContent = contextSummaryText();
   ui.timelineMeta.textContent = contextSummaryText(true);
+  ui.agentStatusText.textContent = activeRun ? `Running ${shortId(activeRun.run_id)}` : "Ready";
+  ui.agentStatusIndicator.hidden = false;
 }
 
 function renderBranches() {

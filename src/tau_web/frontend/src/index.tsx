@@ -4,7 +4,7 @@ import { StatusBar } from "./components/StatusBar";
 import { Composer } from "./components/Composer";
 import { Dashboard } from "./components/Dashboard";
 import { SidePanel } from "./components/SidePanel";
-import { Timeline } from "./components/Timeline";
+import { SessionRuntime, Timeline } from "./components/Timeline";
 import { Onboarding } from "./components/Onboarding";
 import { useDashboardVisibility } from "./hooks/useDashboardVisibility";
 import { useDrawers } from "./hooks/useDrawers";
@@ -51,6 +51,7 @@ function TauShell() {
                 <div className="app-layout__tab-content">
                   <section className="chat" aria-label="Tau chat">
                     <div className="chat__messages"><Timeline /></div>
+                    <SessionRuntime />
                     <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
                     <Composer />
                   </section>

@@ -418,25 +418,47 @@ function Composer() {
 
 // src/components/Dashboard.tsx
 function Dashboard({ open, onClose }) {
-  return /* @__PURE__ */ u2("section", { id: "session-dashboard", className: "session-dashboard", "aria-labelledby": "dashboard-title", "data-open": String(open), hidden: !open, children: /* @__PURE__ */ u2("div", { className: "dashboard-shell", children: [
-    /* @__PURE__ */ u2("header", { className: "dashboard-header", children: [
-      /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2("h2", { id: "dashboard-title", children: "Session dashboard" }),
-        /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Live Tau sessions, queue state, context estimates, and current activity." })
-      ] }),
-      /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "icon-button", type: "button", onClick: onClose, children: "Close" })
-    ] }),
-    /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "dashboard-grid", role: "list", "aria-live": "polite", "aria-busy": "false" }),
-    /* @__PURE__ */ u2("footer", { className: "dashboard-footer", children: [
-      /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "muted small-text", children: "Not refreshed yet." }),
-      /* @__PURE__ */ u2("div", { className: "dashboard-pagination", role: "group", "aria-label": "Dashboard pages", children: [
-        /* @__PURE__ */ u2("button", { id: "dashboard-previous", type: "button", children: "Previous" }),
-        /* @__PURE__ */ u2("output", { id: "dashboard-page", children: "Page 1 of 1" }),
-        /* @__PURE__ */ u2("button", { id: "dashboard-next", type: "button", children: "Next" }),
-        /* @__PURE__ */ u2("button", { id: "dashboard-manage", type: "button", children: "All sessions" })
-      ] })
-    ] })
-  ] }) });
+  return /* @__PURE__ */ u2(
+    "div",
+    {
+      id: "session-dashboard",
+      className: "modal-dialog__backdrop",
+      "data-open": String(open),
+      hidden: !open,
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) onClose();
+      },
+      children: /* @__PURE__ */ u2(
+        "section",
+        {
+          className: "modal-dialog session-dashboard__dialog",
+          role: "dialog",
+          "aria-modal": "true",
+          "aria-labelledby": "dashboard-title",
+          onMouseDown: (event) => event.stopPropagation(),
+          children: [
+            /* @__PURE__ */ u2("header", { className: "session-dashboard__header", children: [
+              /* @__PURE__ */ u2("div", { children: [
+                /* @__PURE__ */ u2("h2", { id: "dashboard-title", className: "modal-dialog__title", children: "Session dashboard" }),
+                /* @__PURE__ */ u2("p", { className: "modal-dialog__description", children: "Live Tau sessions, queue state, context estimates, and current activity." })
+              ] }),
+              /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "modal-dialog__btn", type: "button", onClick: onClose, children: "Close" })
+            ] }),
+            /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": "false" }),
+            /* @__PURE__ */ u2("footer", { className: "session-dashboard__footer", children: [
+              /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "modal-dialog__description", children: "Not refreshed yet." }),
+              /* @__PURE__ */ u2("div", { className: "modal-dialog__actions", role: "group", "aria-label": "Dashboard pages", children: [
+                /* @__PURE__ */ u2("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", children: "Previous" }),
+                /* @__PURE__ */ u2("output", { id: "dashboard-page", children: "Page 1 of 1" }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", children: "Next" }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", children: "All sessions" })
+              ] })
+            ] })
+          ]
+        }
+      )
+    }
+  );
 }
 
 // src/components/SidePanel.tsx
@@ -608,64 +630,24 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
 
 // src/components/Timeline.tsx
 function Timeline() {
-  return /* @__PURE__ */ u2("div", { id: "timeline-main", className: "chat__messages", tabIndex: -1, children: [
+  return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
-    /* @__PURE__ */ u2("div", { className: "message-list", children: [
+    /* @__PURE__ */ u2("div", { id: "timeline-main", className: "message-list", tabIndex: -1, children: [
       /* @__PURE__ */ u2("div", { id: "timeline-meta", className: "message-list__status-banner", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
       /* @__PURE__ */ u2("ol", { id: "timeline-list", className: "timeline-list message-list__items", "aria-live": "polite", tabIndex: 0 })
     ] }),
-    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" }),
-    /* @__PURE__ */ u2("details", { className: "chat__session-details", children: [
-      /* @__PURE__ */ u2("summary", { children: "Session details" }),
-      /* @__PURE__ */ u2("section", { className: "branch-strip", "aria-labelledby": "branch-strip-title", children: [
-        /* @__PURE__ */ u2("div", { className: "branch-strip-header", children: [
-          /* @__PURE__ */ u2("h3", { id: "branch-strip-title", children: "Branches" }),
-          /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Select the active leaf for restored playback." })
-        ] }),
-        /* @__PURE__ */ u2("div", { id: "branch-list", className: "branch-list" })
-      ] }),
-      /* @__PURE__ */ u2("section", { id: "session-overview", className: "session-overview", "aria-label": "Live session overview", children: [
-        /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "dashboard" }),
-        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "context-summary-title", children: [
-          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-            /* @__PURE__ */ u2("h3", { id: "context-summary-title", children: "Context" }),
-            /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Session entry, message, and compaction summary." })
-          ] }) }),
-          /* @__PURE__ */ u2("dl", { id: "context-summary", className: "stats-list" })
-        ] }),
-        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "usage-summary-title", children: [
-          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-            /* @__PURE__ */ u2("h3", { id: "usage-summary-title", children: "Usage" }),
-            /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Durable token and cost records for this session." })
-          ] }) }),
-          /* @__PURE__ */ u2("dl", { id: "usage-totals", className: "stats-list" }),
-          /* @__PURE__ */ u2("ol", { id: "usage-records", className: "compact-list", "aria-live": "polite" })
-        ] }),
-        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "active-run-title", children: [
-          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-            /* @__PURE__ */ u2("h3", { id: "active-run-title", children: "Active run" }),
-            /* @__PURE__ */ u2("p", { id: "active-run-note", className: "muted small-text", children: "Pending and running work for the selected session." })
-          ] }) }),
-          /* @__PURE__ */ u2("div", { id: "active-run-card", "aria-live": "polite" })
-        ] }),
-        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "queue-panel-title", children: [
-          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-            /* @__PURE__ */ u2("h3", { id: "queue-panel-title", children: "Queue" }),
-            /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Follow-up and steer messages waiting for dispatch." })
-          ] }) }),
-          /* @__PURE__ */ u2("form", { id: "queue-form", className: "stack-form", children: [
-            /* @__PURE__ */ u2("label", { htmlFor: "queue-input", children: "Queue follow-up" }),
-            /* @__PURE__ */ u2("textarea", { id: "queue-input", name: "content", rows: 3, placeholder: "Add a follow-up message for this session." }),
-            /* @__PURE__ */ u2("div", { className: "button-row button-row-wrap", role: "group", "aria-label": "Queue actions", children: [
-              /* @__PURE__ */ u2("button", { id: "queue-submit-button", type: "submit", children: "Enqueue follow-up" }),
-              /* @__PURE__ */ u2("button", { id: "dispatch-follow-up-button", type: "button", children: "Dispatch follow-up" }),
-              /* @__PURE__ */ u2("button", { id: "dispatch-steer-button", type: "button", children: "Dispatch steer" })
-            ] }),
-            /* @__PURE__ */ u2("p", { id: "queue-help", className: "muted small-text", children: "Enter submits. Shift+Enter inserts a newline." })
-          ] }),
-          /* @__PURE__ */ u2("ul", { id: "queue-list", className: "queue-list", "aria-live": "polite" })
-        ] })
-      ] })
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
+  ] });
+}
+function SessionRuntime() {
+  return /* @__PURE__ */ u2("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
+    /* @__PURE__ */ u2("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
+      /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
+    ] }),
+    /* @__PURE__ */ u2("section", { className: "agent-status-panel__section", children: [
+      /* @__PURE__ */ u2("div", { className: "agent-status-panel__title", children: "Session branch" }),
+      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools" })
     ] })
   ] });
 }
@@ -1191,6 +1173,7 @@ function TauShell() {
             ] }),
             /* @__PURE__ */ u2("div", { className: "app-layout__tab-viewport", children: /* @__PURE__ */ u2("div", { className: "app-layout__tab-content", children: /* @__PURE__ */ u2("section", { className: "chat", "aria-label": "Tau chat", children: [
               /* @__PURE__ */ u2("div", { className: "chat__messages", children: /* @__PURE__ */ u2(Timeline, {}) }),
+              /* @__PURE__ */ u2(SessionRuntime, {}),
               /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
               /* @__PURE__ */ u2(Composer, {})
             ] }) }) })
