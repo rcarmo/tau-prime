@@ -88,35 +88,59 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
           <ol id="search-results" className="search-panel__results" tabIndex={0} aria-label="Search results" aria-live="polite" />
         </section>
 
-        <section id="panel-plan" className="plan-panel" aria-labelledby="tab-plan" hidden={activeTab !== "plan"}>
-          <form id="plan-form" className="stack-form">
-            <div className="plan-editor-header"><label htmlFor="plan-editor">Session plan</label><span id="plan-revision" className="muted small-text">Revision 0</span></div>
-            <textarea id="plan-editor" className="plan-editor" spellcheck placeholder="- [ ] Add a concrete next step" aria-describedby="plan-status" />
-            <p id="plan-status" className="muted small-text" aria-live="polite">Select a session to edit its shared plan.</p>
-            <div id="plan-conflict" className="plan-conflict" role="alert" hidden>The plan changed elsewhere while you had local edits. Reload the server version or save again after reviewing it.</div>
-            <div className="button-row button-row-wrap"><button id="plan-save-button" type="submit">Save plan</button><button id="plan-reload-button" type="button">Reload server plan</button></div>
-          </form>
+        <section id="panel-plan" className="tasks-panel" aria-labelledby="tab-plan" hidden={activeTab !== "plan"}>
+          <div className="tasks-panel__tabs" role="tablist" aria-label="Plan views">
+            <button className="tasks-panel__tab tasks-panel__tab--active" type="button" role="tab" aria-selected="true">Plan</button>
+          </div>
+          <div className="tasks-panel__tasks">
+            <form id="plan-form" className="tasks-panel__card">
+              <div className="tasks-panel__card-header">
+                <span className="tasks-panel__card-id">Session plan</span>
+                <span id="plan-revision" className="tasks-panel__badge tasks-panel__badge--kind">Revision 0</span>
+              </div>
+              <label className="tasks-panel__card-label" htmlFor="plan-editor">Shared checklist</label>
+              <textarea id="plan-editor" className="plan-editor tasks-panel__card-mono" spellcheck placeholder="- [ ] Add a concrete next step" aria-describedby="plan-status" />
+              <p id="plan-status" className="tasks-panel__card-muted" aria-live="polite">Select a session to edit its shared plan.</p>
+              <div id="plan-conflict" className="tasks-panel__sessions-error tasks-panel__sessions-error--inline" role="alert" hidden>The plan changed elsewhere. Reload the server version or save again after reviewing it.</div>
+              <div className="tasks-panel__card-actions"><button id="plan-save-button" type="submit">Save plan</button><button id="plan-reload-button" type="button">Reload</button></div>
+            </form>
+          </div>
         </section>
 
         <section id="panel-settings" className="settings-panel" aria-labelledby="tab-settings" hidden={activeTab !== "settings"}>
-          <button className="settings-provider-setup" type="button" onClick={() => document.querySelector<HTMLButtonElement>(".provider-setup-trigger")?.click()}>Provider setup</button>
-          <form id="auth-form" className="stack-form">
-            <label htmlFor="auth-token">Bearer token</label><input id="auth-token" type="password" autoComplete="off" />
-            <div className="button-row button-row-wrap"><button id="save-auth-button" type="submit">Save token</button><button id="clear-auth-button" type="button">Clear token</button></div>
-          </form>
-          <form id="model-form" className="stack-form">
-            <label htmlFor="provider-input">Provider</label><input id="provider-input" list="provider-options" autoComplete="off" /><datalist id="provider-options" />
-            <label htmlFor="model-input">Model</label><input id="model-input" list="model-options" autoComplete="off" /><datalist id="model-options" />
-            <div className="button-row button-row-wrap"><button id="apply-model-button" type="submit">Apply to session</button><button id="refresh-button" type="button">Refresh shell</button></div>
-          </form>
-          <form id="thinking-form" className="stack-form">
-            <label htmlFor="thinking-level-select">Thinking level</label>
-            <div className="toolbar-row toolbar-row-wrap"><select id="thinking-level-select" name="thinking_level" /><button id="apply-thinking-button" type="submit">Apply thinking</button></div>
-            <p id="thinking-help" className="muted small-text">Updates session thinking with optimistic concurrency checks.</p>
-          </form>
-          <section aria-labelledby="settings-summary-title"><h3 id="settings-summary-title">Runtime summary</h3><dl id="settings-summary" className="settings-summary" /></section>
-          <p id="streaming-note" className="muted small-text">Live streaming, queue controls, and persisted timeline playback use safe DOM updates.</p>
-          <div className="extension-slot" data-extension-slot="sidebar" />
+          <nav className="settings-panel__nav" aria-label="Settings categories">
+            <a className="settings-panel__nav-item settings-panel__nav-item--active" href="#tau-settings-auth"><i className="codicon codicon-shield" aria-hidden="true" />Authentication</a>
+            <a className="settings-panel__nav-item" href="#tau-settings-model"><i className="codicon codicon-symbol-parameter" aria-hidden="true" />Model</a>
+            <a className="settings-panel__nav-item" href="#tau-settings-runtime"><i className="codicon codicon-server" aria-hidden="true" />Runtime</a>
+          </nav>
+          <div className="settings-panel__content">
+            <section id="tau-settings-auth" className="settings-panel__section">
+              <h2 className="settings-panel__section-title">Authentication</h2>
+              <button className="settings-panel__provider-btn settings-provider-setup" type="button" onClick={() => document.querySelector<HTMLButtonElement>(".provider-setup-trigger")?.click()}>Provider setup</button>
+              <form id="auth-form">
+                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="auth-token">Bearer token</label><input id="auth-token" className="settings-panel__input" type="password" autoComplete="off" /></div>
+                <div className="settings-panel__field"><span className="settings-panel__label" /><button id="save-auth-button" className="settings-panel__provider-btn" type="submit">Save token</button><button id="clear-auth-button" className="settings-panel__provider-btn settings-panel__provider-btn--logout" type="button">Clear token</button></div>
+              </form>
+            </section>
+            <section id="tau-settings-model" className="settings-panel__section">
+              <h2 className="settings-panel__section-title">Model</h2>
+              <form id="model-form">
+                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="provider-input">Provider</label><input id="provider-input" className="settings-panel__input" list="provider-options" autoComplete="off" /><datalist id="provider-options" /></div>
+                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="model-input">Model</label><input id="model-input" className="settings-panel__input" list="model-options" autoComplete="off" /><datalist id="model-options" /></div>
+                <div className="settings-panel__field"><span className="settings-panel__label" /><button id="apply-model-button" className="settings-panel__provider-btn" type="submit">Apply to session</button><button id="refresh-button" className="settings-panel__provider-btn" type="button">Refresh</button></div>
+              </form>
+              <form id="thinking-form">
+                <div className="settings-panel__field"><label className="settings-panel__label" htmlFor="thinking-level-select">Thinking level</label><select id="thinking-level-select" className="settings-panel__select" name="thinking_level" /><button id="apply-thinking-button" className="settings-panel__provider-btn" type="submit">Apply</button></div>
+                <p id="thinking-help" className="settings-panel__description">Updates session thinking with optimistic concurrency checks.</p>
+              </form>
+            </section>
+            <section id="tau-settings-runtime" className="settings-panel__section" aria-labelledby="settings-summary-title">
+              <h2 id="settings-summary-title" className="settings-panel__section-title">Runtime</h2>
+              <dl id="settings-summary" className="settings-summary" />
+              <p id="streaming-note" className="settings-panel__description">Live streaming, queue controls, and persisted timeline playback use safe DOM updates.</p>
+              <div className="extension-slot" data-extension-slot="sidebar" />
+            </section>
+          </div>
         </section>
       </div>
     </aside>
