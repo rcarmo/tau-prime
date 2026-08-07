@@ -335,37 +335,28 @@ function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessio
 }
 
 // src/components/Composer.tsx
-var SelectControl = ({ id: id2, name, label, children }) => /* @__PURE__ */ u2("div", { className: "compose-control", children: [
-  /* @__PURE__ */ u2("label", { htmlFor: id2, children: label }),
-  /* @__PURE__ */ u2("select", { id: id2, name, children })
-] });
 function Composer() {
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
     /* @__PURE__ */ u2("form", { id: "compose-form", className: "chat__compose", children: [
       /* @__PURE__ */ u2("div", { className: "chat__compose-container", children: [
         /* @__PURE__ */ u2("div", { className: "chat__toolbar", "aria-label": "Prompt controls", children: [
-          /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: [
-            /* @__PURE__ */ u2("i", { className: "codicon codicon-attach", "aria-hidden": "true" }),
-            /* @__PURE__ */ u2("span", { className: "sr-only", children: "Attach file" })
-          ] }),
+          /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
           /* @__PURE__ */ u2("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" }),
-          /* @__PURE__ */ u2("details", { className: "chat__prompt-options", children: [
-            /* @__PURE__ */ u2("summary", { className: "chat__toolbar-btn", "aria-label": "Prompt options", title: "Prompt options", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-settings-gear", "aria-hidden": "true" }) }),
-            /* @__PURE__ */ u2("section", { className: "compose-toolbar", "aria-label": "Model and delivery controls", children: [
-              /* @__PURE__ */ u2("div", { className: "compose-select-grid", children: [
-                /* @__PURE__ */ u2(SelectControl, { id: "compose-provider-select", name: "provider_name", label: "Provider" }),
-                /* @__PURE__ */ u2(SelectControl, { id: "compose-model-select", name: "model", label: "Model" }),
-                /* @__PURE__ */ u2(SelectControl, { id: "compose-thinking-select", name: "compose_thinking_level", label: "Thinking" }),
-                /* @__PURE__ */ u2(SelectControl, { id: "compose-delivery-mode", name: "delivery_mode", label: "Delivery", children: [
-                  /* @__PURE__ */ u2("option", { value: "run", children: "Run immediately" }),
-                  /* @__PURE__ */ u2("option", { value: "follow_up", children: "Queue follow-up" }),
-                  /* @__PURE__ */ u2("option", { value: "steer", children: "Queue steer" })
-                ] })
-              ] }),
-              /* @__PURE__ */ u2("p", { id: "compose-context-readout", className: "muted small-text", children: "No session selected. Sending will create one." })
+          /* @__PURE__ */ u2("label", { className: "thinking-badge-wrapper", title: "Message delivery", children: [
+            /* @__PURE__ */ u2("span", { className: "sr-only", children: "Delivery" }),
+            /* @__PURE__ */ u2("select", { id: "compose-delivery-mode", className: "thinking-badge", name: "delivery_mode", "aria-label": "Message delivery", children: [
+              /* @__PURE__ */ u2("option", { value: "run", children: "Run" }),
+              /* @__PURE__ */ u2("option", { value: "follow_up", children: "Follow-up" }),
+              /* @__PURE__ */ u2("option", { value: "steer", children: "Steer" })
             ] })
-          ] })
+          ] }),
+          /* @__PURE__ */ u2("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
+        ] }),
+        /* @__PURE__ */ u2("div", { className: "sr-only", "aria-hidden": "true", children: [
+          /* @__PURE__ */ u2("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter" }),
+          /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter" }),
+          /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter" })
         ] }),
         /* @__PURE__ */ u2("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments" }),
         /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", className: "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: true, children: "Clear all" }),
@@ -387,19 +378,16 @@ function Composer() {
             placeholder: "Type a message..."
           }
         ),
-        /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "compose-completion-popup", hidden: true, children: [
-          /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "muted small-text", "aria-live": "polite" }),
-          /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: "compose-completion-listbox", role: "listbox", "aria-label": "Composer completions" })
+        /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: true, children: [
+          /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite" }),
+          /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions" })
         ] })
       ] }),
-      /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", title: "Send (Enter)", children: [
-        /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }),
-        /* @__PURE__ */ u2("span", { className: "sr-only", children: "Run" })
-      ] })
+      /* @__PURE__ */ u2("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
     ] }),
     /* @__PURE__ */ u2("div", { className: "sr-only", children: [
-      /* @__PURE__ */ u2("p", { id: "compose-help", className: "muted small-text", children: "Enter sends. Shift+Enter inserts a newline." }),
-      /* @__PURE__ */ u2("p", { id: "app-status", className: "small-text", "aria-live": "polite", children: "Loading Tau shell\u2026" })
+      /* @__PURE__ */ u2("p", { id: "compose-help", children: "Enter sends. Shift+Enter inserts a newline." }),
+      /* @__PURE__ */ u2("p", { id: "app-status", "aria-live": "polite", children: "Loading Tau shell\u2026" })
     ] }),
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_below" })
   ] });

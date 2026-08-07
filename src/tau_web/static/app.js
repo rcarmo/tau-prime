@@ -2545,7 +2545,7 @@ function renderComposerCompletion() {
   for (const [index, item] of completion.items.entries()) {
     const option = document.createElement("li");
     option.id = `compose-completion-option-${index}`;
-    option.className = "compose-completion-option";
+    option.className = `command-palette__row${index === completion.index ? " is-active" : ""}`;
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(index === completion.index));
     option.dataset.active = String(index === completion.index);
@@ -2557,11 +2557,11 @@ function renderComposerCompletion() {
     });
 
     const title = document.createElement("strong");
-    title.className = "compose-completion-title";
+    title.className = "command-palette__label";
     title.textContent = item.label;
 
     const detail = document.createElement("p");
-    detail.className = "compose-completion-detail muted small-text";
+    detail.className = "command-palette__description";
     detail.textContent = item.detail;
 
     option.append(title, detail);
