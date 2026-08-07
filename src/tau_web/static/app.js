@@ -159,8 +159,6 @@ function bindUi() {
     restoreSessionButton: requiredElement("restore-session-button"),
     showActiveSessions: requiredElement("show-active-sessions"),
     showArchivedSessions: requiredElement("show-archived-sessions"),
-    sessionCount: requiredElement("session-count"),
-    sessionList: requiredElement("session-list"),
     timelineMain: requiredElement("timeline-main"),
     timelineMeta: requiredElement("timeline-meta"),
     agentStatusIndicator: requiredElement("agent-status-indicator"),
@@ -240,6 +238,10 @@ function installEventHandlers() {
   window.addEventListener("tau:completion-select", (event) => {
     const index = Number(event.detail?.index);
     if (Number.isInteger(index)) void chooseComposerCompletion(index);
+  });
+  window.addEventListener("tau:session-select", (event) => {
+    const sessionId = event.detail?.sessionId;
+    if (typeof sessionId === "string") void selectSession(sessionId, { reconnect: true });
   });
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
@@ -1586,43 +1588,14 @@ function renderPlan() {
 }
 
 function renderSessions() {
-  const sessions = visibleSessions();
-  ui.sessionCount.textContent = `${sessions.length} session${sessions.length === 1 ? "" : "s"}`;
-  ui.sessionList.replaceChildren();
-
-  if (!sessions.length) {
-    ui.sessionList.append(createPlaceholderItem("No sessions available."));
-    return;
-  }
-
-  for (const session of sessions) {
-    const item = document.createElement("li");
-    item.className = "sessions-panel__item";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "sessions-panel__session";
-    button.dataset.active = String(session.session_id === state.selectedSessionId);
-    button.addEventListener("click", () => {
-      void selectSession(session.session_id, { reconnect: true });
-    });
-
-    const card = document.createElement("div");
-    card.className = "sessions-panel__session-body";
-
-    const title = document.createElement("strong");
-    title.className = "sessions-panel__session-title";
-    title.textContent = sessionLabel(session);
-    card.append(title);
-
-    const meta = document.createElement("span");
-    meta.className = "sessions-panel__session-meta";
-    meta.textContent = sessionMeta(session);
-    card.append(meta);
-
-    button.append(card);
-    item.append(button);
-    ui.sessionList.append(item);
-  }
+  window.dispatchEvent(new CustomEvent("tau:sessions-render", { detail: {
+    items: visibleSessions().map((session) => ({
+      sessionId: session.session_id,
+      title: sessionLabel(session),
+      meta: sessionMeta(session),
+      active: session.session_id === state.selectedSessionId,
+    })),
+  } }));
 }
 
 function renderSessionDetails() {

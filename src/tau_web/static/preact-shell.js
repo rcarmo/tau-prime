@@ -699,6 +699,35 @@ function PlanPanel({ hidden }) {
   ] });
 }
 
+// src/components/SessionList.tsx
+function SessionList({ filter, onSelectFilter }) {
+  const [items, setItems] = h2([]);
+  _2(() => {
+    const update = (event) => setItems(event.detail.items);
+    window.addEventListener("tau:sessions-render", update);
+    return () => window.removeEventListener("tau:sessions-render", update);
+  }, []);
+  const select = (sessionId) => window.dispatchEvent(new CustomEvent("tau:session-select", { detail: { sessionId } }));
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "sessions-panel__filters", role: "group", "aria-label": "Session list filter", children: [
+      /* @__PURE__ */ u2("button", { id: "show-active-sessions", type: "button", "aria-pressed": filter === "active", onClick: () => onSelectFilter("active"), children: "Active" }),
+      /* @__PURE__ */ u2("button", { id: "show-archived-sessions", type: "button", "aria-pressed": filter === "archived", onClick: () => onSelectFilter("archived"), children: "Archived" }),
+      /* @__PURE__ */ u2("span", { id: "session-count", className: "sessions-panel__count", children: [
+        items.length,
+        " session",
+        items.length === 1 ? "" : "s"
+      ] })
+    ] }),
+    /* @__PURE__ */ u2("ul", { id: "session-list", className: "sessions-panel__list", "aria-label": "Available sessions", children: [
+      !items.length && /* @__PURE__ */ u2("li", { className: "sessions-panel__item sessions-panel__placeholder", children: "No sessions available." }),
+      items.map((session) => /* @__PURE__ */ u2("li", { className: "sessions-panel__item", children: /* @__PURE__ */ u2("button", { type: "button", className: "sessions-panel__session", "data-active": String(session.active), onClick: () => select(session.sessionId), children: /* @__PURE__ */ u2("div", { className: "sessions-panel__session-body", children: [
+        /* @__PURE__ */ u2("strong", { className: "sessions-panel__session-title", children: session.title }),
+        /* @__PURE__ */ u2("span", { className: "sessions-panel__session-meta", children: session.meta })
+      ] }) }) }, session.sessionId))
+    ] })
+  ] });
+}
+
 // src/components/SidePanel.tsx
 var TITLES = {
   sessions: "Sessions",
@@ -731,12 +760,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
           /* @__PURE__ */ u2("button", { id: "archive-session-button", className: "sessions-panel__action", type: "button", children: "Archive" }),
           /* @__PURE__ */ u2("button", { id: "restore-session-button", className: "sessions-panel__action", type: "button", children: "Restore" })
         ] }),
-        /* @__PURE__ */ u2("div", { className: "sessions-panel__filters", role: "group", "aria-label": "Session list filter", children: [
-          /* @__PURE__ */ u2("button", { id: "show-active-sessions", type: "button", "aria-pressed": sessionFilter === "active", onClick: () => onSelectSessionFilter("active"), children: "Active" }),
-          /* @__PURE__ */ u2("button", { id: "show-archived-sessions", type: "button", "aria-pressed": sessionFilter === "archived", onClick: () => onSelectSessionFilter("archived"), children: "Archived" }),
-          /* @__PURE__ */ u2("span", { id: "session-count", className: "sessions-panel__count", children: "0 sessions" })
-        ] }),
-        /* @__PURE__ */ u2("ul", { id: "session-list", className: "sessions-panel__list", "aria-label": "Available sessions" })
+        /* @__PURE__ */ u2(SessionList, { filter: sessionFilter, onSelectFilter: onSelectSessionFilter })
       ] }),
       /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden: activeTab !== "workspace", children: [
         /* @__PURE__ */ u2("div", { className: "workspace__pane-top", children: [

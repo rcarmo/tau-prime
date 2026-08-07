@@ -609,11 +609,15 @@ def test_preact_owns_meter_controls() -> None:
 def test_preact_owns_session_filter_state() -> None:
     root = Path(__file__).parents[2] / "src" / "tau_web"
     hook = (root / "frontend/src/hooks/useSessionFilter.ts").read_text(encoding="utf-8")
-    nav = (root / "frontend/src/components/SidePanel.tsx").read_text(encoding="utf-8")
+    nav = (root / "frontend/src/components/SessionList.tsx").read_text(encoding="utf-8")
     legacy = (root / "static/app.js").read_text(encoding="utf-8")
 
     assert 'new CustomEvent("tau:session-filter"' in hook
-    assert 'aria-pressed={sessionFilter === "active"}' in nav
+    assert 'aria-pressed={filter === "active"}' in nav
+    assert 'window.addEventListener("tau:sessions-render"' in nav
+    assert 'new CustomEvent("tau:session-select"' in nav
     assert 'showActiveSessions.addEventListener("click"' not in legacy
     assert "ui.showActiveSessions.setAttribute" not in legacy
     assert 'window.addEventListener("tau:session-filter"' in legacy
+    assert 'new CustomEvent("tau:sessions-render"' in legacy
+    assert "ui.sessionList.replaceChildren" not in legacy

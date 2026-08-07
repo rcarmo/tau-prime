@@ -1,6 +1,7 @@
 import type { SidebarTab } from "../hooks/useSidebarTabs";
 import type { SessionFilter } from "../hooks/useSessionFilter";
 import { PlanPanel } from "./PlanPanel";
+import { SessionList } from "./SessionList";
 
 const TITLES: Record<SidebarTab, string> = {
   sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
@@ -42,12 +43,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
             <button id="archive-session-button" className="sessions-panel__action" type="button">Archive</button>
             <button id="restore-session-button" className="sessions-panel__action" type="button">Restore</button>
           </div>
-          <div className="sessions-panel__filters" role="group" aria-label="Session list filter">
-            <button id="show-active-sessions" type="button" aria-pressed={sessionFilter === "active"} onClick={() => onSelectSessionFilter("active")}>Active</button>
-            <button id="show-archived-sessions" type="button" aria-pressed={sessionFilter === "archived"} onClick={() => onSelectSessionFilter("archived")}>Archived</button>
-            <span id="session-count" className="sessions-panel__count">0 sessions</span>
-          </div>
-          <ul id="session-list" className="sessions-panel__list" aria-label="Available sessions" />
+          <SessionList filter={sessionFilter} onSelectFilter={onSelectSessionFilter} />
         </section>
 
         <section id="panel-workspace" className="workspace" aria-labelledby="tab-workspace" hidden={activeTab !== "workspace"}>
