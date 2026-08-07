@@ -1867,153 +1867,37 @@ function messageAttachments(message) {
   return references;
 }
 
-function createTimelineAttachments(attachments) {
-  if (!attachments.length) {
-    return null;
-  }
-  const gallery = document.createElement("div");
-  gallery.className = "timeline-attachments";
-  for (const attachment of attachments) {
-    const link = document.createElement("a");
-    link.className = "timeline-attachment";
-    const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
-    link.href = contentUrl;
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.title = attachment.filename;
-    if (state.authToken) {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        void downloadAuthenticatedMedia(contentUrl, attachment.filename);
-      });
-    }
-
-    if (attachment.mediaType.startsWith("image/")) {
-      const image = document.createElement("img");
-      image.className = "timeline-attachment-image";
-      const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
-      image.alt = attachment.filename;
-      image.loading = "lazy";
-      if (state.authToken) {
-        void loadAuthenticatedImage(image, thumbnailUrl);
-      } else {
-        image.src = thumbnailUrl;
-      }
-      link.append(image);
-    }
-
-    const label = document.createElement("span");
-    label.className = "timeline-attachment-label";
-    label.textContent = attachment.filename;
-    link.append(label);
-    gallery.append(link);
-  }
-  return gallery;
-}
-
-async function fetchMediaBlob(url) {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: buildHeaders("GET", { Accept: "*/*" }),
-    credentials: "same-origin",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response);
-  }
-  return await response.blob();
-}
-
-async function loadAuthenticatedImage(image, url) {
-  try {
-    const blob = await fetchMediaBlob(url);
-    const objectUrl = URL.createObjectURL(blob);
-    image.addEventListener("load", () => URL.revokeObjectURL(objectUrl), { once: true });
-    image.src = objectUrl;
-  } catch (error) {
-    image.alt = `${image.alt} (preview unavailable)`;
-    console.warn("Unable to load attachment preview", error);
-  }
-}
-
-async function downloadAuthenticatedMedia(url, filename) {
-  try {
-    const blob = await fetchMediaBlob(url);
-    const objectUrl = URL.createObjectURL(blob);
-    const download = document.createElement("a");
-    download.href = objectUrl;
-    download.download = filename;
-    document.body.append(download);
-    download.click();
-    download.remove();
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  } catch (error) {
-    handleError(error, "Unable to download the attachment.");
-  }
-}
-
 function renderTimeline() {
-  ui.timelineList.replaceChildren();
-  const timelineItems = state.messages.map((entry) => ({
-    role: entry?.message?.role ?? "assistant",
-    content: displayMessageContent(entry?.message),
-    attachments: messageAttachments(entry?.message),
-    meta: typeof entry?.id === "string" ? `Entry ${shortId(entry.id)}` : "Persisted message",
-  }));
+  const timelineItems = state.messages.map((entry) => {
+    const message = entry?.message ?? {};
+    return {
+      id: typeof entry?.id === "string" ? entry.id : undefined,
+      role: message.role ?? "assistant",
+      content: displayMessageContent(message),
+      attachments: messageAttachments(message),
+      toolCalls: Array.isArray(message.tool_calls) ? message.tool_calls : [],
+      toolCallId: typeof message.tool_call_id === "string" ? message.tool_call_id : undefined,
+      toolName: typeof message.name === "string" ? message.name : undefined,
+      toolOk: message.ok !== false,
+      meta: typeof entry?.id === "string" ? `Entry ${shortId(entry.id)}` : "Persisted message",
+    };
+  });
 
   if (state.liveDraft?.content) {
     timelineItems.push({
       role: "assistant",
       content: state.liveDraft.content,
+      attachments: [],
+      toolCalls: [],
+      toolOk: true,
       meta: "Streaming draft",
       live: true,
     });
   }
 
-  if (!state.selectedSessionId) {
-    ui.timelineList.append(createPlaceholderItem("Select or create a session to load the timeline."));
-    return;
-  }
-  if (!timelineItems.length) {
-    ui.timelineList.append(createPlaceholderItem("No persisted messages yet."));
-    return;
-  }
-
-  for (const item of timelineItems) {
-    const isUser = item.role === "user";
-    const listItem = document.createElement("li");
-    listItem.className = `message-list__item message-list__item--${isUser ? "user" : "agent"}`;
-
-    const avatar = document.createElement("div");
-    avatar.className = `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`;
-    avatar.setAttribute("aria-hidden", "true");
-    avatar.textContent = isUser ? "Y" : "τ";
-
-    const body = document.createElement("div");
-    body.className = item.live ? "message-list__body message-list__body--draft" : "message-list__body";
-
-    const header = document.createElement("div");
-    header.className = "message-list__header";
-    const name = document.createElement("span");
-    name.className = `message-list__name message-list__name--${isUser ? "user" : "agent"}`;
-    name.textContent = isUser ? "You" : "Tau";
-    const meta = document.createElement("span");
-    meta.className = "message-list__time";
-    meta.textContent = item.live ? "live" : item.meta;
-    header.append(name, meta);
-
-    const content = document.createElement("div");
-    content.className = "message-list__content";
-    content.textContent = item.content || "(empty)";
-    body.append(header, content);
-
-    const attachmentGallery = createTimelineAttachments(item.attachments ?? []);
-    if (attachmentGallery) {
-      attachmentGallery.classList.add("message-list__attachments");
-      body.append(attachmentGallery);
-    }
-    listItem.append(avatar, body);
-    ui.timelineList.append(listItem);
-  }
+  window.dispatchEvent(new CustomEvent("tau:timeline-render", {
+    detail: { selected: Boolean(state.selectedSessionId), items: timelineItems },
+  }));
 }
 
 function renderWorkspace() {

@@ -605,30 +605,6 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
   ] });
 }
 
-// src/components/Timeline.tsx
-function Timeline() {
-  return /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
-    /* @__PURE__ */ u2("div", { id: "timeline-main", className: "message-list", tabIndex: -1, children: [
-      /* @__PURE__ */ u2("div", { id: "timeline-meta", className: "message-list__status-banner", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
-      /* @__PURE__ */ u2("ol", { id: "timeline-list", className: "timeline-list message-list__items", "aria-live": "polite", tabIndex: 0 })
-    ] }),
-    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
-  ] });
-}
-function SessionRuntime() {
-  return /* @__PURE__ */ u2("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
-    /* @__PURE__ */ u2("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
-      /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
-      /* @__PURE__ */ u2("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
-    ] }),
-    /* @__PURE__ */ u2("section", { className: "agent-status-panel__section", children: [
-      /* @__PURE__ */ u2("div", { className: "agent-status-panel__title", children: "Session branch" }),
-      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools" })
-    ] })
-  ] });
-}
-
 // node_modules/preact/hooks/dist/hooks.module.js
 var t2;
 var r2;
@@ -770,6 +746,125 @@ function C2(n2, t3) {
 }
 function D(n2, t3) {
   return "function" == typeof t3 ? t3(n2) : t3;
+}
+
+// src/components/Timeline.tsx
+function valueText(value) {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+function ToolCallBlock({ call, result }) {
+  const [open, setOpen] = h2(false);
+  const name = call.name || result?.toolName || "tool";
+  const input = valueText(call.arguments);
+  const output = result?.content ?? "";
+  return /* @__PURE__ */ u2("div", { className: "message-list__tool-call", children: [
+    /* @__PURE__ */ u2("button", { className: "message-list__tool-call-header", type: "button", onClick: () => setOpen((value) => !value), "aria-expanded": open, children: [
+      /* @__PURE__ */ u2("span", { className: "message-list__tool-call-icon", children: open ? "\u25BE" : "\u25B8" }),
+      /* @__PURE__ */ u2("span", { className: "message-list__tool-call-name", children: name }),
+      result && /* @__PURE__ */ u2("span", { className: "message-list__tool-call-badge", children: result.toolOk === false ? "failed" : "done" })
+    ] }),
+    open && /* @__PURE__ */ u2("div", { className: "message-list__tool-call-body", children: [
+      input && /* @__PURE__ */ u2("pre", { className: "message-list__tool-call-code", children: input }),
+      output && /* @__PURE__ */ u2(b, { children: [
+        /* @__PURE__ */ u2("div", { className: "message-list__tool-call-result-label", children: "Result" }),
+        /* @__PURE__ */ u2("pre", { className: "message-list__tool-call-code", children: output })
+      ] })
+    ] })
+  ] });
+}
+function AttachmentChip({ attachment }) {
+  const [previewUrl, setPreviewUrl] = h2(null);
+  const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
+  const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
+  const token = localStorage.getItem("tau.web.authToken");
+  y2(() => {
+    if (!token || !attachment.mediaType.startsWith("image/")) return;
+    let objectUrl = null;
+    const controller = new AbortController();
+    void fetch(thumbnailUrl, { headers: { Authorization: `Bearer ${token}` }, credentials: "same-origin", signal: controller.signal }).then((response) => response.ok ? response.blob() : Promise.reject(new Error("Preview unavailable"))).then((blob) => {
+      objectUrl = URL.createObjectURL(blob);
+      setPreviewUrl(objectUrl);
+    }).catch(() => void 0);
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.mediaType, thumbnailUrl, token]);
+  const download = async (event) => {
+    if (!token) return;
+    event.preventDefault();
+    const response = await fetch(contentUrl, { headers: { Authorization: `Bearer ${token}` }, credentials: "same-origin" });
+    if (!response.ok) return;
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = attachment.filename;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  };
+  return /* @__PURE__ */ u2("a", { className: "attachment-chip", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
+    attachment.mediaType.startsWith("image/") ? /* @__PURE__ */ u2("img", { className: "attachment-chip__preview", src: previewUrl ?? thumbnailUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ u2("span", { className: "attachment-chip__icon", "aria-hidden": "true", children: "\u{1F4C4}" }),
+    /* @__PURE__ */ u2("span", { className: "attachment-chip__name", children: attachment.filename }),
+    /* @__PURE__ */ u2("i", { className: "codicon codicon-desktop-download attachment-chip__action", "aria-hidden": "true" })
+  ] });
+}
+function MessageItem({ item, resultByCall }) {
+  const isUser = item.role === "user";
+  const isTool = item.role === "tool";
+  if (isTool) return null;
+  return /* @__PURE__ */ u2("li", { className: `message-list__item message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
+    /* @__PURE__ */ u2("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
+    /* @__PURE__ */ u2("div", { className: item.live ? "message-list__body message-list__body--draft" : "message-list__body", children: [
+      /* @__PURE__ */ u2("div", { className: "message-list__header", children: [
+        /* @__PURE__ */ u2("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
+        /* @__PURE__ */ u2("span", { className: "message-list__time", children: item.live ? "live" : item.meta })
+      ] }),
+      item.toolCalls && item.toolCalls.length > 0 && /* @__PURE__ */ u2("div", { className: "message-list__tool-calls", children: item.toolCalls.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)) }),
+      item.content && /* @__PURE__ */ u2("div", { className: "message-list__content", children: item.content }),
+      item.attachments && item.attachments.length > 0 && /* @__PURE__ */ u2("div", { className: "message-list__attachments", children: item.attachments.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { attachment }, attachment.mediaId)) })
+    ] })
+  ] });
+}
+function Timeline() {
+  const [timeline, setTimeline] = h2({ selected: false, items: [] });
+  _2(() => {
+    const update = (event) => {
+      const detail = event.detail;
+      if (detail && Array.isArray(detail.items)) setTimeline(detail);
+    };
+    window.addEventListener("tau:timeline-render", update);
+    return () => window.removeEventListener("tau:timeline-render", update);
+  }, []);
+  const resultByCall = /* @__PURE__ */ new Map();
+  for (const item of timeline.items) if (item.role === "tool" && item.toolCallId) resultByCall.set(item.toolCallId, item);
+  const visibleItems = timeline.items.filter((item) => item.role !== "tool");
+  const empty = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
+    /* @__PURE__ */ u2("div", { id: "timeline-main", className: "message-list", tabIndex: -1, children: [
+      /* @__PURE__ */ u2("div", { id: "timeline-meta", className: "message-list__status-banner", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
+      /* @__PURE__ */ u2("ol", { id: "timeline-list", className: "timeline-list message-list__items", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u2("li", { className: "message-list__empty", children: empty }) : visibleItems.map((item, index) => /* @__PURE__ */ u2(MessageItem, { item, resultByCall }, item.id ?? index)) })
+    ] }),
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
+  ] });
+}
+function SessionRuntime() {
+  return /* @__PURE__ */ u2("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
+    /* @__PURE__ */ u2("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
+      /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
+    ] }),
+    /* @__PURE__ */ u2("section", { className: "agent-status-panel__section", children: [
+      /* @__PURE__ */ u2("div", { className: "agent-status-panel__title", children: "Session branch" }),
+      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools" })
+    ] })
+  ] });
 }
 
 // src/api/client.ts
