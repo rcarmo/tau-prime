@@ -30,6 +30,7 @@ class OpenAICompatibleConfig:
     reasoning_effort_parameter: str = "reasoning_effort"
     force_chat_completions: bool = False
     prompt_cache_affinity: bool | None = None
+    model_aliases: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True)

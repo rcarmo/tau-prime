@@ -137,8 +137,9 @@ class OpenAICompatibleProvider:
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
         """Stream one chat completion response as provider-neutral events."""
+        request_model = (self._config.model_aliases or {}).get(model, model)
         payload = _build_chat_payload(
-            model=model,
+            model=request_model,
             system=system,
             messages=messages,
             tools=tools,
@@ -164,8 +165,9 @@ class OpenAICompatibleProvider:
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
         """Stream one `/v1/responses` response as provider-neutral events."""
+        request_model = (self._config.model_aliases or {}).get(model, model)
         payload = _build_responses_payload(
-            model=model,
+            model=request_model,
             system=system,
             messages=messages,
             tools=tools,

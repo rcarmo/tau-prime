@@ -150,6 +150,7 @@ async def test_openai_compatible_provider_formats_request_and_streams_text() -> 
                 api_key="test-key",
                 base_url="https://example.test/v1",
                 headers={"X-HF-Bill-To": "my-org"},
+                model_aliases={"test-model": "test-model:provider-a"},
             ),
             client=client,
         )
@@ -179,7 +180,7 @@ async def test_openai_compatible_provider_formats_request_and_streams_text() -> 
     assert request.headers["x-hf-bill-to"] == "my-org"
 
     payload = loads(request.content)
-    assert payload["model"] == "test-model"
+    assert payload["model"] == "test-model:provider-a"
     assert payload["stream"] is True
     assert "reasoning_effort" not in payload
     assert payload["messages"] == [
