@@ -6,6 +6,7 @@ import { Dashboard } from "./components/Dashboard";
 import { SessionNav } from "./components/SessionNav";
 import { Timeline } from "./components/Timeline";
 import { SidePanel } from "./components/SidePanel";
+import { Onboarding } from "./components/Onboarding";
 
 /** Preact-owned Tau shell. Regions remain DOM-compatible while they are
  * incrementally replaced by typed components. */
@@ -32,6 +33,7 @@ function TauShell() {
           </div>
         </div>
       </div>
+      <Onboarding />
       <button
         id="drawer-backdrop"
         className="drawer-backdrop"

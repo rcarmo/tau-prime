@@ -62,8 +62,8 @@ function M() {
   M.__r = 0;
 }
 function P(n2, l3, u4, t3, i4, o3, r3, f4, e3, c3, s3) {
-  var a3, p3, y2, d3, w3, _2 = t3 && t3.__k || v, g2 = l3.length;
-  for (u4.__d = e3, $(u4, l3, _2), e3 = u4.__d, a3 = 0; a3 < g2; a3++) null != (y2 = u4.__k[a3]) && (p3 = -1 === y2.__i ? h : _2[y2.__i] || h, y2.__i = a3, O(n2, y2, p3, i4, o3, r3, f4, e3, c3, s3), d3 = y2.__e, y2.ref && p3.ref != y2.ref && (p3.ref && N(p3.ref, null, y2), s3.push(y2.ref, y2.__c || d3, y2)), null == w3 && null != d3 && (w3 = d3), 65536 & y2.__u || p3.__k === y2.__k ? e3 = I(y2, e3, n2) : "function" == typeof y2.type && void 0 !== y2.__d ? e3 = y2.__d : d3 && (e3 = d3.nextSibling), y2.__d = void 0, y2.__u &= -196609);
+  var a3, p3, y3, d3, w3, _2 = t3 && t3.__k || v, g2 = l3.length;
+  for (u4.__d = e3, $(u4, l3, _2), e3 = u4.__d, a3 = 0; a3 < g2; a3++) null != (y3 = u4.__k[a3]) && (p3 = -1 === y3.__i ? h : _2[y3.__i] || h, y3.__i = a3, O(n2, y3, p3, i4, o3, r3, f4, e3, c3, s3), d3 = y3.__e, y3.ref && p3.ref != y3.ref && (p3.ref && N(p3.ref, null, y3), s3.push(y3.ref, y3.__c || d3, y3)), null == w3 && null != d3 && (w3 = d3), 65536 & y3.__u || p3.__k === y3.__k ? e3 = I(y3, e3, n2) : "function" == typeof y3.type && void 0 !== y3.__d ? e3 = y3.__d : d3 && (e3 = d3.nextSibling), y3.__d = void 0, y3.__u &= -196609);
   u4.__d = e3, u4.__e = w3;
 }
 function $(n2, l3, u4) {
@@ -130,13 +130,13 @@ function F(n2) {
   };
 }
 function O(n2, u4, t3, i4, o3, r3, f4, e3, c3, s3) {
-  var a3, h3, v3, p3, w3, _2, g2, m2, x2, C2, S2, M2, $2, I2, H, L2, T2 = u4.type;
+  var a3, h3, v3, p3, w3, _2, g2, m2, x2, C3, S2, M2, $2, I2, H, L2, T3 = u4.type;
   if (void 0 !== u4.constructor) return null;
   128 & t3.__u && (c3 = !!(32 & t3.__u), r3 = [e3 = u4.__e = t3.__e]), (a3 = l.__b) && a3(u4);
-  n: if ("function" == typeof T2) try {
-    if (m2 = u4.props, x2 = "prototype" in T2 && T2.prototype.render, C2 = (a3 = T2.contextType) && i4[a3.__c], S2 = a3 ? C2 ? C2.props.value : a3.__ : i4, t3.__c ? g2 = (h3 = u4.__c = t3.__c).__ = h3.__E : (x2 ? u4.__c = h3 = new T2(m2, S2) : (u4.__c = h3 = new k(m2, S2), h3.constructor = T2, h3.render = q), C2 && C2.sub(h3), h3.props = m2, h3.state || (h3.state = {}), h3.context = S2, h3.__n = i4, v3 = h3.__d = true, h3.__h = [], h3._sb = []), x2 && null == h3.__s && (h3.__s = h3.state), x2 && null != T2.getDerivedStateFromProps && (h3.__s == h3.state && (h3.__s = d({}, h3.__s)), d(h3.__s, T2.getDerivedStateFromProps(m2, h3.__s))), p3 = h3.props, w3 = h3.state, h3.__v = u4, v3) x2 && null == T2.getDerivedStateFromProps && null != h3.componentWillMount && h3.componentWillMount(), x2 && null != h3.componentDidMount && h3.__h.push(h3.componentDidMount);
+  n: if ("function" == typeof T3) try {
+    if (m2 = u4.props, x2 = "prototype" in T3 && T3.prototype.render, C3 = (a3 = T3.contextType) && i4[a3.__c], S2 = a3 ? C3 ? C3.props.value : a3.__ : i4, t3.__c ? g2 = (h3 = u4.__c = t3.__c).__ = h3.__E : (x2 ? u4.__c = h3 = new T3(m2, S2) : (u4.__c = h3 = new k(m2, S2), h3.constructor = T3, h3.render = q), C3 && C3.sub(h3), h3.props = m2, h3.state || (h3.state = {}), h3.context = S2, h3.__n = i4, v3 = h3.__d = true, h3.__h = [], h3._sb = []), x2 && null == h3.__s && (h3.__s = h3.state), x2 && null != T3.getDerivedStateFromProps && (h3.__s == h3.state && (h3.__s = d({}, h3.__s)), d(h3.__s, T3.getDerivedStateFromProps(m2, h3.__s))), p3 = h3.props, w3 = h3.state, h3.__v = u4, v3) x2 && null == T3.getDerivedStateFromProps && null != h3.componentWillMount && h3.componentWillMount(), x2 && null != h3.componentDidMount && h3.__h.push(h3.componentDidMount);
     else {
-      if (x2 && null == T2.getDerivedStateFromProps && m2 !== p3 && null != h3.componentWillReceiveProps && h3.componentWillReceiveProps(m2, S2), !h3.__e && (null != h3.shouldComponentUpdate && false === h3.shouldComponentUpdate(m2, h3.__s, S2) || u4.__v === t3.__v)) {
+      if (x2 && null == T3.getDerivedStateFromProps && m2 !== p3 && null != h3.componentWillReceiveProps && h3.componentWillReceiveProps(m2, S2), !h3.__e && (null != h3.shouldComponentUpdate && false === h3.shouldComponentUpdate(m2, h3.__s, S2) || u4.__v === t3.__v)) {
         for (u4.__v !== t3.__v && (h3.props = m2, h3.state = h3.__s, h3.__d = false), u4.__e = t3.__e, u4.__k = t3.__k, u4.__k.some(function(n3) {
           n3 && (n3.__ = u4);
         }), M2 = 0; M2 < h3._sb.length; M2++) h3.__h.push(h3._sb[M2]);
@@ -178,18 +178,18 @@ function j(n2, u4, t3) {
   });
 }
 function z(u4, t3, i4, o3, r3, f4, e3, c3, s3) {
-  var a3, v3, p3, d3, _2, g2, m2, b2 = i4.props, k3 = t3.props, C2 = t3.type;
-  if ("svg" === C2 ? r3 = "http://www.w3.org/2000/svg" : "math" === C2 ? r3 = "http://www.w3.org/1998/Math/MathML" : r3 || (r3 = "http://www.w3.org/1999/xhtml"), null != f4) {
-    for (a3 = 0; a3 < f4.length; a3++) if ((_2 = f4[a3]) && "setAttribute" in _2 == !!C2 && (C2 ? _2.localName === C2 : 3 === _2.nodeType)) {
+  var a3, v3, p3, d3, _2, g2, m2, b2 = i4.props, k3 = t3.props, C3 = t3.type;
+  if ("svg" === C3 ? r3 = "http://www.w3.org/2000/svg" : "math" === C3 ? r3 = "http://www.w3.org/1998/Math/MathML" : r3 || (r3 = "http://www.w3.org/1999/xhtml"), null != f4) {
+    for (a3 = 0; a3 < f4.length; a3++) if ((_2 = f4[a3]) && "setAttribute" in _2 == !!C3 && (C3 ? _2.localName === C3 : 3 === _2.nodeType)) {
       u4 = _2, f4[a3] = null;
       break;
     }
   }
   if (null == u4) {
-    if (null === C2) return document.createTextNode(k3);
-    u4 = document.createElementNS(r3, C2, k3.is && k3), c3 && (l.__m && l.__m(t3, f4), c3 = false), f4 = null;
+    if (null === C3) return document.createTextNode(k3);
+    u4 = document.createElementNS(r3, C3, k3.is && k3), c3 && (l.__m && l.__m(t3, f4), c3 = false), f4 = null;
   }
-  if (null === C2) b2 === k3 || c3 && u4.data === k3 || (u4.data = k3);
+  if (null === C3) b2 === k3 || c3 && u4.data === k3 || (u4.data = k3);
   else {
     if (f4 = f4 && n.call(u4.childNodes), b2 = i4.props || h, !c3 && null != f4) for (b2 = {}, a3 = 0; a3 < u4.attributes.length; a3++) b2[(_2 = u4.attributes[a3]).name] = _2.value;
     for (a3 in b2) if (_2 = b2[a3], "children" == a3) ;
@@ -200,8 +200,8 @@ function z(u4, t3, i4, o3, r3, f4, e3, c3, s3) {
     }
     for (a3 in k3) _2 = k3[a3], "children" == a3 ? d3 = _2 : "dangerouslySetInnerHTML" == a3 ? v3 = _2 : "value" == a3 ? g2 = _2 : "checked" == a3 ? m2 = _2 : c3 && "function" != typeof _2 || b2[a3] === _2 || A(u4, a3, _2, b2[a3], r3);
     if (v3) c3 || p3 && (v3.__html === p3.__html || v3.__html === u4.innerHTML) || (u4.innerHTML = v3.__html), t3.__k = [];
-    else if (p3 && (u4.innerHTML = ""), P(u4, y(d3) ? d3 : [d3], t3, i4, o3, "foreignObject" === C2 ? "http://www.w3.org/1999/xhtml" : r3, f4, e3, f4 ? f4[0] : i4.__k && x(i4, 0), c3, s3), null != f4) for (a3 = f4.length; a3--; ) w(f4[a3]);
-    c3 || (a3 = "value", "progress" === C2 && null == g2 ? u4.removeAttribute("value") : void 0 !== g2 && (g2 !== u4[a3] || "progress" === C2 && !g2 || "option" === C2 && g2 !== b2[a3]) && A(u4, a3, g2, b2[a3], r3), a3 = "checked", void 0 !== m2 && m2 !== u4[a3] && A(u4, a3, m2, b2[a3], r3));
+    else if (p3 && (u4.innerHTML = ""), P(u4, y(d3) ? d3 : [d3], t3, i4, o3, "foreignObject" === C3 ? "http://www.w3.org/1999/xhtml" : r3, f4, e3, f4 ? f4[0] : i4.__k && x(i4, 0), c3, s3), null != f4) for (a3 = f4.length; a3--; ) w(f4[a3]);
+    c3 || (a3 = "value", "progress" === C3 && null == g2 ? u4.removeAttribute("value") : void 0 !== g2 && (g2 !== u4[a3] || "progress" === C3 && !g2 || "option" === C3 && g2 !== b2[a3]) && A(u4, a3, g2, b2[a3], r3), a3 = "checked", void 0 !== m2 && m2 !== u4[a3] && A(u4, a3, m2, b2[a3], r3));
   }
   return u4;
 }
@@ -309,6 +309,14 @@ function p2(n2, u4, i4) {
   }
   return o3.__N || o3.__;
 }
+function y2(n2, u4) {
+  var i4 = d2(t2++, 3);
+  !c2.__s && C2(i4.__H, u4) && (i4.__ = n2, i4.i = u4, r2.__H.__h.push(i4));
+}
+function T2(n2, r3) {
+  var u4 = d2(t2++, 7);
+  return C2(u4.__H, r3) && (u4.__ = n2(), u4.__H = r3, u4.__h = n2), u4.__;
+}
 function j2() {
   for (var n2; n2 = f2.shift(); ) if (n2.__P && n2.__H) try {
     n2.__H.__h.forEach(z2), n2.__H.__h.forEach(B2), n2.__H.__h = [];
@@ -370,6 +378,11 @@ function B2(n2) {
   var t3 = r2;
   n2.__c = n2.__(), r2 = t3;
 }
+function C2(n2, t3) {
+  return !n2 || n2.length !== t3.length || t3.some(function(t4, r3) {
+    return t4 !== n2[r3];
+  });
+}
 function D(n2, t3) {
   return "function" == typeof t3 ? t3(n2) : t3;
 }
@@ -416,13 +429,13 @@ function ActivityBar() {
 }
 
 // src/components/StatusBar.tsx
-var Meter = ({ id, label }) => /* @__PURE__ */ u3("figure", { className: "meter-tile", children: [
+var Meter = ({ id: id2, label }) => /* @__PURE__ */ u3("figure", { className: "meter-tile", children: [
   /* @__PURE__ */ u3("figcaption", { children: [
     label,
     " ",
-    /* @__PURE__ */ u3("output", { id: `meter-${id}-value`, children: "--" })
+    /* @__PURE__ */ u3("output", { id: `meter-${id2}-value`, children: "--" })
   ] }),
-  /* @__PURE__ */ u3("svg", { id: `meter-${id}-sparkline`, role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
+  /* @__PURE__ */ u3("svg", { id: `meter-${id2}-sparkline`, role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
 ] });
 function StatusBar() {
   return /* @__PURE__ */ u3("header", { className: "topbar", "aria-label": "Tau status bar", children: [
@@ -471,9 +484,9 @@ function StatusBar() {
 }
 
 // src/components/Composer.tsx
-var SelectControl = ({ id, name, label, children }) => /* @__PURE__ */ u3("div", { className: "compose-control", children: [
-  /* @__PURE__ */ u3("label", { htmlFor: id, children: label }),
-  /* @__PURE__ */ u3("select", { id, name, children })
+var SelectControl = ({ id: id2, name, label, children }) => /* @__PURE__ */ u3("div", { className: "compose-control", children: [
+  /* @__PURE__ */ u3("label", { htmlFor: id2, children: label }),
+  /* @__PURE__ */ u3("select", { id: id2, name, children })
 ] });
 function Composer() {
   return /* @__PURE__ */ u3("footer", { className: "composer-shell", children: [
@@ -628,7 +641,7 @@ function Timeline() {
 }
 
 // src/components/SidePanel.tsx
-var Tab = ({ id, panel, selected, children }) => /* @__PURE__ */ u3("button", { id, className: "tab-button", type: "button", role: "tab", "aria-controls": panel, "aria-selected": selected, children });
+var Tab = ({ id: id2, panel, selected, children }) => /* @__PURE__ */ u3("button", { id: id2, className: "tab-button", type: "button", role: "tab", "aria-controls": panel, "aria-selected": selected, children });
 function SidePanel() {
   return /* @__PURE__ */ u3("aside", { id: "side-panel", className: "panel panel-side", "aria-label": "Workspace search and settings", children: [
     /* @__PURE__ */ u3("div", { className: "panel-header sticky-header", children: [
@@ -731,6 +744,254 @@ function SidePanel() {
   ] });
 }
 
+// src/api/client.ts
+var ApiError = class extends Error {
+  constructor(message, status, code = "request_failed", details) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    this.name = "ApiError";
+  }
+};
+var SAFE_METHODS = /* @__PURE__ */ new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+var ApiClient = class {
+  constructor(options = {}) {
+    this.options = options;
+    this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
+  }
+  fetchImpl;
+  async request(path, init = {}) {
+    const method = (init.method ?? "GET").toUpperCase();
+    const headers = new Headers(init.headers);
+    headers.set("Accept", "application/json");
+    if (!SAFE_METHODS.has(method)) headers.set("X-Tau-CSRF", "1");
+    const token = this.options.authToken?.();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    let body = init.body;
+    if (init.json !== void 0) {
+      headers.set("Content-Type", "application/json");
+      body = JSON.stringify(init.json);
+    }
+    const response = await this.fetchImpl(path, {
+      ...init,
+      body,
+      credentials: "same-origin",
+      headers,
+      method
+    });
+    if (response.status === 204) return null;
+    const isJson = response.headers.get("content-type")?.includes("application/json") ?? false;
+    const payload = isJson ? await response.json() : await response.text();
+    if (!response.ok) {
+      const error = typeof payload === "object" && payload !== null ? payload.error : void 0;
+      throw new ApiError(
+        error?.message ?? `${response.status} ${response.statusText}`.trim(),
+        response.status,
+        error?.code,
+        error?.details
+      );
+    }
+    return payload;
+  }
+};
+
+// src/api/tau.ts
+var id = encodeURIComponent;
+var TauApi = class {
+  constructor(client = new ApiClient()) {
+    this.client = client;
+  }
+  settings() {
+    return this.client.request("/api/settings");
+  }
+  onboarding() {
+    return this.client.request("/api/onboarding");
+  }
+  configureOnboarding(input) {
+    return this.client.request("/api/onboarding", { method: "PUT", json: input });
+  }
+  models() {
+    return this.client.request("/api/models");
+  }
+  commands() {
+    return this.client.request("/api/commands");
+  }
+  sessions() {
+    return this.client.request("/api/sessions");
+  }
+  session(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}`);
+  }
+  createSession(input) {
+    return this.client.request("/api/sessions", { method: "POST", json: input });
+  }
+  updateSession(sessionId, input) {
+    return this.client.request(`/api/sessions/${id(sessionId)}`, { method: "PATCH", json: input });
+  }
+  archiveSession(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}`, { method: "DELETE" });
+  }
+  timeline(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/timeline`);
+  }
+  entries(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/entries`);
+  }
+  messages(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/messages`);
+  }
+  branches(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/branches`);
+  }
+  selectBranch(sessionId, input) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/branches/select`, { method: "POST", json: input });
+  }
+  context(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/context`);
+  }
+  usage(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/usage`);
+  }
+  runs(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/runs`);
+  }
+  submitRun(sessionId, input) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/runs`, { method: "POST", json: input });
+  }
+  runAction(runId, action) {
+    return this.client.request(`/api/runs/${id(runId)}/${action}`, { method: "POST" });
+  }
+  queue(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/queue`);
+  }
+  enqueue(sessionId, content, kind) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/queue`, { method: "POST", json: { content, kind } });
+  }
+  plan(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/plan`);
+  }
+  savePlan(sessionId, plan) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/plan`, { method: "PUT", json: plan });
+  }
+  approvals(sessionId) {
+    return this.client.request(`/api/sessions/${id(sessionId)}/approvals`);
+  }
+  resolveApproval(approvalId, resolution) {
+    return this.client.request(`/api/approvals/${id(approvalId)}`, { method: "POST", json: { resolution } });
+  }
+  media() {
+    return this.client.request("/api/media");
+  }
+  uploadMedia(body) {
+    return this.client.request("/api/media", { method: "POST", body });
+  }
+  deleteMedia(mediaId) {
+    return this.client.request(`/api/media/${id(mediaId)}`, { method: "DELETE" });
+  }
+  files(path = "") {
+    return this.client.request(`/api/files?path=${encodeURIComponent(path)}`);
+  }
+  search(query) {
+    return this.client.request(`/api/search?q=${encodeURIComponent(query)}`);
+  }
+  dashboard() {
+    return this.client.request("/dashboard");
+  }
+  meters() {
+    return this.client.request("/meters");
+  }
+  frontendModules() {
+    return this.client.request("/api/extensions/frontend-modules");
+  }
+  widget(extensionId, widgetId) {
+    return this.client.request(`/api/extensions/widgets/${id(extensionId)}/${id(widgetId)}`);
+  }
+  widgetAction(extensionId, widgetId, action, input) {
+    return this.client.request(`/api/extensions/widgets/${id(extensionId)}/${id(widgetId)}/actions/${id(action)}`, { method: "POST", json: input });
+  }
+  eventUrl(sessionId) {
+    return `/api/events?session_id=${id(sessionId)}`;
+  }
+};
+
+// src/components/Onboarding.tsx
+var api = new TauApi();
+function Onboarding() {
+  const [state, setState] = h2(null);
+  const [open, setOpen] = h2(false);
+  const [provider, setProvider] = h2("");
+  const [model, setModel] = h2("");
+  const [credential, setCredential] = h2("");
+  const [error, setError] = h2("");
+  const [saving, setSaving] = h2(false);
+  y2(() => {
+    api.onboarding().then((next) => {
+      setState(next);
+      setProvider(next.default_provider);
+      setModel(next.default_model);
+      setOpen(!next.configured);
+    }).catch((reason) => setError(String(reason)));
+  }, []);
+  const selected = T2(
+    () => state?.providers.find((item) => item.name === provider),
+    [state, provider]
+  );
+  function chooseProvider(name) {
+    const next = state?.providers.find((item) => item.name === name);
+    setProvider(name);
+    setModel(next?.default_model ?? "");
+    setCredential("");
+    setError("");
+  }
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const next = await api.configureOnboarding({
+        provider,
+        model,
+        ...credential.trim() ? { credential } : {}
+      });
+      setState(next);
+      setCredential("");
+      setOpen(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setSaving(false);
+    }
+  }
+  if (!state && !error) return null;
+  return /* @__PURE__ */ u3(b, { children: [
+    /* @__PURE__ */ u3("button", { className: "provider-setup-trigger", type: "button", onClick: () => setOpen(true), children: "Provider setup" }),
+    open && state ? /* @__PURE__ */ u3("div", { className: "onboarding-backdrop", role: "presentation", children: /* @__PURE__ */ u3("section", { className: "onboarding-dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "onboarding-title", children: [
+      /* @__PURE__ */ u3("h2", { id: "onboarding-title", children: "Connect a model provider" }),
+      /* @__PURE__ */ u3("p", { children: "Choose a provider and model. Credentials are stored locally and never returned by this API." }),
+      /* @__PURE__ */ u3("form", { onSubmit: submit, children: [
+        /* @__PURE__ */ u3("label", { children: [
+          "Provider",
+          /* @__PURE__ */ u3("select", { value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u3("option", { value: item.name, children: item.name })) })
+        ] }),
+        /* @__PURE__ */ u3("label", { children: [
+          "Model",
+          /* @__PURE__ */ u3("select", { value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u3("option", { value: item, children: item })) })
+        ] }),
+        selected?.credential_name ? /* @__PURE__ */ u3("label", { children: [
+          "API key",
+          /* @__PURE__ */ u3("input", { type: "password", value: credential, autocomplete: "off", onInput: (event) => setCredential(event.currentTarget.value), placeholder: selected.configured ? "Stored credential (leave blank to keep)" : "Required" })
+        ] }) : null,
+        error ? /* @__PURE__ */ u3("p", { className: "onboarding-error", role: "alert", children: error }) : null,
+        /* @__PURE__ */ u3("div", { className: "onboarding-actions", children: [
+          /* @__PURE__ */ u3("button", { type: "button", onClick: () => setOpen(false), children: "Cancel" }),
+          /* @__PURE__ */ u3("button", { type: "submit", disabled: saving || !provider || !model || Boolean(selected?.credential_name && !selected.configured && !credential.trim()), children: saving ? "Saving\u2026" : "Save and continue" })
+        ] })
+      ] })
+    ] }) }) : null
+  ] });
+}
+
 // src/index.tsx
 function TauShell() {
   return /* @__PURE__ */ u3(b, { children: [
@@ -748,6 +1009,7 @@ function TauShell() {
         /* @__PURE__ */ u3(Composer, {})
       ] }) }) }) })
     ] }),
+    /* @__PURE__ */ u3(Onboarding, {}),
     /* @__PURE__ */ u3(
       "button",
       {

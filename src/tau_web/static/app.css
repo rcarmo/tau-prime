@@ -1710,3 +1710,44 @@ button.danger-button {
   justify-content: flex-end;
   gap: 0.65rem;
 }
+
+.provider-setup-trigger {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 40;
+}
+.onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 68%);
+}
+.onboarding-dialog {
+  width: min(32rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1.5rem;
+  border: 1px solid var(--border, #334155);
+  background: var(--surface, #111827);
+  color: var(--text, #f8fafc);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 35%);
+}
+.onboarding-dialog form, .onboarding-dialog label {
+  display: grid;
+  gap: 0.5rem;
+}
+.onboarding-dialog form { gap: 1rem; }
+.onboarding-dialog select, .onboarding-dialog input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border, #475569);
+  background: var(--canvas, #0f172a);
+  color: inherit;
+}
+.onboarding-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+.onboarding-error { color: #fca5a5; }

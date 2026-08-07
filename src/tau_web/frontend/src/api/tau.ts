@@ -1,7 +1,7 @@
 import { ApiClient } from "./client";
 import type {
-  ApprovalRecord, CommandDescriptor, MediaRecord, ModelDescriptor, PlanDocument,
-  QueueItem, RunRecord, SessionRecord, TimelineItem,
+  ApprovalRecord, CommandDescriptor, MediaRecord, ModelDescriptor, OnboardingState,
+  PlanDocument, QueueItem, RunRecord, SessionRecord, TimelineItem,
 } from "./types";
 
 const id = encodeURIComponent;
@@ -10,6 +10,10 @@ export class TauApi {
   constructor(readonly client = new ApiClient()) {}
 
   settings() { return this.client.request<Record<string, unknown>>("/api/settings"); }
+  onboarding() { return this.client.request<OnboardingState>("/api/onboarding"); }
+  configureOnboarding(input: { provider: string; model: string; credential?: string }) {
+    return this.client.request<OnboardingState>("/api/onboarding", { method: "PUT", json: input });
+  }
   models() { return this.client.request<ModelDescriptor[]>("/api/models"); }
   commands() { return this.client.request<CommandDescriptor[]>("/api/commands"); }
   sessions() { return this.client.request<SessionRecord[]>("/api/sessions"); }

@@ -9,6 +9,7 @@ def setup_routes(app: Any) -> None:
     """Register Tau Web routes without importing aiohttp at package import time."""
     from tau_web.routes.approvals import setup_routes as setup_approval_routes
     from tau_web.routes.assets import setup_routes as setup_asset_routes
+    from tau_web.routes.auth import setup_routes as setup_auth_routes
     from tau_web.routes.dashboard import setup_routes as setup_dashboard_routes
     from tau_web.routes.events import setup_routes as setup_event_routes
     from tau_web.routes.extensions import setup_routes as setup_extension_routes
@@ -20,6 +21,7 @@ def setup_routes(app: Any) -> None:
     from tau_web.routes.timeline import setup_routes as setup_timeline_routes
 
     setup_approval_routes(app)
+    setup_auth_routes(app)
     setup_session_routes(app)
     setup_timeline_routes(app)
     setup_run_routes(app)

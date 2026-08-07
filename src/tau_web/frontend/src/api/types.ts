@@ -10,6 +10,19 @@ export type SessionRecord = {
 };
 
 export type ModelDescriptor = { provider_name: string; model: string };
+export type OnboardingProvider = {
+  name: string;
+  models: string[];
+  default_model: string;
+  credential_name: string | null;
+  configured: boolean;
+};
+export type OnboardingState = {
+  configured: boolean;
+  default_provider: string;
+  default_model: string;
+  providers: OnboardingProvider[];
+};
 export type CommandDescriptor = { name: string; description?: string; source?: string };
 export type TimelineItem = {
   id?: string;
