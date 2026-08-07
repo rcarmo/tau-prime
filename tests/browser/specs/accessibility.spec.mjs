@@ -9,6 +9,9 @@ async function waitForShell(page) {
   await expect
     .poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '')
     .not.toMatch(/Loading Tau shell/i);
+  const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
+  await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+  if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
 }
 
 function summarizeViolations(violations) {
