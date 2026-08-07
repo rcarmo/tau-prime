@@ -5852,6 +5852,29 @@ def test_github_copilot_is_subscription_login_provider() -> None:
     assert all(provider.name != "github-copilot" for provider in api_key)
 
 
+def test_first_usable_startup_selection_uses_configured_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = ProviderSettings(
+        default_provider="local",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="local",
+                base_url="http://localhost:11434/v1",
+                models=("local-model",),
+                default_model="local-model",
+            ),
+        ),
+    )
+    monkeypatch.setattr(tui_app, "provider_has_usable_credentials", lambda *_args, **_kwargs: True)
+
+    selection = tui_app._first_usable_startup_selection(settings)
+
+    assert selection is not None
+    assert selection.provider.name == "local"
+    assert selection.model == "local-model"
+
+
 def test_first_usable_startup_selection_skips_provider_without_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

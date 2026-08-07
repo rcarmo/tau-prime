@@ -95,6 +95,28 @@ def test_tui_prints_resume_hint_after_exit(monkeypatch: pytest.MonkeyPatch) -> N
     assert "tau --resume session-123" in result.output
 
 
+def test_bare_tui_reaches_onboarding_from_isolated_home(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    isolated_home = tmp_path / "home"
+    isolated_home.mkdir()
+    monkeypatch.setenv("HOME", str(isolated_home))
+    monkeypatch.delenv("TAU_HOME", raising=False)
+    seen: list[tuple[object, object]] = []
+
+    async def fake_tui(model: object, _cwd: object, *_args: object, **_kwargs: object) -> None:
+        seen.append((model, _args[2] if len(_args) > 2 else None))
+
+    monkeypatch.setattr(cli, "_startup_update_notice", lambda: None)
+    monkeypatch.setattr(cli, "run_openai_tui", fake_tui)
+
+    result = CliRunner().invoke(app, [])
+
+    assert result.exit_code == 0, result.output
+    assert seen == [(None, None)]
+    assert not (isolated_home / ".tau" / "providers.json").exists()
+
+
 def test_tui_suppresses_resume_hint_without_session(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_tui(*args: object, **kwargs: object) -> None:
         del args, kwargs
