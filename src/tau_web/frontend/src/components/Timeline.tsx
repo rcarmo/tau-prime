@@ -1,9 +1,12 @@
 export function Timeline() {
   return (
     <div id="timeline-main" className="chat__messages" tabIndex={-1}>
-      <div className="panel-header sticky-header">
-        <div><h2>Timeline</h2><p id="timeline-meta" className="muted">Load a session to inspect persisted messages.</p></div>
+      <div className="tab-bar" role="tablist" aria-label="Open views">
+        <button className="tab-bar__tab tab-bar__tab--active" type="button" role="tab" aria-selected="true">Chat</button>
+        <span id="timeline-meta" className="tab-bar__clock">Load a session to inspect persisted messages.</span>
       </div>
+      <details className="chat__session-details">
+        <summary>Session details</summary>
       <section className="branch-strip" aria-labelledby="branch-strip-title">
         <div className="branch-strip-header"><h3 id="branch-strip-title">Branches</h3><p className="muted small-text">Select the active leaf for restored playback.</p></div>
         <div id="branch-list" className="branch-list" />
@@ -38,6 +41,7 @@ export function Timeline() {
           <ul id="queue-list" className="queue-list" aria-live="polite" />
         </article>
       </section>
+      </details>
       <div className="extension-slot" data-extension-slot="timeline_before" />
       <ol id="timeline-list" className="timeline-list" aria-live="polite" tabIndex={0} />
       <div className="extension-slot" data-extension-slot="timeline_after" />

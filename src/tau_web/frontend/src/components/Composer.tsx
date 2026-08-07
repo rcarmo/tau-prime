@@ -12,6 +12,8 @@ export function Composer() {
     <footer className="chat__compose">
       <div className="extension-slot" data-extension-slot="compose_above" />
       <form id="compose-form" className="compose-form chat__compose-container">
+        <details className="chat__prompt-options">
+          <summary>Prompt options</summary>
         <section className="compose-toolbar chat__toolbar" aria-label="Prompt controls">
           <div className="compose-select-grid">
             <SelectControl id="compose-provider-select" name="provider_name" label="Provider" />
@@ -29,7 +31,8 @@ export function Composer() {
           </div>
           <ul id="compose-attachment-list" className="compose-attachment-list" aria-live="polite" aria-label="Staged attachments" />
         </section>
-        <label htmlFor="compose-input">Send a prompt to Tau</label>
+        </details>
+        <label className="sr-only" htmlFor="compose-input">Send a prompt to Tau</label>
         <div className="compose-editor-group">
           <div className="compose-row">
             <textarea id="compose-input" className="chat__input" name="prompt" rows={3} autoComplete="off" role="combobox" aria-autocomplete="list" aria-controls="compose-completion-listbox" aria-describedby="compose-help compose-completion-status" aria-expanded="false" aria-haspopup="listbox" placeholder="Select or create a session, then send a prompt." />

@@ -363,26 +363,29 @@ function Composer() {
   return /* @__PURE__ */ u2("footer", { className: "chat__compose", children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
     /* @__PURE__ */ u2("form", { id: "compose-form", className: "compose-form chat__compose-container", children: [
-      /* @__PURE__ */ u2("section", { className: "compose-toolbar chat__toolbar", "aria-label": "Prompt controls", children: [
-        /* @__PURE__ */ u2("div", { className: "compose-select-grid", children: [
-          /* @__PURE__ */ u2(SelectControl, { id: "compose-provider-select", name: "provider_name", label: "Provider" }),
-          /* @__PURE__ */ u2(SelectControl, { id: "compose-model-select", name: "model", label: "Model" }),
-          /* @__PURE__ */ u2(SelectControl, { id: "compose-thinking-select", name: "compose_thinking_level", label: "Thinking" }),
-          /* @__PURE__ */ u2(SelectControl, { id: "compose-delivery-mode", name: "delivery_mode", label: "Delivery", children: [
-            /* @__PURE__ */ u2("option", { value: "run", children: "Run immediately" }),
-            /* @__PURE__ */ u2("option", { value: "follow_up", children: "Queue follow-up" }),
-            /* @__PURE__ */ u2("option", { value: "steer", children: "Queue steer" })
-          ] })
-        ] }),
-        /* @__PURE__ */ u2("p", { id: "compose-context-readout", className: "muted small-text", children: "No session selected. Sending will create one." }),
-        /* @__PURE__ */ u2("div", { className: "compose-attachment-bar", children: [
-          /* @__PURE__ */ u2("button", { id: "compose-attachment-button", type: "button", children: "Attach files" }),
-          /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", type: "button", children: "Clear staged" }),
-          /* @__PURE__ */ u2("input", { id: "compose-file-input", className: "sr-only", type: "file", multiple: true, "aria-label": "Attach files" })
-        ] }),
-        /* @__PURE__ */ u2("ul", { id: "compose-attachment-list", className: "compose-attachment-list", "aria-live": "polite", "aria-label": "Staged attachments" })
+      /* @__PURE__ */ u2("details", { className: "chat__prompt-options", children: [
+        /* @__PURE__ */ u2("summary", { children: "Prompt options" }),
+        /* @__PURE__ */ u2("section", { className: "compose-toolbar chat__toolbar", "aria-label": "Prompt controls", children: [
+          /* @__PURE__ */ u2("div", { className: "compose-select-grid", children: [
+            /* @__PURE__ */ u2(SelectControl, { id: "compose-provider-select", name: "provider_name", label: "Provider" }),
+            /* @__PURE__ */ u2(SelectControl, { id: "compose-model-select", name: "model", label: "Model" }),
+            /* @__PURE__ */ u2(SelectControl, { id: "compose-thinking-select", name: "compose_thinking_level", label: "Thinking" }),
+            /* @__PURE__ */ u2(SelectControl, { id: "compose-delivery-mode", name: "delivery_mode", label: "Delivery", children: [
+              /* @__PURE__ */ u2("option", { value: "run", children: "Run immediately" }),
+              /* @__PURE__ */ u2("option", { value: "follow_up", children: "Queue follow-up" }),
+              /* @__PURE__ */ u2("option", { value: "steer", children: "Queue steer" })
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("p", { id: "compose-context-readout", className: "muted small-text", children: "No session selected. Sending will create one." }),
+          /* @__PURE__ */ u2("div", { className: "compose-attachment-bar", children: [
+            /* @__PURE__ */ u2("button", { id: "compose-attachment-button", type: "button", children: "Attach files" }),
+            /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", type: "button", children: "Clear staged" }),
+            /* @__PURE__ */ u2("input", { id: "compose-file-input", className: "sr-only", type: "file", multiple: true, "aria-label": "Attach files" })
+          ] }),
+          /* @__PURE__ */ u2("ul", { id: "compose-attachment-list", className: "compose-attachment-list", "aria-live": "polite", "aria-label": "Staged attachments" })
+        ] })
       ] }),
-      /* @__PURE__ */ u2("label", { htmlFor: "compose-input", children: "Send a prompt to Tau" }),
+      /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "compose-input", children: "Send a prompt to Tau" }),
       /* @__PURE__ */ u2("div", { className: "compose-editor-group", children: [
         /* @__PURE__ */ u2("div", { className: "compose-row", children: [
           /* @__PURE__ */ u2("textarea", { id: "compose-input", className: "chat__input", name: "prompt", rows: 3, autoComplete: "off", role: "combobox", "aria-autocomplete": "list", "aria-controls": "compose-completion-listbox", "aria-describedby": "compose-help compose-completion-status", "aria-expanded": "false", "aria-haspopup": "listbox", placeholder: "Select or create a session, then send a prompt." }),
@@ -454,57 +457,60 @@ function SessionNav({ filter, onSelectFilter, onClose }) {
 // src/components/Timeline.tsx
 function Timeline() {
   return /* @__PURE__ */ u2("div", { id: "timeline-main", className: "chat__messages", tabIndex: -1, children: [
-    /* @__PURE__ */ u2("div", { className: "panel-header sticky-header", children: /* @__PURE__ */ u2("div", { children: [
-      /* @__PURE__ */ u2("h2", { children: "Timeline" }),
-      /* @__PURE__ */ u2("p", { id: "timeline-meta", className: "muted", children: "Load a session to inspect persisted messages." })
-    ] }) }),
-    /* @__PURE__ */ u2("section", { className: "branch-strip", "aria-labelledby": "branch-strip-title", children: [
-      /* @__PURE__ */ u2("div", { className: "branch-strip-header", children: [
-        /* @__PURE__ */ u2("h3", { id: "branch-strip-title", children: "Branches" }),
-        /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Select the active leaf for restored playback." })
-      ] }),
-      /* @__PURE__ */ u2("div", { id: "branch-list", className: "branch-list" })
+    /* @__PURE__ */ u2("div", { className: "tab-bar", role: "tablist", "aria-label": "Open views", children: [
+      /* @__PURE__ */ u2("button", { className: "tab-bar__tab tab-bar__tab--active", type: "button", role: "tab", "aria-selected": "true", children: "Chat" }),
+      /* @__PURE__ */ u2("span", { id: "timeline-meta", className: "tab-bar__clock", children: "Load a session to inspect persisted messages." })
     ] }),
-    /* @__PURE__ */ u2("section", { id: "session-overview", className: "session-overview", "aria-label": "Live session overview", children: [
-      /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "dashboard" }),
-      /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "context-summary-title", children: [
-        /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-          /* @__PURE__ */ u2("h3", { id: "context-summary-title", children: "Context" }),
-          /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Session entry, message, and compaction summary." })
-        ] }) }),
-        /* @__PURE__ */ u2("dl", { id: "context-summary", className: "stats-list" })
-      ] }),
-      /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "usage-summary-title", children: [
-        /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-          /* @__PURE__ */ u2("h3", { id: "usage-summary-title", children: "Usage" }),
-          /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Durable token and cost records for this session." })
-        ] }) }),
-        /* @__PURE__ */ u2("dl", { id: "usage-totals", className: "stats-list" }),
-        /* @__PURE__ */ u2("ol", { id: "usage-records", className: "compact-list", "aria-live": "polite" })
-      ] }),
-      /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "active-run-title", children: [
-        /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-          /* @__PURE__ */ u2("h3", { id: "active-run-title", children: "Active run" }),
-          /* @__PURE__ */ u2("p", { id: "active-run-note", className: "muted small-text", children: "Pending and running work for the selected session." })
-        ] }) }),
-        /* @__PURE__ */ u2("div", { id: "active-run-card", "aria-live": "polite" })
-      ] }),
-      /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "queue-panel-title", children: [
-        /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
-          /* @__PURE__ */ u2("h3", { id: "queue-panel-title", children: "Queue" }),
-          /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Follow-up and steer messages waiting for dispatch." })
-        ] }) }),
-        /* @__PURE__ */ u2("form", { id: "queue-form", className: "stack-form", children: [
-          /* @__PURE__ */ u2("label", { htmlFor: "queue-input", children: "Queue follow-up" }),
-          /* @__PURE__ */ u2("textarea", { id: "queue-input", name: "content", rows: 3, placeholder: "Add a follow-up message for this session." }),
-          /* @__PURE__ */ u2("div", { className: "button-row button-row-wrap", role: "group", "aria-label": "Queue actions", children: [
-            /* @__PURE__ */ u2("button", { id: "queue-submit-button", type: "submit", children: "Enqueue follow-up" }),
-            /* @__PURE__ */ u2("button", { id: "dispatch-follow-up-button", type: "button", children: "Dispatch follow-up" }),
-            /* @__PURE__ */ u2("button", { id: "dispatch-steer-button", type: "button", children: "Dispatch steer" })
-          ] }),
-          /* @__PURE__ */ u2("p", { id: "queue-help", className: "muted small-text", children: "Enter submits. Shift+Enter inserts a newline." })
+    /* @__PURE__ */ u2("details", { className: "chat__session-details", children: [
+      /* @__PURE__ */ u2("summary", { children: "Session details" }),
+      /* @__PURE__ */ u2("section", { className: "branch-strip", "aria-labelledby": "branch-strip-title", children: [
+        /* @__PURE__ */ u2("div", { className: "branch-strip-header", children: [
+          /* @__PURE__ */ u2("h3", { id: "branch-strip-title", children: "Branches" }),
+          /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Select the active leaf for restored playback." })
         ] }),
-        /* @__PURE__ */ u2("ul", { id: "queue-list", className: "queue-list", "aria-live": "polite" })
+        /* @__PURE__ */ u2("div", { id: "branch-list", className: "branch-list" })
+      ] }),
+      /* @__PURE__ */ u2("section", { id: "session-overview", className: "session-overview", "aria-label": "Live session overview", children: [
+        /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "dashboard" }),
+        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "context-summary-title", children: [
+          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
+            /* @__PURE__ */ u2("h3", { id: "context-summary-title", children: "Context" }),
+            /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Session entry, message, and compaction summary." })
+          ] }) }),
+          /* @__PURE__ */ u2("dl", { id: "context-summary", className: "stats-list" })
+        ] }),
+        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "usage-summary-title", children: [
+          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
+            /* @__PURE__ */ u2("h3", { id: "usage-summary-title", children: "Usage" }),
+            /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Durable token and cost records for this session." })
+          ] }) }),
+          /* @__PURE__ */ u2("dl", { id: "usage-totals", className: "stats-list" }),
+          /* @__PURE__ */ u2("ol", { id: "usage-records", className: "compact-list", "aria-live": "polite" })
+        ] }),
+        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "active-run-title", children: [
+          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
+            /* @__PURE__ */ u2("h3", { id: "active-run-title", children: "Active run" }),
+            /* @__PURE__ */ u2("p", { id: "active-run-note", className: "muted small-text", children: "Pending and running work for the selected session." })
+          ] }) }),
+          /* @__PURE__ */ u2("div", { id: "active-run-card", "aria-live": "polite" })
+        ] }),
+        /* @__PURE__ */ u2("article", { className: "overview-card", "aria-labelledby": "queue-panel-title", children: [
+          /* @__PURE__ */ u2("div", { className: "overview-card-header", children: /* @__PURE__ */ u2("div", { children: [
+            /* @__PURE__ */ u2("h3", { id: "queue-panel-title", children: "Queue" }),
+            /* @__PURE__ */ u2("p", { className: "muted small-text", children: "Follow-up and steer messages waiting for dispatch." })
+          ] }) }),
+          /* @__PURE__ */ u2("form", { id: "queue-form", className: "stack-form", children: [
+            /* @__PURE__ */ u2("label", { htmlFor: "queue-input", children: "Queue follow-up" }),
+            /* @__PURE__ */ u2("textarea", { id: "queue-input", name: "content", rows: 3, placeholder: "Add a follow-up message for this session." }),
+            /* @__PURE__ */ u2("div", { className: "button-row button-row-wrap", role: "group", "aria-label": "Queue actions", children: [
+              /* @__PURE__ */ u2("button", { id: "queue-submit-button", type: "submit", children: "Enqueue follow-up" }),
+              /* @__PURE__ */ u2("button", { id: "dispatch-follow-up-button", type: "button", children: "Dispatch follow-up" }),
+              /* @__PURE__ */ u2("button", { id: "dispatch-steer-button", type: "button", children: "Dispatch steer" })
+            ] }),
+            /* @__PURE__ */ u2("p", { id: "queue-help", className: "muted small-text", children: "Enter submits. Shift+Enter inserts a newline." })
+          ] }),
+          /* @__PURE__ */ u2("ul", { id: "queue-list", className: "queue-list", "aria-live": "polite" })
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),

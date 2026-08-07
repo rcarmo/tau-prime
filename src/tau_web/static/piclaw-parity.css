@@ -75,6 +75,26 @@ option { background: var(--bg-secondary); }
 }
 body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 
+.chat__session-details,
+.chat__prompt-options {
+  border: 0;
+}
+.chat__session-details > summary,
+.chat__prompt-options > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 12px;
+  list-style: none;
+}
+.chat__session-details > summary {
+  margin: 6px 12px;
+}
+.chat__prompt-options > summary {
+  padding: 2px 0 6px;
+}
+.chat__session-details > summary::-webkit-details-marker,
+.chat__prompt-options > summary::-webkit-details-marker { display: none; }
+
 @media (max-width: 639px) {
   .app-layout__sidebar-wrapper.is-open { width: 100vw; }
   .panel-nav {
