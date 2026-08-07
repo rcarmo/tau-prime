@@ -28,8 +28,8 @@ function TauShell() {
         <ActivityBar activeTab={activeTab} onSelectTab={selectTab} onOpenPanel={() => open("panel")} />
         <main className="app-layout__main">
           <div className="app-layout__content-area">
-            <div className="app-layout__sidebar-wrapper">
-              <SessionNav filter={sessionFilter} onSelectFilter={selectSessionFilter} onClose={close} />
+            <div className={`app-layout__sidebar-wrapper ${drawer === "panel" ? "is-open" : ""}`}>
+              <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={close} />
             </div>
             <div className="app-layout__panel">
               <div className="app-layout__tab-viewport">
@@ -42,7 +42,7 @@ function TauShell() {
                 </div>
               </div>
             </div>
-            <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={close} />
+            <SessionNav filter={sessionFilter} onSelectFilter={selectSessionFilter} onClose={close} />
           </div>
           <StatusBar drawer={drawer} dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onToggleDrawer={toggle} onToggleDashboard={() => setDashboardOpen((current) => !current)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />
           <div className="mobile-toolbar" role="banner" aria-label="Tau status bar">

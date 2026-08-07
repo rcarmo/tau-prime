@@ -267,6 +267,7 @@ function u2(e3, t3, n2, o3, i4, u4) {
 
 // src/components/ActivityBar.tsx
 var PANELS = [
+  { id: "sessions", label: "Sessions", target: "mobile-nav-toggle", glyph: "\u2630" },
   { id: "workspace", label: "Workspace", target: "tab-workspace", glyph: "\u25B1" },
   { id: "search", label: "Search", target: "tab-search", glyph: "\u2315" },
   { id: "plan", label: "Plan", target: "tab-plan", glyph: "\u2637" },
@@ -277,6 +278,10 @@ function ActivityBar({ activeTab, onSelectTab, onOpenPanel }) {
   const activate = (panel) => {
     if (panel.id === "dashboard") {
       document.getElementById("dashboard-toggle")?.click();
+      return;
+    }
+    if (panel.id === "sessions") {
+      document.getElementById("mobile-nav-toggle")?.click();
       return;
     }
     onSelectTab(panel.id);
@@ -1116,13 +1121,13 @@ function TauShell() {
       /* @__PURE__ */ u2(ActivityBar, { activeTab, onSelectTab: selectTab, onOpenPanel: () => open("panel") }),
       /* @__PURE__ */ u2("main", { className: "app-layout__main", children: [
         /* @__PURE__ */ u2("div", { className: "app-layout__content-area", children: [
-          /* @__PURE__ */ u2("div", { className: "app-layout__sidebar-wrapper", children: /* @__PURE__ */ u2(SessionNav, { filter: sessionFilter, onSelectFilter: selectSessionFilter, onClose: close }) }),
+          /* @__PURE__ */ u2("div", { className: `app-layout__sidebar-wrapper ${drawer === "panel" ? "is-open" : ""}`, children: /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close }) }),
           /* @__PURE__ */ u2("div", { className: "app-layout__panel", children: /* @__PURE__ */ u2("div", { className: "app-layout__tab-viewport", children: /* @__PURE__ */ u2("div", { className: "app-layout__tab-content", children: /* @__PURE__ */ u2("section", { className: "chat", "aria-label": "Tau chat", children: [
             /* @__PURE__ */ u2(Timeline, {}),
             /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
             /* @__PURE__ */ u2(Composer, {})
           ] }) }) }) }),
-          /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close })
+          /* @__PURE__ */ u2(SessionNav, { filter: sessionFilter, onSelectFilter: selectSessionFilter, onClose: close })
         ] }),
         /* @__PURE__ */ u2(StatusBar, { drawer, dashboardOpen, metersEnabled, metersCollapsed, onToggleDrawer: toggle, onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
         /* @__PURE__ */ u2("div", { className: "mobile-toolbar", role: "banner", "aria-label": "Tau status bar", children: [

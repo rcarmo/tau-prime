@@ -44,13 +44,44 @@ option { background: var(--bg-secondary); }
   background: var(--bg-primary);
 }
 
-/* Tau's former three-column breakpoint must not turn Piclaw's canonical
- * session sidebar into an unreachable drawer at tablet widths. */
-@media (min-width: 640px) and (max-width: 960px) {
-  .app-layout__sidebar-wrapper .panel-nav {
-    position: static;
-    width: 100%;
-    transform: none;
+/* Piclaw starts with its single sidebar collapsed and opens it from the
+ * Activity Bar; do not reserve a permanent third column. */
+.app-layout__sidebar-wrapper {
+  width: 0;
+}
+.app-layout__sidebar-wrapper.is-open {
+  width: min(24rem, 32vw);
+}
+
+/* Tau sessions remain available as an overlay instead of recreating the
+ * former permanent three-column shell. */
+.app-layout__sidebar-wrapper .panel-side {
+  position: static;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+
+.panel-nav {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 48px;
+  width: min(24rem, calc(100vw - 48px));
+  z-index: 60;
+  overflow: auto;
+  transform: translateX(calc(-100% - 48px));
+  transition: transform 180ms ease;
+}
+body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
+
+@media (max-width: 639px) {
+  .app-layout__sidebar-wrapper.is-open { width: 100vw; }
+  .panel-nav {
+    top: 40px;
+    left: 0;
+    width: 100vw;
+    transform: translateX(-105%);
   }
 }
 

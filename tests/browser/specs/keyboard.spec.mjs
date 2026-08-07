@@ -45,14 +45,16 @@ async function closeDrawersIfNeeded(page) {
 }
 
 async function openNavIfNeeded(page) {
+  if ((await drawerState(page)).nav === 'true') return;
+
   const navToggle = page.locator('#mobile-nav-toggle');
-  if (!(await navToggle.isVisible())) {
-    return;
-  }
+  const trigger = (await navToggle.isVisible())
+    ? navToggle
+    : page.getByRole('button', { name: 'Sessions', exact: true }).first();
 
   await closeDrawersIfNeeded(page);
-  await navToggle.focus();
-  await expect(navToggle).toBeFocused();
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
   await page.keyboard.press('Enter');
 
   await expect(navToggle).toHaveAttribute('aria-expanded', 'true');

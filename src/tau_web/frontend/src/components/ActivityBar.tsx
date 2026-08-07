@@ -1,8 +1,9 @@
 import type { SidebarTab } from "../hooks/useSidebarTabs";
 
-type Panel = { id: SidebarTab | "dashboard"; label: string; target?: string; glyph: string; bottom?: boolean };
+type Panel = { id: SidebarTab | "dashboard" | "sessions"; label: string; target?: string; glyph: string; bottom?: boolean };
 
 const PANELS: Panel[] = [
+  { id: "sessions", label: "Sessions", target: "mobile-nav-toggle", glyph: "☰" },
   { id: "workspace", label: "Workspace", target: "tab-workspace", glyph: "▱" },
   { id: "search", label: "Search", target: "tab-search", glyph: "⌕" },
   { id: "plan", label: "Plan", target: "tab-plan", glyph: "☷" },
@@ -18,6 +19,10 @@ export function ActivityBar({ activeTab, onSelectTab, onOpenPanel }: {
   const activate = (panel: Panel) => {
     if (panel.id === "dashboard") {
       document.getElementById("dashboard-toggle")?.click();
+      return;
+    }
+    if (panel.id === "sessions") {
+      document.getElementById("mobile-nav-toggle")?.click();
       return;
     }
     onSelectTab(panel.id);
