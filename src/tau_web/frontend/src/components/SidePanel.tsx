@@ -4,6 +4,7 @@ import { PlanPanel } from "./PlanPanel";
 import { SessionList } from "./SessionList";
 import { SearchResults } from "./SearchResults";
 import { SettingsSummary } from "./SettingsSummary";
+import { WorkspacePanel } from "./WorkspacePanel";
 
 const TITLES: Record<SidebarTab, string> = {
   sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
@@ -48,32 +49,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
           <SessionList filter={sessionFilter} onSelectFilter={onSelectSessionFilter} />
         </section>
 
-        <section id="panel-workspace" className="workspace" aria-labelledby="tab-workspace" hidden={activeTab !== "workspace"}>
-          <div className="workspace__pane-top">
-            <div className="workspace__section-header workspace__section-header--padded">
-              <span>Files</span>
-              <div className="workspace__files-toolbar">
-                <button id="workspace-up-button" className="workspace__files-toolbar-icon codicon codicon-arrow-up" type="button" title="Parent directory" aria-label="Parent directory" />
-                <button id="workspace-reload-button" className="workspace__files-toolbar-icon codicon codicon-refresh" type="button" title="Refresh" aria-label="Refresh workspace" />
-              </div>
-            </div>
-            <p id="workspace-path" className="workspace__current-path">.</p>
-            <div id="workspace-list" className="file-tree" role="tree" aria-label="Workspace tree" />
-          </div>
-          <div className="workspace__drag-handle" role="separator" aria-orientation="horizontal" />
-          <div className="workspace__pane-bottom">
-            <div className="workspace__preview-header">Preview</div>
-            <section className="workspace__preview-info" aria-labelledby="workspace-editor-title">
-              <div id="workspace-editor-title" className="workspace__preview-name">Selected file</div>
-              <div id="workspace-editor-path" className="workspace__preview-path">No file selected</div>
-              <label className="sr-only" htmlFor="workspace-editor">Workspace file editor</label>
-              <textarea id="workspace-editor" className="workspace__preview-content" spellcheck={false} aria-describedby="workspace-editor-note" />
-              <p id="workspace-editor-note" className="workspace__preview-meta">Local edits are not yet persisted through the web shell.</p>
-              <section id="workspace-annotations" className="workspace-annotations" hidden><h4>Annotations</h4><ul id="workspace-annotation-list" className="workspace-annotation-list" /></section>
-              <section id="workspace-renderer" className="workspace-renderer" aria-label="Extension file preview" hidden />
-            </section>
-          </div>
-        </section>
+        <WorkspacePanel hidden={activeTab !== "workspace"} />
 
         <section id="panel-search" className="search-panel" aria-labelledby="tab-search" hidden={activeTab !== "search"}>
           <form id="search-form">

@@ -563,6 +563,18 @@ def test_preact_owns_dashboard_visibility() -> None:
     assert "ui.sessionDashboard.hidden" not in legacy
 
 
+def test_preact_owns_workspace_markup() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    workspace = (root / "frontend/src/components/WorkspacePanel.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("tau:workspace-render"' in workspace
+    assert 'new CustomEvent("tau:workspace-open"' in workspace
+    assert 'new CustomEvent("tau:workspace-render"' in legacy
+    assert "ui.workspaceList.replaceChildren" not in legacy
+    assert "renderWorkspaceAnnotations" not in legacy
+
+
 def test_preact_owns_settings_summary_markup() -> None:
     root = Path(__file__).parents[2] / "src" / "tau_web"
     summary = (root / "frontend/src/components/SettingsSummary.tsx").read_text(encoding="utf-8")

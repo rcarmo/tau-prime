@@ -113,8 +113,6 @@ const state = {
 ui.authToken.value = state.authToken ?? "";
 ui.providerInput.value = loadStorage(STORAGE_KEYS.provider) ?? "";
 ui.modelInput.value = loadStorage(STORAGE_KEYS.model) ?? "";
-ui.workspaceEditor.readOnly = true;
-
 installEventHandlers();
 renderShell();
 void init();
@@ -170,12 +168,6 @@ function bindUi() {
     panelSettings: requiredElement("panel-settings"),
     workspaceUpButton: requiredElement("workspace-up-button"),
     workspaceReloadButton: requiredElement("workspace-reload-button"),
-    workspacePath: requiredElement("workspace-path"),
-    workspaceList: requiredElement("workspace-list"),
-    workspaceEditorPath: requiredElement("workspace-editor-path"),
-    workspaceEditor: requiredElement("workspace-editor"),
-    workspaceAnnotations: requiredElement("workspace-annotations"),
-    workspaceAnnotationList: requiredElement("workspace-annotation-list"),
     workspaceRenderer: requiredElement("workspace-renderer"),
     searchForm: requiredElement("search-form"),
     searchInput: requiredElement("search-input"),
@@ -244,6 +236,10 @@ function installEventHandlers() {
       switchTab("workspace");
       void selectSession(sessionId, { reconnect: true });
     }
+  });
+  window.addEventListener("tau:workspace-open", (event) => {
+    const entry = event.detail?.entry;
+    if (entry && typeof entry === "object") void openWorkspaceEntry(entry);
   });
   window.addEventListener("tau:dashboard-visibility", (event) => {
     applyDashboardOpen(Boolean(event.detail?.open));
@@ -1575,72 +1571,23 @@ function renderTimeline() {
 }
 
 function renderWorkspace() {
-  ui.workspacePath.textContent = state.workspacePath;
-  ui.workspaceEditorPath.textContent = state.workspaceFilePath ?? "No file selected";
-  ui.workspaceEditor.value = state.workspaceFileContent;
-  renderWorkspaceAnnotations();
+  const annotations = state.workspaceAnnotations
+    .filter((item) => item && typeof item === "object" && Number.isInteger(item.line) && item.line > 0)
+    .map((annotation) => ({
+      line: annotation.line,
+      endLine: Number.isInteger(annotation.end_line) && annotation.end_line >= annotation.line ? annotation.end_line : null,
+      severity: ["info", "warning", "error"].includes(annotation.severity) ? annotation.severity : "info",
+      source: typeof annotation.source === "string" ? annotation.source : "",
+      message: stringOrEmpty(annotation.message),
+    }));
+  window.dispatchEvent(new CustomEvent("tau:workspace-render", { detail: {
+    path: state.workspacePath,
+    filePath: state.workspaceFilePath,
+    content: state.workspaceFileContent,
+    entries: state.workspaceEntries,
+    annotations,
+  } }));
   void renderWorkspaceRenderer();
-  ui.workspaceList.replaceChildren();
-
-  if (!state.workspaceEntries.length) {
-    ui.workspaceList.append(createPlaceholderItem("No workspace entries available."));
-    return;
-  }
-
-  for (const entry of state.workspaceEntries) {
-    const item = document.createElement("div");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "file-tree__item";
-    button.setAttribute("role", "treeitem");
-    button.disabled = entry.kind !== "directory" && entry.kind !== "file";
-    button.addEventListener("click", () => {
-      void openWorkspaceEntry(entry);
-    });
-
-    const icon = document.createElement("span");
-    icon.className = `file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`;
-    icon.setAttribute("aria-hidden", "true");
-
-    const label = document.createElement("span");
-    label.className = "file-tree__name";
-    label.textContent = entry.name;
-
-    const kind = document.createElement("span");
-    kind.className = "file-tree__meta";
-    kind.textContent = entry.kind;
-
-    button.append(icon, label, kind);
-    item.append(button);
-    ui.workspaceList.append(item);
-  }
-}
-
-function renderWorkspaceAnnotations() {
-  ui.workspaceAnnotationList.replaceChildren();
-  const annotations = state.workspaceAnnotations.filter(
-    (item) => item && typeof item === "object" && Number.isInteger(item.line) && item.line > 0,
-  );
-  ui.workspaceAnnotations.hidden = annotations.length === 0;
-  ui.workspaceEditor.setAttribute(
-    "aria-describedby",
-    annotations.length ? "workspace-editor-note workspace-annotations" : "workspace-editor-note",
-  );
-  for (const annotation of annotations) {
-    const item = document.createElement("li");
-    item.className = "workspace-annotation";
-    item.dataset.severity = ["info", "warning", "error"].includes(annotation.severity)
-      ? annotation.severity
-      : "info";
-    const endLine = Number.isInteger(annotation.end_line) && annotation.end_line >= annotation.line
-      ? `–${annotation.end_line}`
-      : "";
-    const source = typeof annotation.source === "string" && annotation.source
-      ? ` · ${annotation.source}`
-      : "";
-    item.textContent = `Line ${annotation.line}${endLine}${source}: ${stringOrEmpty(annotation.message)}`;
-    ui.workspaceAnnotationList.append(item);
-  }
 }
 
 async function renderWorkspaceRenderer() {

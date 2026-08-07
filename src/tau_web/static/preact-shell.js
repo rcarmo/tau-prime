@@ -909,6 +909,61 @@ function SettingsSummary() {
   ] }, item.label)) });
 }
 
+// src/components/WorkspacePanel.tsx
+var empty = { path: ".", filePath: null, content: "", entries: [], annotations: [] };
+function WorkspacePanel({ hidden }) {
+  const [view, setView] = h2(empty);
+  _2(() => {
+    const update = (event) => setView(event.detail);
+    window.addEventListener("tau:workspace-render", update);
+    return () => window.removeEventListener("tau:workspace-render", update);
+  }, []);
+  const describedBy = view.annotations.length ? "workspace-editor-note workspace-annotations" : "workspace-editor-note";
+  return /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden, children: [
+    /* @__PURE__ */ u2("div", { className: "workspace__pane-top", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace__section-header workspace__section-header--padded", children: [
+        /* @__PURE__ */ u2("span", { children: "Files" }),
+        /* @__PURE__ */ u2("div", { className: "workspace__files-toolbar", children: [
+          /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "workspace__files-toolbar-icon codicon codicon-arrow-up", type: "button", title: "Parent directory", "aria-label": "Parent directory" }),
+          /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "workspace__files-toolbar-icon codicon codicon-refresh", type: "button", title: "Refresh", "aria-label": "Refresh workspace" })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: view.path }),
+      /* @__PURE__ */ u2("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree", children: [
+        !view.entries.length && /* @__PURE__ */ u2("div", { children: "No workspace entries available." }),
+        view.entries.map((entry) => /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", className: "file-tree__item", role: "treeitem", disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
+          /* @__PURE__ */ u2("span", { className: `file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`, "aria-hidden": "true" }),
+          /* @__PURE__ */ u2("span", { className: "file-tree__name", children: entry.name }),
+          /* @__PURE__ */ u2("span", { className: "file-tree__meta", children: entry.kind })
+        ] }) }, `${entry.kind}:${entry.path ?? entry.name}`))
+      ] })
+    ] }),
+    /* @__PURE__ */ u2("div", { className: "workspace__drag-handle", role: "separator", "aria-orientation": "horizontal" }),
+    /* @__PURE__ */ u2("div", { className: "workspace__pane-bottom", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace__preview-header", children: "Preview" }),
+      /* @__PURE__ */ u2("section", { className: "workspace__preview-info", "aria-labelledby": "workspace-editor-title", children: [
+        /* @__PURE__ */ u2("div", { id: "workspace-editor-title", className: "workspace__preview-name", children: "Selected file" }),
+        /* @__PURE__ */ u2("div", { id: "workspace-editor-path", className: "workspace__preview-path", children: view.filePath ?? "No file selected" }),
+        /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
+        /* @__PURE__ */ u2("textarea", { id: "workspace-editor", className: "workspace__preview-content", spellcheck: false, "aria-describedby": describedBy, value: view.content, readOnly: true }),
+        /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "workspace__preview-meta", children: "Local edits are not yet persisted through the web shell." }),
+        /* @__PURE__ */ u2("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: !view.annotations.length, children: [
+          /* @__PURE__ */ u2("h4", { children: "Annotations" }),
+          /* @__PURE__ */ u2("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list", children: view.annotations.map((annotation, index) => /* @__PURE__ */ u2("li", { className: "workspace-annotation", "data-severity": annotation.severity, children: [
+            "Line ",
+            annotation.line,
+            annotation.endLine ? `\u2013${annotation.endLine}` : "",
+            annotation.source ? ` \xB7 ${annotation.source}` : "",
+            ": ",
+            annotation.message
+          ] }, `${annotation.line}:${index}`)) })
+        ] }),
+        /* @__PURE__ */ u2("section", { id: "workspace-renderer", className: "workspace-renderer", "aria-label": "Extension file preview", hidden: true })
+      ] })
+    ] })
+  ] });
+}
+
 // src/components/SidePanel.tsx
 var TITLES = {
   sessions: "Sessions",
@@ -943,35 +998,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
         ] }),
         /* @__PURE__ */ u2(SessionList, { filter: sessionFilter, onSelectFilter: onSelectSessionFilter })
       ] }),
-      /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden: activeTab !== "workspace", children: [
-        /* @__PURE__ */ u2("div", { className: "workspace__pane-top", children: [
-          /* @__PURE__ */ u2("div", { className: "workspace__section-header workspace__section-header--padded", children: [
-            /* @__PURE__ */ u2("span", { children: "Files" }),
-            /* @__PURE__ */ u2("div", { className: "workspace__files-toolbar", children: [
-              /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "workspace__files-toolbar-icon codicon codicon-arrow-up", type: "button", title: "Parent directory", "aria-label": "Parent directory" }),
-              /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "workspace__files-toolbar-icon codicon codicon-refresh", type: "button", title: "Refresh", "aria-label": "Refresh workspace" })
-            ] })
-          ] }),
-          /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: "." }),
-          /* @__PURE__ */ u2("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree" })
-        ] }),
-        /* @__PURE__ */ u2("div", { className: "workspace__drag-handle", role: "separator", "aria-orientation": "horizontal" }),
-        /* @__PURE__ */ u2("div", { className: "workspace__pane-bottom", children: [
-          /* @__PURE__ */ u2("div", { className: "workspace__preview-header", children: "Preview" }),
-          /* @__PURE__ */ u2("section", { className: "workspace__preview-info", "aria-labelledby": "workspace-editor-title", children: [
-            /* @__PURE__ */ u2("div", { id: "workspace-editor-title", className: "workspace__preview-name", children: "Selected file" }),
-            /* @__PURE__ */ u2("div", { id: "workspace-editor-path", className: "workspace__preview-path", children: "No file selected" }),
-            /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
-            /* @__PURE__ */ u2("textarea", { id: "workspace-editor", className: "workspace__preview-content", spellcheck: false, "aria-describedby": "workspace-editor-note" }),
-            /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "workspace__preview-meta", children: "Local edits are not yet persisted through the web shell." }),
-            /* @__PURE__ */ u2("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: true, children: [
-              /* @__PURE__ */ u2("h4", { children: "Annotations" }),
-              /* @__PURE__ */ u2("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list" })
-            ] }),
-            /* @__PURE__ */ u2("section", { id: "workspace-renderer", className: "workspace-renderer", "aria-label": "Extension file preview", hidden: true })
-          ] })
-        ] })
-      ] }),
+      /* @__PURE__ */ u2(WorkspacePanel, { hidden: activeTab !== "workspace" }),
       /* @__PURE__ */ u2("section", { id: "panel-search", className: "search-panel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
         /* @__PURE__ */ u2("form", { id: "search-form", children: [
           /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "search-input", children: "Search persisted content" }),
@@ -1151,12 +1178,12 @@ function Timeline() {
   const resultByCall = /* @__PURE__ */ new Map();
   for (const item of timeline.items) if (item.role === "tool" && item.toolCallId) resultByCall.set(item.toolCallId, item);
   const visibleItems = timeline.items.filter((item) => item.role !== "tool");
-  const empty = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
+  const empty2 = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
     /* @__PURE__ */ u2("div", { id: "timeline-main", className: "message-list", tabIndex: -1, children: [
       /* @__PURE__ */ u2("div", { id: "timeline-meta", className: "message-list__status-banner", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
-      /* @__PURE__ */ u2("ol", { id: "timeline-list", className: "timeline-list message-list__items", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u2("li", { className: "message-list__empty", children: empty }) : visibleItems.map((item, index) => /* @__PURE__ */ u2(MessageItem, { item, resultByCall }, item.id ?? index)) })
+      /* @__PURE__ */ u2("ol", { id: "timeline-list", className: "timeline-list message-list__items", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u2("li", { className: "message-list__empty", children: empty2 }) : visibleItems.map((item, index) => /* @__PURE__ */ u2(MessageItem, { item, resultByCall }, item.id ?? index)) })
     ] }),
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
   ] });
