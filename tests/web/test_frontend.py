@@ -563,6 +563,16 @@ def test_preact_owns_dashboard_visibility() -> None:
     assert "ui.sessionDashboard.hidden" not in legacy
 
 
+def test_preact_owns_settings_summary_markup() -> None:
+    root = Path(__file__).parents[2] / "src" / "tau_web"
+    summary = (root / "frontend/src/components/SettingsSummary.tsx").read_text(encoding="utf-8")
+    legacy = (root / "static/app.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("tau:settings-render"' in summary
+    assert 'new CustomEvent("tau:settings-render"' in legacy
+    assert "ui.settingsSummary.replaceChildren" not in legacy
+
+
 def test_preact_owns_search_result_markup() -> None:
     root = Path(__file__).parents[2] / "src" / "tau_web"
     results = (root / "frontend/src/components/SearchResults.tsx").read_text(encoding="utf-8")

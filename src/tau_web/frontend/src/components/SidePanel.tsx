@@ -3,6 +3,7 @@ import type { SessionFilter } from "../hooks/useSessionFilter";
 import { PlanPanel } from "./PlanPanel";
 import { SessionList } from "./SessionList";
 import { SearchResults } from "./SearchResults";
+import { SettingsSummary } from "./SettingsSummary";
 
 const TITLES: Record<SidebarTab, string> = {
   sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
@@ -117,7 +118,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
             </section>
             <section id="tau-settings-runtime" className="settings-panel__section" aria-labelledby="settings-summary-title">
               <h2 id="settings-summary-title" className="settings-panel__section-title">Runtime</h2>
-              <dl id="settings-summary" className="settings-summary" />
+              <SettingsSummary />
               <p id="streaming-note" className="settings-panel__description">Live streaming, queue controls, and persisted timeline playback use safe DOM updates.</p>
               <div className="extension-slot" data-extension-slot="sidebar" />
             </section>

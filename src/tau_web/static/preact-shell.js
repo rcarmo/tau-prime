@@ -895,6 +895,20 @@ function SearchResults() {
   ] });
 }
 
+// src/components/SettingsSummary.tsx
+function SettingsSummary() {
+  const [items, setItems] = h2(null);
+  _2(() => {
+    const update = (event) => setItems(event.detail.items);
+    window.addEventListener("tau:settings-render", update);
+    return () => window.removeEventListener("tau:settings-render", update);
+  }, []);
+  return /* @__PURE__ */ u2("dl", { id: "settings-summary", className: "settings-summary", children: items === null ? /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("dd", { className: "muted-text", children: "Runtime settings unavailable." }) }) : items.map((item) => /* @__PURE__ */ u2("div", { children: [
+    /* @__PURE__ */ u2("dt", { children: item.label }),
+    /* @__PURE__ */ u2("dd", { children: item.value })
+  ] }, item.label)) });
+}
+
 // src/components/SidePanel.tsx
 var TITLES = {
   sessions: "Sessions",
@@ -1031,7 +1045,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
           ] }),
           /* @__PURE__ */ u2("section", { id: "tau-settings-runtime", className: "settings-panel__section", "aria-labelledby": "settings-summary-title", children: [
             /* @__PURE__ */ u2("h2", { id: "settings-summary-title", className: "settings-panel__section-title", children: "Runtime" }),
-            /* @__PURE__ */ u2("dl", { id: "settings-summary", className: "settings-summary" }),
+            /* @__PURE__ */ u2(SettingsSummary, {}),
             /* @__PURE__ */ u2("p", { id: "streaming-note", className: "settings-panel__description", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
             /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "sidebar" })
           ] })

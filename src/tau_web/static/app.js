@@ -200,7 +200,6 @@ function bindUi() {
     refreshButton: requiredElement("refresh-button"),
     thinkingForm: requiredElement("thinking-form"),
     thinkingLevelSelect: requiredElement("thinking-level-select"),
-    settingsSummary: requiredElement("settings-summary"),
     composeForm: requiredElement("compose-form"),
     composeProviderSelect: requiredElement("compose-provider-select"),
     composeModelSelect: requiredElement("compose-model-select"),
@@ -1757,15 +1756,8 @@ function renderSearchResults() {
 
 function renderSettings() {
   renderModelOptions();
-  ui.settingsSummary.replaceChildren();
-
   const settings = state.settings;
-  if (!settings) {
-    ui.settingsSummary.append(createMutedText("Runtime settings unavailable."));
-    return;
-  }
-
-  const items = [
+  const items = settings ? [
     ["Host", `${settings.host}:${settings.port}`],
     ["Workspace", stringOrEmpty(settings.cwd)],
     ["Database", stringOrEmpty(settings.database_path)],
@@ -1773,17 +1765,8 @@ function renderSettings() {
     ["Origins", Array.isArray(settings.allowed_origins) && settings.allowed_origins.length ? settings.allowed_origins.join(", ") : "Same origin only"],
     ["Concurrency", String(settings.max_active_runs ?? "")],
     ["Request size", String(settings.max_request_size ?? "")],
-  ];
-
-  for (const [label, value] of items) {
-    const wrapper = document.createElement("div");
-    const dt = document.createElement("dt");
-    dt.textContent = label;
-    const dd = document.createElement("dd");
-    dd.textContent = value;
-    wrapper.append(dt, dd);
-    ui.settingsSummary.append(wrapper);
-  }
+  ].map(([label, value]) => ({ label, value })) : null;
+  window.dispatchEvent(new CustomEvent("tau:settings-render", { detail: { items } }));
 }
 
 function renderModelOptions() {
