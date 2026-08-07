@@ -294,54 +294,43 @@ function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
 }
 
 // src/components/StatusBar.tsx
-var Meter = ({ id: id2, label }) => /* @__PURE__ */ u2("figure", { className: "meter-tile", children: [
-  /* @__PURE__ */ u2("figcaption", { children: [
-    label,
-    " ",
-    /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, children: "--" })
-  ] }),
-  /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
+var Meter = ({ id: id2, label, icon }) => /* @__PURE__ */ u2("span", { className: "sys-stats__metric", title: `${label} usage`, children: [
+  /* @__PURE__ */ u2("i", { className: `sys-stats__icon codicon ${icon}`, "aria-hidden": "true" }),
+  /* @__PURE__ */ u2("span", { className: "sys-stats__label", children: label }),
+  /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, className: "sys-stats__value", children: "--" }),
+  /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, className: "sys-stats__sparkline", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history` })
 ] });
-function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
+function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
   return /* @__PURE__ */ u2("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
-    /* @__PURE__ */ u2("div", { className: "status-bar__conn", children: [
+    /* @__PURE__ */ u2("span", { className: "status-bar__conn", children: [
       /* @__PURE__ */ u2("span", { className: "status-bar__conn-dot status-bar__conn-dot--disconnected", "aria-hidden": "true" }),
-      /* @__PURE__ */ u2("div", { className: "brand-block", children: [
-        /* @__PURE__ */ u2("h1", { className: "sr-only", children: "Tau" }),
-        /* @__PURE__ */ u2("p", { id: "status-stream", className: "status-bar__conn-text", children: "Connecting\u2026" })
-      ] })
+      /* @__PURE__ */ u2("span", { id: "status-stream", className: "status-bar__conn-text", children: "Connecting\u2026" })
     ] }),
-    /* @__PURE__ */ u2("dl", { className: "status-grid model-badge-wrapper", "aria-label": "Current Tau status", children: [
-      /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2("dt", { children: "Session" }),
-        /* @__PURE__ */ u2("dd", { id: "status-session", children: "No session selected" })
-      ] }),
-      /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2("dt", { children: "Model" }),
-        /* @__PURE__ */ u2("dd", { id: "status-model", children: "Unset" })
-      ] }),
-      /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2("dt", { children: "Context" }),
-        /* @__PURE__ */ u2("dd", { id: "status-context", children: "No context loaded" })
-      ] })
-    ] }),
-    /* @__PURE__ */ u2("div", { className: "topbar-group topbar-dashboard-control", children: /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "dashboard-toggle", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
-      "Dashboard ",
-      /* @__PURE__ */ u2("span", { id: "dashboard-count", className: "dashboard-count", children: "0" })
+    /* @__PURE__ */ u2("span", { className: "session-pill-wrap", children: /* @__PURE__ */ u2("button", { className: "session-pill", type: "button", title: "Open sessions", onClick: onOpenSessions, children: [
+      /* @__PURE__ */ u2("span", { className: "session-pill__dot session-pill__dot--current", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "status-session", className: "session-pill__label", children: "No session selected" })
     ] }) }),
-    /* @__PURE__ */ u2("div", { className: "status-bar__right", children: /* @__PURE__ */ u2("section", { id: "system-meters", className: "system-meters", "aria-label": "System meters", "data-enabled": String(metersEnabled), "data-collapsed": String(metersCollapsed), children: [
-      /* @__PURE__ */ u2("div", { className: "meters-toolbar", children: [
-        /* @__PURE__ */ u2("output", { id: "meters-summary", className: "meters-summary", "aria-live": "polite", children: "Meters loading\u2026" }),
-        /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "meter-control", type: "button", "aria-controls": "meters-details", "aria-expanded": !metersCollapsed, onClick: onToggleMetersCollapsed, children: metersCollapsed ? "Expand" : "Compact" }),
-        /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "meter-control", type: "button", "aria-pressed": metersEnabled, onClick: onToggleMetersEnabled, children: metersEnabled ? "Hide" : "Show" })
+    /* @__PURE__ */ u2("span", { className: "model-badge-wrapper", children: [
+      /* @__PURE__ */ u2("span", { id: "status-model", className: "model-badge model-badge--empty", children: "Unset" }),
+      /* @__PURE__ */ u2("span", { id: "status-context", className: "usage-badge", children: "No context loaded" })
+    ] }),
+    /* @__PURE__ */ u2("span", { className: "status-bar__right", children: [
+      /* @__PURE__ */ u2("span", { id: "system-meters", className: "sys-stats-bar", "data-enabled": String(metersEnabled), "data-collapsed": String(metersCollapsed), children: [
+        /* @__PURE__ */ u2("span", { className: "sys-stats-bar__inline", children: /* @__PURE__ */ u2("span", { id: "meters-details", className: "sys-stats", children: [
+          /* @__PURE__ */ u2(Meter, { id: "cpu", label: "CPU", icon: "codicon-pulse" }),
+          /* @__PURE__ */ u2(Meter, { id: "ram", label: "RAM", icon: "codicon-circuit-board" }),
+          /* @__PURE__ */ u2(Meter, { id: "rss", label: "RSS", icon: "codicon-package" }),
+          /* @__PURE__ */ u2(Meter, { id: "swap", label: "SWP", icon: "codicon-arrow-swap" })
+        ] }) }),
+        /* @__PURE__ */ u2("output", { id: "meters-summary", className: "sys-stats-bar__compact", "aria-live": "polite", children: "Meters loading\u2026" }),
+        /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "status-bar__terminal-btn", type: "button", "aria-controls": "meters-details", "aria-expanded": !metersCollapsed, title: metersCollapsed ? "Expand system meters" : "Compact system meters", onClick: onToggleMetersCollapsed, children: /* @__PURE__ */ u2("i", { className: `codicon ${metersCollapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`, "aria-hidden": "true" }) }),
+        /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "status-bar__terminal-btn", type: "button", "aria-pressed": metersEnabled, title: metersEnabled ? "Hide system meters" : "Show system meters", onClick: onToggleMetersEnabled, children: /* @__PURE__ */ u2("i", { className: `codicon ${metersEnabled ? "codicon-eye" : "codicon-eye-closed"}`, "aria-hidden": "true" }) })
       ] }),
-      /* @__PURE__ */ u2("div", { id: "meters-details", className: "meters-details", children: [
-        /* @__PURE__ */ u2(Meter, { id: "cpu", label: "CPU" }),
-        /* @__PURE__ */ u2(Meter, { id: "ram", label: "RAM" }),
-        /* @__PURE__ */ u2(Meter, { id: "rss", label: "RSS" }),
-        /* @__PURE__ */ u2(Meter, { id: "swap", label: "Swap" })
+      /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "status-bar__terminal-btn", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
+        /* @__PURE__ */ u2("i", { className: "codicon codicon-dashboard", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("span", { id: "dashboard-count", children: "0" })
       ] })
-    ] }) })
+    ] })
   ] });
 }
 
@@ -1179,7 +1168,7 @@ function TauShell() {
             ] }) }) })
           ] })
         ] }),
-        /* @__PURE__ */ u2(StatusBar, { dashboardOpen, metersEnabled, metersCollapsed, onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
+        /* @__PURE__ */ u2(StatusBar, { dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions: () => selectPanel("sessions"), onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
         /* @__PURE__ */ u2("div", { className: "mobile-toolbar", children: [
           /* @__PURE__ */ u2("button", { id: "mobile-nav-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open sessions", "aria-expanded": drawer === "nav", onClick: () => selectPanel("sessions"), children: "Sessions" }),
           /* @__PURE__ */ u2("span", { className: "mobile-toolbar__model-slot", children: "Tau" }),

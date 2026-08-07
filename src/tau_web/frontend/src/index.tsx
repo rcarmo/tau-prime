@@ -59,7 +59,7 @@ function TauShell() {
               </div>
             </div>
           </div>
-          <StatusBar dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onToggleDashboard={() => setDashboardOpen((current) => !current)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />
+          <StatusBar dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onOpenSessions={() => selectPanel("sessions")} onToggleDashboard={() => setDashboardOpen((current) => !current)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />
           <div className="mobile-toolbar">
             <button id="mobile-nav-toggle" className="mobile-toolbar__terminal-btn" type="button" aria-label="Open sessions" aria-expanded={drawer === "nav"} onClick={() => selectPanel("sessions")}>Sessions</button>
             <span className="mobile-toolbar__model-slot">Tau</span>

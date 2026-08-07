@@ -87,17 +87,17 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 .app-layout__sidebar-backdrop[hidden] { display: none !important; }
 .provider-setup-trigger { display: none; }
 
-.app-layout__status-bar .system-meters,
-.app-layout__status-bar .topbar-dashboard-control { display: none; }
-.app-layout__status-bar .status-grid {
-  display: inline-flex;
-  gap: 12px;
-  margin: 0;
-  font-size: 11px;
+.sys-stats__sparkline {
+  width: 32px;
+  height: 12px;
+  overflow: visible;
 }
-.app-layout__status-bar .status-grid > div { display: inline-flex; gap: 4px; }
-.app-layout__status-bar .status-grid dt { color: var(--text-secondary); }
-.app-layout__status-bar .status-grid dd { margin: 0; }
+#system-meters[data-enabled="false"] .sys-stats-bar__inline,
+#system-meters[data-enabled="false"] .sys-stats-bar__compact,
+#system-meters[data-collapsed="true"] .sys-stats-bar__inline {
+  display: none;
+}
+#dashboard-count { font-size: 10px; }
 
 .chat__prompt-options { border: 0; }
 .chat__prompt-options > summary {
