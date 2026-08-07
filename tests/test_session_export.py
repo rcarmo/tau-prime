@@ -98,6 +98,11 @@ def test_render_session_html_exports_provider_cache_usage() -> None:
         "Provider usage: input=12, output=3, cache read=4, "
         "cache write=5, one-hour cache write=2"
     ) in rendered
+    assert 'aria-label="Cache analytics"' in rendered
+    assert "<dt>Cache read</dt><dd>4</dd>" in rendered
+    assert "<dt>One-hour write</dt><dd>2</dd>" in rendered
+    assert '<div class="usage-captured"><dt>Snapshot:</dt>' in rendered
+    assert '<time datetime="' in rendered
 
 
 def test_export_session_html_writes_file(tmp_path: Path) -> None:

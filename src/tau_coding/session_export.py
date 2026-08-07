@@ -118,14 +118,7 @@ def render_session_html(
     details_html = _render_entry_details(entry_list, active_path_ids, active_leaf_id)
     source_html = f'<p class="source">Source: <code>{_escape(source)}</code></p>' if source else ""
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat()
-    usage_html = ""
-    if usage is not None:
-        usage_html = (
-            '<p class="generated">Provider usage: '
-            f"input={usage.input_tokens}, output={usage.output_tokens}, "
-            f"cache read={usage.cache_read_tokens}, cache write={usage.cache_write_tokens}, "
-            f"one-hour cache write={usage.cache_write_1h_tokens}</p>"
-        )
+    usage_html = _render_usage_summary(usage, captured_at=generated_at) if usage is not None else ""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -308,6 +301,32 @@ def render_session_html(
     }}
     .entry-meta dt {{ font-weight: 700; color: var(--text); }}
     .entry-meta dd {{ margin: 0; overflow-wrap: anywhere; }}
+    .usage-summary {{
+      display: grid;
+      grid-template-columns: repeat(5, minmax(110px, 1fr));
+      gap: 1px;
+      width: 100%;
+      margin: 12px 0 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }}
+    .usage-summary div {{ background: var(--surface); padding: 10px 12px; }}
+    .usage-summary dt {{ color: var(--muted); font-size: 0.76rem; font-weight: 700; }}
+    .usage-summary dd {{ margin: 2px 0 0; font-size: 1.05rem; font-variant-numeric: tabular-nums; }}
+    .usage-captured {{ grid-column: 1 / -1; color: var(--muted); font-size: 0.78rem; }}
+    .usage-captured dt, .usage-captured dd {{ display: inline; font-size: inherit; }}
+    .visually-hidden {{
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }}
     .badges {{
       display: flex;
       flex-wrap: wrap;
@@ -335,6 +354,7 @@ def render_session_html(
       main {{ grid-template-columns: 1fr; }}
       aside {{ position: static; max-height: none; }}
       article, article + article {{ padding-left: 20px; }}
+      .usage-summary {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
     }}
   </style>
 </head>
@@ -540,7 +560,7 @@ def _render_entry_detail(
         "<dt>parent</dt>"
         f"<dd>{_entry_parent_html(entry)}</dd>"
         "<dt>timestamp</dt>"
-        f"<dd>{_escape(_format_timestamp(entry.timestamp))}</dd>"
+        f"<dd>{_timestamp_html(entry.timestamp)}</dd>"
         "</dl>"
         f"{body}"
         "</article>"
@@ -576,7 +596,7 @@ def _render_entry_body(entry: SessionEntry) -> str:
         return (
             f"<p>Title: <strong>{_escape(entry.title or 'Untitled')}</strong></p>"
             f"<p>Working directory: <code>{_escape(entry.cwd or 'unknown')}</code></p>"
-            f"<p>Created: {_escape(_format_timestamp(entry.created_at))}</p>"
+            f"<p>Created: {_timestamp_html(entry.created_at)}</p>"
         )
     if isinstance(entry, CustomEntry):
         return (
@@ -721,8 +741,39 @@ def _json_dump(value: dict[str, JSONValue]) -> str:
     return json.dumps(value, indent=2, sort_keys=True)
 
 
+def _render_usage_summary(usage: ProviderUsage, *, captured_at: str) -> str:
+    values = (
+        ("Input", usage.input_tokens),
+        ("Output", usage.output_tokens),
+        ("Cache read", usage.cache_read_tokens),
+        ("Cache write", usage.cache_write_tokens),
+        ("One-hour write", usage.cache_write_1h_tokens),
+    )
+    cells = "".join(
+        f"<div><dt>{label}</dt><dd>{value:,}</dd></div>" for label, value in values
+    )
+    accessible = (
+        f"Provider usage: input={usage.input_tokens}, output={usage.output_tokens}, "
+        f"cache read={usage.cache_read_tokens}, cache write={usage.cache_write_tokens}, "
+        f"one-hour cache write={usage.cache_write_1h_tokens}"
+    )
+    return (
+        f'<section class="usage-analytics" aria-label="Cache analytics">'
+        f'<span class="visually-hidden">{accessible}</span>'
+        f'<dl class="usage-summary">{cells}'
+        f'<div class="usage-captured"><dt>Snapshot:</dt> '
+        f'<dd><time datetime="{_attr(captured_at)}">{_escape(captured_at)}</time></dd>'
+        f"</div></dl></section>"
+    )
+
+
 def _format_timestamp(timestamp: float) -> str:
     return datetime.fromtimestamp(timestamp, tz=UTC).replace(microsecond=0).isoformat()
+
+
+def _timestamp_html(timestamp: float) -> str:
+    formatted = _format_timestamp(timestamp)
+    return f'<time datetime="{_attr(formatted)}">{_escape(formatted)}</time>'
 
 
 def _escape(value: object) -> str:
