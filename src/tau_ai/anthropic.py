@@ -37,6 +37,7 @@ from tau_ai.retry import (
     wait_for_retry,
 )
 from tau_ai.tool_call_ids import portable_tool_call_id
+from tau_ai.usage import ProviderUsage
 
 ANTHROPIC_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 4096
@@ -176,6 +177,7 @@ class AnthropicProvider:
                         content_parts: list[str] = []
                         tool_builders: dict[int, _AnthropicToolBuilder] = {}
                         finish_reason: str | None = None
+                        usage_data: dict[str, JSONValue] = {}
                         retry_stream = False
 
                         async for line in response.aiter_lines():
@@ -193,7 +195,13 @@ class AnthropicProvider:
                                 return
 
                             event_type = chunk.get("type")
-                            if event_type == "content_block_start":
+                            if event_type == "message_start":
+                                message = chunk.get("message")
+                                if isinstance(message, Mapping):
+                                    usage = message.get("usage")
+                                    if isinstance(usage, Mapping):
+                                        usage_data.update(usage)
+                            elif event_type == "content_block_start":
                                 block = chunk.get("content_block")
                                 if isinstance(block, Mapping) and block.get("type") == "tool_use":
                                     index = int(chunk.get("index", 0))
@@ -229,6 +237,9 @@ class AnthropicProvider:
                                     )
                                     emitted_content = True
                             elif event_type == "message_delta":
+                                usage = chunk.get("usage")
+                                if isinstance(usage, Mapping):
+                                    usage_data.update(usage)
                                 delta = chunk.get("delta")
                                 if isinstance(delta, Mapping):
                                     finish_reason = (
@@ -283,6 +294,7 @@ class AnthropicProvider:
                                 tool_calls=tool_calls,
                             ),
                             finish_reason=finish_reason,
+                            usage=_anthropic_usage(usage_data),
                         )
                         return
                 except httpx.HTTPError as exc:
@@ -528,6 +540,29 @@ def _is_transient_anthropic_error(error_type: str | None) -> bool:
         "rate_limit_error",
         "timeout_error",
     }
+
+
+def _anthropic_usage(data: Mapping[str, object]) -> ProviderUsage | None:
+    if not data:
+        return None
+    cache_write = _non_negative_int(data.get("cache_creation_input_tokens"))
+    breakdown = data.get("cache_creation")
+    one_hour = 0
+    if isinstance(breakdown, Mapping):
+        one_hour = _non_negative_int(breakdown.get("ephemeral_1h_input_tokens"))
+    return ProviderUsage(
+        input_tokens=_non_negative_int(data.get("input_tokens")),
+        output_tokens=_non_negative_int(data.get("output_tokens")),
+        cache_read_tokens=_non_negative_int(data.get("cache_read_input_tokens")),
+        cache_write_tokens=cache_write,
+        cache_write_1h_tokens=min(one_hour, cache_write),
+    )
+
+
+def _non_negative_int(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return max(value, 0)
 
 
 def _string_or_empty(value: object) -> str:

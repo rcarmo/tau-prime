@@ -412,10 +412,14 @@ async def test_usage_repository_preserves_details_and_retention(tmp_path: Path) 
             input_tokens=10,
             output_tokens=4,
             cached_input_tokens=2,
+            cache_write_tokens=9,
+            cache_write_1h_tokens=3,
             cost_microunits=25,
             details={"cache": True},
         )
 
+        assert recorded.cache_write_tokens == 9
+        assert recorded.cache_write_1h_tokens == 3
         assert recorded.details == {"cache": True}
         assert await usage.list(session_id=first) == [recorded]
         with pytest.raises(ValueError, match="negative"):

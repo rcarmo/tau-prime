@@ -31,9 +31,10 @@ from tau_agent import (
 )
 from tau_agent.provider_events import TextDeltaEvent as ProviderTextDeltaEvent
 from tau_agent.types import JSONObject
+from tau_ai.usage import ProviderUsage
 from tau_web.events import EventProjector, WebEventEnvelope, build_web_event_envelope
 from tau_web.sqlite.connection import SqliteDatabase
-from tau_web.sqlite.repositories import TimelineMessageRepository
+from tau_web.sqlite.repositories import RunRepository, TimelineMessageRepository, UsageRepository
 from tau_web.sqlite.sessions import SessionRepository
 
 
@@ -53,7 +54,7 @@ async def _create_session(database: SqliteDatabase, tmp_path: Path, session_id: 
 
 
 def _payload_for(event: AgentEvent) -> JSONObject:
-    payload = event.model_dump(mode="json")
+    payload = event.model_dump(mode="json", exclude_none=True)
     assert isinstance(payload, dict)
     return cast(JSONObject, payload)
 
@@ -209,6 +210,40 @@ def test_web_event_envelopes_preserve_foreign_tool_ids_for_live_rendering() -> N
 
     assert start.payload["tool_call"]["id"] == foreign_id
     assert end.payload["result"]["tool_call_id"] == foreign_id
+
+
+@pytest.mark.anyio
+async def test_event_projector_persists_provider_usage(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "tau.sqlite3") as database:
+        await _create_session(database, tmp_path, "alpha")
+        await RunRepository(database).create("alpha", run_id="run-1")
+        timeline = TimelineMessageRepository(database)
+        usage = UsageRepository(database)
+        sessions = SessionRepository(database)
+        projector = EventProjector(timeline, usage, sessions)
+
+        await projector.project(
+            "alpha",
+            "run-1",
+            1,
+            MessageEndEvent(
+                message=AssistantMessage(content="done"),
+                usage=ProviderUsage(
+                    input_tokens=10,
+                    output_tokens=4,
+                    cache_read_tokens=3,
+                    cache_write_tokens=8,
+                    cache_write_1h_tokens=2,
+                ),
+            ),
+        )
+
+        records = await usage.list(session_id="alpha")
+        assert len(records) == 1
+        assert records[0].provider_name == "test"
+        assert records[0].model == "model"
+        assert records[0].cache_write_tokens == 8
+        assert records[0].cache_write_1h_tokens == 2
 
 
 @pytest.mark.anyio

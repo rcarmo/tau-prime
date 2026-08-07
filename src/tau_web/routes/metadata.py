@@ -102,6 +102,7 @@ class UsageTotals:
     output: int
     cache_read: int
     cache_write: int
+    cache_write_1h: int
     cost: int
 
 
@@ -319,7 +320,8 @@ async def get_session_usage(request: web.Request) -> web.Response:
         input=sum(record.input_tokens for record in records),
         output=sum(record.output_tokens for record in records),
         cache_read=sum(record.cached_input_tokens for record in records),
-        cache_write=0,
+        cache_write=sum(record.cache_write_tokens for record in records),
+        cache_write_1h=sum(record.cache_write_1h_tokens for record in records),
         cost=sum(record.cost_microunits or 0 for record in records),
     )
     return json_response(UsageResponse(records=tuple(records), totals=totals))

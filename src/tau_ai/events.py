@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
-
 from tau_agent.messages import AssistantMessage
 from tau_agent.tools import ToolCall
 from tau_agent.types import JSONValue
+from tau_ai.usage import ProviderUsage
 
 
 class ProviderResponseStartEvent(BaseModel):
@@ -68,6 +68,7 @@ class ProviderResponseEndEvent(BaseModel):
     type: Literal["response_end"] = "response_end"
     message: AssistantMessage
     finish_reason: str | None = None
+    usage: ProviderUsage | None = None
 
 
 class ProviderErrorEvent(BaseModel):

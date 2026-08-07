@@ -11,7 +11,8 @@ from uuid import UUID, uuid4
 
 from tau_agent import AgentEvent, MessageEndEvent
 from tau_agent.types import JSONObject
-from tau_web.sqlite.repositories import TimelineMessageRepository
+from tau_web.sqlite.repositories import TimelineMessageRepository, UsageRepository
+from tau_web.sqlite.sessions import SessionRepository
 
 _CAMEL_BOUNDARY_1 = re.compile(r"(.)([A-Z][a-z]+)")
 _CAMEL_BOUNDARY_2 = re.compile(r"([a-z0-9])([A-Z])")
@@ -75,8 +76,15 @@ class WebEventObserverCallback(Protocol):
 class EventProjector:
     """Build canonical envelopes, persist durable projections, and fan out observers."""
 
-    def __init__(self, timeline: TimelineMessageRepository) -> None:
+    def __init__(
+        self,
+        timeline: TimelineMessageRepository,
+        usage: UsageRepository | None = None,
+        sessions: SessionRepository | None = None,
+    ) -> None:
         self._timeline = timeline
+        self._usage = usage
+        self._sessions = sessions
         self._observers: list[WebEventObserverCallback] = []
 
     @property
@@ -115,6 +123,20 @@ class EventProjector:
                 message=event.message,
                 created_at=envelope.created_at,
             )
+            if event.usage is not None and self._usage is not None and self._sessions is not None:
+                session = await self._sessions.get(session_id)
+                if session is not None:
+                    await self._usage.record(
+                        session_id,
+                        run_id=run_id,
+                        provider_name=session.provider_name,
+                        model=session.model,
+                        input_tokens=event.usage.input_tokens,
+                        output_tokens=event.usage.output_tokens,
+                        cached_input_tokens=event.usage.cache_read_tokens,
+                        cache_write_tokens=event.usage.cache_write_tokens,
+                        cache_write_1h_tokens=event.usage.cache_write_1h_tokens,
+                    )
         await self._notify_observers(envelope)
 
     async def _notify_observers(self, envelope: WebEventEnvelope) -> None:
@@ -135,7 +157,7 @@ def build_web_event_envelope(
     created_at: str | None = None,
 ) -> WebEventEnvelope:
     """Build one immutable envelope around a canonical agent event."""
-    payload = event.model_dump(mode="json")
+    payload = event.model_dump(mode="json", exclude_none=True)
     if not isinstance(payload, dict) or not all(isinstance(key, str) for key in payload):
         raise TypeError("Agent event payload must be a JSON object")
     return WebEventEnvelope(

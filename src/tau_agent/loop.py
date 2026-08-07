@@ -192,7 +192,7 @@ async def run_agent_loop(
                         message=assistant_message,
                     ),
                 )
-                yield MessageEndEvent(message=assistant_message)
+                yield MessageEndEvent(message=assistant_message, usage=provider_event.usage)
             elif isinstance(provider_event, ProviderErrorEvent):
                 saw_provider_error = True
                 yield ErrorEvent(

@@ -237,11 +237,44 @@ def test_foreign_keys_reject_orphan_entries(database: sqlite3.Connection) -> Non
 
 
 @pytest.mark.anyio
+async def test_cache_write_migration_upgrades_existing_usage_rows(tmp_path: Path) -> None:
+    database_path = tmp_path / "legacy.sqlite3"
+    connection = sqlite3.connect(database_path)
+    connection.executescript(MIGRATIONS[0].sql)
+    connection.execute(
+        "INSERT INTO schema_migrations(version, name, applied_at) VALUES (1, ?, 'now')",
+        (MIGRATIONS[0].name,),
+    )
+    connection.execute("PRAGMA user_version = 1")
+    _insert_workspace_and_session(connection)
+    connection.execute(
+        """
+        INSERT INTO usage_records(
+            session_id, provider_name, model, input_tokens, output_tokens,
+            cached_input_tokens, recorded_at
+        ) VALUES ('session-1', 'anthropic', 'claude', 3, 5, 2, 'now')
+        """
+    )
+    connection.commit()
+    connection.close()
+
+    async with SqliteDatabase(database_path) as database:
+        async def inspect(reader: SqliteReader) -> None:
+            row = await reader.fetch_one(
+                "SELECT cache_write_tokens, cache_write_1h_tokens FROM usage_records"
+            )
+            assert row is not None
+            assert (int(row[0]), int(row[1])) == (0, 0)
+
+        await database.read(inspect)
+
+
+@pytest.mark.anyio
 async def test_fresh_database_reopen_is_migration_idempotent_without_prior_release(
     tmp_path: Path,
 ) -> None:
-    assert len(MIGRATIONS) == 1
-    assert LATEST_SCHEMA_VERSION == 1
+    assert MIGRATIONS
+    assert MIGRATIONS[-1].version == LATEST_SCHEMA_VERSION
 
     database_path = tmp_path / "tau.sqlite3"
     async with SqliteDatabase(database_path) as database:

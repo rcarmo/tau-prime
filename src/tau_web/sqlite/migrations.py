@@ -267,7 +267,18 @@ CREATE VIRTUAL TABLE search_fts USING fts5(
 """,
 )
 
-MIGRATIONS: tuple[Migration, ...] = (MIGRATION_0001,)
+MIGRATION_0002 = Migration(
+    version=2,
+    name="anthropic_cache_write_usage",
+    sql=r"""
+ALTER TABLE usage_records
+    ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0 CHECK(cache_write_tokens >= 0);
+ALTER TABLE usage_records
+    ADD COLUMN cache_write_1h_tokens INTEGER NOT NULL DEFAULT 0 CHECK(cache_write_1h_tokens >= 0);
+""",
+)
+
+MIGRATIONS: tuple[Migration, ...] = (MIGRATION_0001, MIGRATION_0002)
 LATEST_SCHEMA_VERSION = MIGRATIONS[-1].version
 
 

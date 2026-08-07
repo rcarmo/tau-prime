@@ -102,7 +102,7 @@ class TauWebServices:
             extension_state = ExtensionStateRepository(database)
             extension_storage = SqliteExtensionStorageBackend(extension_state)
             extensions = ExtensionDirectory()
-            projector = EventProjector(timeline)
+            projector = EventProjector(timeline, usage, sessions)
             broker = EventBroker(
                 replay_capacity=config.sse_replay_capacity,
                 subscriber_capacity=config.sse_client_capacity,

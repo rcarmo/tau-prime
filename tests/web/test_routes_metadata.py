@@ -136,6 +136,8 @@ async def test_plan_usage_and_search_routes(app_client: TestClient) -> None:
         input_tokens=3,
         output_tokens=5,
         cached_input_tokens=2,
+        cache_write_tokens=11,
+        cache_write_1h_tokens=4,
         cost_microunits=7,
     )
     usage = await app_client.get("/api/sessions/meta/usage")
@@ -144,7 +146,8 @@ async def test_plan_usage_and_search_routes(app_client: TestClient) -> None:
         "input": 3,
         "output": 5,
         "cache_read": 2,
-        "cache_write": 0,
+        "cache_write": 11,
+        "cache_write_1h": 4,
         "cost": 7,
     }
 

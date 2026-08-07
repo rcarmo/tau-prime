@@ -166,6 +166,8 @@ class UsageRecord:
     input_tokens: int
     output_tokens: int
     cached_input_tokens: int
+    cache_write_tokens: int
+    cache_write_1h_tokens: int
     cost_microunits: int | None
     details: JSONObject
     recorded_at: str
@@ -1112,6 +1114,8 @@ class UsageRepository(SqliteRepository):
         input_tokens: int = 0,
         output_tokens: int = 0,
         cached_input_tokens: int = 0,
+        cache_write_tokens: int = 0,
+        cache_write_1h_tokens: int = 0,
         cost_microunits: int | None = None,
         details: JSONObject | None = None,
     ) -> UsageRecord:
@@ -1121,6 +1125,10 @@ class UsageRepository(SqliteRepository):
         _require_non_negative(input_tokens, field="Input tokens")
         _require_non_negative(output_tokens, field="Output tokens")
         _require_non_negative(cached_input_tokens, field="Cached input tokens")
+        _require_non_negative(cache_write_tokens, field="Cache write tokens")
+        _require_non_negative(cache_write_1h_tokens, field="One-hour cache write tokens")
+        if cache_write_1h_tokens > cache_write_tokens:
+            raise ValueError("One-hour cache write tokens cannot exceed cache write tokens")
         if cost_microunits is not None:
             _require_non_negative(cost_microunits, field="Cost microunits")
         timestamp = _timestamp()
@@ -1131,9 +1139,9 @@ class UsageRepository(SqliteRepository):
                 """
                 INSERT INTO usage_records(
                     session_id, run_id, provider_name, model, input_tokens,
-                    output_tokens, cached_input_tokens, cost_microunits,
-                    details_json, recorded_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    output_tokens, cached_input_tokens, cache_write_tokens,
+                    cache_write_1h_tokens, cost_microunits, details_json, recorded_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_key,
@@ -1143,6 +1151,8 @@ class UsageRepository(SqliteRepository):
                     input_tokens,
                     output_tokens,
                     cached_input_tokens,
+                    cache_write_tokens,
+                    cache_write_1h_tokens,
                     cost_microunits,
                     details_json,
                     timestamp,
@@ -2195,6 +2205,8 @@ def _usage_from_row(row: Row) -> UsageRecord:
         input_tokens=int(row["input_tokens"]),
         output_tokens=int(row["output_tokens"]),
         cached_input_tokens=int(row["cached_input_tokens"]),
+        cache_write_tokens=int(row["cache_write_tokens"]),
+        cache_write_1h_tokens=int(row["cache_write_1h_tokens"]),
         cost_microunits=(
             int(row["cost_microunits"]) if row["cost_microunits"] is not None else None
         ),
