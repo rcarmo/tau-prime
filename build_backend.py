@@ -139,7 +139,20 @@ def _hash(data: bytes) -> str:
 def _is_excluded_source(path: Path) -> bool:
     relative = path.relative_to(ROOT)
     parts = relative.parts
-    if any(part in {".venv", "__pycache__", "pycache", "node_modules"} for part in parts):
+    if any(
+        part
+        in {
+            ".cache",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".venv",
+            "__pycache__",
+            "node_modules",
+            "pycache",
+        }
+        for part in parts
+    ):
         return True
     generated_prefixes = (
         ("website", ".astro"),
@@ -207,7 +220,7 @@ def _package_files() -> list[tuple[Path, str]]:
     for package in ("tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"):
         package_root = src / package
         for path in package_root.rglob("*"):
-            if not path.is_file():
+            if not path.is_file() or _is_excluded_source(path):
                 continue
             if path.suffix == ".py" or path.suffix in package_data_suffixes:
                 files.append((path, path.relative_to(src).as_posix()))

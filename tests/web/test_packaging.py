@@ -77,6 +77,20 @@ def test_wheel_includes_preact_frontend_sources() -> None:
         assert expected in archive_names
 
 
+def test_wheel_excludes_dependency_and_cache_trees() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    forbidden_parts = {
+        ".cache",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__",
+        "node_modules",
+    }
+    assert not any(forbidden_parts.intersection(Path(name).parts) for name in archive_names)
+
+
 def test_wheel_declares_tau_console_script(tmp_path: Path) -> None:
     wheel_name = build_backend.build_wheel(str(tmp_path))
     dist_info = build_backend._dist_info_name()
