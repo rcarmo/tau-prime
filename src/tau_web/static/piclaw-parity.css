@@ -7,22 +7,11 @@
   --panel: var(--bg-secondary);
   --panel-strong: var(--bg-primary);
   --panel-soft: var(--bg-hover);
-  --border: var(--border-color);
-  --text: var(--text-primary);
   --muted: var(--text-secondary);
-  --accent: var(--accent-color);
-  --accent-strong: var(--accent-hover);
   --shadow: var(--shadow-md);
 }
 
 [hidden] { display: none !important; }
-
-html,
-body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-family);
-}
 
 /* The Preact mount must not add a layout box around Piclaw's shell hierarchy. */
 #app,
@@ -38,17 +27,6 @@ body {
 .compose-form { background: var(--bg-secondary); border-color: var(--border-color); }
 .muted { color: var(--text-secondary); }
 
-button,
-input,
-textarea,
-select,
-option {
-  color: var(--text-primary);
-  border-color: var(--border-color);
-  -webkit-text-fill-color: var(--text-primary);
-}
-select,
-option { background: var(--bg-secondary); }
 #compose-delivery-mode {
   appearance: none;
   -webkit-appearance: none;

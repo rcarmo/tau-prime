@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import zipfile
 from pathlib import Path
 
@@ -62,6 +63,17 @@ def test_wheel_includes_frontend_static_assets() -> None:
     assert "tau_web/static/widget-bridge.js" in archive_names
     assert "tau_web/static/frontend-sdk.js" in archive_names
     assert "tau_web/static/preact-shell.js" in archive_names
+
+
+def test_built_wheel_preserves_piclaw_css_and_font_bytes(tmp_path: Path) -> None:
+    wheel_name = build_backend.build_wheel(str(tmp_path))
+    static_root = build_backend.ROOT / "src" / "tau_web" / "static"
+    css = (static_root / "piclaw-reference.css").read_text(encoding="utf-8")
+    font_names = set(re.findall(r"url\(\./([^)]*)\)", css))
+    assert len(font_names) == 4
+    with zipfile.ZipFile(tmp_path / wheel_name, "r") as archive:
+        for name in sorted(font_names | {"piclaw-reference.css", "PICLAW-LICENSE.md", "FONT-LICENSES.md"}):
+            assert archive.read(f"tau_web/static/{name}") == (static_root / name).read_bytes()
 
 
 def test_wheel_includes_preact_frontend_sources() -> None:

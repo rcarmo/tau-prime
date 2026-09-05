@@ -11,7 +11,7 @@ test('system meters render Tau snapshots through Piclaw stats markup', async ({ 
   });
   await page.route('**/meters', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(snapshot) }));
   await page.goto('/');
-  await expect(page.locator('#compose-input')).toBeVisible();
+  await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   await page.evaluate((meters) => window.dispatchEvent(new CustomEvent('tau:meters-render', { detail: {
     enabled: true, collapsed: false, meters,

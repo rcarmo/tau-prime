@@ -6,7 +6,7 @@ import process from 'node:process';
 
 const TAU_BIN = '/workspace/tau/.venv/bin/tau';
 const HOST = '127.0.0.1';
-const PORT = '8765';
+const PORT = process.env.TAU_BROWSER_PORT || '8765';
 
 const SHUTDOWN_GRACE_MS = 3000;
 

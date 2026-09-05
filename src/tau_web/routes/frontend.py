@@ -21,6 +21,10 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/static/widget-bridge.js",
         "/static/frontend-sdk.js",
         "/static/preact-shell.js",
+        "/static/JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
+        "/static/JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
+        "/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
+        "/static/firacode-nerd-font-mono-regular-f4sytzp8.ttf",
     }
 )
 
@@ -63,6 +67,30 @@ _ROOT_ASSETS: Final[dict[str, FrontendAsset]] = {
 }
 
 _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
+    "JetBrainsMonoNFM-Medium-hh38vnv1.woff2": FrontendAsset(
+        resource_name="JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
+        content_type="font/woff2",
+        charset=None,
+        cache_control="public, max-age=31536000, immutable",
+    ),
+    "JetBrainsMonoNFM-Regular-rhdb9m6d.woff2": FrontendAsset(
+        resource_name="JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
+        content_type="font/woff2",
+        charset=None,
+        cache_control="public, max-age=31536000, immutable",
+    ),
+    "firacode-nerd-font-mono-bold-v7nf8tpn.ttf": FrontendAsset(
+        resource_name="firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
+        content_type="font/ttf",
+        charset=None,
+        cache_control="public, max-age=31536000, immutable",
+    ),
+    "firacode-nerd-font-mono-regular-f4sytzp8.ttf": FrontendAsset(
+        resource_name="firacode-nerd-font-mono-regular-f4sytzp8.ttf",
+        content_type="font/ttf",
+        charset=None,
+        cache_control="public, max-age=31536000, immutable",
+    ),
     "piclaw-reference.css": FrontendAsset(
         resource_name="piclaw-reference.css",
         content_type="text/css",

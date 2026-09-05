@@ -60,7 +60,7 @@ def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:
                         "default-src 'self'",
                         "base-uri 'none'",
                         "connect-src 'self'",
-                        "font-src 'self'",
+                        "font-src 'self' data:",
                         "form-action 'self'",
                         "frame-ancestors 'none'",
                         "img-src 'self' blob: data:",

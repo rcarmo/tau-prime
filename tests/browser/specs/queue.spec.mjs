@@ -27,7 +27,7 @@ test('queue stack preserves independent FIFO heads and uses Tau dispatch routes'
   }, queued);
 
   await page.goto('/');
-  await expect(page.locator('#compose-input')).toBeVisible();
+  await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});

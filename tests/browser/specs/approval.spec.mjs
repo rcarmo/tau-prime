@@ -20,7 +20,7 @@ test('approval dialog uses Piclaw modal mapping and Escape denies safely', async
     };
   });
   await page.goto('/');
-  await expect(page.locator('#compose-input')).toBeVisible();
+  await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});

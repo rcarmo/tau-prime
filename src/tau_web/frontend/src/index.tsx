@@ -1,9 +1,12 @@
 import { Fragment, render } from "preact";
+import { useState } from "preact/hooks";
 import { ActivityBar } from "./components/ActivityBar";
+import { TabBar } from "./components/TabBar";
 import { StatusBar } from "./components/StatusBar";
 import { Composer } from "./components/Composer";
 import { Dashboard } from "./components/Dashboard";
 import { SidePanel } from "./components/SidePanel";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { SessionRuntime, Timeline } from "./components/Timeline";
 import { Onboarding } from "./components/Onboarding";
 import { QueueStack } from "./components/QueueStack";
@@ -18,12 +21,20 @@ import { useSidebarTabs } from "./hooks/useSidebarTabs";
 function TauShell() {
   const { drawer, close, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+
   const { dashboardOpen, setDashboardOpen } = useDashboardVisibility();
   const { metersEnabled, metersCollapsed, toggleMetersEnabled, toggleMetersCollapsed } = useMeterControls();
   const { sessionFilter, selectSessionFilter } = useSessionFilter();
-  const sidebarOpen = drawer !== null;
+  const settingsOpen = activeTab === "settings";
+  const sidebarOpen = drawer !== null && !settingsOpen;
 
   const selectPanel = (panel: Parameters<typeof selectTab>[0]) => {
+    if (panel === "settings") {
+      selectTab(settingsOpen ? "workspace" : "settings");
+      close();
+      return;
+    }
     const target = panel === "sessions" ? "nav" : "panel";
     if (panel === activeTab && drawer === target) close();
     else {
@@ -39,19 +50,18 @@ function TauShell() {
         <ActivityBar activePanel={activeTab} onPanelChange={selectPanel} onDashboard={() => setDashboardOpen(true)} />
         <main className="app-layout__main">
           <div className="app-layout__content-area">
-            <div className="app-layout__sidebar-wrapper" style={{ width: sidebarOpen ? "300px" : "0" }}>
+            <div className="app-layout__sidebar-wrapper" hidden={settingsOpen} style={{ width: sidebarOpen ? "300px" : "0" }}>
               <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={close} sessionFilter={sessionFilter} onSelectSessionFilter={selectSessionFilter} />
             </div>
             <button id="drawer-backdrop" className="app-layout__sidebar-backdrop" type="button" aria-label="Close sidebar" hidden={!sidebarOpen} onClick={close} />
             {sidebarOpen && <div className="app-layout__resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" />}
             <div className="app-layout__panel">
-              <div className="tab-bar" role="tablist" aria-label="Open views">
-                <button className="tab-bar__tab tab-bar__tab--active" type="button" role="tab" aria-selected="true">Chat</button>
-                <span className="tab-bar__clock" aria-hidden="true" />
-              </div>
-              <div className="app-layout__tab-viewport">
+              <SettingsPanel hidden={!settingsOpen} />
+              {!settingsOpen && <TabBar />}
+              <div className="app-layout__tab-viewport" hidden={settingsOpen}>
                 <div className="app-layout__tab-content">
-                  <section className="chat" aria-label="Tau chat">
+                  <Onboarding onOpenChange={setOnboardingOpen} />
+                  <section className="chat" aria-label="Tau chat" hidden={onboardingOpen}>
                     <div className="chat__messages"><Timeline /></div>
                     <SessionRuntime />
                     <QueueStack />
@@ -70,7 +80,6 @@ function TauShell() {
           </div>
         </main>
       </div>
-      <Onboarding />
       <ApprovalDialog />
       {/* Temporary event-adapter anchors; visible shell markup is Piclaw-owned. */}
       <aside id="session-nav" hidden />

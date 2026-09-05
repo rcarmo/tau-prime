@@ -30,7 +30,7 @@ export function ActivityBar({ activePanel, onPanelChange, onDashboard }: {
             aria-pressed={active}
             onClick={() => panel.id === "dashboard" ? onDashboard() : onPanelChange(panel.id)}
           >
-            <i className={`codicon ${panel.icon} activity-bar__icon`} aria-hidden="true" />
+            <i className={`codicon ${panel.icon} icon--size-24 activity-bar__icon`} aria-hidden="true" />
           </button>
         );
       })}

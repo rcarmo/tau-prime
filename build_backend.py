@@ -216,6 +216,8 @@ def _package_files() -> list[tuple[Path, str]]:
         ".webmanifest",
         ".svg",
         ".png",
+        ".ttf",
+        ".woff2",
     }
     for package in ("tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"):
         package_root = src / package

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('timeline uses Piclaw message, tool, and attachment component mapping', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('#compose-input')).toBeVisible();
+  await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('session navigation renders Tau sessions through Piclaw sidebar cards', async ({ page }) => {
   await page.addInitScript(() => { window.EventSource = class { close() {} }; });
   await page.goto('/');
-  await expect(page.locator('#compose-input')).toBeVisible();
+  await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});

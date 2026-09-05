@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
 const isCI = Boolean(process.env.CI);
+const baseURL = `http://127.0.0.1:${process.env.TAU_BROWSER_PORT || '8765'}`;
 
 export default defineConfig({
   testDir: './specs',
@@ -8,14 +9,14 @@ export default defineConfig({
   retries: isCI ? 2 : 0,
   workers: 2,
   use: {
-    baseURL: 'http://127.0.0.1:8765',
+    baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
   webServer: {
     command: 'node ./start-server.mjs',
-    url: 'http://127.0.0.1:8765/api/health',
+    url: `${baseURL}/api/health`,
     reuseExistingServer: !isCI,
     timeout: 120_000,
   },
