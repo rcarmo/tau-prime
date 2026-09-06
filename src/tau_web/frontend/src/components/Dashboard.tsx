@@ -114,7 +114,7 @@ export function Dashboard({ open, onClose }: { open: boolean; onClose: () => voi
   const dialogRef = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
     const dialog = dialogRef.current;

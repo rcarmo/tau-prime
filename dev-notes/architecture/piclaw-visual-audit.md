@@ -340,6 +340,18 @@ Dashboard link handler now intercepts only unmodified primary activation; Shift/
 
 Full combined run initially hit model-options injection replaced by server data. Added durable shell-ready/SSE isolation to that component spec; full rerun 339 passed / 3 documented WebKit offline skips. Frontend/packaging 43/43, TypeScript/diff checks pass. Dashboard focus/inertness/modified-links/contrast/wrapping fixes are checkpointed without claiming final visual acceptance.
 
+## Dashboard session-selection dismissal
+
+Real backend session-selection test reproduced Dashboard staying open after selecting a tile. selectSession now closes it after unsaved-plan confirmation, before session refresh/focus; modal inert cleanup uses layout effect. Six-target selection checks confirm modal hidden, target selected, timeline focused and not inert. Initial test route glob also matched synthetic session ID paths; narrowed it to /dashboard? so session API remains real. Existing focus tests passed 6/6 during fix. Build/TypeScript pass.
+
+## Unsaved-plan cancellation and startup selection
+
+New decline-switch test first exposed startup losing URL-selected session: applySessionFilter ran against an empty list before initial refresh. Removed that premature selection synchronization (persist filter only, let refreshShell resolve requested ID against fetched sessions). Real backend acceptance/cancellation matrix passes 12/12: decline preserves current session, dirty plan and open modal. Real SSE/populated capture checks pass 18/18; frontend/packaging 43/43. This corrects earlier startup sequencing attempts rather than adding another wait.
+
+## Session-selection integration checkpoint
+
+Complete browser suite after initialization/selection dismissal corrections: 351 passed / 3 documented WebKit offline skips, no failures. Full Python suite 1327 passed; diff checks pass. This checkpoint verifies functional regression coverage, not the still-open optional rendering/full visual acceptance items.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.

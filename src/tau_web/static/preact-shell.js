@@ -798,7 +798,7 @@ function Dashboard({ open, onClose }) {
   const dialogRef = A2(null);
   const closeRef = A2(onClose);
   closeRef.current = onClose;
-  y2(() => {
+  _2(() => {
     if (!open) return;
     const previous = document.activeElement;
     const dialog = dialogRef.current;

@@ -121,7 +121,9 @@ void init();
 async function init() {
   try {
     switchTab("workspace");
-    await applySessionFilter(state.sessionFilter);
+    // Sessions are not loaded yet: filtering now would clear the URL/storage
+    // selection before refreshShell can resolve it against the fetched list.
+    persistStorage(STORAGE_KEYS.sessionFilter, state.sessionFilter);
     closeDrawers();
     await refreshShell({ reconnect: true, announceMessage: "Tau shell ready." });
     document.documentElement.dataset.tauShellReady = "true";
@@ -494,6 +496,7 @@ async function selectSession(sessionId, { reconnect = true, focusTimeline = true
   ) {
     return;
   }
+  if (state.dashboard.open) setDashboardOpen(false);
   state.selectedSessionId = sessionId;
   persistStorage(STORAGE_KEYS.selectedSessionId, sessionId);
   syncSelection(sessionId);
