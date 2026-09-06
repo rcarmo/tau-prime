@@ -115,3 +115,13 @@ unsupported delete action. Uses semantic article and noninteractive timestamp
 until permalink behavior is wired. Combined staged frame/composer/posts pass
 12/12 both-theme/engine/viewport checks, including chronology and messages above
 composer. TypeScript passes. Live Timeline adapter remains to be switched.
+
+## Timeline adapter integration
+
+Timeline/MessageItem now accept internal classic mode, consume the same Tau
+render events and use ClassicPost with chronological classic timeline-content.
+Copy/collapse state and focus reuse existing handlers. Default remains old mode
+until shell/composer cutover. Tool/attachment/code inner markup still needs
+classic conversion; this is not full message fidelity. Combined classic frame,
+real timeline event/collapse and existing message-copy checks: 24 passed.
+Frontend build/TypeScript pass; generated bundle updated.

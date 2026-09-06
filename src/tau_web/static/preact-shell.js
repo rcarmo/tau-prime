@@ -1278,6 +1278,21 @@ function SettingsPanel({ hidden }) {
   ] });
 }
 
+// src/components/ClassicPost.tsx
+function ClassicPost({ id: id2, agent, author, time, avatar, actions, children }) {
+  return /* @__PURE__ */ u3("article", { id: id2, className: `post${agent ? " agent-post" : ""}`, children: [
+    /* @__PURE__ */ u3("div", { className: `post-avatar${agent ? " agent-avatar" : ""}`, "aria-hidden": "true", children: avatar }),
+    /* @__PURE__ */ u3("div", { className: "post-body", children: [
+      actions && /* @__PURE__ */ u3("div", { className: "post-actions", children: actions }),
+      /* @__PURE__ */ u3("div", { className: "post-meta", children: [
+        /* @__PURE__ */ u3("span", { className: "post-author", children: author }),
+        /* @__PURE__ */ u3("span", { className: "post-time", children: time })
+      ] }),
+      /* @__PURE__ */ u3("div", { className: "post-content", children })
+    ] })
+  ] });
+}
+
 // src/components/CopyButton.tsx
 function CopyButton({ text: text2 }) {
   const [copied, setCopied] = h2(false);
@@ -4169,10 +4184,10 @@ function MarkdownContent({ content }) {
 }
 
 // src/components/MessageActionBar.tsx
-function MessageActionBar({ content, collapsed, onToggle, toggleRef }) {
+function MessageActionBar({ content, collapsed, onToggle, toggleRef, classic = false }) {
   const [feedback, setFeedback] = h2("");
-  return /* @__PURE__ */ u3("div", { className: "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
-    content && /* @__PURE__ */ u3("button", { type: "button", className: "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
+  return /* @__PURE__ */ u3("div", { className: classic ? "post-action-controls" : "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
+    content && /* @__PURE__ */ u3("button", { type: "button", className: classic ? "post-action-btn post-copy-btn" : "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
       try {
         await navigator.clipboard.writeText(content);
         setFeedback("Message copied");
@@ -4180,7 +4195,7 @@ function MessageActionBar({ content, collapsed, onToggle, toggleRef }) {
         setFeedback("Unable to copy message");
       }
     }, children: /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u3("button", { ref: toggleRef, type: "button", className: "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: /* @__PURE__ */ u3("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u3("button", { ref: toggleRef, type: "button", className: classic ? "post-action-btn" : "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: /* @__PURE__ */ u3("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
     /* @__PURE__ */ u3("span", { className: "sr-only", role: "status", children: feedback })
   ] });
 }
@@ -4266,7 +4281,7 @@ function AttachmentChip({ attachment }) {
     /* @__PURE__ */ u3("i", { className: "codicon codicon-desktop-download attachment-chip__action", "aria-hidden": "true" })
   ] });
 }
-function MessageItem({ item, resultByCall }) {
+function MessageItem({ item, resultByCall, classic = false }) {
   const [collapsed, setCollapsed] = h2(false);
   const toggleRef = A2(null);
   const restoreToggleFocus = A2(false);
@@ -4281,6 +4296,22 @@ function MessageItem({ item, resultByCall }) {
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
+  if (classic) return /* @__PURE__ */ u3(
+    ClassicPost,
+    {
+      id: `post-${item.id}`,
+      agent: !isUser,
+      author: isUser ? "You" : "Tau",
+      time: item.live ? "live" : item.meta ?? "",
+      avatar: isUser ? "Y" : "\u03C4",
+      actions: /* @__PURE__ */ u3(MessageActionBar, { classic: true, content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
+      children: collapsed ? /* @__PURE__ */ u3("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u3(b, { children: [
+        item.toolCalls?.map((call, index) => /* @__PURE__ */ u3(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
+        item.content && (isUser ? /* @__PURE__ */ u3("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u3(MarkdownContent, { content: item.content })),
+        item.attachments?.map((attachment) => /* @__PURE__ */ u3(AttachmentChip, { attachment }, attachment.mediaId))
+      ] })
+    }
+  );
   if (collapsed) return /* @__PURE__ */ u3("div", { className: `message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
     /* @__PURE__ */ u3("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
     /* @__PURE__ */ u3("div", { className: "message-list__body message-list__body--collapsed", children: [
@@ -4304,7 +4335,7 @@ function MessageItem({ item, resultByCall }) {
     ] })
   ] });
 }
-function Timeline() {
+function Timeline({ classic = false }) {
   const [timeline, setTimeline] = h2({ selected: false, items: [] });
   _2(() => {
     const update = (event) => {
@@ -4320,9 +4351,9 @@ function Timeline() {
   const empty2 = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
   return /* @__PURE__ */ u3(b, { children: [
     /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
-    /* @__PURE__ */ u3("div", { id: "timeline-main", className: "chat__messages", tabIndex: -1, children: [
+    /* @__PURE__ */ u3("div", { id: "timeline-main", className: classic ? "timeline reverse" : "chat__messages", tabIndex: -1, children: [
       /* @__PURE__ */ u3("div", { id: "timeline-meta", className: "sr-only", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
-      /* @__PURE__ */ u3("div", { id: "timeline-list", className: "message-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u3("div", { className: "message-list__empty", children: /* @__PURE__ */ u3("p", { children: empty2 }) }) : [...visibleItems].reverse().map((item, index) => /* @__PURE__ */ u3(MessageItem, { item, resultByCall }, item.id ?? index)) })
+      /* @__PURE__ */ u3("div", { id: "timeline-list", className: classic ? "timeline-content" : "message-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u3("div", { className: "message-list__empty", children: /* @__PURE__ */ u3("p", { children: empty2 }) }) : (classic ? visibleItems : [...visibleItems].reverse()).map((item, index) => /* @__PURE__ */ u3(MessageItem, { item, resultByCall, classic }, item.id ?? index)) })
     ] }),
     /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
   ] });

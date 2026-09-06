@@ -1,4 +1,5 @@
 import { Fragment } from "preact";
+import { ClassicPost } from "./ClassicPost";
 import { CopyButton } from "./CopyButton";
 import { MarkdownContent } from "./MarkdownContent";
 import { MessageActionBar } from "./MessageActionBar";
@@ -97,7 +98,7 @@ function AttachmentChip({ attachment }: { attachment: Attachment }) {
   );
 }
 
-export function MessageItem({ item, resultByCall }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage> }) {
+export function MessageItem({ item, resultByCall, classic = false }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage>; classic?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = useRef(false);
@@ -112,6 +113,14 @@ export function MessageItem({ item, resultByCall }: { item: TimelineMessage; res
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
+  if (classic) return <ClassicPost id={`post-${item.id}`} agent={!isUser} author={isUser ? "You" : "Tau"} time={item.live ? "live" : item.meta ?? ""} avatar={isUser ? "Y" : "τ"}
+    actions={<MessageActionBar classic content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />}>
+    {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "— collapsed"}</span> : <>
+      {item.toolCalls?.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
+      {item.content && (isUser ? <div style={{whiteSpace:"pre-wrap"}}>{item.content}</div> : <MarkdownContent content={item.content} />)}
+      {item.attachments?.map(attachment => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}
+    </>}
+  </ClassicPost>;
   if (collapsed) return <div className={`message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
     <div className={`message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`} aria-hidden="true">{isUser ? "Y" : "τ"}</div>
     <div className="message-list__body message-list__body--collapsed">
@@ -144,7 +153,7 @@ export function MessageItem({ item, resultByCall }: { item: TimelineMessage; res
   );
 }
 
-export function Timeline() {
+export function Timeline({ classic = false }: { classic?: boolean }) {
   const [timeline, setTimeline] = useState<TimelineState>({ selected: false, items: [] });
   useLayoutEffect(() => {
     const update = (event: Event) => {
@@ -163,12 +172,12 @@ export function Timeline() {
   return (
     <Fragment>
       <div className="extension-slot" data-extension-slot="timeline_before" />
-      <div id="timeline-main" className="chat__messages" tabIndex={-1}>
+      <div id="timeline-main" className={classic ? "timeline reverse" : "chat__messages"} tabIndex={-1}>
         <div id="timeline-meta" className="sr-only" aria-live="polite">Load a session to inspect persisted messages.</div>
-        <div id="timeline-list" className="message-list" aria-live="polite" tabIndex={0}>
+        <div id="timeline-list" className={classic ? "timeline-content" : "message-list"} aria-live="polite" tabIndex={0}>
           {visibleItems.length === 0
             ? <div className="message-list__empty"><p>{empty}</p></div>
-            : [...visibleItems].reverse().map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} />)}
+            : (classic ? visibleItems : [...visibleItems].reverse()).map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} classic={classic} />)}
         </div>
       </div>
       <div className="extension-slot" data-extension-slot="timeline_after" />
