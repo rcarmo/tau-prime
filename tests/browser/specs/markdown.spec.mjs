@@ -1,4 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { installSelectedSession } from '../fixtures/selected-session.mjs';
+import { installLiveStream } from '../fixtures/live-stream.mjs';
+
+test.beforeEach(async ({page}) => {
+  await installSelectedSession(page);
+  await installLiveStream(page, 'tau');
+});
 
 test('agent Markdown renders semantic content without active HTML', async ({ page }) => {
   await page.route('**/api/events*', r => r.fulfill({contentType:'text/event-stream',body:': fixture\n\n'}));

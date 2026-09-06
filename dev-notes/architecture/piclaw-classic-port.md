@@ -701,3 +701,11 @@ Removed nonfunctional separator rather than implying unsupported drag resizing.
 Native textarea resizing remains available. Existing file navigation/UTF-8,
 annotations and pane a11y checks pass 24/24; build/TypeScript pass. No editor,
 rename or delete functionality invented. Paired panel visual review still open.
+
+## Secondary-surface full regression and fixture isolation
+
+Complete browser run after secondary conversions: 434 passed, 1 failed, 3
+existing WebKit offline skips (438 total). Failure: WebKit phone threshold
+fixture replaced during click by live session updates. Added selected-session
+and persistent SSE isolation to all Markdown tests; focused 18 passed. No
+production change for this failure. Full rerun remains required.
