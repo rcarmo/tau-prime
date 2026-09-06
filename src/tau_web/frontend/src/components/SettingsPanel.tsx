@@ -15,7 +15,7 @@ export function SettingsPanel({ hidden }: { hidden: boolean }) {
     { id: "runtime", label: "Runtime" },
   ];
   return (
-        <section id="panel-settings" className="settings-panel" aria-labelledby="tab-settings" hidden={hidden}>
+        <section id="panel-settings" className="settings-dialog-body" aria-labelledby="tab-settings" hidden={hidden}>
           <nav className="settings-nav" aria-label="Settings categories">
             {categories.map(item => <a key={item.id}
               className={`settings-nav-item${category === item.id ? " active" : ""}`}
@@ -26,7 +26,7 @@ export function SettingsPanel({ hidden }: { hidden: boolean }) {
                 setCategory(item.id);
               }}><span className="settings-nav-label">{item.label}</span></a>)}
           </nav>
-          <div className="tau-settings-content">
+          <div className="settings-content">
             <section id="tau-settings-auth" className="settings-section">
               <h2 className="tau-settings-heading">Authentication</h2>
               <button className="tau-settings-button settings-provider-setup" type="button" onClick={() => {

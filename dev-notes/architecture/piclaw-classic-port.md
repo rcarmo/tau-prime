@@ -909,3 +909,13 @@ message deletion has no Tau backend endpoint. None are deemed accepted.
 Autonomous loop paused for concrete visual feedback, not marked complete.
 Resume from the current PDF and identify bounded corrections, rather than rerun
 already-green tests or keep producing superseding artifacts without UI decisions.
+
+## Settings dialog correction after review handoff
+
+Continued known mismatch without treating sidebar placement as accepted. Settings
+now uses actual classic overlay/dialog/header/body/content classes outside the
+Workspace sidebar. Forms stay mounted. Added inert background, focus trap/Escape,
+backdrop dismissal and focus restoration; composer model shortcut retains input
+focus/category. Six-target modal state/identity and setup reopening checks 12
+passed; build/TypeScript pass. Older sidebar-layout expectations need migration,
+plus dialog both-theme a11y/bounds verification before final regression.

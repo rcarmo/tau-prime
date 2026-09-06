@@ -1,3 +1,4 @@
+import { ClassicSettingsDialog } from "./components/ClassicSettingsDialog";
 import { ClassicChatFrame } from "./components/ClassicChatFrame";
 import { ClassicSessionControl } from "./components/ClassicSessionControl";
 import { SystemStats } from "./components/SystemStats";
@@ -47,9 +48,8 @@ function TauShell() {
   };
 
   return <Fragment>
-    <ClassicChatFrame workspaceOpen={sidebarOpen || settingsOpen} onToggleWorkspace={() => { if(sidebarOpen || settingsOpen) { close(); if(settingsOpen) selectTab("workspace"); } else selectPanel("workspace"); }} sidebar={<>
+    <ClassicChatFrame workspaceOpen={sidebarOpen} onToggleWorkspace={() => { if(sidebarOpen || settingsOpen) { close(); if(settingsOpen) selectTab("workspace"); } else selectPanel("workspace"); }} sidebar={<>
       <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={() => { close(); if(settingsOpen) selectTab("sessions"); }} sessionFilter={sessionFilter} onSelectSessionFilter={selectSessionFilter} />
-      <SettingsPanel hidden={!settingsOpen} />
       <SystemStats enabled={metersEnabled} collapsed={metersCollapsed} onToggleEnabled={toggleMetersEnabled} onToggleCollapsed={toggleMetersCollapsed} />
     </>}>
       <Onboarding onOpenChange={setOnboardingOpen} />
@@ -59,6 +59,7 @@ function TauShell() {
         <Composer session={<ClassicSessionControl open={sidebarOpen} onToggle={() => selectPanel("sessions")} />} metadata={<StatusBar onOpenModel={() => { selectTab("settings"); close(); window.dispatchEvent(new CustomEvent("tau:open-model-settings")); requestAnimationFrame(() => document.getElementById("model-input")?.focus()); }} dashboardOpen={dashboardOpen} onToggleDashboard={() => setDashboardOpen(value=>!value)} />} />
       </div>
     </ClassicChatFrame>
+    <ClassicSettingsDialog open={settingsOpen} onClose={() => {selectTab("workspace");close();}}><SettingsPanel hidden={!settingsOpen} /></ClassicSettingsDialog>
     <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
     <ApprovalDialog />
     <div hidden><aside id="session-nav" /><button id="mobile-nav-toggle" onClick={() => selectPanel("sessions")} /><button id="mobile-panel-toggle" onClick={() => selectPanel("workspace")} /><button id="drawer-backdrop" onClick={close} /></div>
