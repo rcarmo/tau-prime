@@ -125,3 +125,12 @@ until shell/composer cutover. Tool/attachment/code inner markup still needs
 classic conversion; this is not full message fidelity. Combined classic frame,
 real timeline event/collapse and existing message-copy checks: 24 passed.
 Frontend build/TypeScript pass; generated bundle updated.
+
+## Composer adapter integration
+
+Composer now shares input, attachment, completion and hidden adapter controls
+between default and internal classic layouts, using ClassicComposerSurface.
+Classic mode hides legacy context/delivery controls, places attach/send in the
+footer, and accepts session/model slots. Live default unchanged pending cutover.
+24 classic frame/timeline/composer checks and 12 existing composer checks pass;
+TypeScript/build pass. Completion and attachment styling still needs conversion.

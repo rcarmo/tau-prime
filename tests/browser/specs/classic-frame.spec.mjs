@@ -6,7 +6,7 @@ const frontend=path.resolve(import.meta.dirname,'../../../src/tau_web/frontend')
 const require=createRequire(path.join(frontend,'package.json'));
 const {build}=require('esbuild');
 const css=await readFile(path.resolve(frontend,'../static/piclaw-classic.css'),'utf8');
-const bundle=await build({stdin:{contents:`import {h,render} from 'preact';import {ClassicChatFrame} from './src/components/ClassicChatFrame.tsx';import {ClassicComposerSurface} from './src/components/ClassicComposerSurface.tsx';import {ClassicPost} from './src/components/ClassicPost.tsx';import {Timeline} from './src/components/Timeline.tsx';window.mountClassicTimeline=()=>{render(h(ClassicChatFrame,null,h(Timeline,{classic:true})),document.getElementById('app'));};render(h(ClassicChatFrame,{workspaceOpen:false},h('div',{class:'timeline reverse'},h('div',{class:'timeline-content'},h(ClassicPost,{id:'user',agent:false,author:'You',time:'2m',avatar:'Y'},'Review the workspace.'),h(ClassicPost,{id:'agent',agent:true,author:'Tau',time:'1m',avatar:'τ',actions:h('button',{class:'post-action-btn',type:'button','aria-label':'Copy'},'Copy')},h('p',null,'The API is unchanged.')))),h(ClassicComposerSurface,{session:h('button',{class:'compose-session-switcher-pill',type:'button'},'Sessions'),input:h('textarea',{'aria-label':'Message',rows:1,style:{height:'50px'}}),metadata:h('button',{class:'compose-model-hint compose-model-hint-btn',type:'button'},'test/review-model'),actions:h('button',{class:'send-btn',type:'button'},'Send')})),document.getElementById('app'));`,resolveDir:frontend,loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',jsxImportSource:'preact',nodePaths:[path.join(frontend,'node_modules')]});
+const bundle=await build({stdin:{contents:`import {h,render} from 'preact';import {ClassicChatFrame} from './src/components/ClassicChatFrame.tsx';import {ClassicComposerSurface} from './src/components/ClassicComposerSurface.tsx';import {ClassicPost} from './src/components/ClassicPost.tsx';import {Timeline} from './src/components/Timeline.tsx';import {Composer} from './src/components/Composer.tsx';window.mountClassicComposer=()=>render(h(ClassicChatFrame,null,h(Composer,{classic:true,session:h('button',{type:'button'},'Sessions'),metadata:'test/review-model'})),document.getElementById('app'));window.mountClassicTimeline=()=>{render(h(ClassicChatFrame,null,h(Timeline,{classic:true})),document.getElementById('app'));};render(h(ClassicChatFrame,{workspaceOpen:false},h('div',{class:'timeline reverse'},h('div',{class:'timeline-content'},h(ClassicPost,{id:'user',agent:false,author:'You',time:'2m',avatar:'Y'},'Review the workspace.'),h(ClassicPost,{id:'agent',agent:true,author:'Tau',time:'1m',avatar:'τ',actions:h('button',{class:'post-action-btn',type:'button','aria-label':'Copy'},'Copy')},h('p',null,'The API is unchanged.')))),h(ClassicComposerSurface,{session:h('button',{class:'compose-session-switcher-pill',type:'button'},'Sessions'),input:h('textarea',{'aria-label':'Message',rows:1,style:{height:'50px'}}),metadata:h('button',{class:'compose-model-hint compose-model-hint-btn',type:'button'},'test/review-model'),actions:h('button',{class:'send-btn',type:'button'},'Send')})),document.getElementById('app'));`,resolveDir:frontend,loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',jsxImportSource:'preact',nodePaths:[path.join(frontend,'node_modules')]});
 for(const theme of ['light','dark']) test(`classic ${theme} frame uses centered column without visual shell`,async({page})=>{
  await page.route('**/classic-frame-fixture',route=>route.fulfill({contentType:'text/html',body:`<html data-theme="${theme}"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="app"></div></body></html>`}));
  await page.goto('/classic-frame-fixture');
@@ -46,4 +46,19 @@ test('classic timeline consumes Tau events and preserves collapse focus',async({
  const expand=page.locator('#post-two').getByRole('button',{name:'Expand message'});
  await expect(expand).toBeFocused();await expect(expand).toHaveAttribute('aria-expanded','false');
  await expand.click();await expect(page.locator('#post-two strong')).toHaveText('Agent text');
+});
+
+test('classic composer retains adapter anchors and completion events',async({page})=>{
+ await page.route('**/classic-compose-fixture',r=>r.fulfill({contentType:'text/html',body:'<meta name="viewport" content="width=device-width, initial-scale=1"><div id="app"></div>'}));
+ await page.goto('/classic-compose-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:bundle.outputFiles[0].text});
+ await page.evaluate(()=>window.mountClassicComposer());
+ await expect(page.locator('#compose-input')).toBeVisible();
+ await expect(page.locator('#compose-delivery-mode')).toBeHidden();
+ await expect(page.locator('#compose-submit')).toHaveAccessibleName('Send');
+ await page.locator('#compose-input').fill('/help');
+ await expect(page.locator('#compose-input')).toHaveValue('/help');
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:completion-render',{detail:{open:true,index:0,items:[{label:'/help',detail:'Help'}]}})));
+ await expect(page.locator('#compose-input')).toHaveAttribute('aria-expanded','true');
+ await expect(page.locator('#compose-completion-option-0')).toContainText('/help');
+ await expect(page.locator('#compose-form')).toHaveCount(1);
 });
