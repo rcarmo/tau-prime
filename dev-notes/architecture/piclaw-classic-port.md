@@ -77,3 +77,13 @@ verify responsive results. Runtime/queue/approval extension surfaces need explic
 placement during shell conversion, not removal to reduce screenshot differences.
 The reference capture now fails on unknown endpoints/page errors and waits for
 actual message/font readiness; it also exports a bounded DOM/geometry inventory.
+
+## Classic asset staging
+
+Vendored untouched classic bundle CSS as `static/piclaw-classic.css`, separately
+from rejected visual reference. Registered public CSS route; SHA-256 pinned to
+632b049f34a164f73b4f2a379d4bfc4ee76327955b32331c9af6db28281b0ab6.
+Both referenced Fira Code fonts are byte-identical to already bundled/noticed
+files. Added wheel-byte/font-reference checks and route coverage: focused
+frontend/packaging 46 passed. The main page does NOT load this CSS yet: classic
+components must replace visual markup before stylesheet cutover.

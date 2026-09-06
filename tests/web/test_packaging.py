@@ -82,6 +82,18 @@ def test_vendored_assets_match_pinned_piclaw_2_15_3() -> None:
         assert hashlib.sha256((static_root / name).read_bytes()).hexdigest() == digest, name
 
 
+def test_classic_reference_assets_are_pinned_and_packaged(tmp_path: Path) -> None:
+    static_root = build_backend.ROOT / "src" / "tau_web" / "static"
+    css_bytes = (static_root / "piclaw-classic.css").read_bytes()
+    assert hashlib.sha256(css_bytes).hexdigest() == "632b049f34a164f73b4f2a379d4bfc4ee76327955b32331c9af6db28281b0ab6"
+    fonts = set(re.findall(r"url\(\./([^)]*)\)", css_bytes.decode()))
+    assert fonts == {"firacode-nerd-font-mono-bold-v7nf8tpn.ttf", "firacode-nerd-font-mono-regular-f4sytzp8.ttf"}
+    wheel_name = build_backend.build_wheel(str(tmp_path))
+    with zipfile.ZipFile(tmp_path / wheel_name) as archive:
+        for name in fonts | {"piclaw-classic.css"}:
+            assert archive.read(f"tau_web/static/{name}") == (static_root / name).read_bytes()
+
+
 def test_built_wheel_preserves_piclaw_css_and_font_bytes(tmp_path: Path) -> None:
     wheel_name = build_backend.build_wheel(str(tmp_path))
     static_root = build_backend.ROOT / "src" / "tau_web" / "static"

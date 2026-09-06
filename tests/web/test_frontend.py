@@ -35,6 +35,7 @@ FRONTEND_ASSETS = (
     ("/manifest.webmanifest", "application/manifest+json"),
     ("/sw.js", "application/javascript"),
     ("/static/piclaw-reference.css", "text/css"),
+    ("/static/piclaw-classic.css", "text/css"),
     ("/static/JetBrainsMonoNFM-Medium-hh38vnv1.woff2", "font/woff2"),
     ("/static/JetBrainsMonoNFM-Regular-rhdb9m6d.woff2", "font/woff2"),
     ("/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf", "font/ttf"),
