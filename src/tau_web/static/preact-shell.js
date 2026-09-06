@@ -1180,21 +1180,30 @@ function SettingsSummary() {
 
 // src/components/SettingsPanel.tsx
 function SettingsPanel({ hidden }) {
+  const [category, setCategory] = h2("auth");
+  const categories = [
+    { id: "auth", label: "Authentication", icon: "shield" },
+    { id: "model", label: "Model", icon: "symbol-parameter" },
+    { id: "runtime", label: "Runtime", icon: "server" }
+  ];
   return /* @__PURE__ */ u3("section", { id: "panel-settings", className: "settings-panel", "aria-labelledby": "tab-settings", hidden, children: [
-    /* @__PURE__ */ u3("nav", { className: "settings-panel__nav", "aria-label": "Settings categories", children: [
-      /* @__PURE__ */ u3("a", { className: "settings-panel__nav-item settings-panel__nav-item--active", href: "#tau-settings-auth", children: [
-        /* @__PURE__ */ u3("i", { className: "codicon codicon-shield", "aria-hidden": "true" }),
-        "Authentication"
-      ] }),
-      /* @__PURE__ */ u3("a", { className: "settings-panel__nav-item", href: "#tau-settings-model", children: [
-        /* @__PURE__ */ u3("i", { className: "codicon codicon-symbol-parameter", "aria-hidden": "true" }),
-        "Model"
-      ] }),
-      /* @__PURE__ */ u3("a", { className: "settings-panel__nav-item", href: "#tau-settings-runtime", children: [
-        /* @__PURE__ */ u3("i", { className: "codicon codicon-server", "aria-hidden": "true" }),
-        "Runtime"
-      ] })
-    ] }),
+    /* @__PURE__ */ u3("nav", { className: "settings-panel__nav", "aria-label": "Settings categories", children: categories.map((item) => /* @__PURE__ */ u3(
+      "a",
+      {
+        className: `settings-panel__nav-item${category === item.id ? " settings-panel__nav-item--active" : ""}`,
+        "aria-current": category === item.id ? "location" : void 0,
+        href: `#tau-settings-${item.id}`,
+        onClick: (event) => {
+          if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          setCategory(item.id);
+        },
+        children: [
+          /* @__PURE__ */ u3("i", { className: `codicon codicon-${item.icon}`, "aria-hidden": "true" }),
+          item.label
+        ]
+      },
+      item.id
+    )) }),
     /* @__PURE__ */ u3("div", { className: "settings-panel__content", children: [
       /* @__PURE__ */ u3("section", { id: "tau-settings-auth", className: "settings-panel__section", children: [
         /* @__PURE__ */ u3("h2", { className: "settings-panel__section-title", children: "Authentication" }),

@@ -137,3 +137,20 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 /* Tau's form wrapper retains an inline baseline gap below the textarea.
  * Block flow preserves its intrinsic height without adding a phantom line. */
 .chat__compose-container > #compose-input { display: block; }
+
+/* Tau's API forms combine labels and several controls in a single field row.
+ * Wrap those rows instead of clipping fixed-width inputs on narrow panes. */
+#panel-settings .settings-panel__field { flex-wrap: wrap; }
+#panel-settings .settings-panel__input,
+#panel-settings .settings-panel__select { max-width: 100%; min-width: 0; }
+
+/* Accessibility exceptions for Tau's settings forms: legacy secondary text
+ * and opacity do not meet AA on the visual theme's settings surfaces. */
+#panel-settings .settings-panel__description { color: var(--text-muted); opacity: 1; }
+.dark #panel-settings .settings-panel__nav-item:not(.settings-panel__nav-item--active),
+.dark #panel-settings .settings-panel__provider-btn { color: var(--text); }
+
+/* Inline Tau provider setup shares the visual dark surface, not legacy gray. */
+.dark .provider-wizard .provider-wizard__subtitle,
+.dark .provider-wizard .settings-panel__label,
+.dark .provider-wizard .provider-wizard__btn--secondary { color: var(--text-muted); }

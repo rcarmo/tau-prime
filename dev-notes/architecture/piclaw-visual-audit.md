@@ -268,6 +268,26 @@ Added real-backend session/SSE test (no stream route mocking), network offline t
 
 Combined current browser suite: 267 passed / 3 documented WebKit offline-navigation skips, including real SSE connectivity. Full Python: 1327 passed. Build/TypeScript/diff checks pass. This checkpoint includes explicit selected-session capture fixture, initial status-model subscription timing fix, conditional empty copy action, connection label/dot state and offline/online recovery. Visual acceptance and optional feature gaps remain open.
 
+## Phone settings clipping
+
+Stronger per-control bounds check found auth/provider/model inputs and thinking Apply button outside phone settings pane even though document/panel scroll overflow was zero. Tau fields combine fixed-width controls in nonwrapping rows. Added scoped wrapping/maximum-width constraints for Tau settings fields, preserving standard control styles. Six settings bounds and six model-control checks pass 12/12. This is a documented responsive adaptation; screenshots still require acceptance.
+
+## Settings category active state
+
+Replaced hard-coded Authentication active styling with local selected-category state and aria-current. Normal keyboard/click navigation updates selected category; modifier clicks retain native link behavior and do not change current selection. Forms remain mounted. Settings layout/category keyboard and model-control tests pass 12/12; build/TypeScript pass. Scroll-position-driven active tracking is not implemented.
+
+## Open-settings accessibility coverage
+
+Added explicit light/dark axe scans of open settings pane across all targets (previous scans covered chat/mobile navigation, not settings). Found helper-text opacity failures and dark inactive-link/button secondary colors below 4.5:1. Scoped description opacity/active-theme muted color and dark link/button foreground corrections documented as accessibility exceptions; vendor CSS unchanged. Settings axe plus layout checks pass 18/18. These checks do not replace visual acceptance.
+
+## Onboarding accessibility coverage
+
+Added both-theme scoped axe/control-bounds checks to inline onboarding. Light passed; dark subtitle/labels/Cancel used legacy gray with 3.57:1 contrast. Scoped active-theme muted token corrections restore contrast without modifying vendor CSS. Onboarding axe/bounds plus open/cancel/reopen checks pass 18/18 across targets; no clipping observed.
+
+## Pane-accessibility checkpoint
+
+Combined current browser run after settings wrapping/category and onboarding contrast changes: 291 passed / 3 documented WebKit offline skips. Build/TypeScript, frontend/packaging 43/43 and diff checks pass. Full Python last 1327 passed at prior connection checkpoint; this batch changes frontend/styles/tests only. Visual approval and optional feature gaps still remain.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.

@@ -13,6 +13,20 @@ test('settings occupies central pane without remounting Tau API form anchors', a
   await expect(page.locator('.app-layout__sidebar-wrapper')).toBeHidden();
   await expect(page.locator('#compose-input')).toBeHidden();
   await expect(page.locator('#auth-token')).toBeVisible();
+  const overflow = await page.locator('#panel-settings').evaluate(el => ({
+    scroll: el.scrollWidth - el.clientWidth,
+    controls: [...el.querySelectorAll('input, select, button')].filter(control => {
+      const r=control.getBoundingClientRect(), p=el.getBoundingClientRect();
+      return r.width>0 && (r.left<p.left-1 || r.right>p.right+1);
+    }).map(control=>control.id || control.className),
+  }));
+  expect(overflow.scroll).toBeLessThanOrEqual(1);
+  expect(overflow.controls).toEqual([]);
+  const modelCategory=page.getByRole('link',{name:'Model',exact:true});
+  await modelCategory.focus(); await page.keyboard.press('Enter');
+  await expect(modelCategory).toHaveAttribute('aria-current','location');
+  await expect(page.locator('.settings-panel__nav-item--active')).toHaveCount(1);
+  await expect(page.getByRole('link',{name:'Authentication',exact:true})).not.toHaveAttribute('aria-current','location');
   await settings.click();
   await expect(page.locator('#panel-settings')).toBeHidden();
   await expect(page.locator('#compose-input')).toBeVisible();
