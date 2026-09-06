@@ -9,7 +9,8 @@ test('plan panel renders Tau revision and conflict state through Piclaw task mar
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
 
-  await page.getByRole('button', { name: 'Plan', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Open sessions', exact: true }).click();
+  await page.getByRole('group', { name: 'Navigation', exact: true }).getByRole('button', { name: 'Plan', exact: true }).click();
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:plan-render', { detail: {
     draft: '- [ ] Review queue behavior', revision: 7, dirty: true, disabled: false,
     reloadDisabled: false, conflict: true, status: 'Server revision 8 is newer than your draft.',

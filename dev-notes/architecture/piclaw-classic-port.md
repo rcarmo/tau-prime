@@ -394,3 +394,14 @@ session-above/input/footer-below geometry and hidden legacy delivery/context
 anchors, even with long context text. Updated model-option Settings navigation;
 provider/model/thinking event ownership assertions retained. Matrix 18 passed.
 No production code changes in this checkpoint.
+
+## Rejected component comparisons removed; Plan coverage retained
+
+Removed five tests importing visual MessageItem/tool/Markdown implementations or
+asserting visual control CSS: collapsed-reference, message-reference,
+tool-reference, markdown-reference, control-styles. Behavior remains covered by
+classic-frame, message-copy, tool-output, markdown, collapse-edge and a11y specs;
+new genuine classic paired visual evidence still pending (not replaced by self
+baselines). Next capped full triage: 40 passed, 8 failed, 1 interrupted, 341 not
+run. Migrated Plan/conflict and Workspace/Plan accessibility navigation, retaining
+all state/contrast/bounds assertions: 18 passed. No production changes.
