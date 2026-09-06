@@ -931,3 +931,12 @@ geometry measurement. Classic-live combined attempt: 59 passed with premature
 animation-bound checks failing; focused settled rerun resolves those test failures.
 Delegated review attempted but unavailable under current model policy. No
 production change in this continuation; full regression remains pending.
+
+## Settings integrated regression migration
+
+Full browser run after modal: 453 passed, 12 failures, 3 offline skips. All
+failures were broader Settings contrast scans during finite entrance animation;
+now await settled animations and include the whole dialog overlay. Focused
+classic a11y matrix 24 passed. Updated Python shell assertion: Settings no longer
+opens Workspace; it mounts in ClassicSettingsDialog. Focused Python 42 passed.
+No production changes; complete browser rerun pending.

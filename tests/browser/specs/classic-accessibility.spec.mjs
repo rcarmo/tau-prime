@@ -18,7 +18,8 @@ for(const colorScheme of ['light','dark']) test(`classic ${colorScheme} chat and
  for(const surface of ['chat','sessions','search','settings']) {
   if(surface==='sessions')await page.getByRole('button',{name:'Open sessions',exact:true}).click();
   if(surface==='search'||surface==='settings')await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:surface==='search'?'Search':'Settings',exact:true}).click();
-  const result=await new AxeBuilder({page}).include(surface==='chat'?'.tau-classic-chat':surface==='sessions'?'#side-panel':`#panel-${surface}`).analyze();
+  await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})));});
+  const result=await new AxeBuilder({page}).include(surface==='chat'?'.tau-classic-chat':surface==='sessions'?'#side-panel':surface==='settings'?'.settings-dialog-overlay':`#panel-${surface}`).analyze();
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),surface).toEqual([]);
  }
 });
