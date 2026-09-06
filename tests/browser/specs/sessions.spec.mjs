@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
+import {installLiveStream} from '../fixtures/live-stream.mjs';
 
 test('session navigation renders Tau sessions through Piclaw sidebar cards', async ({ page }) => {
-  await page.addInitScript(() => { window.EventSource = class { close() {} }; });
+  await installLiveStream(page,'tau');
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
@@ -17,7 +18,7 @@ test('session navigation renders Tau sessions through Piclaw sidebar cards', asy
     ] } }));
   });
 
-  await page.getByRole('button', { name: 'Sessions', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Open sessions', exact: true }).first().click();
   const list = page.locator('#session-list');
   await expect(list.locator('.sessions-panel__session')).toHaveCount(2);
   await expect(page.locator('#session-count')).toHaveText('2 sessions');

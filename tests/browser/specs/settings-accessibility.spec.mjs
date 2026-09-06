@@ -7,7 +7,9 @@ for(const colorScheme of ['light','dark']) {
     await page.goto('/',{waitUntil:'domcontentloaded'});
     await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
     const cancel=page.getByRole('button',{name:'Cancel',exact:true});
-    if(await cancel.isVisible()) await cancel.click();
+    await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
+    if(await cancel.isVisible())await cancel.click();
+    await page.getByRole('button',{name:'Open sessions',exact:true}).click();
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await expect(page.locator('#panel-settings')).toBeVisible();
     await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})));});

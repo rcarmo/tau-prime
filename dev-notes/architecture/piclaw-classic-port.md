@@ -445,3 +445,12 @@ failures are Search/session/Settings navigation assumptions. Migrated populated
 Search rendering and both-theme a11y specs to session-pill navigation, preserving
 snippet/margin/action and contrast/bounds checks: 18 passed. No production changes.
 Full browser suite remains unresolved; log /workspace/tmp/classic-triage-third.log.
+
+## Settings/session regression migration
+
+Updated Settings layout/axe and session event tests to classic session-pill
+navigation. Preserved Settings form DOM identity, keyboard category activation,
+control bounds, both-theme axe checks and selected-session event. Replaced
+obsolete EventSource mock with persistent fetch SSE fixture for sessions.
+24 checks passed. Settings currently occupies secondary sidebar, a Tau-specific
+placement still subject to visual review; no production change in this pass.

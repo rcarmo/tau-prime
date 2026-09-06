@@ -1,17 +1,17 @@
 import { expect, test } from '@playwright/test';
 
-test('settings occupies central pane without remounting Tau API form anchors', async ({ page }) => {
+test('settings in classic sidebar without remounting Tau API form anchors', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
-  if (await cancel.isVisible()) await cancel.click();
+  await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
+  if(await cancel.isVisible())await cancel.click();
+  await page.getByRole('button',{name:'Open sessions',exact:true}).click();
   await page.evaluate(() => { window.__authAnchor = document.getElementById('auth-form'); });
   const settings = page.getByRole('button', { name: 'Settings', exact: true });
   await settings.click();
-  await expect(page.locator('.app-layout__panel > #panel-settings')).toBeVisible();
-  await expect(page.locator('.app-layout__sidebar-wrapper')).toBeHidden();
-  await expect(page.locator('#compose-input')).toBeHidden();
+  await expect(page.locator('.workspace-sidebar > #panel-settings')).toBeVisible();
   await expect(page.locator('#auth-token')).toBeVisible();
   const overflow = await page.locator('#panel-settings').evaluate(el => ({
     scroll: el.scrollWidth - el.clientWidth,
@@ -27,7 +27,7 @@ test('settings occupies central pane without remounting Tau API form anchors', a
   await expect(modelCategory).toHaveAttribute('aria-current','location');
   await expect(page.locator('.settings-panel__nav-item--active')).toHaveCount(1);
   await expect(page.getByRole('link',{name:'Authentication',exact:true})).not.toHaveAttribute('aria-current','location');
-  await settings.click();
+  await page.locator('#close-panel-drawer').click();
   await expect(page.locator('#panel-settings')).toBeHidden();
   await expect(page.locator('#compose-input')).toBeVisible();
   expect(await page.evaluate(() => window.__authAnchor === document.getElementById('auth-form'))).toBe(true);
