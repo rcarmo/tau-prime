@@ -38,15 +38,7 @@ export function Composer() {
               <i className="codicon codicon-attach" aria-hidden="true" />
             </button>
             <input id="compose-file-input" type="file" multiple hidden aria-label="Attach files" />
-            <label className="thinking-badge-wrapper" title="Message delivery">
-              <span className="sr-only">Delivery</span>
-              <select id="compose-delivery-mode" className="settings-panel__select" name="delivery_mode" aria-label="Message delivery">
-                <option value="run">Run</option>
-                <option value="follow_up">Follow-up</option>
-                <option value="steer">Steer</option>
-              </select>
-            </label>
-            <span id="compose-context-readout" className="usage-badge">No session selected. Sending will create one.</span>
+
           </div>
 
           <div className="sr-only" aria-hidden="true">
@@ -80,6 +72,17 @@ export function Composer() {
             placeholder="Type a message..."
           />
 
+          <div className="chat__compose-toolbar" aria-label="Delivery and context">
+            <label className="thinking-badge-wrapper" title="Message delivery">
+              <span className="sr-only">Delivery</span>
+              <select id="compose-delivery-mode" className="settings-panel__select" name="delivery_mode" aria-label="Message delivery">
+                <option value="run">Run</option>
+                <option value="follow_up">Follow-up</option>
+                <option value="steer">Steer</option>
+              </select>
+            </label>
+            <span id="compose-context-readout" className="usage-badge">No session selected. Sending will create one.</span>
+          </div>
           <div id="compose-completion-popup" className="command-palette compose-completion-popup" hidden={!completion.open}>
             <p id="compose-completion-status" className="command-palette__step-hint" aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
             <ul id="compose-completion-listbox" className="command-palette__results" role="listbox" aria-label="Composer completions">

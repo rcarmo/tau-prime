@@ -1,4 +1,4 @@
-import { tauItems, fixedTime } from "../fixtures/visual-state.mjs";
+import { tauItems, fixedTime, tauMeters } from "../fixtures/visual-state.mjs";
 import { expect, test } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -8,6 +8,7 @@ for (const colorScheme of ['light','dark']) {
     await page.emulateMedia({colorScheme});
     await page.clock.setFixedTime(new Date(fixedTime));
     await page.route('**/api/events*', route=>route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'}));
+    await page.route('**/meters', route=>route.fulfill({contentType:'application/json',body:JSON.stringify(tauMeters)}));
     await page.goto('/',{waitUntil:'domcontentloaded'});
     await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
     const cancel=page.getByRole('button',{name:'Cancel',exact:true});
@@ -17,6 +18,7 @@ for (const colorScheme of ['light','dark']) {
     await expect(page.locator('.message-list__content h2')).toHaveText('Workspace review');
     await page.locator('.message-list__tool-call-header').click();
     await expect(page.locator('.message-list__tool-call-body')).toBeVisible();
+    await expect(page.locator('#meters-summary')).toHaveText('CPU 10% · RAM 25% · RSS 80 MB · Swap 0%');
     await page.evaluate(()=>document.fonts.ready);
     const dir='/workspace/tmp/tau-populated-review'; await mkdir(dir,{recursive:true});
     await page.screenshot({path:path.join(dir,`${info.project.name}-${colorScheme}-chat.png`)});

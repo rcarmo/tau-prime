@@ -15,3 +15,14 @@ export const piclawPosts = [
   ]},
   {id:1,type:'user',content:userText,created_at:'2026-09-01T12:00:00Z'},
 ];
+export const tauMeters = {
+  cpu_percent:10, ram_percent:25, process_rss_bytes:83886080, swap_percent:0,
+  cpu_series:[10,10,10], ram_series:[25,25,25],
+  process_rss_series_bytes:[83886080,83886080,83886080], swap_series:[0,0,0],
+};
+export const piclawMeters = {
+  cpu_percent:tauMeters.cpu_percent, ram_percent:tauMeters.ram_percent,
+  swap_percent:tauMeters.swap_percent, buffer_cache_bytes:1048576,
+  vram_percent:null, gpu_provider:null,
+  process_memory:{rss_bytes:tauMeters.process_rss_bytes},
+};

@@ -644,16 +644,7 @@ function Composer() {
       /* @__PURE__ */ u3("div", { className: "chat__compose-container", children: [
         /* @__PURE__ */ u3("div", { className: "chat__toolbar", "aria-label": "Prompt controls", children: [
           /* @__PURE__ */ u3("button", { id: "compose-attachment-button", className: "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u3("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
-          /* @__PURE__ */ u3("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" }),
-          /* @__PURE__ */ u3("label", { className: "thinking-badge-wrapper", title: "Message delivery", children: [
-            /* @__PURE__ */ u3("span", { className: "sr-only", children: "Delivery" }),
-            /* @__PURE__ */ u3("select", { id: "compose-delivery-mode", className: "settings-panel__select", name: "delivery_mode", "aria-label": "Message delivery", children: [
-              /* @__PURE__ */ u3("option", { value: "run", children: "Run" }),
-              /* @__PURE__ */ u3("option", { value: "follow_up", children: "Follow-up" }),
-              /* @__PURE__ */ u3("option", { value: "steer", children: "Steer" })
-            ] })
-          ] }),
-          /* @__PURE__ */ u3("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
+          /* @__PURE__ */ u3("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" })
         ] }),
         /* @__PURE__ */ u3("div", { className: "sr-only", "aria-hidden": "true", children: [
           /* @__PURE__ */ u3("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter", children: adapterOptions.providers.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) }),
@@ -684,6 +675,17 @@ function Composer() {
             placeholder: "Type a message..."
           }
         ),
+        /* @__PURE__ */ u3("div", { className: "chat__compose-toolbar", "aria-label": "Delivery and context", children: [
+          /* @__PURE__ */ u3("label", { className: "thinking-badge-wrapper", title: "Message delivery", children: [
+            /* @__PURE__ */ u3("span", { className: "sr-only", children: "Delivery" }),
+            /* @__PURE__ */ u3("select", { id: "compose-delivery-mode", className: "settings-panel__select", name: "delivery_mode", "aria-label": "Message delivery", children: [
+              /* @__PURE__ */ u3("option", { value: "run", children: "Run" }),
+              /* @__PURE__ */ u3("option", { value: "follow_up", children: "Follow-up" }),
+              /* @__PURE__ */ u3("option", { value: "steer", children: "Steer" })
+            ] })
+          ] }),
+          /* @__PURE__ */ u3("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
+        ] }),
         /* @__PURE__ */ u3("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: !completion.open, children: [
           /* @__PURE__ */ u3("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite", children: completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : "" }),
           /* @__PURE__ */ u3("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions", children: completion.items.map((item, index) => /* @__PURE__ */ u3(

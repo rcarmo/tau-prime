@@ -224,6 +224,26 @@ Actual Piclaw collapsed MessageItem compared to Tau after a real collapse click:
 
 Tau web registers DELETE for session archival and media only, not individual messages. Do not map Piclaw's delete-post control onto either operation. Message deletion is intentionally absent pending explicit backend design; preservation of existing API semantics takes priority over a misleading button. Copy/collapse are implemented, read-aloud remains optional/unported. Combined current action/collapsed-reference/both-theme accessibility checks pass 24/24.
 
+## Explicit full reference themes
+
+Actual unmodified Piclaw bundle capture now explicitly emulates light/dark and asserts matching root class. Both Piclaw and Tau shared-content captures run at all six viewports/engines (24 capture tests pass). Attached 24 full-chat images named by engine/viewport/theme, Tau prefixed. These supersede light-only reference captures. Runtime identity/status and feature inventories still differ; screenshots are review evidence, not approved baselines.
+
+## Composer control overlap fixed
+
+Added text-line/toolbar intersection check; previous floating delivery selector and long context label invaded first half of typed line on phone/tablet (four failures). Moved Tau delivery/context controls into existing upstream chat__compose-toolbar wrapping row below textarea; floating toolbar now contains only attachment icon. Six-target space/composer/keyboard checks pass 18/18. This deliberately adds a control row: earlier 106.5px resting height equality is superseded, not maintained by clipping or hiding Tau functionality. Full screenshot review must reflect this functional adaptation.
+
+## Composer row stress validation
+
+Expanded text-space check to light/dark schemes with long provider/context/attachment metadata. Twelve engine/viewport/theme cases show no row horizontal overflow and send remains visible. Both-theme accessibility/populated captures also pass 24/24. These verify the deliberate extra control row is usable; no claim that its height equals Piclaw's icon-only composer.
+
+## Shared telemetry fixture
+
+Moved fixed CPU/RAM/RSS/swap values into shared visual-state fixture with Tau/Piclaw API shapes. Tau populated capture now routes meters to fixed data and asserts exact rendered summary before screenshot; reference consumes same values. Both-theme six-target captures pass 24/24. Session/model/connection labels and avatar identity remain differing; do not infer whole-image determinism solely from this telemetry fix.
+
+## Current combined regression checkpoint
+
+Latest full browser run after action/composer/shared telemetry updates: 249 passed / 3 documented WebKit offline skips, no failures. Build/TypeScript and focused frontend/packaging 43/43 pass; diff check clean. Visual differences and optional features remain open; do not infer acceptance from this test count.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.
