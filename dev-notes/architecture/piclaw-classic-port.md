@@ -770,3 +770,11 @@ metadata and Open session action retained (classic itself searches timeline post
 Scoped list/padding/wrapping adapts rows to Tau sidebar. Search rendering and
 both-theme a11y matrix 18 passed; build/TypeScript pass. Search form container
 still requires audit; no claim of identical upstream search workflow.
+
+## Search form cleanup
+
+Removed remaining visual search-panel form/input/icon classes. Tau's existing
+sidebar search uses explicit tau-* native controls styled with classic tokens;
+retains form IDs, submit behavior, labels and shortcuts. No claim that this is
+upstream's composer search workflow. Search/axe/keyboard matrix 24 passed;
+build/TypeScript pass. No added font/image assets.

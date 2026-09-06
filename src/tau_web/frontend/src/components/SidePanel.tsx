@@ -50,13 +50,12 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
 
         <WorkspacePanel hidden={activeTab !== "workspace"} />
 
-        <section id="panel-search" className="search-panel" aria-labelledby="tab-search" hidden={activeTab !== "search"}>
+        <section id="panel-search" className="tau-search-panel" aria-labelledby="tab-search" hidden={activeTab !== "search"}>
           <form id="search-form">
             <label className="sr-only" htmlFor="search-input">Search persisted content</label>
-            <div className="search-panel__input-wrapper">
-              <span className="search-panel__icon" aria-hidden="true">⌕</span>
-              <input id="search-input" className="search-panel__input" name="query" type="search" autoComplete="off" spellcheck={false} placeholder="Search messages…" />
-              <button id="search-submit-button" className="search-panel__submit settings-panel__provider-btn" type="submit">Search</button>
+            <div className="tau-search-controls">
+              <input id="search-input" className="tau-search-input" name="query" type="search" autoComplete="off" spellcheck={false} placeholder="Search messages…" />
+              <button id="search-submit-button" className="tau-search-submit" type="submit">Search</button>
             </div>
           </form>
           <SearchResults />

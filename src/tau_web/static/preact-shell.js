@@ -1152,13 +1152,12 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
       /* @__PURE__ */ u2(SessionList, { filter: sessionFilter, onSelectFilter: onSelectSessionFilter })
     ] }),
     /* @__PURE__ */ u2(WorkspacePanel, { hidden: activeTab !== "workspace" }),
-    /* @__PURE__ */ u2("section", { id: "panel-search", className: "search-panel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
+    /* @__PURE__ */ u2("section", { id: "panel-search", className: "tau-search-panel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
       /* @__PURE__ */ u2("form", { id: "search-form", children: [
         /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "search-input", children: "Search persisted content" }),
-        /* @__PURE__ */ u2("div", { className: "search-panel__input-wrapper", children: [
-          /* @__PURE__ */ u2("span", { className: "search-panel__icon", "aria-hidden": "true", children: "\u2315" }),
-          /* @__PURE__ */ u2("input", { id: "search-input", className: "search-panel__input", name: "query", type: "search", autoComplete: "off", spellcheck: false, placeholder: "Search messages\u2026" }),
-          /* @__PURE__ */ u2("button", { id: "search-submit-button", className: "search-panel__submit settings-panel__provider-btn", type: "submit", children: "Search" })
+        /* @__PURE__ */ u2("div", { className: "tau-search-controls", children: [
+          /* @__PURE__ */ u2("input", { id: "search-input", className: "tau-search-input", name: "query", type: "search", autoComplete: "off", spellcheck: false, placeholder: "Search messages\u2026" }),
+          /* @__PURE__ */ u2("button", { id: "search-submit-button", className: "tau-search-submit", type: "submit", children: "Search" })
         ] })
       ] }),
       /* @__PURE__ */ u2(SearchResults, {})

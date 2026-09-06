@@ -57,3 +57,7 @@
 .tau-search-result .post { padding:8px 0; }
 .tau-search-result .post-meta { flex-wrap:wrap; }
 .tau-search-result .post-content { display:block; overflow-wrap:anywhere; margin:0; }
+/* Sidebar search is Tau-specific; use classic theme tokens, not visual classes. */
+.tau-search-controls { display:flex; gap:6px; align-items:center; padding:8px 0; }
+.tau-search-input { flex:1; min-width:0; width:100%; padding:6px; border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); background:var(--bg-secondary); font:inherit; }
+.tau-search-submit { flex:none; padding:6px 8px; border:1px solid var(--border-color); border-radius:var(--radius-md); font:inherit; }
