@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 const queued = [
   { queue_id: 'follow-1', session_id: 'queue-test', queue_kind: 'follow_up', position: 0, content: 'First follow-up', consumed_at: null },
@@ -6,7 +7,8 @@ const queued = [
   { queue_id: 'steer-1', session_id: 'queue-test', queue_kind: 'steer', position: 0, content: 'Urgent steer', consumed_at: null },
 ];
 
-test('queue stack preserves independent FIFO heads and uses Tau dispatch routes', async ({ page }) => {
+for (const colorScheme of ['light', 'dark']) test(`${colorScheme} classic queue preserves FIFO dispatch and accessibility`, async ({ page }) => {
+  await page.emulateMedia({colorScheme});
   await page.addInitScript((items) => {
     const nativeFetch = window.fetch.bind(window);
     window.__tauDispatched = [];
@@ -37,6 +39,8 @@ test('queue stack preserves independent FIFO heads and uses Tau dispatch routes'
   const stack = page.locator('.compose-queue-stack');
   await expect(stack.locator('.compose-queue-stack-item')).toHaveCount(3);
   await expect(stack).toHaveAttribute('role','list');
+  const scan = await new AxeBuilder({page}).include('.compose-queue-stack').analyze();
+  expect(scan.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
   const outside=await stack.locator('button').evaluateAll(els=>els.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.left<0||r.right>innerWidth+1);}).map(el=>el.textContent));
   expect(outside).toEqual([]);
   await expect(stack.locator('.codicon')).toHaveCount(0);

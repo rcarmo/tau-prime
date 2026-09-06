@@ -28,5 +28,8 @@
 [data-tau-ui="classic"] .agent-thinking-body pre { color:var(--text-primary); }
 /* Tau's persisted-tool disclosure is a button, unlike classic's text title. */
 [data-tau-ui="classic"] .thinking-toggle { appearance:none; background:transparent; color:var(--text-primary); border:0; font:inherit; cursor:pointer; }
+/* Tau's text Dispatch control needs full contrast, not a faded icon treatment. */
+[data-tau-ui="classic"] .compose-queue-stack-content,
+[data-tau-ui="classic"] .compose-queue-stack-steer-btn { color:var(--text-primary); opacity:1; }
 /* Reserve space for Tau's potentially longer session title on desktop too. */
 [data-tau-ui="classic"] .compose-session-trigger-top + .compose-input-main textarea { padding-right:max(calc(var(--spacing-xs) + 28px),min(44vw,156px)); }

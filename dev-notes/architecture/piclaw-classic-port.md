@@ -658,3 +658,10 @@ labels retain explicit tau-* names. FIFO per-kind dispatch and copy-to-compose
 unchanged; no unsupported reorder/remove added. Queue controls stay within
 viewport; queue/populated matrix 18 passed; build/TypeScript pass. Populated
 queue both-theme accessibility and reference assessment remain to check.
+
+## Populated queue accessibility
+
+Extended existing queue dispatch/copy test to both themes and axe. Found low
+contrast on faded Dispatch text and dark queue content; scoped primary-text/
+opacity rules correct these without vendor edits. Both-theme/six-target queue
+matrix 12 passed with FIFO route/copy behavior and bounds checks retained.
