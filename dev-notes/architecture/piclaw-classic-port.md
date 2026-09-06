@@ -581,3 +581,10 @@ rerender. Copy retains full UTF-8 payload while collapsed. Labels use byte count
 rather than upstream compact formatting. Markdown safety/copy + large-code tests
 12 passed; build/TypeScript pass. Threshold behavior and styling derive from
 classic post.ts. Artifact/full regression refresh still required.
+
+## Code-collapse boundary validation
+
+Added exact 40-line/24KiB threshold checks, final-newline accounting, UTF-8
+byte-size case (8192 Japanese characters plus newline = 24577 bytes), and reset
+of expanded state when message content changes. Complete Markdown matrix
+18 passed across six targets. No production changes in this checkpoint.

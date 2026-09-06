@@ -46,3 +46,20 @@ test('classic large code collapses, keeps toggle focus and copies complete text'
  await block.getByRole('button',{name:'Copy code',exact:true}).click();
  expect(await page.evaluate(()=>window.largeCopied)).toBe(code);
 });
+
+test('classic code thresholds count UTF-8 bytes and reset expansion for new content',async({page})=>{
+ await page.goto('/');await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ const show=code=>page.evaluate(code=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'threshold',role:'assistant',content:'```txt\n'+code+'```'}]}})),code);
+ const block=page.locator('#post-threshold .post-code-block');
+ // Fenced code retains a final newline; classic's split counts the empty final line.
+ await show('x\n'.repeat(39));await expect(block).not.toHaveClass(/post-code-block-collapsed/);
+ await show('x\n'.repeat(40));await expect(block).toHaveClass(/post-code-block-collapsed/);
+ await show('x'.repeat(24575)+'\n');await expect(block).not.toHaveClass(/post-code-block-collapsed/);
+ await show('x'.repeat(24576)+'\n');await expect(block).toHaveClass(/post-code-block-collapsed/);
+ await block.getByRole('button',{name:/Expand code/}).click();await expect(block).toHaveClass(/post-code-block-expanded/);
+ const unicode='日'.repeat(8192)+'\n';await show(unicode);
+ await expect(block).toHaveClass(/post-code-block-collapsed/);await expect(block).not.toHaveClass(/post-code-block-expanded/);
+ await expect(block.getByRole('button',{name:/Expand code/})).toContainText('24577 bytes');
+ await expect(block.locator('pre code')).toHaveText(unicode);
+});
