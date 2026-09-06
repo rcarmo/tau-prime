@@ -4157,7 +4157,7 @@ function valueText(value) {
     return String(value);
   }
 }
-function ToolCallBlock({ call, result, classic = false }) {
+function ToolCallBlock({ call, result }) {
   const [open, setOpen] = h2(false);
   const [expanded, setExpanded] = h2(false);
   const name = call.name || result?.toolName || "tool";
@@ -4166,7 +4166,7 @@ function ToolCallBlock({ call, result, classic = false }) {
   const lines = output.split("\n");
   const hiddenLines = !expanded && lines.length > 20 ? lines.length - 20 : 0;
   const displayedOutput = hiddenLines ? lines.slice(-20).join("\n") : output;
-  if (classic) return /* @__PURE__ */ u2("section", { className: "agent-thinking", "data-expanded": open, children: [
+  return /* @__PURE__ */ u2("section", { className: "agent-thinking", "data-expanded": open, children: [
     /* @__PURE__ */ u2("div", { className: "agent-thinking-title tool-output", children: /* @__PURE__ */ u2("button", { type: "button", className: "thinking-toggle", "aria-expanded": open, onClick: () => setOpen((value) => !value), children: [
       name,
       " ",
@@ -4186,33 +4186,8 @@ function ToolCallBlock({ call, result, classic = false }) {
       ] })
     ] })
   ] });
-  return /* @__PURE__ */ u2("div", { className: "message-list__tool-call", children: [
-    /* @__PURE__ */ u2("button", { className: "message-list__tool-call-header", type: "button", onClick: () => setOpen((value) => !value), "aria-expanded": open, children: [
-      /* @__PURE__ */ u2("span", { className: "message-list__tool-call-icon", children: open ? "\u25BE" : "\u25B8" }),
-      /* @__PURE__ */ u2("span", { className: "message-list__tool-call-name", children: name }),
-      result && /* @__PURE__ */ u2("span", { className: "message-list__tool-call-badge", children: result.toolOk === false ? "failed" : "done" })
-    ] }),
-    open && /* @__PURE__ */ u2("div", { className: "message-list__tool-call-body", children: [
-      input && /* @__PURE__ */ u2("div", { className: "tool-call__pre-wrapper", children: [
-        /* @__PURE__ */ u2(CopyButton, { text: input }),
-        /* @__PURE__ */ u2("pre", { className: "message-list__tool-call-code", children: input })
-      ] }),
-      output && /* @__PURE__ */ u2(b, { children: [
-        /* @__PURE__ */ u2("div", { className: "message-list__tool-call-result-label", children: "Result" }),
-        /* @__PURE__ */ u2("div", { className: "tool-call__pre-wrapper", children: [
-          hiddenLines > 0 && /* @__PURE__ */ u2("button", { type: "button", className: "tool-call__hidden-lines", title: "Show full output", onClick: () => setExpanded(true), children: [
-            hiddenLines,
-            " lines hidden \u2014 click to expand"
-          ] }),
-          expanded && /* @__PURE__ */ u2("button", { type: "button", className: "tool-call__hidden-lines tool-call__hidden-lines--collapse", onClick: () => setExpanded(false), children: "collapse" }),
-          /* @__PURE__ */ u2(CopyButton, { text: output }),
-          /* @__PURE__ */ u2("pre", { className: "message-list__tool-call-code", children: displayedOutput })
-        ] })
-      ] })
-    ] })
-  ] });
 }
-function AttachmentChip({ attachment, classic = false }) {
+function AttachmentChip({ attachment }) {
   const [previewUrl, setPreviewUrl] = h2(null);
   const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
   const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
@@ -4242,21 +4217,16 @@ function AttachmentChip({ attachment, classic = false }) {
     link.click();
     URL.revokeObjectURL(objectUrl);
   };
-  if (classic && attachment.mediaType.startsWith("image/")) return /* @__PURE__ */ u2("div", { className: "media-preview", children: /* @__PURE__ */ u2("a", { href: contentUrl, target: "_blank", rel: "noopener", title: `Open ${attachment.filename}`, onClick: (event) => void download(event), children: /* @__PURE__ */ u2("img", { src: previewUrl ?? thumbnailUrl, alt: attachment.filename, loading: "lazy", decoding: "async" }) }) });
-  if (classic) return /* @__PURE__ */ u2("a", { className: "post-file-pill", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
+  if (attachment.mediaType.startsWith("image/")) return /* @__PURE__ */ u2("div", { className: "media-preview", children: /* @__PURE__ */ u2("a", { href: contentUrl, target: "_blank", rel: "noopener", title: `Open ${attachment.filename}`, onClick: (event) => void download(event), children: /* @__PURE__ */ u2("img", { src: previewUrl ?? thumbnailUrl, alt: attachment.filename, loading: "lazy", decoding: "async" }) }) });
+  return /* @__PURE__ */ u2("a", { className: "post-file-pill", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
     /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: [
       /* @__PURE__ */ u2("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
       /* @__PURE__ */ u2("polyline", { points: "14 2 14 8 20 8" })
     ] }),
     /* @__PURE__ */ u2("span", { className: "post-file-name", children: attachment.filename })
   ] });
-  return /* @__PURE__ */ u2("a", { className: "attachment-chip", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
-    attachment.mediaType.startsWith("image/") ? /* @__PURE__ */ u2("img", { className: "attachment-chip__preview", src: previewUrl ?? thumbnailUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ u2("span", { className: "attachment-chip__icon", "aria-hidden": "true", children: "\u{1F4C4}" }),
-    /* @__PURE__ */ u2("span", { className: "attachment-chip__name", children: attachment.filename }),
-    /* @__PURE__ */ u2("i", { className: "codicon codicon-desktop-download attachment-chip__action", "aria-hidden": "true" })
-  ] });
 }
-function MessageItem({ item, resultByCall, classic = false }) {
+function MessageItem({ item, resultByCall }) {
   const [collapsed, setCollapsed] = h2(false);
   const toggleRef = A2(null);
   const restoreToggleFocus = A2(false);
@@ -4271,7 +4241,7 @@ function MessageItem({ item, resultByCall, classic = false }) {
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
-  if (classic) return /* @__PURE__ */ u2(
+  return /* @__PURE__ */ u2(
     ClassicPost,
     {
       id: `post-${item.id}`,
@@ -4281,36 +4251,14 @@ function MessageItem({ item, resultByCall, classic = false }) {
       avatar: isUser ? "Y" : "\u03C4",
       actions: /* @__PURE__ */ u2(MessageActionBar, { classic: true, content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
       children: collapsed ? /* @__PURE__ */ u2("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u2(b, { children: [
-        item.toolCalls?.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { classic: true, call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
+        item.toolCalls?.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
         item.content && (isUser ? /* @__PURE__ */ u2("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u2(MarkdownContent, { content: item.content })),
-        item.attachments?.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { classic: true, attachment }, attachment.mediaId))
+        item.attachments?.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { attachment }, attachment.mediaId))
       ] })
     }
   );
-  if (collapsed) return /* @__PURE__ */ u2("div", { className: `message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
-    /* @__PURE__ */ u2("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
-    /* @__PURE__ */ u2("div", { className: "message-list__body message-list__body--collapsed", children: [
-      /* @__PURE__ */ u2(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
-      /* @__PURE__ */ u2("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
-      /* @__PURE__ */ u2("span", { className: "message-list__time", children: item.live ? "live" : item.meta }),
-      /* @__PURE__ */ u2("span", { className: "message-list__collapsed-preview", children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.length > 120 ? "\u2026" : "") : "\u2014 collapsed" })
-    ] })
-  ] });
-  return /* @__PURE__ */ u2("div", { className: `message-list__item message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
-    /* @__PURE__ */ u2("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
-    /* @__PURE__ */ u2("div", { className: item.live ? "message-list__body message-list__body--draft" : "message-list__body", children: [
-      /* @__PURE__ */ u2("div", { className: "message-list__header", children: [
-        /* @__PURE__ */ u2(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
-        /* @__PURE__ */ u2("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
-        /* @__PURE__ */ u2("span", { className: "message-list__time", children: item.live ? "live" : item.meta })
-      ] }),
-      item.toolCalls && item.toolCalls.length > 0 && /* @__PURE__ */ u2("div", { className: "message-list__tool-calls", children: item.toolCalls.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)) }),
-      item.content && (isUser ? /* @__PURE__ */ u2("div", { className: "message-list__content", children: item.content }) : /* @__PURE__ */ u2(MarkdownContent, { content: item.content })),
-      item.attachments && item.attachments.length > 0 && /* @__PURE__ */ u2("div", { className: "message-list__attachments", children: item.attachments.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { attachment }, attachment.mediaId)) })
-    ] })
-  ] });
 }
-function Timeline({ classic = false }) {
+function Timeline() {
   const [timeline, setTimeline] = h2({ selected: false, items: [] });
   _2(() => {
     const update = (event) => {
@@ -4326,9 +4274,9 @@ function Timeline({ classic = false }) {
   const empty2 = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
-    /* @__PURE__ */ u2("div", { id: "timeline-main", className: classic ? "timeline reverse" : "chat__messages", tabIndex: -1, children: [
+    /* @__PURE__ */ u2("div", { id: "timeline-main", className: "timeline reverse", tabIndex: -1, children: [
       /* @__PURE__ */ u2("div", { id: "timeline-meta", className: "sr-only", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
-      /* @__PURE__ */ u2("div", { id: "timeline-list", className: classic ? "timeline-content" : "message-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u2("div", { className: "message-list__empty", children: /* @__PURE__ */ u2("p", { children: empty2 }) }) : (classic ? visibleItems : [...visibleItems].reverse()).map((item, index) => /* @__PURE__ */ u2(MessageItem, { item, resultByCall, classic }, item.id ?? index)) })
+      /* @__PURE__ */ u2("div", { id: "timeline-list", className: "timeline-content", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u2("div", { className: "timeline-empty", children: /* @__PURE__ */ u2("p", { children: empty2 }) }) : visibleItems.map((item, index) => /* @__PURE__ */ u2(MessageItem, { item, resultByCall }, item.id ?? index)) })
     ] }),
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
   ] });
@@ -4894,7 +4842,7 @@ function TauShell() {
     ] }), children: [
       /* @__PURE__ */ u2(Onboarding, { onOpenChange: setOnboardingOpen }),
       /* @__PURE__ */ u2("div", { className: "tau-classic-chat", hidden: onboardingOpen, children: [
-        /* @__PURE__ */ u2(Timeline, { classic: true }),
+        /* @__PURE__ */ u2(Timeline, {}),
         /* @__PURE__ */ u2(SessionRuntime, {}),
         /* @__PURE__ */ u2(QueueStack, {}),
         /* @__PURE__ */ u2(Composer, { session: /* @__PURE__ */ u2(ClassicSessionControl, { open: sidebarOpen, onToggle: () => selectPanel("sessions") }), metadata: /* @__PURE__ */ u2(StatusBar, { dashboardOpen, onToggleDashboard: () => setDashboardOpen((value) => !value) }) })

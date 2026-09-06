@@ -27,7 +27,7 @@ function valueText(value: unknown): string {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
-export function ToolCallBlock({ call, result, classic = false }: { call: ToolCall; result?: TimelineMessage; classic?: boolean }) {
+export function ToolCallBlock({ call, result }: { call: ToolCall; result?: TimelineMessage }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const name = call.name || result?.toolName || "tool";
@@ -36,7 +36,7 @@ export function ToolCallBlock({ call, result, classic = false }: { call: ToolCal
   const lines = output.split("\n");
   const hiddenLines = !expanded && lines.length > 20 ? lines.length - 20 : 0;
   const displayedOutput = hiddenLines ? lines.slice(-20).join("\n") : output;
-  if (classic) return <section className="agent-thinking" data-expanded={open}>
+  return <section className="agent-thinking" data-expanded={open}>
     <div className="agent-thinking-title tool-output">
       <button type="button" className="thinking-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}>{name} {result ? result.toolOk === false ? "· failed" : "· done" : ""} {open ? "▴" : "▾"}</button>
     </div>
@@ -47,28 +47,9 @@ export function ToolCallBlock({ call, result, classic = false }: { call: ToolCal
       </div>}
     </div>}
   </section>;
-  return (
-    <div className="message-list__tool-call">
-      <button className="message-list__tool-call-header" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-        <span className="message-list__tool-call-icon">{open ? "▾" : "▸"}</span>
-        <span className="message-list__tool-call-name">{name}</span>
-        {result && <span className="message-list__tool-call-badge">{result.toolOk === false ? "failed" : "done"}</span>}
-      </button>
-      {open && (
-        <div className="message-list__tool-call-body">
-          {input && <div className="tool-call__pre-wrapper"><CopyButton text={input} /><pre className="message-list__tool-call-code">{input}</pre></div>}
-          {output && <Fragment><div className="message-list__tool-call-result-label">Result</div><div className="tool-call__pre-wrapper">
-            {hiddenLines > 0 && <button type="button" className="tool-call__hidden-lines" title="Show full output" onClick={() => setExpanded(true)}>{hiddenLines} lines hidden — click to expand</button>}
-            {expanded && <button type="button" className="tool-call__hidden-lines tool-call__hidden-lines--collapse" onClick={() => setExpanded(false)}>collapse</button>}
-            <CopyButton text={output} /><pre className="message-list__tool-call-code">{displayedOutput}</pre>
-          </div></Fragment>}
-        </div>
-      )}
-    </div>
-  );
 }
 
-function AttachmentChip({ attachment, classic = false }: { attachment: Attachment; classic?: boolean }) {
+function AttachmentChip({ attachment }: { attachment: Attachment }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
   const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
@@ -98,27 +79,18 @@ function AttachmentChip({ attachment, classic = false }: { attachment: Attachmen
     URL.revokeObjectURL(objectUrl);
   };
 
-  if (classic && attachment.mediaType.startsWith("image/")) return <div className="media-preview">
+  if (attachment.mediaType.startsWith("image/")) return <div className="media-preview">
     <a href={contentUrl} target="_blank" rel="noopener" title={`Open ${attachment.filename}`} onClick={event => void download(event)}>
       <img src={previewUrl ?? thumbnailUrl} alt={attachment.filename} loading="lazy" decoding="async" />
     </a>
   </div>;
-  if (classic) return <a className="post-file-pill" href={contentUrl} target="_blank" rel="noopener" title={attachment.filename} onClick={event => void download(event)}>
+  return <a className="post-file-pill" href={contentUrl} target="_blank" rel="noopener" title={attachment.filename} onClick={event => void download(event)}>
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
     <span className="post-file-name">{attachment.filename}</span>
   </a>;
-  return (
-    <a className="attachment-chip" href={contentUrl} target="_blank" rel="noopener" title={attachment.filename} onClick={(event) => void download(event)}>
-      {attachment.mediaType.startsWith("image/") ? (
-        <img className="attachment-chip__preview" src={previewUrl ?? thumbnailUrl} alt="" loading="lazy" />
-      ) : <span className="attachment-chip__icon" aria-hidden="true">📄</span>}
-      <span className="attachment-chip__name">{attachment.filename}</span>
-      <i className="codicon codicon-desktop-download attachment-chip__action" aria-hidden="true" />
-    </a>
-  );
 }
 
-export function MessageItem({ item, resultByCall, classic = false }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage>; classic?: boolean }) {
+export function MessageItem({ item, resultByCall }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage> }) {
   const [collapsed, setCollapsed] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const restoreToggleFocus = useRef(false);
@@ -133,47 +105,17 @@ export function MessageItem({ item, resultByCall, classic = false }: { item: Tim
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
-  if (classic) return <ClassicPost id={`post-${item.id}`} agent={!isUser} author={isUser ? "You" : "Tau"} time={item.live ? "live" : item.meta ?? ""} avatar={isUser ? "Y" : "τ"}
+  return <ClassicPost id={`post-${item.id}`} agent={!isUser} author={isUser ? "You" : "Tau"} time={item.live ? "live" : item.meta ?? ""} avatar={isUser ? "Y" : "τ"}
     actions={<MessageActionBar classic content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />}>
     {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "— collapsed"}</span> : <>
-      {item.toolCalls?.map((call, index) => <ToolCallBlock classic key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
+      {item.toolCalls?.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
       {item.content && (isUser ? <div style={{whiteSpace:"pre-wrap"}}>{item.content}</div> : <MarkdownContent content={item.content} />)}
-      {item.attachments?.map(attachment => <AttachmentChip classic key={attachment.mediaId} attachment={attachment} />)}
+      {item.attachments?.map(attachment => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}
     </>}
   </ClassicPost>;
-  if (collapsed) return <div className={`message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
-    <div className={`message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`} aria-hidden="true">{isUser ? "Y" : "τ"}</div>
-    <div className="message-list__body message-list__body--collapsed">
-      <MessageActionBar content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />
-      <span className={`message-list__name message-list__name--${isUser ? "user" : "agent"}`}>{isUser ? "You" : "Tau"}</span>
-      <span className="message-list__time">{item.live ? "live" : item.meta}</span>
-      <span className="message-list__collapsed-preview">{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.length > 120 ? "…" : "") : "— collapsed"}</span>
-    </div>
-  </div>;
-  return (
-    <div className={`message-list__item message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
-      <div className={`message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`} aria-hidden="true">{isUser ? "Y" : "τ"}</div>
-      <div className={item.live ? "message-list__body message-list__body--draft" : "message-list__body"}>
-        <div className="message-list__header">
-          <MessageActionBar content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />
-          <span className={`message-list__name message-list__name--${isUser ? "user" : "agent"}`}>{isUser ? "You" : "Tau"}</span>
-          <span className="message-list__time">{item.live ? "live" : item.meta}</span>
-        </div>
-        {item.toolCalls && item.toolCalls.length > 0 && (
-          <div className="message-list__tool-calls">
-            {item.toolCalls.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
-          </div>
-        )}
-        {item.content && (isUser ? <div className="message-list__content">{item.content}</div> : <MarkdownContent content={item.content} />)}
-        {item.attachments && item.attachments.length > 0 && (
-          <div className="message-list__attachments">{item.attachments.map((attachment) => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}</div>
-        )}
-      </div>
-    </div>
-  );
 }
 
-export function Timeline({ classic = false }: { classic?: boolean }) {
+export function Timeline() {
   const [timeline, setTimeline] = useState<TimelineState>({ selected: false, items: [] });
   useLayoutEffect(() => {
     const update = (event: Event) => {
@@ -192,12 +134,12 @@ export function Timeline({ classic = false }: { classic?: boolean }) {
   return (
     <Fragment>
       <div className="extension-slot" data-extension-slot="timeline_before" />
-      <div id="timeline-main" className={classic ? "timeline reverse" : "chat__messages"} tabIndex={-1}>
+      <div id="timeline-main" className="timeline reverse" tabIndex={-1}>
         <div id="timeline-meta" className="sr-only" aria-live="polite">Load a session to inspect persisted messages.</div>
-        <div id="timeline-list" className={classic ? "timeline-content" : "message-list"} aria-live="polite" tabIndex={0}>
+        <div id="timeline-list" className="timeline-content" aria-live="polite" tabIndex={0}>
           {visibleItems.length === 0
-            ? <div className="message-list__empty"><p>{empty}</p></div>
-            : (classic ? visibleItems : [...visibleItems].reverse()).map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} classic={classic} />)}
+            ? <div className="timeline-empty"><p>{empty}</p></div>
+            : visibleItems.map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} />)}
         </div>
       </div>
       <div className="extension-slot" data-extension-slot="timeline_after" />

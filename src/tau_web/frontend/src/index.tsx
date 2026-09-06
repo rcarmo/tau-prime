@@ -54,7 +54,7 @@ function TauShell() {
     </>}>
       <Onboarding onOpenChange={setOnboardingOpen} />
       <div className="tau-classic-chat" hidden={onboardingOpen}>
-        <Timeline classic />
+        <Timeline />
         <SessionRuntime /><QueueStack />
         <Composer session={<ClassicSessionControl open={sidebarOpen} onToggle={() => selectPanel("sessions")} />} metadata={<StatusBar dashboardOpen={dashboardOpen} onToggleDashboard={() => setDashboardOpen(value=>!value)} />} />
       </div>

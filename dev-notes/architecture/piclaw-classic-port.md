@@ -295,3 +295,12 @@ and Codicon alternative. Classic surface is now its sole layout. Updated live
 and fixture callers and existing attachment behavior test selectors. Classic
 frame/root matrix 66 passed; composer regressions 12 passed; build/TypeScript
 pass. Timeline/action/sidebar dual branches are separate pending cleanup.
+
+## Classic-only timeline cleanup
+
+Deleted visual post/tool/attachment branches and Timeline mode prop. Retained
+classic chronological DOM order and shared state/download/clipboard handlers.
+Updated callers; no visual message-list wrappers in Timeline rendering.
+Classic component/root/accessibility matrix 78 passed; build/TypeScript pass.
+Old visual-oriented specs still need replacement; these results are the named
+classic suites, not a clean full legacy browser run.
