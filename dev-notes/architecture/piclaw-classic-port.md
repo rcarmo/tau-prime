@@ -490,3 +490,13 @@ API fixtures; rejects unknown endpoints/page errors. All 12 engine/size/theme
 captures pass. Outputs /workspace/tmp/piclaw-classic-reference. Tool output is
 not added to reference posts (classic live-status semantics differ); Tau pairing
 must use equivalent message-only fixture, not imply identical tool presentation.
+
+## Genuine classic paired chat delivery
+
+New classic-paired spec uses shared message-only content, fixed time, matching
+2m/1m labels and model; no tool result injected into either post sequence.
+Genuine classic + Tau matrix 24 passed. Replaced review exporter input paths
+with classic-only outputs and removed old visual/panel options. Delivered
+Tau-Piclaw-Classic-Paired-Review.html with 12 labeled pairs. Identity/session/
+runtime/action differences remain visible. This is evidence for review, not
+acceptance; no pixel score or self-approved screenshot baseline used.

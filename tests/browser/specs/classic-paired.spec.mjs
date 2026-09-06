@@ -1,0 +1,23 @@
+import {test,expect} from '@playwright/test';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {installSelectedSession} from '../fixtures/selected-session.mjs';
+import {installLiveStream} from '../fixtures/live-stream.mjs';
+import {fixedTime,userText,agentText} from '../fixtures/visual-state.mjs';
+for(const colorScheme of ['light','dark']) test(`classic paired ${colorScheme} message-only capture`,async({page},info)=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');
+ await page.emulateMedia({colorScheme});await page.clock.setFixedTime(new Date(fixedTime));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});
+ await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ await page.evaluate(({userText,agentText})=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'1',role:'user',content:userText,meta:'2m'},{id:'2',role:'assistant',content:agentText,meta:'1m'}]}})),{userText,agentText});
+ await expect(page.locator('.post')).toHaveCount(2);
+ await expect(page.locator('#status-model')).toHaveText('test/review-model');
+ await expect(page.locator('#status-stream')).toBeHidden();
+ await expect(page.locator('#compose-input')).toBeVisible();
+ await page.evaluate(()=>document.fonts.ready);
+ const dir='/workspace/tmp/tau-classic-paired';await mkdir(dir,{recursive:true});
+ await page.screenshot({path:`${dir}/${info.project.name}-${colorScheme}.png`});
+ const geometry=await page.locator('.container,.timeline,.post,.compose-box,.compose-footer,#compose-input').evaluateAll(els=>els.map(el=>({className:el.className,rect:el.getBoundingClientRect().toJSON()})));
+ await writeFile(`${dir}/${info.project.name}-${colorScheme}.json`,JSON.stringify(geometry,null,2));
+});
