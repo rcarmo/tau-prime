@@ -4372,14 +4372,14 @@ function SessionRuntime() {
     window.addEventListener("tau:branches-render", update);
     return () => window.removeEventListener("tau:branches-render", update);
   }, []);
-  return /* @__PURE__ */ u2("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
-    /* @__PURE__ */ u2("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
-      /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
-      /* @__PURE__ */ u2("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
+  return /* @__PURE__ */ u2("div", { className: "tau-session-runtime", "aria-label": "Session runtime", children: [
+    /* @__PURE__ */ u2("div", { className: "agent-thinking-title", "aria-live": "polite", children: [
+      /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-dot", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "agent-status-text", className: "tau-runtime-label", children: "No session selected" })
     ] }),
-    /* @__PURE__ */ u2("section", { className: "agent-status-panel__section", hidden: !branches.length, children: [
-      /* @__PURE__ */ u2("div", { className: "agent-status-panel__title", children: "Session branch" }),
-      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools", children: branches.map((branch) => /* @__PURE__ */ u2("button", { type: "button", className: "branch-button settings-panel__provider-btn", "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })) })
+    /* @__PURE__ */ u2("section", { className: "tau-runtime-branches", hidden: !branches.length, children: [
+      /* @__PURE__ */ u2("div", { className: "agent-thinking-title", children: "Session branch" }),
+      /* @__PURE__ */ u2("div", { id: "branch-list", className: "tau-branch-actions", children: branches.map((branch) => /* @__PURE__ */ u2("button", { type: "button", className: "branch-button", "aria-pressed": branch.active, "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })) })
     ] })
   ] });
 }

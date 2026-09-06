@@ -786,3 +786,11 @@ is explicitly Tau-specific, styled with classic tokens and native form controls;
 revision/conflict/status/editor IDs preserved. Plan, both-theme pane a11y and
 Dashboard dirty-draft acceptance/cancellation matrix 30 passed; build/TypeScript
 pass. Does not pretend Tau shared plans are classic scheduled tasks.
+
+## Runtime/branch status cleanup
+
+Removed agent-status-panel visual classes. Runtime uses classic status title/dot
+with explicitly Tau-scoped branch layout and pressed state. Existing run-status
+IDs and branch events retained; empty branches remain hidden. Branch plus global
+accessibility matrix 18 passed; build/TypeScript pass. Persistent Ready/runtime
+row is still a Tau-specific visual difference requiring review, not hidden.

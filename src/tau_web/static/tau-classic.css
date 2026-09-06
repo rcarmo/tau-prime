@@ -68,3 +68,8 @@
 .tau-plan-card-muted,.tau-plan-revision { font-size:12px; color:var(--text-primary); }
 .tau-plan-conflict { padding:8px; border:1px solid var(--danger-color); border-radius:var(--radius-md); }
 .tau-plan-card-actions button { appearance:none; padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--radius-md); }
+.tau-session-runtime { flex:none; padding:2px 10px; }
+.tau-session-runtime .agent-thinking-title { color:var(--text-primary); }
+.tau-branch-actions { display:flex; flex-wrap:wrap; gap:4px; }
+.tau-branch-actions button { appearance:none; color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:4px 8px; }
+.tau-branch-actions button[aria-pressed="true"] { border-color:var(--accent-color); }

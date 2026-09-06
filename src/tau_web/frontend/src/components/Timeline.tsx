@@ -156,15 +156,15 @@ export function SessionRuntime() {
     return () => window.removeEventListener("tau:branches-render", update);
   }, []);
   return (
-    <div className="agent-status-panel" aria-label="Session runtime">
-      <div className="agent-status-panel__status" aria-live="polite">
-        <span id="agent-status-indicator" className="agent-status-panel__status-dot" aria-hidden="true" />
-        <span id="agent-status-text" className="agent-status-panel__status-text">No session selected</span>
+    <div className="tau-session-runtime" aria-label="Session runtime">
+      <div className="agent-thinking-title" aria-live="polite">
+        <span id="agent-status-indicator" className="agent-status-dot" aria-hidden="true" />
+        <span id="agent-status-text" className="tau-runtime-label">No session selected</span>
       </div>
-      <section className="agent-status-panel__section" hidden={!branches.length}>
-        <div className="agent-status-panel__title">Session branch</div>
-        <div id="branch-list" className="agent-status-panel__tools">
-          {branches.map((branch) => <button type="button" className="branch-button settings-panel__provider-btn" data-active={String(branch.active)} onClick={() => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } }))}>{branch.label}</button>)}
+      <section className="tau-runtime-branches" hidden={!branches.length}>
+        <div className="agent-thinking-title">Session branch</div>
+        <div id="branch-list" className="tau-branch-actions">
+          {branches.map((branch) => <button type="button" className="branch-button" aria-pressed={branch.active} data-active={String(branch.active)} onClick={() => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } }))}>{branch.label}</button>)}
         </div>
       </section>
     </div>
