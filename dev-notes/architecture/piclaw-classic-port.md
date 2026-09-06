@@ -546,3 +546,11 @@ rerender persistence, max clamp and Home reset: 6 passed; build/TypeScript pass.
 Refreshed Tau pairs: 12 passed. Chromium light phone/tablet/desktop composer
 heights now equal genuine classic (102/105/125px) with zero y delta. This bounded
 geometry evidence is not full visual acceptance; identity/runtime/panels remain.
+
+## Full post-resize checkpoint (f43ccbb)
+
+Complete browser suite after real classic reference and resize integration:
+405 passed, 3 documented WebKit offline skips, no failures (408 total).
+Focused frontend/packaging 42 passed; diff checks clean. Regenerated and delivered
+classic paired review HTML after composer corrections. Latest installed artifact
+predates resize and needs refresh. Visual approval still not recorded.
