@@ -19,6 +19,20 @@ If system dependencies are missing, run:
 bun x playwright install-deps chromium webkit
 ```
 
+## Installed-package and alternate-port runs
+
+Set `TAU_BROWSER_PORT` to avoid another application listening on 8765.
+Set `TAU_BROWSER_BIN` to an absolute installed `tau` executable to test a wheel:
+this mode removes `PYTHONPATH` instead of injecting the source checkout.
+
+```bash
+TAU_BROWSER_PORT=8877 TAU_BROWSER_BIN=/path/to/venv/bin/tau npx playwright test specs/visual-assets.spec.mjs specs/onboarding-layout.spec.mjs specs/settings-layout.spec.mjs
+```
+
+The direct-source component comparison specs require Piclaw 2.15.3 visual sources.
+Set `PICLAW_VISUAL_SOURCE` to that frontend `src` directory if it is not at the
+pinned `/opt/piclaw/releases/` installation path.
+
 ## Run tests
 
 ```bash

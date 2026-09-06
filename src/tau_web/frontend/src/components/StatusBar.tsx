@@ -1,3 +1,4 @@
+import { useEffect, useState } from "preact/hooks";
 import { SystemStats } from "./SystemStats";
 
 export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }: {
@@ -9,6 +10,12 @@ export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpe
   onToggleMetersEnabled: () => void;
   onToggleMetersCollapsed: () => void;
 }) {
+  const [model, setModel] = useState("");
+  useEffect(() => {
+    const receive = (event: Event) => setModel((event as CustomEvent<{ model: string }>).detail.model);
+    window.addEventListener("tau:status-model", receive);
+    return () => window.removeEventListener("tau:status-model", receive);
+  }, []);
   return (
     <footer className="app-layout__status-bar" role="banner" aria-label="Tau status bar">
       <span className="status-bar__conn">
@@ -24,7 +31,9 @@ export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpe
       </span>
 
       <span className="model-badge-wrapper">
-        <span id="status-model" className="model-badge model-badge--empty">Unset</span>
+        <span id="status-model" className={`model-badge${model ? "" : " model-badge--empty"}`}>
+          {model ? <span className="model-badge__name-wrapper"><span className="model-badge__provider">{model.includes("/") ? model.slice(0, model.lastIndexOf("/") + 1) : ""}</span><span className="model-badge__name">{model.split("/").pop()}</span></span> : <span className="model-badge__empty">Unset</span>}
+        </span>
         <span id="status-context" className="usage-badge">No context loaded</span>
       </span>
 

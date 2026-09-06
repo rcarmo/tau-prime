@@ -1,10 +1,15 @@
-const CACHE_NAME = "tau-web-shell-v10";
+const CACHE_NAME = "tau-web-shell-v11";
 const SHELL_URLS = Object.freeze([
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/static/piclaw-reference.css",
   "/static/piclaw-parity.css",
+  "/static/preact-shell.js",
+  "/static/JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
+  "/static/JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
+  "/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
+  "/static/firacode-nerd-font-mono-regular-f4sytzp8.ttf",
   "/static/app.js",
   "/static/extension-ui.js",
   "/static/widget-bridge.js",

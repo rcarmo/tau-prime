@@ -121,9 +121,10 @@ void init();
 async function init() {
   try {
     switchTab("workspace");
-    applySessionFilter(state.sessionFilter);
+    await applySessionFilter(state.sessionFilter);
     closeDrawers();
     await refreshShell({ reconnect: true, announceMessage: "Tau shell ready." });
+    document.documentElement.dataset.tauShellReady = "true";
     void initializeTrustedFrontendModules();
     await refreshMeters();
     startMetersPolling();
@@ -1179,7 +1180,7 @@ function applySessionFilter(filter) {
   persistStorage(STORAGE_KEYS.sessionFilter, state.sessionFilter);
   syncSelection(state.selectedSessionId);
   renderShell();
-  void refreshSelectedSessionData({ reconnect: true });
+  return refreshSelectedSessionData({ reconnect: true });
 }
 
 function switchTab(name) {
@@ -1487,7 +1488,7 @@ function renderSessions() {
 function renderSessionDetails() {
   if (!state.selectedSession) {
     ui.statusSession.textContent = "No session selected";
-    ui.statusModel.textContent = ui.modelInput.value.trim() ? `${ui.providerInput.value.trim()}/${ui.modelInput.value.trim()}` : "Unset";
+    window.dispatchEvent(new CustomEvent("tau:status-model", { detail: { model: ui.modelInput.value.trim() ? `${ui.providerInput.value.trim()}/${ui.modelInput.value.trim()}` : "" } }));
     ui.statusContext.textContent = "No context loaded";
     ui.timelineMeta.textContent = "Load a session to inspect persisted messages.";
     ui.agentStatusText.textContent = "No session selected";
@@ -1498,7 +1499,7 @@ function renderSessionDetails() {
   const session = state.selectedSession;
   const activeRun = currentComposerActiveRun();
   ui.statusSession.textContent = sessionLabel(session);
-  ui.statusModel.textContent = `${session.provider_name}/${state.context?.model ?? session.model}`;
+  window.dispatchEvent(new CustomEvent("tau:status-model", { detail: { model: `${session.provider_name}/${state.context?.model ?? session.model}` } }));
   ui.statusContext.textContent = contextSummaryText();
   ui.timelineMeta.textContent = contextSummaryText(true);
   ui.agentStatusText.textContent = activeRun ? `Running ${shortId(activeRun.run_id)}` : "Ready";

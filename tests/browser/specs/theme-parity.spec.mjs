@@ -5,7 +5,7 @@ import path from 'node:path';
 const staticRoot = path.resolve(import.meta.dirname, '../../../src/tau_web/static');
 
 test('Tau compatibility sheet preserves Piclaw root theme tokens', async ({ page }) => {
-  await page.setContent('<main>Theme fixture</main>');
+  await page.setContent('<meta name="viewport" content="width=device-width, initial-scale=1"><main>Theme fixture</main>');
   await page.addStyleTag({ content: await readFile(path.join(staticRoot, 'piclaw-reference.css'), 'utf8') });
   const tokens = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);

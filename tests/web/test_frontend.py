@@ -393,7 +393,7 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "theme_color": "#0f172a",
         "lang": "en",
     }
-    assert 'const CACHE_NAME = "tau-web-shell-v10";' in worker
+    assert 'const CACHE_NAME = "tau-web-shell-v11";' in worker
     for asset_path in (
         "/",
         "/index.html",

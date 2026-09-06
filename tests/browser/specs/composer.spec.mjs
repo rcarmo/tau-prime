@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('composer renders staged attachments through Piclaw chip markup', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });

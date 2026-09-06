@@ -30,6 +30,13 @@ function summarizeViolations(violations) {
 }
 
 async function expectNoBlockingAxeViolations(page, label) {
+  // Inspect the settled UI, not a partially transparent entrance frame.
+  // Await finite animations only; running-status indicators may animate forever.
+  await page.evaluate(async () => {
+    await Promise.all(document.getAnimations().filter(animation =>
+      Number.isFinite(animation.effect?.getComputedTiming().endTime),
+    ).map(animation => animation.finished.catch(() => {})));
+  });
   const results = await new AxeBuilder({ page }).analyze();
   const blocking = results.violations.filter((violation) =>
     BLOCKING_IMPACTS.has(violation.impact ?? ''),
@@ -150,7 +157,9 @@ async function assertComposeFocusIndicatorAfterGlobalShortcut(page) {
   ).toBe(true);
 }
 
-test('baseline accessibility coverage and keyboard focus indicator', async ({ page }, testInfo) => {
+for (const colorScheme of ['light', 'dark']) {
+test(`${colorScheme} accessibility coverage and keyboard focus indicator`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ colorScheme });
   await waitForShell(page);
   await assertCoreAccessibleControls(page);
   await expectNoBlockingAxeViolations(page, `${testInfo.project.name} initial page`);
@@ -162,3 +171,4 @@ test('baseline accessibility coverage and keyboard focus indicator', async ({ pa
 
   await assertComposeFocusIndicatorAfterGlobalShortcut(page);
 });
+}

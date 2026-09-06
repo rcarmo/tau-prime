@@ -1,4 +1,6 @@
 import { Fragment } from "preact";
+import { CopyButton } from "./CopyButton";
+import { MarkdownContent } from "./MarkdownContent";
 import { useEffect, useLayoutEffect, useState } from "preact/hooks";
 
 type Attachment = { mediaId: string; filename: string; mediaType: string };
@@ -23,11 +25,15 @@ function valueText(value: unknown): string {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
-function ToolCallBlock({ call, result }: { call: ToolCall; result?: TimelineMessage }) {
+export function ToolCallBlock({ call, result }: { call: ToolCall; result?: TimelineMessage }) {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const name = call.name || result?.toolName || "tool";
   const input = valueText(call.arguments);
   const output = result?.content ?? "";
+  const lines = output.split("\n");
+  const hiddenLines = !expanded && lines.length > 20 ? lines.length - 20 : 0;
+  const displayedOutput = hiddenLines ? lines.slice(-20).join("\n") : output;
   return (
     <div className="message-list__tool-call">
       <button className="message-list__tool-call-header" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
@@ -37,8 +43,12 @@ function ToolCallBlock({ call, result }: { call: ToolCall; result?: TimelineMess
       </button>
       {open && (
         <div className="message-list__tool-call-body">
-          {input && <pre className="message-list__tool-call-code">{input}</pre>}
-          {output && <Fragment><div className="message-list__tool-call-result-label">Result</div><pre className="message-list__tool-call-code">{output}</pre></Fragment>}
+          {input && <div className="tool-call__pre-wrapper"><CopyButton text={input} /><pre className="message-list__tool-call-code">{input}</pre></div>}
+          {output && <Fragment><div className="message-list__tool-call-result-label">Result</div><div className="tool-call__pre-wrapper">
+            {hiddenLines > 0 && <button type="button" className="tool-call__hidden-lines" title="Show full output" onClick={() => setExpanded(true)}>{hiddenLines} lines hidden — click to expand</button>}
+            {expanded && <button type="button" className="tool-call__hidden-lines tool-call__hidden-lines--collapse" onClick={() => setExpanded(false)}>collapse</button>}
+            <CopyButton text={output} /><pre className="message-list__tool-call-code">{displayedOutput}</pre>
+          </div></Fragment>}
         </div>
       )}
     </div>
@@ -86,12 +96,12 @@ function AttachmentChip({ attachment }: { attachment: Attachment }) {
   );
 }
 
-function MessageItem({ item, resultByCall }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage> }) {
+export function MessageItem({ item, resultByCall }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage> }) {
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
   return (
-    <li className={`message-list__item message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
+    <div className={`message-list__item message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
       <div className={`message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`} aria-hidden="true">{isUser ? "Y" : "τ"}</div>
       <div className={item.live ? "message-list__body message-list__body--draft" : "message-list__body"}>
         <div className="message-list__header">
@@ -103,12 +113,12 @@ function MessageItem({ item, resultByCall }: { item: TimelineMessage; resultByCa
             {item.toolCalls.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
           </div>
         )}
-        {item.content && <div className="message-list__content">{item.content}</div>}
+        {item.content && (isUser ? <div className="message-list__content">{item.content}</div> : <MarkdownContent content={item.content} />)}
         {item.attachments && item.attachments.length > 0 && (
           <div className="message-list__attachments">{item.attachments.map((attachment) => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}</div>
         )}
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -132,12 +142,12 @@ export function Timeline() {
     <Fragment>
       <div className="extension-slot" data-extension-slot="timeline_before" />
       <div id="timeline-main" className="message-list" tabIndex={-1}>
-        <div id="timeline-meta" className="message-list__status-banner" aria-live="polite">Load a session to inspect persisted messages.</div>
-        <ol id="timeline-list" className="timeline-list message-list__items" aria-live="polite" tabIndex={0}>
+        <div id="timeline-meta" className="message-list__empty" aria-live="polite">Load a session to inspect persisted messages.</div>
+        <div id="timeline-list" aria-live="polite" tabIndex={0}>
           {visibleItems.length === 0
-            ? <li className="message-list__empty">{empty}</li>
+            ? <div className="message-list__empty"><p>{empty}</p></div>
             : visibleItems.map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} />)}
-        </ol>
+        </div>
       </div>
       <div className="extension-slot" data-extension-slot="timeline_after" />
     </Fragment>

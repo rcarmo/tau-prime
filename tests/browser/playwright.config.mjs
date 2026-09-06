@@ -10,6 +10,9 @@ export default defineConfig({
   workers: 2,
   use: {
     baseURL,
+    // Page routing cannot intercept requests already handled by a service worker.
+    // Keep API fixtures deterministic; service-worker delivery is a separate check.
+    serviceWorkers: 'block',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
 
-const TAU_BIN = '/workspace/tau/.venv/bin/tau';
+const TAU_BIN = process.env.TAU_BROWSER_BIN || '/workspace/tau/.venv/bin/tau';
 const HOST = '127.0.0.1';
 const PORT = process.env.TAU_BROWSER_PORT || '8765';
 
@@ -59,12 +59,17 @@ function setupEnv() {
   const env = { ...process.env };
   delete env.TAU_WEB_AUTH_TOKEN;
 
-  const pythonPathPrefix = '/workspace/tau/src';
-  env.PYTHONPATH = env.PYTHONPATH
-    ? `${pythonPathPrefix}:${env.PYTHONPATH}`
-    : pythonPathPrefix;
+  if (process.env.TAU_BROWSER_BIN) {
+    // Exercise the installed wheel without silently importing checkout code.
+    delete env.PYTHONPATH;
+  } else {
+    const pythonPathPrefix = '/workspace/tau/src';
+    env.PYTHONPATH = env.PYTHONPATH
+      ? `${pythonPathPrefix}:${env.PYTHONPATH}`
+      : pythonPathPrefix;
+  }
 
-  const pathPrefix = '/workspace/tau/.venv/bin';
+  const pathPrefix = dirname(TAU_BIN);
   const inheritedPath = env.PATH ?? env.Path;
   env.PATH = inheritedPath ? `${pathPrefix}:${inheritedPath}` : pathPrefix;
 

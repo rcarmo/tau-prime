@@ -19,7 +19,7 @@ test('single-chat tab matches actual Piclaw component markup and computed styles
     bundle: true, write: false, format: 'iife', jsx: 'automatic', jsxImportSource: 'preact',
     nodePaths: [path.join(frontend, 'node_modules')],
   });
-  await page.setContent('<div id="reference"></div><div id="tau"></div>');
+  await page.setContent('<meta name="viewport" content="width=device-width, initial-scale=1"><div id="reference"></div><div id="tau"></div>');
   await page.addStyleTag({ content: await readFile(path.join(frontend, '../static/piclaw-reference.css'), 'utf8') });
   await page.addScriptTag({ content: result.outputFiles[0].text });
   const measure = selector => page.locator(selector).evaluate(root => ({

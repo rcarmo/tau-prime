@@ -4,7 +4,7 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '../../../src/tau_web/static');
 
 test('compatibility CSS preserves standard Piclaw control styles', async ({ page }) => {
-  await page.setContent(`<main>
+  await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1"><main>
     <button class="provider-wizard__btn provider-wizard__btn--primary">Connect</button>
     <button class="modal-dialog__btn modal-dialog__btn--primary">Confirm</button>
     <button class="chat__send-btn">Send</button>

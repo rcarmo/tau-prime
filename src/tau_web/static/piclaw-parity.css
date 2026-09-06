@@ -2,7 +2,6 @@
  * Keep this file small: visual primitives belong in piclaw-reference.css.
  */
 :root {
-  color-scheme: light;
   --bg: var(--bg-primary);
   --panel: var(--bg-secondary);
   --panel-strong: var(--bg-primary);
@@ -12,10 +11,6 @@
 }
 
 [hidden] { display: none !important; }
-
-/* The Preact mount must not add a layout box around Piclaw's shell hierarchy. */
-#app,
-.legacy-shell-regions { display: contents; }
 
 /* Map Tau's established shell regions onto Piclaw surface tokens during migration. */
 .app-shell,
@@ -30,16 +25,6 @@
 #compose-delivery-mode {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--bg-primary);
-}
-
-/* Piclaw starts with its single sidebar collapsed and opens it from the
- * Activity Bar; do not reserve a permanent third column. */
-.app-layout__sidebar-wrapper {
-  width: 0;
-}
-.app-layout__sidebar-wrapper.is-open {
-  width: min(24rem, 32vw);
 }
 
 /* Tau sessions remain available as an overlay instead of recreating the
@@ -121,3 +106,27 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
     transform: translateX(-105%);
   }
 }
+
+/* Accessibility exception: upstream secondary text falls below 4.5:1 on
+ * light status surfaces. Use the standard theme foreground for these labels. */
+.light .app-layout__status-bar .status-bar__conn-text,
+.light .app-layout__status-bar .model-badge__empty { color: var(--text); }
+/* Small sidebar headings need the foreground token on the light sidebar. */
+.light .sidebar__title { color: var(--text); }
+/* Upstream hover opacity reduces mobile button contrast below AA. */
+.mobile-toolbar__terminal-btn:hover { opacity: 1; }
+.light .app-layout__status-bar .sys-stats-bar__compact { color: var(--text); }
+/* Tau's persistent branch section uses the active theme's muted token,
+ * rather than the legacy camelCase token in the status-panel stylesheet. */
+.agent-status-panel__section { color: var(--text-muted); }
+.agent-status-panel__section .agent-status-panel__title { color: var(--text-muted); }
+/* Provider prefixes are small text: retain the badge foreground at full opacity. */
+.light .app-layout__status-bar .model-badge__provider { opacity: 1; }
+/* Dark surfaces likewise need the visual theme's muted token rather than
+ * legacy secondary text values designed for a different background. */
+.dark .message-list__empty,
+.dark .agent-status-panel__status-text,
+.dark .app-layout__status-bar .status-bar__conn-text,
+.dark .app-layout__status-bar .sys-stats-bar__compact,
+.dark .app-layout__status-bar .model-badge__empty { color: var(--text-muted); }
+.dark .app-layout__status-bar .model-badge__provider { opacity: 1; }

@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 test('timeline uses Piclaw message, tool, and attachment component mapping', async ({ page }) => {
+  // This spec injects component state; prevent live server events from replacing it.
+  // API/SSE behavior is exercised separately by the integration tests.
+  await page.route('**/api/events*', route => route.fulfill({
+    status: 200, contentType: 'text/event-stream', body: ': fixture stream\n\n',
+  }));
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);

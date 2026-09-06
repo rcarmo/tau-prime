@@ -40,7 +40,7 @@ export function Composer() {
             <input id="compose-file-input" type="file" multiple hidden aria-label="Attach files" />
             <label className="thinking-badge-wrapper" title="Message delivery">
               <span className="sr-only">Delivery</span>
-              <select id="compose-delivery-mode" className="thinking-badge" name="delivery_mode" aria-label="Message delivery">
+              <select id="compose-delivery-mode" className="settings-panel__select" name="delivery_mode" aria-label="Message delivery">
                 <option value="run">Run</option>
                 <option value="follow_up">Follow-up</option>
                 <option value="steer">Steer</option>

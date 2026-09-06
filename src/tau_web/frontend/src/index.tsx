@@ -1,4 +1,5 @@
 import { Fragment, render } from "preact";
+import { installSystemTheme } from "./theme/applyTheme";
 import { useState } from "preact/hooks";
 import { ActivityBar } from "./components/ActivityBar";
 import { TabBar } from "./components/TabBar";
@@ -90,4 +91,5 @@ function TauShell() {
 
 const mount = document.getElementById("app");
 if (!mount) throw new Error("Missing #app root element");
+installSystemTheme();
 render(<TauShell />, mount);

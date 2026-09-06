@@ -7,6 +7,8 @@
     "check": "bun x tsc --noEmit"
   },
   "dependencies": {
+    "dompurify": "3.4.14",
+    "marked": "18.0.0",
     "preact": "10.24.3"
   },
   "devDependencies": {

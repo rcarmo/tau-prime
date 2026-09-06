@@ -78,6 +78,88 @@ Bootstrap assertions now wait for the composer to be attached, not visible befor
 
 Full Python suite after the current asset, CSS, settings and onboarding corrections: **1327 passed**. Added embedded Codicons attribution and upstream CC BY 4.0 license to `FONT-LICENSES.md`; packaging checks still 7/7. These changes are checkpointed as partial visual-port corrections, not final delivery. Latest full browser run was 126/126 before adding the six passing onboarding-placement checks; a combined rerun remains required after subsequent changes.
 
+## Installed-wheel browser verification
+
+Built the wheel into `/workspace/tmp/tau-wheel-audit`, installed its `[web]` extra in a separate uv environment at `/workspace/tmp/tau-installed-audit`, and ran the font-loading, onboarding and settings-layout matrix against that executable on port 8877: **18/18 passed**. Launcher now supports `TAU_BROWSER_BIN` and deletes inherited PYTHONPATH in installed mode. Verified `tau_web.__file__` resolves under the separate environment's site-packages, not the source tree. Harness options documented in tests/browser/README.md.
+
+## Shell CSS interference check
+
+Added reduced App-container geometry fixture with identical markup before/after the compatibility stylesheet. It exposed `#app { display: contents }` replacing upstream's flex mount and a global sidebar-wrapper width of zero replacing upstream's 200px default. Removed both overrides; Tau's explicit state-controlled inline width still controls its own sidebar. The reduced shell, responsive/workspace and onboarding matrices pass 18/18. This is a CSS-interference check, not a genuine full-App or populated screenshot comparison.
+
+## Timeline structure and open contrast regression
+
+Removed Tau's unstyled ordered-list wrapper/list-item markup in favor of div message items, following upstream MessageList/MessageItem. Preserved timeline IDs/live region. Build/TypeScript and six timeline browser checks pass. Accessibility rerun fails in all six projects: delivery selector and model status have insufficient contrast after accumulated theme/layout corrections. Removing the selector's forced white background does not resolve this. Investigate the mixed theme/component token mapping before sign-off; do not count accessibility as green.
+
+## Missing runtime theme initialization
+
+Tau had no equivalent of Piclaw ThemeProvider: no light/dark root class and no runtime theme tokens. Added upstream theme.ts values plus system-theme application and change listener before render. Six browser projects verify light/dark class and background token changes; TypeScript passes. Corrected delivery selector's use of thinking-badge to settings-select styling, and removed error-banner styling from neutral timeline metadata. Accessibility remains red: status connection/model badges have contrast failures under the now-correct light background; inspect status component mapping next. Do not claim the theme fix alone resolves accessibility.
+
+## Settled-state accessibility correction
+
+Status model text is now Preact-owned, with upstream provider/name/empty wrappers and actual empty-state class switching rather than a permanently empty badge. Documented narrow accessibility exceptions use theme foreground on light connection/empty-model/compact-meter labels and sidebar title, and remove opacity reduction on mobile hover/provider prefixes. Tau's persistent branch section uses `--text-muted`, not legacy `--textMuted`.
+
+An intermittent branch-text failure was sampled during upstream `agentFadeIn` (200ms). Accessibility scans now await finite animations' finished promises (not infinite running indicators), preserving actual animation behavior. Six-project accessibility matrix repeated twice: **12/12 passed**. Full suite, dark-theme axe, and paired visual acceptance remain pending; exceptions are deliberate deviations and not evidence of pixel parity.
+
+## Dark-theme accessibility
+
+Accessibility spec now explicitly runs both light/dark schemes at all six engine/viewports. Added narrow dark-surface text-token corrections for neutral timeline/status labels and retained provider prefix opacity. WebKit dark revealed native session buttons because Tau-only classes have no standard style rules; action/filter/session buttons now also use Piclaw's existing settings button primitive. This fixes native-color fallback, not full session-card fidelity. Both-theme accessibility plus session interaction checks pass **18/18**; build/TypeScript pass. Full matrix and visual review remain open.
+
+## Full matrix follow-up
+
+Full browser matrix is currently **149/150**, not green. Timeline injection test overwritten by server state: isolated its SSE endpoint and sequenced startup's previously fire-and-forget session-filter refresh. Timeline passed in the next full run, but the composer attachment fixture then failed on WebKit desktop. Thus startup/fixture isolation is not yet verified complete; inspect composer failure before sign-off. No renderer assertions were weakened.
+
+## Regression recovery verified
+
+Inspection corrected the earlier composer diagnosis: it timed out in `page.goto` waiting for `load`, before any attachment assertions. The composer test now uses DOMContentLoaded followed by its existing attached/shell-ready checks. Full combined matrix now **150/150 passed**; full Python suite **1327 passed**; diff check passes. This supersedes the 149/150 checkpoint, but does not establish full visual parity.
+
+## Genuine populated MessageItem fixture
+
+First actual Piclaw MessageItem fixture renders successfully in Chromium desktop; capture attached. Uses pinned release MessageItem unchanged, fixed plain user content/time, separate origin for storage, and one shared Preact runtime. Release omits dependencies: audit directory supplies signals 2.11.2 and dompurify 3.4.14; missing browser-title formatter is stubbed (unused by message rendering). This is not yet paired with Tau, and font/Markdown library completeness must be checked before visual approval. Initial npm install resolved the parent workspace because the audit directory lacked a package.json; removed added parent dependencies and recreated a proper isolated package before continuing.
+
+## Paired plain user message
+
+Extended genuine MessageItem fixture to render Tau's exported MessageItem with identical plain content, timestamp label and no-uploaded-avatar state. All six projects match message/content width, height and whitespace mode. Captured both versions and DOM/geometry JSON, attached archive. Remaining DOM differences include upstream collapse/delete action bar and timestamp tooltip. This fixture has no Markdown vendor global and covers plain user text only; it does not validate rich agent Markdown, tools, complete chat or pixel parity. Build/TypeScript/diff checks pass.
+
+## Tool output mapping
+
+Adapted upstream ToolCallBlock structure: argument/result pre wrappers, copy controls, 20-line output tail with hidden-line expansion and collapse. Copy sends complete output, not just displayed tail; Tau's failed/done semantics retained. New CopyButton uses clipboard API with feedback and timer cleanup; fallback clipboard behavior remains a difference from upstream. Tool-output interactions and timeline tests pass 12/12 across all six targets; build/TypeScript pass. Direct paired tool geometry/screenshots are not yet implemented.
+
+## Paired tool fixture blocker
+
+Work-in-progress `tests/browser/audits/tool-reference.spec.mjs` compiles genuine upstream and Tau ToolCallBlock but upstream does not expand on click in the isolated bundle (aria-expanded remains false, no page error). Removing clock interception and unifying Preact aliases did not resolve it. Kept outside standard spec discovery until this harness defect is understood. Tau live-page tool interaction tests remain passing; do not claim paired tool geometry or screenshots. Next inspect bundler module/runtime identity and synthetic-origin event dispatch before changing product code.
+
+## Paired tool fixture recovered
+
+Isolated the exact ToolCallBlock source region from installed MessageItem (unchanged function/body) and imported upstream CopyButton directly, avoiding unrelated module initialization. This restored reference state transitions; the precise global-hook interaction remains undiagnosed, so no production bug is inferred. Removed obsolete audits prototype; standard `tool-reference.spec.mjs` now compares collapsed, tail and full-result geometry/text/fonts/padding. All six projects pass, paired screenshots/JSON attached. Fixture source-boundary assertions fail if upstream structure changes. It covers successful string output, not failure states or clipboard fallback parity.
+
+## Core rich agent Markdown
+
+Tau previously rendered agent content as plain text. Added logical MarkdownContent with pinned Marked 18.0.0 and DOMPurify 3.4.14 bundled offline; agent headings/lists/emphasis/code now produce semantic markup in the Piclaw content container. User text remains literal. HTML is sanitized (active attributes/URLs removed; form/style/iframe controls forbidden). Added dependency notices. Six-target Markdown security/rendering and timeline tests pass 12/12; build/TypeScript pass. This implements core Markdown, not Piclaw's full preprocessing/math/highlighting/diagram pipeline; paired rich-agent comparison remains required.
+
+## Rich Markdown direct comparison
+
+Actual upstream pipeline versus Tau now matches HTML and measured styles/geometry for headings, emphasis, inline/fenced code, lists, quote and link fixture in six targets. Added missing code-block header, language label and copy button structure after sanitization; clipboard handler decodes full UTF-8 code. Detached template transformations occur only before Preact mounts sanitized output. Test rounds geometry to 0.001px to avoid WebKit floating-point noise and includes viewport meta. Combined rich reference/security tests 12/12, build/TypeScript pass. Optional syntax highlighting, math and diagrams remain absent; language alias coverage currently limited.
+
+## Corrected mobile fixture viewport
+
+Earlier isolated fixtures omitted viewport meta, permitting a 980px mobile layout viewport. Added viewport meta to message/tool/container/control/token fixtures; message/tool fixtures explicitly assert document clientWidth equals project viewport width. Re-ran paired message/tools 12/12 and container/control/token checks 30/30 at true target widths. Reattached corrected screenshot archives; these supersede earlier mobile reference captures. Full page application tests already used index.html's correct viewport meta.
+
+## Reference dependency reproducibility and fixture guard
+
+Moved signals 2.11.2 into browser package.json/bun.lock; reference tests no longer require temporary dependency installation. Message/tool/rich Markdown references pass 18/18. Full suite reached 178/180: tool-output injection was replaced by empty live-page state in two WebKit targets. Added attached composer and explicit 'Tau shell ready.' guards plus onboarding dismissal before injection; focused six-target tool suite repeated three times passes 18/18. Full rerun still required.
+
+## Browser routing isolation and current result
+
+Exact status-message readiness was invalid because later stream announcements replace it. Added durable data-tau-shell-ready marker after initial refresh and used it for tool/plan fixtures. Subsequent real data bypassing route mocks exposed service-worker interference; browser harness now blocks service workers so page-route fixtures remain interceptable. Full suite **180/180 passed** after this change. Service-worker behavior is excluded from that result and requires separate validation. Core app marker changes no API contract.
+
+## Service-worker coverage
+
+Found missing offline Preact bundle/font cache entries; added preact-shell.js and all four fonts and bumped cache to v11. Worker-enabled tests now explicitly override the default blocked-worker suite: cache contents/API exclusion pass on all six projects; true offline rendered reload passes on all three Chromium viewports. WebKit offline navigation fails with internal browser error, so its three offline-reload cases are explicitly skipped/unverified (cache cases remain enabled). Result 9 passed/3 skipped, frontend/packaging 43/43. This is not full WebKit offline sign-off.
+
+## Rich-copy and Python checkpoint
+
+Verified Markdown code-copy preserves full UTF-8 content (café, Japanese and emoji) through generated base64 data and clipboard handler; six-target security/render/copy checks pass. Full Python suite rerun: 1327 passed. Build, TypeScript and diff checks pass. Current batch remains a partial visual-port checkpoint; no complete paired-shell or optional-plugin sign-off.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.
