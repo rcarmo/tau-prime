@@ -991,3 +991,11 @@ Each category captured for both themes/all six targets: 36-page installed
 Settings PDF delivered with wheel/checksum. This build was not double-built in
 this checkpoint, so no new reproducibility comparison claimed. No runtime
 changes; visual approval still outstanding.
+
+## Remove obsolete sidebar navigation override
+
+Removed tau-classic.css rule forcing Settings nav into narrow wrapping-sidebar
+layout. Actual classic dialog CSS now controls responsive navigation width and
+orientation; accessible anchor text treatment remains. Layout/category a11y
+matrix 18 passed, additional desktop navigation-width regression 6 passed.
+No vendor CSS changed. Latest artifact/evidence predates this styling correction.

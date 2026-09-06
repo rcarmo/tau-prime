@@ -13,6 +13,9 @@ test('settings in classic dialog without remounting Tau API form anchors', async
   await settings.click();
   await expect(page.locator('.settings-dialog > #panel-settings')).toBeVisible();
   await expect(page.locator('#auth-token')).toBeVisible();
+  const navigation = await page.locator('#panel-settings .settings-nav').evaluate(el=>({width:el.getBoundingClientRect().width,display:getComputedStyle(el).display}));
+  // Desktop retains classic's side navigation, rather than the former wrapping sidebar override.
+  if(page.viewportSize().width>=1024) expect(navigation.width).toBeGreaterThanOrEqual(160);
   await expect(page.locator('#model-input')).toBeHidden();
   await page.locator('#auth-token').fill('unsaved-token-fixture');
   const overflow = await page.locator('#panel-settings').evaluate(el => ({
