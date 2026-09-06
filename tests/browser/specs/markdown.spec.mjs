@@ -20,5 +20,12 @@ test('agent Markdown renders semantic content without active HTML', async ({ pag
   expect(await page.evaluate(()=>window.pwned)).toBeUndefined();
   await content.getByRole('button',{name:'Copy code',exact:true}).click();
   expect(await page.evaluate(()=>window.copiedCode)).toBe('const n = 1; // café 日本語 🚀\n');
+  await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveText('Code copied');
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('Denied');}}}));
+  await content.getByRole('button',{name:'Copy code',exact:true}).click();
+  await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveText('Unable to copy code; try again');
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedCode=text;}}}));
+  await content.getByRole('button',{name:'Copy code',exact:true}).click();
+  await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveText('Code copied');
   await expect(page.locator('.message-list__item--user .message-list__content')).toHaveText('**literal user text**');
 });

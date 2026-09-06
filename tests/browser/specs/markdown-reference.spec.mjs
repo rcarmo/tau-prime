@@ -29,5 +29,8 @@ test('core rich Markdown matches actual Piclaw pipeline', async ({ page }) => {
     html:root.innerHTML,
     elements:[...root.querySelectorAll('*')].map(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return {tag:el.tagName,width:Math.round(r.width*1000)/1000,height:Math.round(r.height*1000)/1000,font:s.font,margin:s.margin,whiteSpace:s.whiteSpace};}),
   }));
-  expect(await measure('#tau')).toEqual(await measure('#reference'));
+  // Compare the actual rich-content region; Tau's separate screen-reader
+  // clipboard status is an intentional accessibility addition, not visible markup.
+  expect(await measure('#tau .message-list__content')).toEqual(await measure('#reference .message-list__content'));
+  await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveCount(1);
 });

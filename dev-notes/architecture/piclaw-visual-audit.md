@@ -288,6 +288,26 @@ Added both-theme scoped axe/control-bounds checks to inline onboarding. Light pa
 
 Combined current browser run after settings wrapping/category and onboarding contrast changes: 291 passed / 3 documented WebKit offline skips. Build/TypeScript, frontend/packaging 43/43 and diff checks pass. Full Python last 1327 passed at prior connection checkpoint; this batch changes frontend/styles/tests only. Visual approval and optional feature gaps still remain.
 
+## Tool clipboard failure/retry
+
+Tool copy no longer silently returns to idle after denial: accessible label/title reports 'Copy failed — retry', and a subsequent successful click restores copied feedback. Pending success timer is cleared when starting another attempt. Failure/retry/full-output and direct tool geometry tests pass 12/12; build/TypeScript/diff checks pass. This does not add a deprecated execCommand fallback.
+
+## Markdown clipboard feedback
+
+Added separate screen-reader status for code-copy success/failure/retry; previously errors were swallowed. Visible rich-content region remains unchanged and directly compared to actual upstream pipeline; additional sr-only status is asserted separately as deliberate accessibility difference. Unicode/security/retry and reference checks pass 12/12, build/TypeScript pass.
+
+## Workspace/Plan accessibility
+
+Added both-theme scans and per-control bounds checks for opened Workspace and Plan. Found light workspace heading contrast, dark/native file-tree button colors, preview metadata and plan revision/status contrast issues. Scoped button reset preserves standard file-tree geometry while avoiding native fill; labels use active theme text/muted tokens. Panel scans plus existing populated-workspace/plan-conflict tests pass 24/24. Axe workspace scan uses server's populated tree; plan scan starts with default plan state, while separate conflict test exercises injected revision.
+
+## Enabled Plan scan correction
+
+Combined run exposed dark Plan label/reload failures that isolated empty-session state missed. Panel axe fixture now explicitly injects dirty enabled plan and asserts both Save/Reload enabled before scanning. Scoped dark card-label and card-action foreground corrections resolve contrast; 12/12 both-theme panel cases pass. Earlier combined run was 297 pass/6 fail/3 skips; not yet superseded by a complete rerun.
+
+## Latest pane/clipboard integration
+
+After enabled Plan contrast corrections, combined browser run passes 303 tests with 3 documented WebKit offline skips and no failures. Frontend/packaging 43/43, build/TypeScript/diff checks pass. Checkpoint includes clipboard retry feedback, queue/run fixture completeness and Workspace/Plan accessibility fixes. Remaining full-image/feature gaps are tracked separately; no visual approval implied.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.

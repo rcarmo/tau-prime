@@ -20,6 +20,7 @@ for (const colorScheme of ['light','dark']) {
     await expect(page.locator('.message-list__content h2')).toHaveText('Workspace review');
     await page.locator('.message-list__tool-call-header').click();
     await expect(page.locator('.message-list__tool-call-body')).toBeVisible();
+    await expect(page.locator('.queue-stack__error')).toHaveCount(0);
     await expect(page.locator('#status-session')).toHaveText('Review session');
     await expect(page.locator('#status-model')).toHaveText('test/review-model');
     await expect(page.locator('#meters-summary')).toHaveText('CPU 10% · RAM 25% · RSS 80 MB · Swap 0%');

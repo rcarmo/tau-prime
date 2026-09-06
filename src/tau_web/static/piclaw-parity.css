@@ -154,3 +154,17 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 .dark .provider-wizard .provider-wizard__subtitle,
 .dark .provider-wizard .settings-panel__label,
 .dark .provider-wizard .provider-wizard__btn--secondary { color: var(--text-muted); }
+
+/* Tau uses semantic buttons for file-tree entries; reset native button colors
+ * while keeping the standard file-tree layout and hover rules. */
+#workspace-list button.file-tree__item { background: transparent; border: 0; color: var(--text); font-family: inherit; text-align: left; width: 100%; }
+#workspace-list button.file-tree__item:hover { background: var(--bg-hover); }
+#panel-workspace .workspace__section-header,
+#panel-workspace .workspace__preview-header { color: var(--text); }
+#panel-workspace .file-tree__meta,
+#workspace-editor-path,
+#workspace-editor-note { color: var(--text-muted); opacity: 1; }
+#panel-plan #plan-revision,
+#panel-plan #plan-status { color: var(--text); opacity: 1; }
+.dark #panel-plan .tasks-panel__card-label,
+.dark #panel-plan .tasks-panel__card-actions button { color: var(--text); }

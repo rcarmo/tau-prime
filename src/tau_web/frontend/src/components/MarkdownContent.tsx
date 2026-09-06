@@ -1,4 +1,4 @@
-import { useMemo } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 
@@ -6,6 +6,7 @@ const labels: Record<string, string> = { js: "JavaScript", javascript: "JavaScri
 
 /** Sanitized core Markdown; optional Piclaw math/diagram plugins are not yet ported. */
 export function MarkdownContent({ content }: { content: string }) {
+  const [copyStatus, setCopyStatus] = useState("");
   const html = useMemo(() => {
     const clean = DOMPurify.sanitize(marked.parse(content, { async: false }), {
       USE_PROFILES: { html: true },
@@ -40,12 +41,13 @@ export function MarkdownContent({ content }: { content: string }) {
     }
     return template.innerHTML;
   }, [content]);
-  return <div className="message-list__content" onClick={async event => {
+  return <><div className="message-list__content" onClick={async event => {
     const button = (event.target as Element).closest<HTMLButtonElement>("button.code-block__copy");
     if (!button || !event.currentTarget.contains(button)) return;
     try {
       const bytes = Uint8Array.from(atob(button.dataset.code ?? ""), c => c.charCodeAt(0));
       await navigator.clipboard.writeText(new TextDecoder().decode(bytes));
-    } catch { /* Clipboard permissions may be denied; never claim success. */ }
-  }} dangerouslySetInnerHTML={{ __html: html }} />;
+      setCopyStatus("Code copied");
+    } catch { setCopyStatus("Unable to copy code; try again"); }
+  }} dangerouslySetInnerHTML={{ __html: html }} /><span className="sr-only" role="status" aria-label="Code clipboard status">{copyStatus}</span></>;
 }

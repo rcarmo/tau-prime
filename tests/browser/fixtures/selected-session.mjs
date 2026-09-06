@@ -7,6 +7,8 @@ export async function installSelectedSession(page) {
     '/api/sessions': {sessions:[session]},
     [`/api/sessions/${id}`]: session,
     [`/api/sessions/${id}/branches`]: {branches:[]},
+    [`/api/sessions/${id}/queue`]: {queue:[]},
+    [`/api/sessions/${id}/runs`]: {runs:[]},
     [`/api/sessions/${id}/messages`]: {messages:[]},
     [`/api/sessions/${id}/context`]: {session_id:id,model:modelName,message_count:2,compaction_count:0,active_leaf_id:null},
     [`/api/sessions/${id}/plan`]: {session_id:id,revision:1,markdown:''},

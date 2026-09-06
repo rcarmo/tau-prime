@@ -1240,6 +1240,7 @@ function SettingsPanel({ hidden }) {
 // src/components/CopyButton.tsx
 function CopyButton({ text: text2 }) {
   const [copied, setCopied] = h2(false);
+  const [failed, setFailed] = h2(false);
   const timer = A2();
   y2(() => () => clearTimeout(timer.current), []);
   return /* @__PURE__ */ u3(
@@ -1247,17 +1248,20 @@ function CopyButton({ text: text2 }) {
     {
       type: "button",
       className: `tool-call__copy${copied ? " tool-call__copy--copied" : ""}`,
-      title: copied ? "Copied!" : "Copy",
-      "aria-label": copied ? "Copied!" : "Copy",
+      title: failed ? "Copy failed \u2014 retry" : copied ? "Copied!" : "Copy",
+      "aria-label": failed ? "Copy failed \u2014 retry" : copied ? "Copied!" : "Copy",
       onClick: async (event) => {
         event.stopPropagation();
+        setFailed(false);
+        setCopied(false);
+        clearTimeout(timer.current);
         try {
           await navigator.clipboard.writeText(text2);
           setCopied(true);
           clearTimeout(timer.current);
           timer.current = setTimeout(() => setCopied(false), 2e3);
         } catch {
-          setCopied(false);
+          setFailed(true);
         }
       },
       children: copied ? "\u2713" : /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" })
@@ -4073,6 +4077,7 @@ var purify = createDOMPurify();
 // src/components/MarkdownContent.tsx
 var labels = { js: "JavaScript", javascript: "JavaScript", ts: "TypeScript", typescript: "TypeScript", py: "Python", python: "Python", sh: "Shell", bash: "Bash", json: "JSON", go: "Go", css: "CSS", html: "HTML" };
 function MarkdownContent({ content }) {
+  const [copyStatus, setCopyStatus] = h2("");
   const html2 = T2(() => {
     const clean = purify.sanitize(g2.parse(content, { async: false }), {
       USE_PROFILES: { html: true },
@@ -4106,15 +4111,20 @@ function MarkdownContent({ content }) {
     }
     return template.innerHTML;
   }, [content]);
-  return /* @__PURE__ */ u3("div", { className: "message-list__content", onClick: async (event) => {
-    const button = event.target.closest("button.code-block__copy");
-    if (!button || !event.currentTarget.contains(button)) return;
-    try {
-      const bytes = Uint8Array.from(atob(button.dataset.code ?? ""), (c3) => c3.charCodeAt(0));
-      await navigator.clipboard.writeText(new TextDecoder().decode(bytes));
-    } catch {
-    }
-  }, dangerouslySetInnerHTML: { __html: html2 } });
+  return /* @__PURE__ */ u3(b, { children: [
+    /* @__PURE__ */ u3("div", { className: "message-list__content", onClick: async (event) => {
+      const button = event.target.closest("button.code-block__copy");
+      if (!button || !event.currentTarget.contains(button)) return;
+      try {
+        const bytes = Uint8Array.from(atob(button.dataset.code ?? ""), (c3) => c3.charCodeAt(0));
+        await navigator.clipboard.writeText(new TextDecoder().decode(bytes));
+        setCopyStatus("Code copied");
+      } catch {
+        setCopyStatus("Unable to copy code; try again");
+      }
+    }, dangerouslySetInnerHTML: { __html: html2 } }),
+    /* @__PURE__ */ u3("span", { className: "sr-only", role: "status", "aria-label": "Code clipboard status", children: copyStatus })
+  ] });
 }
 
 // src/components/MessageActionBar.tsx

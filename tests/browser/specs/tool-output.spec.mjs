@@ -23,6 +23,13 @@ test('tool output shows tail, expands, collapses and copies full output', async 
   await expect(tool.locator('pre').last()).toHaveText(content.split('\n').slice(-20).join('\n'));
   await tool.getByRole('button',{name:'Copy',exact:true}).last().click();
   expect(await page.evaluate(()=>window.copiedOutput)).toBe(content);
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('Denied');}}}));
+  await tool.getByRole('button',{name:'Copied!',exact:true}).click();
+  await expect(tool.getByRole('button',{name:'Copy failed — retry',exact:true})).toBeVisible();
+  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedOutput=text;}}}));
+  await tool.getByRole('button',{name:'Copy failed — retry',exact:true}).click();
+  await expect(tool.getByRole('button',{name:'Copied!',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>window.copiedOutput)).toBe(content);
   await tool.getByTitle('Show full output').click();
   await expect(tool.locator('pre').last()).toHaveText(content);
   await tool.getByRole('button',{name:'collapse',exact:true}).click();
