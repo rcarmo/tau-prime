@@ -446,3 +446,12 @@ Tau captures pass 12/12; reference corrected-selector rerun passes 12/12.
 Exporter now supports `search`, delivering twelve labeled pairs. Search author,
 timestamp, filters and navigation differ; do not equate Tau's Open session with
 Piclaw's scroll-to-message action. No production changes or acceptance claim.
+
+## WebKit offline repro follow-up
+
+Added opt-in TAU_PROBE_WEBKIT_OFFLINE=1 path. Desktop probe reproduces the
+internal WebKit reload error, with cache verification passing. Strengthened
+cache assertions to require root document and all successful/nonempty asset
+responses; default six-target service-worker run: 9 passed, 3 existing skips.
+No unsupported claim that this proves browser-engine fault or fixes offline
+navigation. Production service worker unchanged; repro command in browser README.

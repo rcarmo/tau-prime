@@ -77,3 +77,17 @@ On failures, Playwright keeps:
 - videos
 
 Artifacts are written under `test-results/` and `playwright-report/`.
+
+### Reproduce the WebKit offline-navigation limitation
+
+The normal suite skips WebKit offline reload (but verifies its precache).
+To run the known failing path explicitly:
+
+```sh
+TAU_BROWSER_PORT=8876 TAU_PROBE_WEBKIT_OFFLINE=1 npx playwright test specs/service-worker.spec.mjs --project=webkit-desktop --reporter=line
+```
+
+Latest probe: cache verification passes; `page.reload` after `setOffline(true)`
+reports `WebKit encountered an internal error`. This is not an offline-delivery
+sign-off. The cache test also checks the root document and successful, nonempty
+responses for every cached asset. Offline state is restored even when reload fails.

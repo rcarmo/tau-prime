@@ -11,7 +11,18 @@ async function verifyCache(page) {
     const cache = await caches.open('tau-web-shell-v11');
     return (await cache.keys()).map(request => new URL(request.url).pathname);
   });
+  expect(cached).toContain('/');
   expect(cached).toContain('/static/preact-shell.js');
+  const unusable = await page.evaluate(async () => {
+    const cache = await caches.open('tau-web-shell-v11');
+    const failures = [];
+    for (const request of await cache.keys()) {
+      const response = await cache.match(request);
+      if (!response?.ok || !(await response.arrayBuffer()).byteLength) failures.push(request.url);
+    }
+    return failures;
+  });
+  expect(unusable).toEqual([]);
   expect(cached.filter(name => /\.(woff2|ttf)$/.test(name))).toHaveLength(4);
   expect(cached.some(name => name.startsWith('/api/'))).toBe(false);
 }
@@ -21,11 +32,14 @@ test('service worker caches shell assets without API data', async ({ page }) => 
 });
 
 test('service worker supports offline reload', async ({ page, context, browserName }) => {
-  test.skip(browserName === 'webkit', 'WebKit offline navigation reports internal browser error; cache verification runs separately.');
+  test.skip(browserName === 'webkit' && process.env.TAU_PROBE_WEBKIT_OFFLINE !== '1', 'WebKit offline navigation reports internal browser error; set TAU_PROBE_WEBKIT_OFFLINE=1 to reproduce.');
   await verifyCache(page);
   await context.setOffline(true);
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#compose-input')).toBeVisible();
-  await expect(page.locator('.activity-bar')).toBeVisible();
-  await context.setOffline(false);
+  try {
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#compose-input')).toBeVisible();
+    await expect(page.locator('.activity-bar')).toBeVisible();
+  } finally {
+    await context.setOffline(false);
+  }
 });
