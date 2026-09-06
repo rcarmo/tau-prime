@@ -16,19 +16,22 @@ export function ClassicComposerSurface({ session, input, metadata, actions, noti
   const root = useRef<HTMLDivElement>(null);
   const drag = useRef<{ y: number; height: number } | null>(null);
   const [height, setHeight] = useState(50);
+  // Match the pinned classic chat.css/responsive.css textarea limits.
+  const limits = () => ({ min: window.innerWidth >= 1024 ? 70 : 50, max: window.innerWidth < 640 ? Math.min(window.innerHeight * 0.3, 200) : Math.min(window.innerHeight * 0.5, 520) });
+  const bounds = limits();
   useLayoutEffect(() => {
     const textarea = root.current?.querySelector("textarea");
-    if (textarea) { textarea.style.height = `${height}px`; textarea.style.flex = "none"; textarea.style.boxSizing = "border-box"; }
+    if (textarea) { textarea.style.height = `${Math.max(bounds.min, Math.min(bounds.max, height))}px`; textarea.style.flex = "none"; textarea.style.boxSizing = "border-box"; }
   });
   const resize = (value: number) => {
     const minimum = parseFloat(getComputedStyle(root.current!.querySelector("textarea")!).minHeight) || 50;
-    const next = Math.max(minimum, Math.min(Math.max(minimum, window.innerHeight * 0.5), value));
+    const next = Math.max(minimum, Math.min(limits().max, value));
     const textarea = root.current?.querySelector("textarea");
     if (textarea) { textarea.style.height = `${next}px`; textarea.style.flex = "none"; textarea.style.boxSizing = "border-box"; }
     setHeight(next);
   };
   return <div ref={root} className="compose-box" data-testid="compose-box">
-    <div className="compose-resize-handle" role="separator" tabIndex={0} aria-label="Resize message input" aria-orientation="horizontal" aria-valuemin={50} aria-valuemax={Math.max(50, Math.floor(window.innerHeight * 0.5))} aria-valuenow={Math.round(height)}
+    <div className="compose-resize-handle" role="separator" tabIndex={0} aria-label="Resize message input" aria-orientation="horizontal" aria-valuemin={bounds.min} aria-valuemax={Math.floor(bounds.max)} aria-valuenow={Math.round(Math.max(bounds.min, Math.min(bounds.max, height)))}
       onPointerDown={event => { event.preventDefault(); drag.current = {y:event.clientY,height:root.current?.querySelector("textarea")?.getBoundingClientRect().height ?? height}; event.currentTarget.setPointerCapture(event.pointerId); }}
       onPointerMove={event => { if (drag.current) resize(drag.current.height + drag.current.y - event.clientY); }}
       onPointerUp={event => { drag.current=null; if(event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}

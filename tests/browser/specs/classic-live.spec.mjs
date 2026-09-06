@@ -91,4 +91,12 @@ test('classic composer resize supports keyboard and pointer without changing dra
  await expect(input).toHaveCSS('height',`${baseline+10}px`);await page.keyboard.press('Home');await expect(input).toHaveCSS('height',`${baseline}px`);
  const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y+box.height/2-40);await page.mouse.up();
  await expect(input).toHaveCSS('height',`${baseline+40}px`);await expect(input).toHaveValue('Keep this draft');
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:completion-render',{detail:{open:false,index:0,items:[]}})));
+ await expect(input).toHaveCSS('height',`${baseline+40}px`);
+ await handle.focus();for(let i=0;i<60;i++)await page.keyboard.press('ArrowUp');
+ const max=Number(await handle.getAttribute('aria-valuemax'));
+ expect(Math.abs((await input.boundingBox()).height-max)).toBeLessThanOrEqual(1);
+ expect(Number(await handle.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(max+1);
+ await page.keyboard.press('Home');await expect(input).toHaveCSS('height',`${baseline}px`);
+ await expect(handle).toHaveAttribute('aria-valuemin',String(baseline));
 });
