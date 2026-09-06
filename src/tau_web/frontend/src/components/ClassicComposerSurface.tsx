@@ -16,7 +16,7 @@ export function ClassicComposerSurface({ session, input, metadata, actions, noti
     {notices}
     {attachments}
     <div className="compose-input-wrapper">
-      <div className="compose-top-session-row">{session}</div>
+      {session}
       <div className="compose-input-main">{input}</div>
       {completions}
       <div className="compose-footer">

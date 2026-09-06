@@ -14,7 +14,7 @@
 .tau-classic-status .compose-model-hint { color:var(--text-primary); opacity:1; }
 .tau-classic-panel [aria-label="Navigation"] button { color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px; padding:4px 8px; }
 .tau-classic-panel button { color:var(--text-primary); background:var(--bg-secondary); }
-[data-tau-ui="classic"] .compose-session-switcher-pill { appearance:none; color:var(--text-primary); background:var(--bg-secondary); }
+[data-tau-ui="classic"] .compose-session-trigger-pill { appearance:none; color:var(--text-primary); background:var(--bg-secondary); }
 [data-tau-ui="classic"] .workspace-header-left { color:var(--text-primary); }
 [data-tau-ui="classic"] .provider-wizard__btn--secondary,
 [data-tau-ui="classic"] #session-dashboard button,
@@ -27,3 +27,5 @@
 [data-tau-ui="classic"] .agent-thinking-body pre { color:var(--text-primary); }
 /* Tau's persisted-tool disclosure is a button, unlike classic's text title. */
 [data-tau-ui="classic"] .thinking-toggle { appearance:none; background:transparent; color:var(--text-primary); border:0; font:inherit; cursor:pointer; }
+/* Reserve space for Tau's potentially longer session title on desktop too. */
+[data-tau-ui="classic"] .compose-session-trigger-top + .compose-input-main textarea { padding-right:max(calc(var(--spacing-xs) + 28px),min(44vw,156px)); }

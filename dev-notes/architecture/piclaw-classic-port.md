@@ -517,3 +517,14 @@ Removed unused visual Piclaw post/meter payloads, renamed shared fixture to
 classic-state.mjs and updated all consumers. Browser README now documents actual
 classic bundle pairing and classic asset checks, not PICLAW_VISUAL_SOURCE.
 Reference/paired/populated capture matrix 36 passed. No runtime changes.
+
+## Reference-driven composer correction
+
+Current genuine DOM/CSS inspection revealed obsolete session-switcher class names
+in the initial adapter. Replaced with compose-session-trigger-group/top/pill and
+compose-current-agent-label; attach/send now include actual icon-btn class.
+Classic session trigger overlays the top-right input rather than a separate row;
+updated spacing check to require reserved text space. Tau's longer session title
+needs right-padding on desktop too (scoped adaptation). Classic component/pair/
+a11y batch had 54 passes with 12 outdated spacing failures; corrected spacing+
+a11y matrix passes 24/24. Further refreshed paired review remains needed.

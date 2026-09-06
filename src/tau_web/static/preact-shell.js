@@ -275,10 +275,7 @@ function ClassicChatFrame({ sidebar, children, workspaceOpen = false }) {
 
 // src/components/ClassicSessionControl.tsx
 function ClassicSessionControl({ open, onToggle }) {
-  return /* @__PURE__ */ u2("div", { className: "compose-session-switcher-trigger-wrap", children: /* @__PURE__ */ u2("button", { type: "button", className: "compose-session-switcher-pill", "aria-label": "Open sessions", "aria-expanded": open, "aria-controls": "panel-sessions", onClick: onToggle, children: [
-    /* @__PURE__ */ u2("span", { id: "status-session", className: "compose-session-switcher-pill-label", children: "No session selected" }),
-    /* @__PURE__ */ u2("span", { className: "compose-session-switcher-pill-chevron", "aria-hidden": "true", children: "\u25BE" })
-  ] }) });
+  return /* @__PURE__ */ u2("div", { className: "compose-session-trigger-group compose-session-trigger-top", children: /* @__PURE__ */ u2("button", { type: "button", className: "compose-session-trigger compose-session-trigger-pill", "aria-label": "Open sessions", "aria-expanded": open, "aria-controls": "panel-sessions", onClick: onToggle, children: /* @__PURE__ */ u2("span", { id: "status-session", className: "compose-current-agent-label active", children: "No session selected" }) }) });
 }
 
 // node_modules/preact/hooks/dist/hooks.module.js
@@ -522,7 +519,7 @@ function ClassicComposerSurface({ session, input, metadata, actions, notices, at
     notices,
     attachments,
     /* @__PURE__ */ u2("div", { className: "compose-input-wrapper", children: [
-      /* @__PURE__ */ u2("div", { className: "compose-top-session-row", children: session }),
+      session,
       /* @__PURE__ */ u2("div", { className: "compose-input-main", children: input }),
       completions,
       /* @__PURE__ */ u2("div", { className: "compose-footer", children: [
@@ -559,7 +556,7 @@ function Composer({ session, metadata }) {
   const toolbar = /* @__PURE__ */ u2(b, { children: [
     "          ",
     /* @__PURE__ */ u2("div", { className: "compose-attachment-actions", "aria-label": "Prompt controls", children: [
-      /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: "attach-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u2(ClassicIcon, { name: "attach" }) }),
+      /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: "icon-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u2(ClassicIcon, { name: "attach" }) }),
       /* @__PURE__ */ u2("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" })
     ] })
   ] });
@@ -636,7 +633,7 @@ function Composer({ session, metadata }) {
   ] });
   const send = /* @__PURE__ */ u2(b, { children: [
     "        ",
-    /* @__PURE__ */ u2("button", { id: "compose-submit", className: "send-btn", type: "submit", "aria-label": "Send", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
+    /* @__PURE__ */ u2("button", { id: "compose-submit", className: "icon-btn send-btn", type: "submit", "aria-label": "Send", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
   ] });
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),

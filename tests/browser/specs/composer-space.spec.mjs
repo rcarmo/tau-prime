@@ -15,9 +15,11 @@ for (const colorScheme of ['light', 'dark']) test(`${colorScheme} classic compos
   await expect(page.locator('#compose-context-readout')).toBeHidden();
   await expect(page.locator('#compose-delivery-mode')).toBeHidden();
   const input=await page.locator('#compose-input').boundingBox();
-  const session=await page.locator('.compose-top-session-row').boundingBox();
+  const session=await page.locator('.compose-session-trigger-top').boundingBox();
   const footer=await page.locator('.compose-footer').boundingBox();
-  expect(session.y+session.height).toBeLessThanOrEqual(input.y+1);
+  // Classic overlays the session pill at top right; textarea padding reserves its space.
+  const padding=await page.locator('#compose-input').evaluate(el=>({right:parseFloat(getComputedStyle(el).paddingRight),top:parseFloat(getComputedStyle(el).paddingTop)}));
+  expect(input.x+input.width-padding.right <= session.x+1 || input.y+padding.top >= session.y+session.height-1).toBe(true);
   expect(footer.y).toBeGreaterThanOrEqual(input.y+input.height-1);
   for(const selector of ['#compose-input','#compose-submit','#compose-attachment-button']) {
     await expect(page.locator(selector)).toBeVisible();
