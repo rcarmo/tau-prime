@@ -73,3 +73,7 @@
 .tau-branch-actions { display:flex; flex-wrap:wrap; gap:4px; }
 .tau-branch-actions button { appearance:none; color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:4px 8px; }
 .tau-branch-actions button[aria-pressed="true"] { border-color:var(--accent-color); }
+/* Tau retains anchor-based settings navigation inside its secondary panel. */
+#panel-settings .settings-nav { width:auto; min-width:0; max-width:100%; display:flex; flex-wrap:wrap; padding:6px; gap:4px; }
+#panel-settings a.settings-nav-item { color:var(--text-primary); text-decoration:none; }
+#panel-settings .settings-nav-label { display:inline; }

@@ -1227,25 +1227,22 @@ function SettingsSummary() {
 function SettingsPanel({ hidden }) {
   const [category, setCategory] = h2("auth");
   const categories = [
-    { id: "auth", label: "Authentication", icon: "shield" },
-    { id: "model", label: "Model", icon: "symbol-parameter" },
-    { id: "runtime", label: "Runtime", icon: "server" }
+    { id: "auth", label: "Authentication" },
+    { id: "model", label: "Model" },
+    { id: "runtime", label: "Runtime" }
   ];
   return /* @__PURE__ */ u2("section", { id: "panel-settings", className: "settings-panel", "aria-labelledby": "tab-settings", hidden, children: [
-    /* @__PURE__ */ u2("nav", { className: "settings-panel__nav", "aria-label": "Settings categories", children: categories.map((item) => /* @__PURE__ */ u2(
+    /* @__PURE__ */ u2("nav", { className: "settings-nav", "aria-label": "Settings categories", children: categories.map((item) => /* @__PURE__ */ u2(
       "a",
       {
-        className: `settings-panel__nav-item${category === item.id ? " settings-panel__nav-item--active" : ""}`,
+        className: `settings-nav-item${category === item.id ? " active" : ""}`,
         "aria-current": category === item.id ? "location" : void 0,
         href: `#tau-settings-${item.id}`,
         onClick: (event) => {
           if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
           setCategory(item.id);
         },
-        children: [
-          /* @__PURE__ */ u2("i", { className: `codicon codicon-${item.icon}`, "aria-hidden": "true" }),
-          item.label
-        ]
+        children: /* @__PURE__ */ u2("span", { className: "settings-nav-label", children: item.label })
       },
       item.id
     )) }),

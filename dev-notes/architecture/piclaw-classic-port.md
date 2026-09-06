@@ -794,3 +794,12 @@ with explicitly Tau-scoped branch layout and pressed state. Existing run-status
 IDs and branch events retained; empty branches remain hidden. Branch plus global
 accessibility matrix 18 passed; build/TypeScript pass. Persistent Ready/runtime
 row is still a Tau-specific visual difference requiring review, not hidden.
+
+## Settings category font cleanup
+
+Removed last active Codicon nodes (decorative Settings category icons) and mapped
+navigation to classic settings-nav/item/label classes. Retained anchor semantics
+and category/form state. Classic hides labels on phone in favor of icons; Tau's
+text-only adaptation explicitly keeps labels visible. Settings layout/keyboard
+category/form identity and both-theme a11y matrix 18 passed; build/TypeScript pass.
+Settings form internals still use old field classes and require final styling audit.

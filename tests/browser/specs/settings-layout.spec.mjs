@@ -25,7 +25,7 @@ test('settings in classic sidebar without remounting Tau API form anchors', asyn
   const modelCategory=page.getByRole('link',{name:'Model',exact:true});
   await modelCategory.focus(); await page.keyboard.press('Enter');
   await expect(modelCategory).toHaveAttribute('aria-current','location');
-  await expect(page.locator('.settings-panel__nav-item--active')).toHaveCount(1);
+  await expect(page.locator('.settings-nav-item.active')).toHaveCount(1);
   await expect(page.getByRole('link',{name:'Authentication',exact:true})).not.toHaveAttribute('aria-current','location');
   await page.locator('#close-panel-drawer').click();
   await expect(page.locator('#panel-settings')).toBeHidden();
