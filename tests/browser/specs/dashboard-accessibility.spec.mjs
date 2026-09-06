@@ -7,7 +7,9 @@ for(const colorScheme of ['light','dark']) {
   await page.goto('/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancel=page.getByRole('button',{name:'Cancel',exact:true});
+  await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
   if(await cancel.isVisible()) await cancel.click();
+  await expect(page.locator('#compose-input')).toBeVisible();
   await page.getByRole('button',{name:'Dashboard',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'Session dashboard'});
   await expect(dialog.locator('.dashboard-tile')).toHaveCount(1);

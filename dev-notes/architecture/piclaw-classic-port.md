@@ -463,3 +463,11 @@ and secondary navigation. Retained correct tool-result association, code payload
 annotations/editor data and chronological visual order; replaced wrong visual
 DOM-reversal/10px-gap assertions with classic chronological DOM and composer
 boundary checks. Focused matrix 18 passed. Full suite still needs rerun.
+
+## Complete browser run and remaining-failure corrections
+
+Complete suite at 3e3446c: 380 passed, 7 failed, 3 documented WebKit offline
+skips. Six failures were WebKit native-button contrast in Dashboard/onboarding;
+one Search fixture race. Scoped Dashboard/secondary wizard button appearance,
+isolated Search fetch SSE and awaited Dashboard setup dismissal. Affected matrix
+30 passed after fixes. Complete suite still needs rerun; no green full claim yet.
