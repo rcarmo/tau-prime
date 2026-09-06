@@ -446,14 +446,13 @@ var points = (series, maximum) => {
   const max = maximum ?? Math.max(...values, 1);
   return values.map((value, index) => `${index / (values.length - 1) * 48},${12 - Math.min(1, Math.max(0, value / max)) * 12}`).join(" ");
 };
-function Metric({ id: id2, label, icon, value, series, maximum }) {
+function Metric({ id: id2, label, value, series, maximum }) {
   const numeric = series?.at(-1);
   const level = id2 === "swap" && numeric && numeric > 0 ? "warning" : severity(numeric);
-  return /* @__PURE__ */ u2("span", { className: "sys-stats__metric", title: `${label} usage`, children: [
-    /* @__PURE__ */ u2("i", { className: `sys-stats__icon codicon ${icon}`, "aria-hidden": "true" }),
-    /* @__PURE__ */ u2("span", { className: "sys-stats__label", children: label }),
-    /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, className: `sys-stats__value${level === "normal" ? "" : ` sys-stats__value--${level}`}`, children: value }),
-    /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, className: "sys-stats__sparkline", viewBox: "0 0 48 12", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history`, children: points(series, maximum) && /* @__PURE__ */ u2("polyline", { className: "meter-sparkline", points: points(series, maximum) }) })
+  return /* @__PURE__ */ u2("span", { className: "tau-metric-metric", title: `${label} usage`, children: [
+    /* @__PURE__ */ u2("span", { className: "tau-metric-label", children: label }),
+    /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, className: `tau-metric-value${level === "normal" ? "" : ` tau-metric-value--${level}`}`, children: value }),
+    /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, className: "tau-metric-sparkline", viewBox: "0 0 48 12", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history`, children: points(series, maximum) && /* @__PURE__ */ u2("polyline", { className: "meter-sparkline", points: points(series, maximum) }) })
   ] });
 }
 function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed }) {
@@ -467,16 +466,16 @@ function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed })
   const cpu = formatPercent(meters?.cpu_percent), ram = formatPercent(meters?.ram_percent);
   const rss = formatBytes(meters?.process_rss_bytes), swap = formatPercent(meters?.swap_percent);
   const summary = !state.enabled ? "Meters hidden" : !meters ? "Meters unavailable" : `CPU ${cpu} \xB7 RAM ${ram} \xB7 RSS ${rss} \xB7 Swap ${swap}`;
-  return /* @__PURE__ */ u2("span", { id: "system-meters", className: "sys-stats-bar", "data-enabled": String(state.enabled), "data-collapsed": String(state.collapsed), children: [
-    /* @__PURE__ */ u2("span", { className: "sys-stats-bar__inline", children: /* @__PURE__ */ u2("span", { id: "meters-details", className: "sys-stats", children: [
-      /* @__PURE__ */ u2(Metric, { id: "cpu", label: "CPU", icon: "codicon-pulse", value: cpu, series: meters?.cpu_series, maximum: 100 }),
-      /* @__PURE__ */ u2(Metric, { id: "ram", label: "RAM", icon: "codicon-circuit-board", value: ram, series: meters?.ram_series, maximum: 100 }),
-      /* @__PURE__ */ u2(Metric, { id: "rss", label: "RSS", icon: "codicon-package", value: rss, series: meters?.process_rss_series_bytes, maximum: null }),
-      /* @__PURE__ */ u2(Metric, { id: "swap", label: "SWP", icon: "codicon-arrow-swap", value: swap, series: meters?.swap_series, maximum: 100 })
+  return /* @__PURE__ */ u2("span", { id: "system-meters", className: "tau-meters", "data-enabled": String(state.enabled), "data-collapsed": String(state.collapsed), children: [
+    /* @__PURE__ */ u2("span", { className: "tau-meters-inline", hidden: !state.enabled || state.collapsed, children: /* @__PURE__ */ u2("span", { id: "meters-details", className: "tau-meters-details", children: [
+      /* @__PURE__ */ u2(Metric, { id: "cpu", label: "CPU", value: cpu, series: meters?.cpu_series, maximum: 100 }),
+      /* @__PURE__ */ u2(Metric, { id: "ram", label: "RAM", value: ram, series: meters?.ram_series, maximum: 100 }),
+      /* @__PURE__ */ u2(Metric, { id: "rss", label: "RSS", value: rss, series: meters?.process_rss_series_bytes, maximum: null }),
+      /* @__PURE__ */ u2(Metric, { id: "swap", label: "SWP", value: swap, series: meters?.swap_series, maximum: 100 })
     ] }) }),
-    /* @__PURE__ */ u2("output", { id: "meters-summary", className: "sys-stats-bar__compact", "aria-live": "polite", children: summary }),
-    /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "status-bar__terminal-btn", type: "button", "aria-controls": "meters-details", "aria-expanded": !state.collapsed, title: state.collapsed ? "Expand system meters" : "Compact system meters", onClick: onToggleCollapsed, children: /* @__PURE__ */ u2("i", { className: `codicon ${state.collapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`, "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "status-bar__terminal-btn", type: "button", "aria-pressed": state.enabled, title: state.enabled ? "Hide system meters" : "Show system meters", onClick: onToggleEnabled, children: /* @__PURE__ */ u2("i", { className: `codicon ${state.enabled ? "codicon-eye" : "codicon-eye-closed"}`, "aria-hidden": "true" }) })
+    /* @__PURE__ */ u2("output", { id: "meters-summary", className: "tau-meters-compact", hidden: !state.enabled || !state.collapsed, "aria-live": "polite", children: summary }),
+    /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "icon-btn", type: "button", hidden: !state.enabled, "aria-controls": "meters-details", "aria-expanded": !state.collapsed, onClick: onToggleCollapsed, children: state.collapsed ? "Expand meters" : "Compact meters" }),
+    /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "icon-btn", type: "button", "aria-pressed": state.enabled, onClick: onToggleEnabled, children: state.enabled ? "Hide meters" : "Show meters" })
   ] });
 }
 

@@ -665,3 +665,12 @@ Extended existing queue dispatch/copy test to both themes and axe. Found low
 contrast on faded Dispatch text and dark queue content; scoped primary-text/
 opacity rules correct these without vendor edits. Both-theme/six-target queue
 matrix 12 passed with FIFO route/copy behavior and bounds checks retained.
+
+## Telemetry state/control repair
+
+Removed visual sys-stats/status-bar classes and Codicon nodes from SystemStats.
+Tau metrics remain a secondary-panel feature with explicit tau-* styles, readable
+text buttons and Preact hidden semantics for compact/disabled state. Prior CSS-
+only states stopped working when visual CSS was removed. Added visible toggling
+checks (compact/hide/show/expand) retaining metric values/severity/sparklines;
+six targets pass; build/TypeScript pass. No visual-mode status strip restored.

@@ -33,3 +33,9 @@
 [data-tau-ui="classic"] .compose-queue-stack-steer-btn { color:var(--text-primary); opacity:1; }
 /* Reserve space for Tau's potentially longer session title on desktop too. */
 [data-tau-ui="classic"] .compose-session-trigger-top + .compose-input-main textarea { padding-right:max(calc(var(--spacing-xs) + 28px),min(44vw,156px)); }
+/* Tau telemetry is a secondary-panel feature, not a visual-mode status bar. */
+.tau-meters { display:block; padding:8px; color:var(--text-primary); }
+.tau-meters-details { display:flex; flex-direction:column; gap:6px; }
+.tau-metric-metric { display:flex; align-items:center; gap:6px; }
+.tau-metric-sparkline { width:48px; height:12px; fill:none; stroke:currentColor; }
+.tau-meters .icon-btn { width:auto; padding:4px 8px; color:var(--text-primary); background:var(--bg-secondary); appearance:none; }
