@@ -892,3 +892,20 @@ readiness corrections: 459 passed / 3 documented WebKit offline skips, no
 failures. Delivered exact wheel and SHA256SUMS. Production bytes unchanged since
 0d274e6; fixture-only commits do not invalidate this installed result. This is
 package/behavior validation, not visual approval of remaining semantic deviations.
+
+## Visual-review handoff (e7751a8)
+
+Current deliverables: Tau-Classic-Current-Review.pdf (25 pages, 48 screenshots:
+chat + Workspace pairs), reproducible 0d274e6 wheel/SHA256SUMS, full installed
+459-pass/3-offline-skip result. No further application changes after that artifact.
+
+This remains incomplete pending Rui's review. Known adaptations requiring
+acceptance or correction: Settings is a sidebar form rather than classic dialog;
+composer model button opens that form rather than popup picker; Search and Plan
+retain Tau workflows; runtime/branch and metrics controls remain Tau-specific;
+media opens/downloads rather than classic lightbox; read-aloud is absent and
+message deletion has no Tau backend endpoint. None are deemed accepted.
+
+Autonomous loop paused for concrete visual feedback, not marked complete.
+Resume from the current PDF and identify bounded corrections, rather than rerun
+already-green tests or keep producing superseding artifacts without UI decisions.
