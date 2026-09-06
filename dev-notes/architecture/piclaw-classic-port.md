@@ -674,3 +674,12 @@ text buttons and Preact hidden semantics for compact/disabled state. Prior CSS-
 only states stopped working when visual CSS was removed. Added visible toggling
 checks (compact/hide/show/expand) retaining metric values/severity/sparklines;
 six targets pass; build/TypeScript pass. No visual-mode status strip restored.
+
+## Classic session rows
+
+SessionList now uses classic compose-model-popup-item/session-item/label/jid
+structure with active state and aria-current, preserving Tau filters/select
+callbacks and IDs. Scoped list/reset/label layout and selected-row contrast
+adaptations replace missing visual session classes. Session/keyboard/populated
+accessibility matrix 36 passed after fixing low accent text contrast;
+build/TypeScript pass. No unsupported pin/restore semantics copied from upstream.

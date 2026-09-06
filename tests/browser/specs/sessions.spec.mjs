@@ -20,9 +20,9 @@ test('session navigation renders Tau sessions through Piclaw sidebar cards', asy
 
   await page.getByRole('button', { name: 'Open sessions', exact: true }).first().click();
   const list = page.locator('#session-list');
-  await expect(list.locator('.sessions-panel__session')).toHaveCount(2);
+  await expect(list.locator('.session-item')).toHaveCount(2);
   await expect(page.locator('#session-count')).toHaveText('2 sessions');
-  await expect(list.locator('.sessions-panel__session').first()).toHaveAttribute('data-active', 'true');
+  await expect(list.locator('.session-item').first()).toHaveAttribute('data-active', 'true');
   await list.getByRole('button', { name: /Review session/ }).click();
   await expect.poll(() => page.evaluate(() => window.__tauSelectedSession)).toBe('session-2');
 });

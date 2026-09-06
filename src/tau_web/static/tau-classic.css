@@ -39,3 +39,9 @@
 .tau-metric-metric { display:flex; align-items:center; gap:6px; }
 .tau-metric-sparkline { width:48px; height:12px; fill:none; stroke:currentColor; }
 .tau-meters .icon-btn { width:auto; padding:4px 8px; color:var(--text-primary); background:var(--bg-secondary); appearance:none; }
+.tau-session-list { list-style:none; margin:0; padding:0; }
+.tau-session-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.tau-session-item .compose-model-popup-label { display:flex; flex-direction:column; min-width:0; }
+/* Keep selected session text readable over classic's accent-tinted row. */
+.tau-session-list .session-item { color:var(--text-primary); }
+.tau-session-list .compose-model-popup-jid { color:var(--text-primary); opacity:1; }
