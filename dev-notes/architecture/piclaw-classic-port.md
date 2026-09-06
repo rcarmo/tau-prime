@@ -554,3 +554,12 @@ Complete browser suite after real classic reference and resize integration:
 Focused frontend/packaging 42 passed; diff checks clean. Regenerated and delivered
 classic paired review HTML after composer corrections. Latest installed artifact
 predates resize and needs refresh. Visual approval still not recorded.
+
+## Installed post-resize artifact (8cecf00)
+
+Rebuilt twice at SOURCE_DATE_EPOCH from 8cecf00: byte-identical classic wheel.
+SHA-256 eb308c02af6b6a90dfd145d800f40dabe61ad3b0dc4b8bf4356f66f70912c1e0
+for tau_prime-42.3.0-py3-none-any.whl. Delivered with checksum using valid wheel
+filename. Separate installed audit venv, TAU_BROWSER_BIN and port 8877: 72 root,
+submission/resize, populated accessibility, asset and spacing checks passed.
+This supersedes afbdf82 artifact; explicit visual approval remains outstanding.
