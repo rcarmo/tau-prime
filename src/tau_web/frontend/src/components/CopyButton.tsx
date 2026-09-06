@@ -1,3 +1,4 @@
+import { ClassicIcon } from "./ClassicIcon";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 /** Piclaw copy-button markup, with Tau-local clipboard feedback. */
@@ -19,5 +20,5 @@ export function CopyButton({ text, classic = false }: { text: string; classic?: 
         clearTimeout(timer.current);
         timer.current = setTimeout(() => setCopied(false), 2000);
       } catch { setFailed(true); }
-    }}>{copied ? "✓" : <i className="codicon codicon-copy" aria-hidden="true" />}</button>;
+    }}>{copied ? "✓" : classic ? <ClassicIcon name="copy" /> : <i className="codicon codicon-copy" aria-hidden="true" />}</button>;
 }

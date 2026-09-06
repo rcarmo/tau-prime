@@ -41,6 +41,8 @@ test('classic timeline consumes Tau events and preserves collapse focus',async({
  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'one',role:'user',content:'User text',meta:'2m'},{id:'two',role:'assistant',content:'**Agent text**',meta:'1m',toolCalls:[{id:'read',name:'read',arguments:{path:'README.md'}}]},{id:'result',role:'tool',toolCallId:'read',content:Array.from({length:25},(_,i)=>`line ${i+1}`).join('\n'),meta:''}]}})));
  await expect(page.locator('.post')).toHaveCount(2);
  await expect(page.locator('#post-two strong')).toHaveText('Agent text');
+ await expect(page.locator('#post-two .post-actions .codicon')).toHaveCount(0);
+ await expect(page.locator('#post-two .post-actions svg')).toHaveCount(2);
  const collapse=page.locator('#post-two').getByRole('button',{name:'Collapse message'});
  await collapse.focus();await page.keyboard.press('Enter');
  const expand=page.locator('#post-two').getByRole('button',{name:'Expand message'});
@@ -60,6 +62,8 @@ test('classic composer retains adapter anchors and completion events',async({pag
  await expect(page.locator('#compose-input')).toBeVisible();
  await expect(page.locator('#compose-delivery-mode')).toBeHidden();
  await expect(page.locator('#compose-submit')).toHaveAccessibleName('Send');
+ await expect(page.locator('#compose-attachment-button svg')).toBeVisible();
+ await expect(page.locator('#compose-attachment-button .codicon')).toHaveCount(0);
  await page.locator('#compose-input').fill('/help');
  await expect(page.locator('#compose-input')).toHaveValue('/help');
  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:completion-render',{detail:{open:true,index:0,items:[{label:'/help',detail:'Help'}]}})));

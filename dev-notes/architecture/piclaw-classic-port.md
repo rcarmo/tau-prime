@@ -179,3 +179,12 @@ existing IDs and close/select callbacks. This is a Tau navigation adaptation,
 not a replica of all Piclaw sidebar features. Six classic callback checks pass;
 18 existing sidebar/workspace/search checks pass; build/TypeScript pass.
 Panel internals and scoped CSS still need conversion before production cutover.
+
+## Classic control icon independence
+
+Replaced classic-mode copy/collapse and attach Codicon dependencies with inline
+SVGs. Copy geometry taken from classic post.ts; disclosure/attachment are
+classic-style outline adaptations. Added checks for SVG presence and absence
+of Codicon nodes in these controls. Combined classic/message-copy/composer
+matrix 48 passed; build/TypeScript pass. Attachment preview and secondary panel
+icons still require audit at cutover; no whole-interface icon equivalence claim.

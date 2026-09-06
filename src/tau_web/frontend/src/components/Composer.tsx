@@ -1,3 +1,4 @@
+import { ClassicIcon } from "./ClassicIcon";
 import { ClassicComposerSurface } from "./ClassicComposerSurface";
 import type { ComponentChildren } from "preact";
 import { Fragment } from "preact";
@@ -32,7 +33,7 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
   const choose = (index: number) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
   const toolbar = (<>          <div className={classic ? "compose-attachment-actions" : "chat__toolbar"} aria-label="Prompt controls">
             <button id="compose-attachment-button" className={classic ? "attach-btn" : "chat__toolbar-btn"} type="button" aria-label="Attach file" title="Attach file">
-              <i className="codicon codicon-attach" aria-hidden="true" />
+              {classic ? <ClassicIcon name="attach" /> : <i className="codicon codicon-attach" aria-hidden="true" />}
             </button>
             <input id="compose-file-input" type="file" multiple hidden aria-label="Attach files" />
 

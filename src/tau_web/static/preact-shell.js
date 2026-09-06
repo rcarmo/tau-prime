@@ -630,6 +630,14 @@ function StatusBar({ classic = false, dashboardOpen, metersEnabled, metersCollap
   ] });
 }
 
+// src/components/ClassicIcon.tsx
+function ClassicIcon({ name }) {
+  return /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", children: name === "copy" ? /* @__PURE__ */ u3(b, { children: [
+    /* @__PURE__ */ u3("rect", { x: "9", y: "9", width: "11", height: "11", rx: "2" }),
+    /* @__PURE__ */ u3("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
+  ] }) : name === "attach" ? /* @__PURE__ */ u3("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : /* @__PURE__ */ u3("path", { d: name === "up" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6" }) });
+}
+
 // src/components/ClassicComposerSurface.tsx
 function ClassicComposerSurface({ session, input, metadata, actions, notices, attachments, completions }) {
   return /* @__PURE__ */ u3("div", { className: "compose-box", "data-testid": "compose-box", children: [
@@ -673,7 +681,7 @@ function Composer({ classic = false, session, metadata }) {
   const toolbar = /* @__PURE__ */ u3(b, { children: [
     "          ",
     /* @__PURE__ */ u3("div", { className: classic ? "compose-attachment-actions" : "chat__toolbar", "aria-label": "Prompt controls", children: [
-      /* @__PURE__ */ u3("button", { id: "compose-attachment-button", className: classic ? "attach-btn" : "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: /* @__PURE__ */ u3("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
+      /* @__PURE__ */ u3("button", { id: "compose-attachment-button", className: classic ? "attach-btn" : "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: classic ? /* @__PURE__ */ u3(ClassicIcon, { name: "attach" }) : /* @__PURE__ */ u3("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
       /* @__PURE__ */ u3("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" })
     ] })
   ] });
@@ -1396,7 +1404,7 @@ function CopyButton({ text: text2, classic = false }) {
           setFailed(true);
         }
       },
-      children: copied ? "\u2713" : /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" })
+      children: copied ? "\u2713" : classic ? /* @__PURE__ */ u3(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" })
     }
   );
 }
@@ -4270,8 +4278,8 @@ function MessageActionBar({ content, collapsed, onToggle, toggleRef, classic = f
       } catch {
         setFeedback("Unable to copy message");
       }
-    }, children: /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u3("button", { ref: toggleRef, type: "button", className: classic ? "post-action-btn" : "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: /* @__PURE__ */ u3("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
+    }, children: classic ? /* @__PURE__ */ u3(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u3("button", { ref: toggleRef, type: "button", className: classic ? "post-action-btn" : "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: classic ? /* @__PURE__ */ u3(ClassicIcon, { name: collapsed ? "down" : "up" }) : /* @__PURE__ */ u3("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
     /* @__PURE__ */ u3("span", { className: "sr-only", role: "status", children: feedback })
   ] });
 }
