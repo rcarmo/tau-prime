@@ -344,3 +344,11 @@ PYTHONPATH=src:. Count differs from historical baselines because rejected
 visual asset tests were replaced, not because this is the same suite unchanged.
 Browser classic-focused suites are green as recorded above; full legacy browser
 suite is not yet reconciled and no full-browser success is claimed.
+
+## Retained action-regression migration
+
+Migrated existing message-copy and tool-output specs to classic selectors and
+labels, retaining Unicode/raw Markdown copying, clipboard rejection/retry,
+keyboard focus restoration and exact full-output/tail assertions. These are
+behavior tests, not deleted visual parity assertions. Six-target matrix 12
+passed; production code unchanged in this checkpoint.

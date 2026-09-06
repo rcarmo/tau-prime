@@ -17,9 +17,9 @@ test('tool output shows tail, expands, collapses and copies full output', async 
       {id:'result',role:'tool',toolCallId:'read',content,toolOk:true},
     ]}}));
   },content);
-  const tool = page.locator('.message-list__tool-call');
-  await tool.locator('.message-list__tool-call-header').click();
-  await expect(tool.locator('.tool-call__hidden-lines')).toHaveText('5 lines hidden — click to expand');
+  const tool = page.locator('.agent-thinking');
+  await tool.locator('.agent-thinking-title button').click();
+  await expect(tool.getByRole('button',{name:'Show 5 hidden lines',exact:true})).toHaveText('Show 5 hidden lines');
   await expect(tool.locator('pre').last()).toHaveText(content.split('\n').slice(-20).join('\n'));
   await tool.getByRole('button',{name:'Copy',exact:true}).last().click();
   expect(await page.evaluate(()=>window.copiedOutput)).toBe(content);
@@ -30,8 +30,8 @@ test('tool output shows tail, expands, collapses and copies full output', async 
   await tool.getByRole('button',{name:'Copy failed — retry',exact:true}).click();
   await expect(tool.getByRole('button',{name:'Copied!',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>window.copiedOutput)).toBe(content);
-  await tool.getByTitle('Show full output').click();
+  await tool.getByRole('button',{name:'Show 5 hidden lines',exact:true}).click();
   await expect(tool.locator('pre').last()).toHaveText(content);
-  await tool.getByRole('button',{name:'collapse',exact:true}).click();
-  await expect(tool.getByTitle('Show full output')).toBeVisible();
+  await tool.getByRole('button',{name:'Collapse output',exact:true}).click();
+  await expect(tool.getByRole('button',{name:'Show 5 hidden lines',exact:true})).toBeVisible();
 });
