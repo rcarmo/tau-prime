@@ -1,79 +1,40 @@
-import { installLiveStream } from '../fixtures/live-stream.mjs';
-import { piclawPosts, fixedTime, piclawMeters, modelName, providerName } from '../fixtures/visual-state.mjs';
-import { createRequire } from 'node:module';
-import { expect, test } from '@playwright/test';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-const frontendRequire = createRequire(path.resolve(import.meta.dirname,'../../../src/tau_web/frontend/package.json'));
-const markedModule = frontendRequire.resolve('marked');
-const dist = '/opt/piclaw/releases/piclaw-2.15.3-linux-x64-baseline/app/runtime/web/static/visual/dist';
-
-for (const colorScheme of ['light', 'dark']) {
-test(`capture actual Piclaw ${colorScheme} application bundle with isolated backend fixture`, async ({ page }, info) => {
-  await installLiveStream(page, 'piclaw');
-  await page.emulateMedia({ colorScheme });
-  const requests = [], errors = [], unexpected = [];
-  page.on('pageerror', error => errors.push(error.message));
-  await page.route('http://piclaw-reference.test/**', async route => {
-    const url = new URL(route.request().url()); requests.push(url.pathname);
-    if(url.pathname === '/') return route.fulfill({contentType:'text/html',body:'<meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/assets/app.bundle.css"><div id="app"></div><script type="module">import {marked} from "/fixture-marked.js"; window.marked=marked; await import("/assets/app.bundle.js");</script>'});
-    if(url.pathname.startsWith('/assets/')) {
-      const filename=path.basename(url.pathname);
-      try { return route.fulfill({body:await readFile(path.join(dist,filename)),contentType:filename.endsWith('.js')?'application/javascript':filename.endsWith('.css')?'text/css':filename.endsWith('.woff2')?'font/woff2':'font/ttf'}); } catch { return route.fulfill({status:404,body:''}); }
-    }
-    if(url.pathname === '/fixture-marked.js') return route.fulfill({contentType:'application/javascript',body:await readFile(markedModule)});
-    const json = data => route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
-    if(url.pathname === '/search') return json({results:[{id:1,data:{type:'user_message'},content:'Review the workspace and preserve the existing API.',created_at:'2026-09-01T12:00:00Z'}]});
-    if(url.pathname === '/timeline') return json({posts:[...piclawPosts].reverse(),has_more:false});
-    if(url.pathname === '/agent/system-metrics') return json(piclawMeters);
-    if(url.pathname === '/workspace/tree') return json({root:{name:'workspace',path:'',type:'directory',children:[{name:'src',path:'src',type:'directory',children:[]},{name:'README.md',path:'README.md',type:'file'}]}});
-    if(url.pathname === '/agent/addons/web-entries') return json({entries:[]});
-    if(url.pathname === '/agent/active-chats') return json({chats:[]});
-    if(url.pathname === '/agent/status') return json({status:'idle',data:null});
-    if(url.pathname === '/agent/context') return json({tokens:null});
-    if(url.pathname === '/agent/roster') return json({agents:[]});
-    if(url.pathname === '/static/icon-192.png') return route.fulfill({contentType:'image/png',body:await readFile(path.resolve(dist,'../../icon-192.png'))});
-    if(url.pathname.startsWith('/avatar/')) return route.fulfill({status:404,body:''});
-    if(url.pathname === '/agent/models') return json({current:`${providerName}/${modelName}`,models:[`${providerName}/${modelName}`],oobe:{provider_ready_completed_instance:true}});
-    if(url.pathname === '/agent/branches') return json({chats:[]});
-    if(url.pathname.includes('events') || url.pathname === '/sse/stream') return route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'});
-    unexpected.push(url.pathname);
-    return route.fulfill({status:501,body:'Unmapped reference fixture endpoint'});
-  });
-  await page.addInitScript(() => localStorage.setItem('piclaw-sidebar-collapsed','true'));
-  await page.clock.setFixedTime(new Date(fixedTime));
-  await page.goto('http://piclaw-reference.test/',{waitUntil:'domcontentloaded'});
-  await expect(page.locator('.app-layout')).toBeVisible();
-  await expect(page.locator('html')).toHaveClass(new RegExp(colorScheme));
-  await expect(page.locator('.message-list__item--user .message-list__content')).toContainText('Review the workspace');
-  await expect(page.locator('.message-list__content h2')).toHaveText('Workspace review');
-  // Wait for successful status/model polling, not just the timeline mount.
-  await expect(page.locator('.model-badge__name')).toHaveText([modelName, modelName]);
-  await expect(page.locator('.model-badge__provider')).toHaveText([`${providerName}/`, `${providerName}/`]);
-  await expect(page.locator('.status-bar__conn')).toHaveCount(0);
-  await page.locator('.message-list__tool-call-header').click();
-  await expect(page.locator('.message-list__tool-call-body')).toBeVisible();
-  await page.evaluate(()=>document.fonts.ready);
-  const geometry = await page.locator('.activity-bar, .app-layout__sidebar-wrapper, .tab-bar, .chat__compose, .chat__compose-container, .chat__input, .chat__toolbar, .chat__send-btn, .app-layout__status-bar').evaluateAll(elements => elements.map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {fontSize:s.fontSize,fontFamily:s.fontFamily,verticalAlign:s.verticalAlign,whiteSpace:s.whiteSpace,padding:s.padding,margin:s.margin,display:s.display,gap:s.gap,lineHeight:s.lineHeight,className:el.className,x:r.x,y:r.y,width:r.width,height:r.height};}));
-  await mkdir('/workspace/tmp/piclaw-full-reference',{recursive:true});
-  await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}.png`});
-  const renderingCapabilities = await page.evaluate(() => ({
-    marked: typeof window.marked !== 'undefined',
-    cmHighlight: typeof window.cmHighlight !== 'undefined',
-    katex: typeof window.katex !== 'undefined',
-    mermaid: typeof window.mermaid !== 'undefined',
-    highlightedCodeSpans: document.querySelectorAll('pre code span').length,
-  }));
-  await writeFile(`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}.json`,JSON.stringify({requests:[...new Set(requests)],errors,unexpected,geometry,renderingCapabilities},null,2));
-  await page.getByRole('button', {name:'Workspace',exact:true}).click();
-  await expect(page.locator('.file-tree')).toContainText('README.md');
-  await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}-workspace.png`});
-  await page.getByRole('button', {name:'Search',exact:true}).click();
-  await page.getByPlaceholder('Search messages…').fill('workspace');
-  await expect(page.locator('.search-panel__item')).toHaveCount(1);
-  await expect(page.locator('.search-panel__item-text')).toHaveText('Review the workspace and preserve the existing API.');
-  await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}-search.png`});
-  expect(errors).toEqual([]);
-  expect(unexpected).toEqual([]);
+import {test,expect} from '@playwright/test';
+import {installLiveStream} from '../fixtures/live-stream.mjs';
+import {fixedTime,userText,agentText} from '../fixtures/visual-state.mjs';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+const root='/opt/piclaw/releases/piclaw-2.15.3-linux-x64-baseline/app/runtime/web';
+for(const colorScheme of ['light','dark']) test('genuine classic '+colorScheme+' populated reference',async({page},info)=>{
+await page.emulateMedia({colorScheme});await page.clock.setFixedTime(new Date(fixedTime));await installLiveStream(page,'piclaw');
+let unknown=new Set(),errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+await page.route('http://classic.test/**',async r=>{const p=new URL(r.request().url()).pathname;const json=x=>r.fulfill({json:x});
+if(p==='/editor-vendor/codemirror.js')return r.fulfill({body:await readFile(root+'/../extensions/viewers/editor/vendor/codemirror.js'),contentType:'application/javascript'});
+if(p==='/'||p.startsWith('/static/')){try{return await r.fulfill({body:await readFile(root+(p==='/'?'/static/classic/index.html':p)),contentType:p==='/'?'text/html':p.endsWith('.js')?'application/javascript':p.endsWith('.css')?'text/css':undefined});}catch{}}
+if(p==='/timeline')return json({posts:[{id:2,data:{type:'agent_response',content:agentText},timestamp:'2026-09-01T12:01:00Z'},{id:1,data:{type:'user_message',content:userText},timestamp:'2026-09-01T12:00:00Z'}],has_more:false});
+if(p==='/manifest.json')return json({name:'Piclaw classic reference',short_name:'Piclaw',start_url:'/',display:'standalone',icons:[]});
+if(p==='/workspace/index-status')return json({status:'idle'});
+if(p==='/workspace/visibility'||p==='/agent/push/presence')return json({ok:true});
+if(p==='/agent/settings/quick-actions')return json({settings:{}});
+if(p==='/agent/commands')return json({commands:[]});
+if(p==='/agent/queue-state')return json({items:[]});
+if(p==='/agent/autoresearch/status')return json({status:'idle'});
+if(p==='/agent/models')return json({current:'test/review-model',models:['test/review-model'],oobe:{provider_ready_completed_instance:true}});
+if(p==='/agent/status')return json({status:'idle',data:null});
+if(p==='/agent/context')return json({tokens:null});
+if(p==='/agent/roster')return json({agents:[]});
+if(p==='/agent/branches'||p==='/agent/active-chats')return json({chats:[]});
+if(p==='/workspace/tree')return json({root:{name:'workspace',path:'',type:'directory',children:[]}});
+if(p==='/agent/addons/web-entries')return json({entries:[]});
+if(p.includes('events')||p==='/sse/stream')return r.fulfill({contentType:'text/event-stream',body:': fixture\n\n'});
+unknown.add(p);return r.fulfill({status:404,body:''});});
+await page.goto('http://classic.test/',{waitUntil:'domcontentloaded'});
+await page.getByText('The API is unchanged.').waitFor();
+await page.evaluate(() => document.fonts.ready);
+if (errors.length || unknown.size) throw new Error(JSON.stringify({errors,unknown:[...unknown]}));
+const structure = await page.locator('.app-shell, .container, .timeline, .post, .compose-box, .compose-container, .compose-footer, textarea').evaluateAll(els => els.map(el => ({tag:el.tagName,className:el.className,rect:el.getBoundingClientRect().toJSON(),html:el.outerHTML.slice(0,1800)})));
+await expect(page.locator('.compose-model-hint').first()).toContainText('test/review-model');
+const dir='/workspace/tmp/piclaw-classic-reference';await mkdir(dir,{recursive:true});
+await page.screenshot({path:dir+'/'+info.project.name+'-'+colorScheme+'.png'});
+await writeFile(dir+'/'+info.project.name+'-'+colorScheme+'.json',JSON.stringify({unknown:[...unknown],errors,structure},null,2));
+expect(errors).toEqual([]);expect([...unknown]).toEqual([]);
 });
-}

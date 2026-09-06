@@ -480,3 +480,13 @@ This verifies functional/interaction migration, not classic visual acceptance.
 The remaining full-reference capture spec still targets the rejected visual
 bundle and must be replaced; passing it does not contribute classic parity
 proof. Fresh installed-classic artifact and paired screenshots remain pending.
+
+## Genuine classic reference matrix replaces visual bundle
+
+Replaced full-reference.spec's visual bundle fixture with actual classic index,
+classic bundle and correct editor-vendor asset. Uses fixed time/shared message
+text, persistent connected transport, expected model, explicit manifest and idle
+API fixtures; rejects unknown endpoints/page errors. All 12 engine/size/theme
+captures pass. Outputs /workspace/tmp/piclaw-classic-reference. Tool output is
+not added to reference posts (classic live-status semantics differ); Tau pairing
+must use equivalent message-only fixture, not imply identical tool presentation.
