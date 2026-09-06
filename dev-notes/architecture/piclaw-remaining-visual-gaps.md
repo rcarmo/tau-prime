@@ -11,13 +11,31 @@ This is the bounded follow-up list after the source/CSS/component corrections. F
 
 ## Open implementation/review items
 
-1. Full-app captures: explicitly resolve session identity and connection state on both sides; current same-message fixture still differs in these status surfaces.
+1. Full-app captures: both adapters now use persistent connected transports and assert model readiness. Piclaw hides the connected indicator; Tau retains Live. Session identity/branding remain visible deviations requiring review.
 2. Message actions: copy/collapse are implemented; read-aloud remains unported. Decide whether this browser-only capability belongs in Tau scope before treating action inventories as equivalent.
 3. Rich rendering: core Markdown/code wrappers match tested reference input; syntax highlighting, math, diagrams and broader upstream preprocessing are not ported. Existing tests must not imply coverage of these.
 4. Sidebar content: sessions/workspace/search/plan/settings use Tau data and controls. Populated Search/Workspace, enabled Plan, Settings and Onboarding now have both-theme accessibility and bounds coverage, with confirmed contrast/clipping fixes. Their complete appearance still needs paired visual assessment; these tests are not visual approval.
-5. Capture determinism: avatars, asynchronous connection announcements and remaining fallback API requests must be explicit before pixel-regression approval.
+5. Capture determinism: connected transport lifetime is pinned; avatar/identity deviations and any remaining fallback requests still need assessment before pixel-regression approval.
 6. WebKit offline reload: cache validation passes, but offline navigation is skipped after internal browser errors. Browser offline delivery is not fully signed off.
 7. Final visual acceptance: compare complete paired images and record accepted semantic/branding/accessibility deviations; no whole-image similarity score can substitute for this.
+
+## Review handoff after 30bead8
+
+Delivered self-contained HTML comparisons for chat, populated Workspace and
+Search (12 pairs each), plus reproducible bdf435a wheel and checksum. Latest
+installed full browser run: 351 passed / 3 offline skips; later capture/cache
+changes have focused checks, not a newer complete regression run.
+
+Decisions needed from Rui:
+- Accept or identify corrections in the delivered chat/Workspace/Search pairs,
+  especially composer height, persistent Live indicator, and native Tau metadata.
+- Confirm whether read-aloud and optional syntax/math/diagram rendering belong
+  in this port, or are separately scoped follow-up features.
+
+Remaining engineering is not claimed complete: other panel comparisons,
+approved screenshot baselines, final regression after any accepted changes,
+and WebKit offline navigation remain open. The autonomous loop is paused for
+review, not marked successful. No additional test count substitutes for approval.
 
 ## Verified interaction checkpoint (a283f98)
 
