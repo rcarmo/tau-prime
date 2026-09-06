@@ -386,3 +386,11 @@ of activity/mobile-toolbar buttons. Keeps session creation/selection, Ctrl/Cmd-K
 new-session shortcut, slash completion dismissal, Tab/Shift-Tab traversal,
 keyboard workspace reload, and Escape closure assertions. Six targets pass.
 No production change required in this checkpoint.
+
+## Composer spacing and model options regression
+
+Replaced obsolete visible delivery/context wrapping assertions with classic
+session-above/input/footer-below geometry and hidden legacy delivery/context
+anchors, even with long context text. Updated model-option Settings navigation;
+provider/model/thinking event ownership assertions retained. Matrix 18 passed.
+No production code changes in this checkpoint.

@@ -20,7 +20,8 @@ test('model and thinking options are Preact-owned', async ({ page }) => {
   await expect(page.locator('#compose-provider-select option')).toHaveCount(1);
   await expect(page.locator('#compose-model-select option')).toHaveText(['Claude']);
   await expect(page.locator('#compose-thinking-select option')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Open sessions', exact: true }).click();
+  await page.getByRole('group', { name: 'Navigation', exact: true }).getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.locator('#provider-options option')).toHaveAttribute('value', 'anthropic');
   await expect(page.locator('#thinking-level-select option')).toHaveCount(7);
 });
