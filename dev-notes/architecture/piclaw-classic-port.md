@@ -683,3 +683,12 @@ callbacks and IDs. Scoped list/reset/label layout and selected-row contrast
 adaptations replace missing visual session classes. Session/keyboard/populated
 accessibility matrix 36 passed after fixing low accent text contrast;
 build/TypeScript pass. No unsupported pin/restore semantics copied from upstream.
+
+## Classic workspace rows
+
+Replaced visual file-tree item/name/meta classes with classic workspace-tree-list,
+workspace-row and workspace-label/text structure. Kept native button keyboard
+semantics, explicit filenames, and existing click adapter. Scoped button reset
+accounts for upstream div rows; no unsupported rename/drop interactions added.
+Workspace/responsive/pane accessibility matrix 24 passed; build/TypeScript pass.
+Preview/header container conversion still pending.

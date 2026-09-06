@@ -45,3 +45,7 @@
 /* Keep selected session text readable over classic's accent-tinted row. */
 .tau-session-list .session-item { color:var(--text-primary); }
 .tau-session-list .compose-model-popup-jid { color:var(--text-primary); opacity:1; }
+/* Classic tree rows are divs upstream; Tau uses native keyboard buttons. */
+#workspace-list .workspace-row { width:100%; appearance:none; border:0; padding:0 6px; background:transparent; color:var(--text-primary); text-align:left; }
+#workspace-list .workspace-row:hover,#workspace-list .workspace-row:focus-visible { background:var(--bg-secondary); }
+#workspace-list .workspace-row > svg { flex:none; }

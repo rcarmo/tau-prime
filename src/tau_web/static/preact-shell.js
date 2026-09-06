@@ -1065,12 +1065,12 @@ function WorkspacePanel({ hidden }) {
         ] })
       ] }),
       /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: view.path }),
-      /* @__PURE__ */ u2("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree", children: [
+      /* @__PURE__ */ u2("div", { id: "workspace-list", className: "workspace-tree-list", role: "tree", "aria-label": "Workspace tree", children: [
         !view.entries.length && /* @__PURE__ */ u2("div", { children: "No workspace entries available." }),
-        view.entries.map((entry) => /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", className: "file-tree__item", role: "treeitem", "aria-label": entry.name, disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
+        view.entries.map((entry) => /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", className: "workspace-row", role: "treeitem", "aria-label": entry.name, disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
           /* @__PURE__ */ u2(ClassicIcon, { name: entry.kind === "directory" ? "folder" : "file" }),
-          /* @__PURE__ */ u2("span", { className: "file-tree__name", children: entry.name }),
-          /* @__PURE__ */ u2("span", { className: "file-tree__meta", children: entry.kind })
+          /* @__PURE__ */ u2("span", { className: "workspace-label", children: /* @__PURE__ */ u2("span", { className: "workspace-label-text", children: entry.name }) }),
+          /* @__PURE__ */ u2("span", { className: "sr-only", children: entry.kind })
         ] }) }, `${entry.kind}:${entry.path ?? entry.name}`))
       ] })
     ] }),
