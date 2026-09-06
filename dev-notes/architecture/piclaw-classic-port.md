@@ -831,3 +831,12 @@ port 8891 Dashboard/session/theme matrix 18 passed; fresh-policy follow-up 2 pas
 Disabled implicit reuse (debug opt-in TAU_BROWSER_REUSE_SERVER=1); added response
 body to session-create assertions. No production fix inferred from stale-run
 failures. Fresh full suite remains required; stale server left untouched.
+
+## Fresh-server full checkpoint (db016f3)
+
+Full browser suite on fresh port 8891 with reuse disabled: 447 passed,
+3 documented WebKit offline skips (450 total), no failures. Complete Python:
+1326 passed; diff clean. Includes latest rotation, Search/Plan/runtime/Settings
+conversions and stale-harness prevention. Supersedes stale 8876-run failure
+counts. Latest installed artifact a742e08 predates those changes; refresh pending.
+Explicit classic visual approval and final secondary-surface review remain open.
