@@ -97,3 +97,12 @@ Isolated both-theme six-target checks pass 12/12 using classic CSS only:
 centered bounded column, viewport height (0.02px WebKit rounding tolerance),
 no visual activity/tab/status wrappers, and visible composer placeholder.
 TypeScript passes. This checks frame structure, not whole-UI parity.
+
+## Classic composer surface
+
+Added ClassicComposerSurface from actual classic compose-box hierarchy:
+compose-input-wrapper, top session row, input-main, footer meta/actions.
+Slots preserve Tau ownership of inputs and handlers; no delivery selector or
+unsupported inert resize handle introduced. Integrated into isolated frame
+fixture; 12/12 checks pass including footer below textarea and session/model
+rows. TypeScript passes. This is staged structure, not live adapter cutover.
