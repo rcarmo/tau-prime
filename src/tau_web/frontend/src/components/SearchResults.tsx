@@ -19,7 +19,7 @@ export function SearchResults() {
           <span className="post-time">{result.meta}</span>
         </div>
         <span className="post-content">{result.text}</span>
-        {result.sessionId && <button className="settings-panel__provider-btn" type="button" onClick={() => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } }))}>Open session</button>}
+        {result.sessionId && <button className="tau-panel-button" type="button" onClick={() => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } }))}>Open session</button>}
         </div>
       </article>
     </li>)}

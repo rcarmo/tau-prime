@@ -83,3 +83,7 @@
 #panel-settings .tau-settings-button { padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--radius-md); font:inherit; }
 #panel-settings .tau-settings-description { color:var(--text-primary); font-size:12px; }
 #panel-settings .tau-settings-heading { font-size:16px; }
+.tau-session-actions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.tau-panel-button { appearance:none; padding:5px 8px; border:1px solid var(--border-color); border-radius:var(--radius-md); font:inherit; }
+.tau-provider-field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.tau-provider-select { width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); background:var(--bg-secondary); font:inherit; }

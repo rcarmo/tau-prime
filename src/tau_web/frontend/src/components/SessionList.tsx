@@ -13,8 +13,8 @@ export function SessionList({ filter, onSelectFilter }: { filter: SessionFilter;
   const select = (sessionId: string) => window.dispatchEvent(new CustomEvent("tau:session-select", { detail: { sessionId } }));
   return <>
     <div className="tau-session-filters" role="group" aria-label="Session list filter">
-      <button id="show-active-sessions" className="settings-panel__provider-btn" type="button" aria-pressed={filter === "active"} onClick={() => onSelectFilter("active")}>Active</button>
-      <button id="show-archived-sessions" className="settings-panel__provider-btn" type="button" aria-pressed={filter === "archived"} onClick={() => onSelectFilter("archived")}>Archived</button>
+      <button id="show-active-sessions" className="tau-panel-button" type="button" aria-pressed={filter === "active"} onClick={() => onSelectFilter("active")}>Active</button>
+      <button id="show-archived-sessions" className="tau-panel-button" type="button" aria-pressed={filter === "archived"} onClick={() => onSelectFilter("archived")}>Archived</button>
       <span id="session-count" className="tau-session-count">{items.length} session{items.length === 1 ? "" : "s"}</span>
     </div>
     <ul id="session-list" className="tau-session-list" aria-label="Available sessions">

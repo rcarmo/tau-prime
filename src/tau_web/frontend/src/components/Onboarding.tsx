@@ -69,18 +69,18 @@ export function Onboarding({ onOpenChange }: { onOpenChange: (open: boolean) => 
             <h2 id="onboarding-title" className="provider-wizard__title">Connect a model provider</h2>
             <p className="provider-wizard__subtitle">Choose a provider and model. Credentials are stored locally and never returned by this API.</p>
             <form className="provider-wizard__apikey-form" onSubmit={submit}>
-              <label className="settings-panel__field"><span className="settings-panel__label">Provider</span>
-                <select className="settings-panel__select" value={provider} onChange={(event) => chooseProvider(event.currentTarget.value)}>
+              <label className="tau-provider-field"><span className="tau-provider-label">Provider</span>
+                <select className="tau-provider-select" value={provider} onChange={(event) => chooseProvider(event.currentTarget.value)}>
                   {state.providers.map((item) => <option value={item.name}>{item.name}</option>)}
                 </select>
               </label>
-              <label className="settings-panel__field"><span className="settings-panel__label">Model</span>
-                <select className="settings-panel__select" value={model} onChange={(event) => setModel(event.currentTarget.value)}>
+              <label className="tau-provider-field"><span className="tau-provider-label">Model</span>
+                <select className="tau-provider-select" value={model} onChange={(event) => setModel(event.currentTarget.value)}>
                   {(selected?.models ?? []).map((item) => <option value={item}>{item}</option>)}
                 </select>
               </label>
               {selected?.credential_name ? (
-                <label className="settings-panel__field"><span className="settings-panel__label">API key</span>
+                <label className="tau-provider-field"><span className="tau-provider-label">API key</span>
                   <input className="provider-wizard__input" type="password" value={credential} autocomplete="off" onInput={(event) => setCredential(event.currentTarget.value)} placeholder={selected.configured ? "Stored credential (leave blank to keep)" : "Required"} />
                 </label>
               ) : null}

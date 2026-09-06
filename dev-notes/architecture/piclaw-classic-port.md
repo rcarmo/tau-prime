@@ -812,3 +812,12 @@ classes. Provider/model inputs explicitly type=text; forms stay mounted and IDs,
 datalists, optimistic concurrency handlers unchanged. Settings layout/a11y/model
 matrix 24 passed; build/TypeScript pass. Secondary sidebar placement is still
 an explicit difference from upstream Settings dialog for visual review.
+
+## Remaining field/action visual-class cleanup
+
+Removed final settings-panel__/sessions-panel__ field/button classes from active
+components (provider wizard, session actions/filters, Search action). Tau-specific
+native controls now have explicit classic-token styles. No active Codicon,
+chat__, workspace__, tasks-panel or those old settings/session classes remain
+in component sources. Onboarding/layout/session/Search a11y matrix 36 passed;
+build/TypeScript pass. This source cleanup is not visual acceptance.

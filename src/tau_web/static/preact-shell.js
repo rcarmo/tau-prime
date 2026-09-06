@@ -1008,8 +1008,8 @@ function SessionList({ filter, onSelectFilter }) {
   const select = (sessionId) => window.dispatchEvent(new CustomEvent("tau:session-select", { detail: { sessionId } }));
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("div", { className: "tau-session-filters", role: "group", "aria-label": "Session list filter", children: [
-      /* @__PURE__ */ u2("button", { id: "show-active-sessions", className: "settings-panel__provider-btn", type: "button", "aria-pressed": filter === "active", onClick: () => onSelectFilter("active"), children: "Active" }),
-      /* @__PURE__ */ u2("button", { id: "show-archived-sessions", className: "settings-panel__provider-btn", type: "button", "aria-pressed": filter === "archived", onClick: () => onSelectFilter("archived"), children: "Archived" }),
+      /* @__PURE__ */ u2("button", { id: "show-active-sessions", className: "tau-panel-button", type: "button", "aria-pressed": filter === "active", onClick: () => onSelectFilter("active"), children: "Active" }),
+      /* @__PURE__ */ u2("button", { id: "show-archived-sessions", className: "tau-panel-button", type: "button", "aria-pressed": filter === "archived", onClick: () => onSelectFilter("archived"), children: "Archived" }),
       /* @__PURE__ */ u2("span", { id: "session-count", className: "tau-session-count", children: [
         items.length,
         " session",
@@ -1046,7 +1046,7 @@ function SearchResults() {
         /* @__PURE__ */ u2("span", { className: "post-time", children: result.meta })
       ] }),
       /* @__PURE__ */ u2("span", { className: "post-content", children: result.text }),
-      result.sessionId && /* @__PURE__ */ u2("button", { className: "settings-panel__provider-btn", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
+      result.sessionId && /* @__PURE__ */ u2("button", { className: "tau-panel-button", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
     ] }) }) }, `${result.entityType}-${result.entityId}-${index}`))
   ] });
 }
@@ -1138,13 +1138,13 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
       /* @__PURE__ */ u2(PanelNavigationButton, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab })
     ] }),
     /* @__PURE__ */ u2("section", { id: "panel-sessions", className: "sessions-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
-      /* @__PURE__ */ u2("div", { className: "sessions-panel__toolbar", role: "group", "aria-label": "Session actions", children: [
-        /* @__PURE__ */ u2("button", { id: "new-session-button", className: "sessions-panel__new settings-panel__provider-btn", type: "button", children: [
+      /* @__PURE__ */ u2("div", { className: "tau-session-actions", role: "group", "aria-label": "Session actions", children: [
+        /* @__PURE__ */ u2("button", { id: "new-session-button", className: "tau-panel-button", type: "button", children: [
           /* @__PURE__ */ u2(ClassicIcon, { name: "add" }),
           " New"
         ] }),
-        /* @__PURE__ */ u2("button", { id: "archive-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Archive" }),
-        /* @__PURE__ */ u2("button", { id: "restore-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Restore" })
+        /* @__PURE__ */ u2("button", { id: "archive-session-button", className: "tau-panel-button", type: "button", children: "Archive" }),
+        /* @__PURE__ */ u2("button", { id: "restore-session-button", className: "tau-panel-button", type: "button", children: "Restore" })
       ] }),
       /* @__PURE__ */ u2(SessionList, { filter: sessionFilter, onSelectFilter: onSelectSessionFilter })
     ] }),
@@ -4619,16 +4619,16 @@ function Onboarding({ onOpenChange }) {
       /* @__PURE__ */ u2("h2", { id: "onboarding-title", className: "provider-wizard__title", children: "Connect a model provider" }),
       /* @__PURE__ */ u2("p", { className: "provider-wizard__subtitle", children: "Choose a provider and model. Credentials are stored locally and never returned by this API." }),
       /* @__PURE__ */ u2("form", { className: "provider-wizard__apikey-form", onSubmit: submit, children: [
-        /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
-          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "Provider" }),
-          /* @__PURE__ */ u2("select", { className: "settings-panel__select", value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.name, children: item.name })) })
+        /* @__PURE__ */ u2("label", { className: "tau-provider-field", children: [
+          /* @__PURE__ */ u2("span", { className: "tau-provider-label", children: "Provider" }),
+          /* @__PURE__ */ u2("select", { className: "tau-provider-select", value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.name, children: item.name })) })
         ] }),
-        /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
-          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "Model" }),
-          /* @__PURE__ */ u2("select", { className: "settings-panel__select", value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u2("option", { value: item, children: item })) })
+        /* @__PURE__ */ u2("label", { className: "tau-provider-field", children: [
+          /* @__PURE__ */ u2("span", { className: "tau-provider-label", children: "Model" }),
+          /* @__PURE__ */ u2("select", { className: "tau-provider-select", value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u2("option", { value: item, children: item })) })
         ] }),
-        selected?.credential_name ? /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
-          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "API key" }),
+        selected?.credential_name ? /* @__PURE__ */ u2("label", { className: "tau-provider-field", children: [
+          /* @__PURE__ */ u2("span", { className: "tau-provider-label", children: "API key" }),
           /* @__PURE__ */ u2("input", { className: "provider-wizard__input", type: "password", value: credential, autocomplete: "off", onInput: (event) => setCredential(event.currentTarget.value), placeholder: selected.configured ? "Stored credential (leave blank to keep)" : "Required" })
         ] }) : null,
         error ? /* @__PURE__ */ u2("p", { className: "provider-wizard__error", role: "alert", children: error }) : null,
