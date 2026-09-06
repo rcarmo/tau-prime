@@ -1241,7 +1241,7 @@ function ClassicPost({ id: id2, agent, author, time, avatar, actions, children }
 }
 
 // src/components/CopyButton.tsx
-function CopyButton({ text: text2, classic = false }) {
+function CopyButton({ text: text2 }) {
   const [copied, setCopied] = h2(false);
   const [failed, setFailed] = h2(false);
   const timer = A2();
@@ -1250,7 +1250,7 @@ function CopyButton({ text: text2, classic = false }) {
     "button",
     {
       type: "button",
-      className: classic ? "post-action-btn" : `tool-call__copy${copied ? " tool-call__copy--copied" : ""}`,
+      className: `post-action-btn${copied ? " is-success" : failed ? " is-error" : ""}`,
       title: failed ? "Copy failed \u2014 retry" : copied ? "Copied!" : "Copy",
       "aria-label": failed ? "Copy failed \u2014 retry" : copied ? "Copied!" : "Copy",
       onClick: async (event) => {
@@ -1267,7 +1267,7 @@ function CopyButton({ text: text2, classic = false }) {
           setFailed(true);
         }
       },
-      children: copied ? "\u2713" : classic ? /* @__PURE__ */ u2(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u2("i", { className: "codicon codicon-copy", "aria-hidden": "true" })
+      children: copied ? "\u2713" : /* @__PURE__ */ u2(ClassicIcon, { name: "copy" })
     }
   );
 }
@@ -4131,18 +4131,18 @@ function MarkdownContent({ content }) {
 }
 
 // src/components/MessageActionBar.tsx
-function MessageActionBar({ content, collapsed, onToggle, toggleRef, classic = false }) {
+function MessageActionBar({ content, collapsed, onToggle, toggleRef }) {
   const [feedback, setFeedback] = h2("");
-  return /* @__PURE__ */ u2("div", { className: classic ? "post-action-controls" : "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
-    content && /* @__PURE__ */ u2("button", { type: "button", className: classic ? "post-action-btn post-copy-btn" : "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
+  return /* @__PURE__ */ u2("div", { className: "post-action-controls", onClick: (event) => event.stopPropagation(), children: [
+    content && /* @__PURE__ */ u2("button", { type: "button", className: "post-action-btn post-copy-btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
       try {
         await navigator.clipboard.writeText(content);
         setFeedback("Message copied");
       } catch {
         setFeedback("Unable to copy message");
       }
-    }, children: classic ? /* @__PURE__ */ u2(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u2("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u2("button", { ref: toggleRef, type: "button", className: classic ? "post-action-btn" : "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: classic ? /* @__PURE__ */ u2(ClassicIcon, { name: collapsed ? "down" : "up" }) : /* @__PURE__ */ u2("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
+    }, children: /* @__PURE__ */ u2(ClassicIcon, { name: "copy" }) }),
+    /* @__PURE__ */ u2("button", { ref: toggleRef, type: "button", className: "post-action-btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: /* @__PURE__ */ u2(ClassicIcon, { name: collapsed ? "down" : "up" }) }),
     /* @__PURE__ */ u2("span", { className: "sr-only", role: "status", children: feedback })
   ] });
 }
@@ -4176,11 +4176,11 @@ function ToolCallBlock({ call, result }) {
     ] }) }),
     open && /* @__PURE__ */ u2("div", { className: "agent-thinking-body", children: [
       input && /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2(CopyButton, { classic: true, text: input }),
+        /* @__PURE__ */ u2(CopyButton, { text: input }),
         /* @__PURE__ */ u2("pre", { children: input })
       ] }),
       result && /* @__PURE__ */ u2("div", { children: [
-        /* @__PURE__ */ u2(CopyButton, { classic: true, text: output }),
+        /* @__PURE__ */ u2(CopyButton, { text: output }),
         /* @__PURE__ */ u2("pre", { children: displayedOutput }),
         lines.length > 20 && /* @__PURE__ */ u2("button", { type: "button", className: "thinking-toggle", onClick: () => setExpanded((value) => !value), children: expanded ? "Collapse output" : `Show ${lines.length - 20} hidden lines` })
       ] })
@@ -4249,7 +4249,7 @@ function MessageItem({ item, resultByCall }) {
       author: isUser ? "You" : "Tau",
       time: item.live ? "live" : item.meta ?? "",
       avatar: isUser ? "Y" : "\u03C4",
-      actions: /* @__PURE__ */ u2(MessageActionBar, { classic: true, content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
+      actions: /* @__PURE__ */ u2(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
       children: collapsed ? /* @__PURE__ */ u2("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u2(b, { children: [
         item.toolCalls?.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
         item.content && (isUser ? /* @__PURE__ */ u2("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u2(MarkdownContent, { content: item.content })),

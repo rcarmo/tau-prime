@@ -304,3 +304,11 @@ Updated callers; no visual message-list wrappers in Timeline rendering.
 Classic component/root/accessibility matrix 78 passed; build/TypeScript pass.
 Old visual-oriented specs still need replacement; these results are the named
 classic suites, not a clean full legacy browser run.
+
+## Classic-only message actions
+
+Removed mode props and visual/Codicon alternatives from MessageActionBar and
+CopyButton, updated Timeline callers. Classic clipboard feedback now uses
+is-success/is-error state classes. Added message copy failure then retry checks
+with exact copied Markdown; existing collapse-focus checks retained. Classic
+components/populated accessibility: 42 passed; build/TypeScript pass.

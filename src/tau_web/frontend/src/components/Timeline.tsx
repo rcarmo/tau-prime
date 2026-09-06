@@ -41,8 +41,8 @@ export function ToolCallBlock({ call, result }: { call: ToolCall; result?: Timel
       <button type="button" className="thinking-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}>{name} {result ? result.toolOk === false ? "· failed" : "· done" : ""} {open ? "▴" : "▾"}</button>
     </div>
     {open && <div className="agent-thinking-body">
-      {input && <div><CopyButton classic text={input} /><pre>{input}</pre></div>}
-      {result && <div><CopyButton classic text={output} /><pre>{displayedOutput}</pre>
+      {input && <div><CopyButton text={input} /><pre>{input}</pre></div>}
+      {result && <div><CopyButton text={output} /><pre>{displayedOutput}</pre>
         {lines.length > 20 && <button type="button" className="thinking-toggle" onClick={() => setExpanded(value => !value)}>{expanded ? "Collapse output" : `Show ${lines.length - 20} hidden lines`}</button>}
       </div>}
     </div>}
@@ -106,7 +106,7 @@ export function MessageItem({ item, resultByCall }: { item: TimelineMessage; res
   const isTool = item.role === "tool";
   if (isTool) return null;
   return <ClassicPost id={`post-${item.id}`} agent={!isUser} author={isUser ? "You" : "Tau"} time={item.live ? "live" : item.meta ?? ""} avatar={isUser ? "Y" : "τ"}
-    actions={<MessageActionBar classic content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />}>
+    actions={<MessageActionBar content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />}>
     {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "— collapsed"}</span> : <>
       {item.toolCalls?.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
       {item.content && (isUser ? <div style={{whiteSpace:"pre-wrap"}}>{item.content}</div> : <MarkdownContent content={item.content} />)}

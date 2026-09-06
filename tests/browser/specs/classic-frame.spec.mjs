@@ -43,6 +43,12 @@ test('classic timeline consumes Tau events and preserves collapse focus',async({
  await expect(page.locator('#post-two strong')).toHaveText('Agent text');
  await expect(page.locator('#post-two .post-actions .codicon')).toHaveCount(0);
  await expect(page.locator('#post-two .post-actions svg')).toHaveCount(2);
+ await page.evaluate(()=>{window.copyAttempts=0;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copyAttempts++;if(window.copyAttempts===1)throw Error('denied');window.copiedClassicText=text;}}});});
+ await page.locator('#post-two').getByRole('button',{name:'Copy message',exact:true}).click();
+ await expect(page.locator('#post-two .post-actions [role="status"]')).toHaveText('Unable to copy message');
+ await page.locator('#post-two').getByRole('button',{name:'Copy message',exact:true}).click();
+ await expect(page.locator('#post-two .post-actions [role="status"]')).toHaveText('Message copied');
+ expect(await page.evaluate(()=>window.copiedClassicText)).toBe('**Agent text**');
  await expect(page.locator('#post-two .post-file-pill')).toHaveAttribute('href','/api/media/report%201/content');
  await expect(page.locator('#post-two .post-file-name')).toHaveText('report.txt');
  await expect(page.locator('#post-two .attachment-chip')).toHaveCount(0);
