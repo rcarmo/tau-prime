@@ -4100,6 +4100,23 @@ function MarkdownContent({ content }) {
   }, dangerouslySetInnerHTML: { __html: html2 } });
 }
 
+// src/components/MessageActionBar.tsx
+function MessageActionBar({ content, collapsed, onToggle, toggleRef }) {
+  const [feedback, setFeedback] = h2("");
+  return /* @__PURE__ */ u3("div", { className: "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
+    /* @__PURE__ */ u3("button", { type: "button", className: "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
+      try {
+        await navigator.clipboard.writeText(content);
+        setFeedback("Message copied");
+      } catch {
+        setFeedback("Unable to copy message");
+      }
+    }, children: /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u3("button", { ref: toggleRef, type: "button", className: "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: /* @__PURE__ */ u3("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u3("span", { className: "sr-only", role: "status", children: feedback })
+  ] });
+}
+
 // src/components/Timeline.tsx
 function valueText(value) {
   if (typeof value === "string") return value;
@@ -4182,13 +4199,34 @@ function AttachmentChip({ attachment }) {
   ] });
 }
 function MessageItem({ item, resultByCall }) {
+  const [collapsed, setCollapsed] = h2(false);
+  const toggleRef = A2(null);
+  const restoreToggleFocus = A2(false);
+  const toggle = () => {
+    restoreToggleFocus.current = document.activeElement === toggleRef.current;
+    setCollapsed((value) => !value);
+  };
+  _2(() => {
+    if (restoreToggleFocus.current) toggleRef.current?.focus();
+    restoreToggleFocus.current = false;
+  }, [collapsed]);
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
+  if (collapsed) return /* @__PURE__ */ u3("div", { className: `message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
+    /* @__PURE__ */ u3("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
+    /* @__PURE__ */ u3("div", { className: "message-list__body message-list__body--collapsed", children: [
+      /* @__PURE__ */ u3(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
+      /* @__PURE__ */ u3("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
+      /* @__PURE__ */ u3("span", { className: "message-list__time", children: item.live ? "live" : item.meta }),
+      /* @__PURE__ */ u3("span", { className: "message-list__collapsed-preview", children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.length > 120 ? "\u2026" : "") : "\u2014 collapsed" })
+    ] })
+  ] });
   return /* @__PURE__ */ u3("div", { className: `message-list__item message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
     /* @__PURE__ */ u3("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
     /* @__PURE__ */ u3("div", { className: item.live ? "message-list__body message-list__body--draft" : "message-list__body", children: [
       /* @__PURE__ */ u3("div", { className: "message-list__header", children: [
+        /* @__PURE__ */ u3(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
         /* @__PURE__ */ u3("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
         /* @__PURE__ */ u3("span", { className: "message-list__time", children: item.live ? "live" : item.meta })
       ] }),

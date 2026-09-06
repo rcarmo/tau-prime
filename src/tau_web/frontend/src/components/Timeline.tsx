@@ -1,7 +1,8 @@
 import { Fragment } from "preact";
 import { CopyButton } from "./CopyButton";
 import { MarkdownContent } from "./MarkdownContent";
-import { useEffect, useLayoutEffect, useState } from "preact/hooks";
+import { MessageActionBar } from "./MessageActionBar";
+import { useEffect, useLayoutEffect, useState, useRef } from "preact/hooks";
 
 type Attachment = { mediaId: string; filename: string; mediaType: string };
 type ToolCall = { id?: string; name?: string; arguments?: unknown };
@@ -97,14 +98,35 @@ function AttachmentChip({ attachment }: { attachment: Attachment }) {
 }
 
 export function MessageItem({ item, resultByCall }: { item: TimelineMessage; resultByCall: Map<string, TimelineMessage> }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const restoreToggleFocus = useRef(false);
+  const toggle = () => {
+    restoreToggleFocus.current = document.activeElement === toggleRef.current;
+    setCollapsed(value => !value);
+  };
+  useLayoutEffect(() => {
+    if (restoreToggleFocus.current) toggleRef.current?.focus();
+    restoreToggleFocus.current = false;
+  }, [collapsed]);
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
+  if (collapsed) return <div className={`message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
+    <div className={`message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`} aria-hidden="true">{isUser ? "Y" : "τ"}</div>
+    <div className="message-list__body message-list__body--collapsed">
+      <MessageActionBar content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />
+      <span className={`message-list__name message-list__name--${isUser ? "user" : "agent"}`}>{isUser ? "You" : "Tau"}</span>
+      <span className="message-list__time">{item.live ? "live" : item.meta}</span>
+      <span className="message-list__collapsed-preview">{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.length > 120 ? "…" : "") : "— collapsed"}</span>
+    </div>
+  </div>;
   return (
     <div className={`message-list__item message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
       <div className={`message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`} aria-hidden="true">{isUser ? "Y" : "τ"}</div>
       <div className={item.live ? "message-list__body message-list__body--draft" : "message-list__body"}>
         <div className="message-list__header">
+          <MessageActionBar content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />
           <span className={`message-list__name message-list__name--${isUser ? "user" : "agent"}`}>{isUser ? "You" : "Tau"}</span>
           <span className="message-list__time">{item.live ? "live" : item.meta}</span>
         </div>

@@ -200,6 +200,30 @@ Tau's persistent empty 'Session branch / No persisted branches yet' section cons
 
 Combined browser suite now 219 passed / 3 explicitly skipped (WebKit offline navigation), no failures. Python full run 1326 passed / 1 stale 300px sidebar source assertion; updated to verified 250px mapping and focused frontend/packaging rerun 43/43 passes. TypeScript/diff checks pass. Full Python rerun after that assertion-only correction not yet performed; do not conflate prior full pass with current result.
 
+## Current installed checkpoint verified
+
+At ac6c1fa full Python suite rerun passes 1327/1327. Rebuilt its wheel and reinstalled tau-prime into separate audit venv; browser launcher removes PYTHONPATH. Installed Markdown/security/copy, tool output, both-theme axe/focus, onboarding and settings matrix passes 36/36 across all targets. Source/browser complete run remains 219 passed/3 documented WebKit offline skips. These establish current functional/package checks, not complete visual acceptance.
+
+## Message copy action
+
+Added logical MessageActionBar using verified upstream message-action-bar/button classes, with Copy message action for original source text and accessible success/failure feedback. Clipboard-denied branch tested; no unsupported delete control introduced. Initial guessed class names changed height and failed paired geometry, corrected to exact upstream classes. Copy keyboard/Unicode/failure and paired message geometry tests now pass 12/12. Remaining upstream collapse/delete/read-aloud actions are not ported; action-bar contents differ intentionally until Tau behavior mapping is established.
+
+## Local message collapse
+
+Added collapse/expand action and upstream collapsed body/name/time/120-character preview hierarchy. Collapse is local component state, not persisted and not a backend mutation. Keyboard collapse and expansion restore rich content; copy/failure and expanded paired geometry remain passing across six targets (12/12 checks). Build/TypeScript pass. Delete/read-aloud and collapsed-state direct reference comparison still pending.
+
+## Collapse keyboard focus regression
+
+Strengthened action test to require focus remain on the new Expand/Collapse button without manually refocusing it. Reproduced focus loss when the message subtree changes, fixed using a shared toggle ref and layout-effect restoration only when that control had focus. Six-target copy/collapse/expand/failure tests pass 6/6; build/TypeScript pass. Collapsed direct-reference geometry remains to implement; do not count it as verified by this interaction test.
+
+## Collapsed reference verified
+
+Actual Piclaw collapsed MessageItem compared to Tau after a real collapse click: preview text, message/preview geometry and whitespace match across six targets. Each renderer gets a separate document/runtime to prevent upstream signal hooks interfering with Tau state scheduling; no rendering code mocked. Paired screenshots/JSON attached. Test covers one user-text preview, not all long/tool-only/live states or identical action inventories.
+
+## Message deletion capability audit
+
+Tau web registers DELETE for session archival and media only, not individual messages. Do not map Piclaw's delete-post control onto either operation. Message deletion is intentionally absent pending explicit backend design; preservation of existing API semantics takes priority over a misleading button. Copy/collapse are implemented, read-aloud remains optional/unported. Combined current action/collapsed-reference/both-theme accessibility checks pass 24/24.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.
