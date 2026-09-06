@@ -919,3 +919,15 @@ backdrop dismissal and focus restoration; composer model shortcut retains input
 focus/category. Six-target modal state/identity and setup reopening checks 12
 passed; build/TypeScript pass. Older sidebar-layout expectations need migration,
 plus dialog both-theme a11y/bounds verification before final regression.
+
+## Settings dialog validation continuation
+
+Migrated Settings layout and classic-live closing paths from sidebar to dialog,
+retaining mounted-form identity, category and field assertions. Axe scans now
+include the entire overlay, not just inner form. Layout/a11y/modal matrix 24
+passed. Extended modal test verifies viewport bounds, Tab wrapping, restored
+inertness and focus; 6 passed after waiting for finite entrance animation before
+geometry measurement. Classic-live combined attempt: 59 passed with premature
+animation-bound checks failing; focused settled rerun resolves those test failures.
+Delegated review attempted but unavailable under current model policy. No
+production change in this continuation; full regression remains pending.

@@ -76,7 +76,7 @@ for(const via of ['button','keyboard']) test(`classic ${via} submission preserve
  const box=await last.boundingBox();
  expect(box.y).toBeGreaterThanOrEqual(0);
  expect(box.y+box.height).toBeLessThanOrEqual(page.viewportSize().height+1);
- await page.locator('#close-panel-drawer').click();
+ await page.getByRole('button',{name:'Close settings',exact:true}).click();
  await expect(page.locator('.app-shell')).toHaveClass(/workspace-collapsed/);
  await expect(page.locator('#compose-input')).toBeVisible();
  });

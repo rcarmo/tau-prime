@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('settings in classic sidebar without remounting Tau API form anchors', async ({ page }) => {
+test('settings in classic dialog without remounting Tau API form anchors', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeAttached();
   await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
@@ -11,7 +11,7 @@ test('settings in classic sidebar without remounting Tau API form anchors', asyn
   await page.evaluate(() => { window.__authAnchor = document.getElementById('auth-form'); });
   const settings = page.getByRole('button', { name: 'Settings', exact: true });
   await settings.click();
-  await expect(page.locator('.workspace-sidebar > #panel-settings')).toBeVisible();
+  await expect(page.locator('.settings-dialog > #panel-settings')).toBeVisible();
   await expect(page.locator('#auth-token')).toBeVisible();
   const overflow = await page.locator('#panel-settings').evaluate(el => ({
     scroll: el.scrollWidth - el.clientWidth,
@@ -27,7 +27,7 @@ test('settings in classic sidebar without remounting Tau API form anchors', asyn
   await expect(modelCategory).toHaveAttribute('aria-current','location');
   await expect(page.locator('.settings-nav-item.active')).toHaveCount(1);
   await expect(page.getByRole('link',{name:'Authentication',exact:true})).not.toHaveAttribute('aria-current','location');
-  await page.locator('#close-panel-drawer').click();
+  await page.getByRole('button',{name:'Close settings',exact:true}).click();
   await expect(page.locator('#panel-settings')).toBeHidden();
   await expect(page.locator('#compose-input')).toBeVisible();
   expect(await page.evaluate(() => window.__authAnchor === document.getElementById('auth-form'))).toBe(true);

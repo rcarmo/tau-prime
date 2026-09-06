@@ -13,7 +13,7 @@ for(const colorScheme of ['light','dark']) {
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await expect(page.locator('#panel-settings')).toBeVisible();
     await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})));});
-    const results=await new AxeBuilder({page}).include('#panel-settings').analyze();
+    const results=await new AxeBuilder({page}).include('.settings-dialog-overlay').analyze();
     const failures=results.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}));
     expect(failures).toEqual([]);
   });
