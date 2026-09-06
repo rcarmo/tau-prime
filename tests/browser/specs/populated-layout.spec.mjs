@@ -1,6 +1,6 @@
 import { installLiveStream } from '../fixtures/live-stream.mjs';
 import { installSelectedSession } from '../fixtures/selected-session.mjs';
-import { tauItems, fixedTime, tauMeters } from "../fixtures/visual-state.mjs";
+import { tauItems, fixedTime, tauMeters } from "../fixtures/classic-state.mjs";
 import { expect, test } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';

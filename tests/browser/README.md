@@ -26,12 +26,17 @@ Set `TAU_BROWSER_BIN` to an absolute installed `tau` executable to test a wheel:
 this mode removes `PYTHONPATH` instead of injecting the source checkout.
 
 ```bash
-TAU_BROWSER_PORT=8877 TAU_BROWSER_BIN=/path/to/venv/bin/tau npx playwright test specs/visual-assets.spec.mjs specs/onboarding-layout.spec.mjs specs/settings-layout.spec.mjs
+TAU_BROWSER_PORT=8877 TAU_BROWSER_BIN=/path/to/venv/bin/tau npx playwright test specs/classic-assets.spec.mjs specs/onboarding-layout.spec.mjs specs/settings-layout.spec.mjs
 ```
 
-The direct-source component comparison specs require Piclaw 2.15.3 visual sources.
-Set `PICLAW_VISUAL_SOURCE` to that frontend `src` directory if it is not at the
-pinned `/opt/piclaw/releases/` installation path.
+The sole UX reference is Piclaw **classic**, not visual mode. `full-reference.spec.mjs`
+loads the pinned 2.15.3 classic index/bundle and editor vendor from
+`/opt/piclaw/releases/piclaw-2.15.3-linux-x64-baseline/app/runtime/`.
+`classic-paired.spec.mjs` captures Tau with shared message/time/model fixtures.
+Run both, then `node build-visual-review.mjs` to export labeled classic-only
+comparisons. These are review evidence, not approved pixel baselines.
+`fixtures/classic-state.mjs` holds shared content; visual reference payloads
+and the old source override have been removed.
 
 ## Run tests
 

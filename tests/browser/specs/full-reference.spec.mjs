@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {installLiveStream} from '../fixtures/live-stream.mjs';
-import {fixedTime,userText,agentText} from '../fixtures/visual-state.mjs';
+import {fixedTime,userText,agentText} from '../fixtures/classic-state.mjs';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 const root='/opt/piclaw/releases/piclaw-2.15.3-linux-x64-baseline/app/runtime/web';
 for(const colorScheme of ['light','dark']) test('genuine classic '+colorScheme+' populated reference',async({page},info)=>{

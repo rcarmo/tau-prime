@@ -510,3 +510,10 @@ Installed separately, tested using TAU_BROWSER_BIN audit venv and port 8877
 (no checkout PYTHONPATH): classic root sending/navigation, populated a11y,
 asset/font loading + removed-asset 404 checks, real SSE recovery: 60 passed.
 This supersedes the earlier visual-mode wheel; visual acceptance still pending.
+
+## Fixture/documentation cleanup
+
+Removed unused visual Piclaw post/meter payloads, renamed shared fixture to
+classic-state.mjs and updated all consumers. Browser README now documents actual
+classic bundle pairing and classic asset checks, not PICLAW_VISUAL_SOURCE.
+Reference/paired/populated capture matrix 36 passed. No runtime changes.

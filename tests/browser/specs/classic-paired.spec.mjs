@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {installSelectedSession} from '../fixtures/selected-session.mjs';
 import {installLiveStream} from '../fixtures/live-stream.mjs';
-import {fixedTime,userText,agentText} from '../fixtures/visual-state.mjs';
+import {fixedTime,userText,agentText} from '../fixtures/classic-state.mjs';
 for(const colorScheme of ['light','dark']) test(`classic paired ${colorScheme} message-only capture`,async({page},info)=>{
  await installSelectedSession(page);await installLiveStream(page,'tau');
  await page.emulateMedia({colorScheme});await page.clock.setFixedTime(new Date(fixedTime));

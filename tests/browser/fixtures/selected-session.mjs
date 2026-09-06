@@ -1,4 +1,4 @@
-import { fixedTime, modelName, providerName } from './visual-state.mjs';
+import { fixedTime, modelName, providerName } from './classic-state.mjs';
 
 export async function installSelectedSession(page) {
   const id = 'visual-review';
