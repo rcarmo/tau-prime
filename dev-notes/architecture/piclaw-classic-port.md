@@ -940,3 +940,11 @@ now await settled animations and include the whole dialog overlay. Focused
 classic a11y matrix 24 passed. Updated Python shell assertion: Settings no longer
 opens Workspace; it mounts in ClassicSettingsDialog. Focused Python 42 passed.
 No production changes; complete browser rerun pending.
+
+## Settings dialog full checkpoint (fbf4fa5)
+
+Fresh-server complete browser rerun: 465 passed, 3 documented WebKit offline
+skips (468 total), no failures. Complete Python: 1326 passed; diff clean.
+Includes modal Settings with mounted forms, focus/inert lifecycle and settled
+whole-overlay a11y checks. Previous installed artifact and visual handoff predate
+the dialog; both require refresh. No explicit visual approval recorded.
