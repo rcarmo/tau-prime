@@ -27,9 +27,11 @@ test('declining Dashboard session switch preserves unsaved plan and modal', asyn
  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
  const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
  await expect(page.locator('#status-session')).toHaveText('Current review');
- await page.getByRole('button',{name:'Plan',exact:true}).first().click();
+ await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+ await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Plan',exact:true}).click();
  await page.locator('#plan-editor').fill('- [ ] Unsaved review');
  await expect(page.locator('#plan-save-button')).toBeEnabled();
+ await page.getByRole('button',{name:'Close workspace drawer',exact:true}).click();
  await page.getByRole('button',{name:'Dashboard',exact:true}).click();
  const confirmation=page.waitForEvent('dialog');
  const click=page.locator('.dashboard-tile-button').click();

@@ -4,6 +4,7 @@ test('dashboard moves focus inside, traps Tab, and restores focus on Escape', as
   await page.goto('/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancel=page.getByRole('button',{name:'Cancel',exact:true});
+  await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
   if(await cancel.isVisible()) await cancel.click();
   const trigger=page.getByRole('button',{name:'Dashboard',exact:true});
   await trigger.focus(); await page.keyboard.press('Enter');

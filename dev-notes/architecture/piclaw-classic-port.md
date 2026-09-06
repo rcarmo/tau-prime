@@ -360,3 +360,11 @@ live hidden, disconnected/reconnecting visible. Dismiss setup before asserting
 composer visibility (previous status strip existed outside that setup surface).
 Real backend sessions and actual network interruption/recovery plus injected
 state matrix: 12 passed. No production behavior change in this checkpoint.
+
+## Dashboard classic navigation regression
+
+Retained focus/inertness and real-backend accept/decline tests. Updated Plan
+access through classic session navigation, closed overlay sidebar before clicking
+Dashboard, and awaited setup cancellation in focus test. These are actual user
+steps, not forced clicks through overlay. Full matrix 18 passed; no Dashboard
+production fix required. Unsaved plan stays intact when session switch declined.
