@@ -1,0 +1,12 @@
+/* Tau semantic/adapter adjustments; upstream classic stylesheet stays untouched. */
+[data-tau-ui="classic"] [hidden] { display: none !important; }
+.tau-classic-chat { display:flex; flex-direction:column; flex:1; min-height:0; }
+.tau-classic-chat > .timeline { flex:1; min-height:0; }
+.tau-classic-compose-form { flex:none; margin:0; }
+.tau-classic-status,.compose-attachment-actions,.post-action-controls { display:flex; align-items:center; gap:6px; }
+.tau-classic-completion-list { margin:0; padding:0; list-style:none; }
+.tau-classic-panel { min-width:0; }
+.tau-classic-panel-content { padding:8px; overflow:auto; }
+.tau-classic-panel [aria-label="Navigation"] { display:flex; flex-wrap:wrap; gap:4px; }
+.tau-classic-panel input,.tau-classic-panel textarea,.tau-classic-panel select { max-width:100%; box-sizing:border-box; }
+.tau-classic-chat .extension-slot:empty { display:none; }

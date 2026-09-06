@@ -17,6 +17,7 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/static/piclaw-reference.css",
         "/static/piclaw-parity.css",
     "/static/piclaw-classic.css",
+    "/static/tau-classic.css",
         "/static/app.js",
         "/static/extension-ui.js",
         "/static/widget-bridge.js",
@@ -96,6 +97,10 @@ _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
         resource_name="piclaw-reference.css",
         content_type="text/css",
         charset="utf-8",
+        cache_control="public, max-age=3600, must-revalidate",
+    ),
+    "tau-classic.css": FrontendAsset(
+        resource_name="tau-classic.css", content_type="text/css", charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",
     ),
     "piclaw-classic.css": FrontendAsset(

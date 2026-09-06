@@ -253,85 +253,41 @@ n = v.slice, l = { __e: function(n2, l3, u6, t3) {
   return n2.__v.__b - l3.__v.__b;
 }, M.__r = 0, e = 0, c = F(false), s = F(true), a = 0;
 
-// src/theme/theme.ts
-var DARK_THEME = {
-  bg: "#1e1e2e",
-  bgSidebar: "#181825",
-  bgTerminal: "#11111b",
-  bgStatus: "#181825",
-  border: "#313244",
-  text: "#cdd6f4",
-  textMuted: "#9399b2",
-  accent: "#89b4fa",
-  success: "#a6e3a1",
-  error: "#f38ba8",
-  handleHover: "#89b4fa",
-  handle: "#313244",
-  inputBg: "#11111b",
-  inputBorder: "#45475a"
-};
-var LIGHT_THEME = {
-  bg: "#f3f3f3",
-  bgSidebar: "#e8e8e8",
-  bgTerminal: "#1e1e2e",
-  bgStatus: "#dcdcdc",
-  border: "#c8c8c8",
-  text: "#1a1a1a",
-  textMuted: "#4a4a4a",
-  accent: "#0078d4",
-  success: "#16a34a",
-  error: "#d32f2f",
-  handleHover: "#0078d4",
-  handle: "#c8c8c8",
-  inputBg: "#ffffff",
-  inputBorder: "#c8c8c8"
-};
-function getSystemTheme() {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return "dark";
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+// node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js
+var f2 = 0;
+var i2 = Array.isArray;
+function u2(e3, t3, n2, o3, i4, u6) {
+  t3 || (t3 = {});
+  var a3, c3, l3 = t3;
+  "ref" in t3 && (a3 = t3.ref, delete t3.ref);
+  var p3 = { type: e3, props: l3, key: n2, ref: a3, __k: null, __: null, __b: 0, __e: null, __d: void 0, __c: null, constructor: void 0, __v: --f2, __i: -1, __u: 0, __source: i4, __self: u6 };
+  if ("function" == typeof e3 && (a3 = e3.defaultProps)) for (c3 in a3) void 0 === l3[c3] && (l3[c3] = a3[c3]);
+  return l.vnode && l.vnode(p3), p3;
 }
 
-// src/theme/applyTheme.ts
-function installSystemTheme() {
-  const apply2 = () => {
-    const mode = getSystemTheme();
-    const theme = mode === "dark" ? DARK_THEME : LIGHT_THEME;
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(mode);
-    const variables = {
-      "--bg": theme.bg,
-      "--bg-sidebar": theme.bgSidebar,
-      "--bg-terminal": theme.bgTerminal,
-      "--bg-status": theme.bgStatus,
-      "--border": theme.border,
-      "--text": theme.text,
-      "--text-muted": theme.textMuted,
-      "--accent": theme.accent,
-      "--success": theme.success,
-      "--error": theme.error,
-      "--handle-hover": theme.handleHover,
-      "--handle": theme.handle,
-      "--input-bg": theme.inputBg,
-      "--input-border": theme.inputBorder
-    };
-    for (const [key, value] of Object.entries(variables)) root.style.setProperty(key, value);
-  };
-  apply2();
-  const media = window.matchMedia("(prefers-color-scheme: dark)");
-  media.addEventListener("change", apply2);
-  return () => media.removeEventListener("change", apply2);
+// src/components/ClassicChatFrame.tsx
+function ClassicChatFrame({ sidebar, children, workspaceOpen = false }) {
+  return /* @__PURE__ */ u2("div", { className: `app-shell${workspaceOpen ? "" : " workspace-collapsed"}`, style: { "--sidebar-width": "280px" }, children: [
+    /* @__PURE__ */ u2("aside", { className: "workspace-sidebar", "aria-label": "Workspace", inert: !workspaceOpen, children: sidebar }),
+    /* @__PURE__ */ u2("main", { className: "container", "aria-label": "Chat", children })
+  ] });
+}
+
+// src/components/ClassicSessionControl.tsx
+function ClassicSessionControl({ open, onToggle }) {
+  return /* @__PURE__ */ u2("div", { className: "compose-session-switcher-trigger-wrap", children: /* @__PURE__ */ u2("button", { type: "button", className: "compose-session-switcher-pill", "aria-label": "Open sessions", "aria-expanded": open, "aria-controls": "panel-sessions", onClick: onToggle, children: [
+    /* @__PURE__ */ u2("span", { id: "status-session", className: "compose-session-switcher-pill-label", children: "No session selected" }),
+    /* @__PURE__ */ u2("span", { className: "compose-session-switcher-pill-chevron", "aria-hidden": "true", children: "\u25BE" })
+  ] }) });
 }
 
 // node_modules/preact/hooks/dist/hooks.module.js
 var t2;
 var r2;
-var u2;
-var i2;
+var u3;
+var i3;
 var o2 = 0;
-var f2 = [];
+var f3 = [];
 var c2 = l;
 var e2 = c2.__b;
 var a2 = c2.__r;
@@ -404,7 +360,7 @@ function q2(n2, t3) {
   }, t3);
 }
 function j2() {
-  for (var n2; n2 = f2.shift(); ) if (n2.__P && n2.__H) try {
+  for (var n2; n2 = f3.shift(); ) if (n2.__P && n2.__H) try {
     n2.__H.__h.forEach(z2), n2.__H.__h.forEach(B2), n2.__H.__h = [];
   } catch (t3) {
     n2.__H.__h = [], c2.__e(t3, n2.__v);
@@ -417,15 +373,15 @@ c2.__b = function(n2) {
 }, c2.__r = function(n2) {
   a2 && a2(n2), t2 = 0;
   var i4 = (r2 = n2.__c).__H;
-  i4 && (u2 === r2 ? (i4.__h = [], r2.__h = [], i4.__.forEach(function(n3) {
+  i4 && (u3 === r2 ? (i4.__h = [], r2.__h = [], i4.__.forEach(function(n3) {
     n3.__N && (n3.__ = n3.__N), n3.i = n3.__N = void 0;
-  })) : (i4.__h.forEach(z2), i4.__h.forEach(B2), i4.__h = [], t2 = 0)), u2 = r2;
+  })) : (i4.__h.forEach(z2), i4.__h.forEach(B2), i4.__h = [], t2 = 0)), u3 = r2;
 }, c2.diffed = function(n2) {
   v2 && v2(n2);
   var t3 = n2.__c;
-  t3 && t3.__H && (t3.__H.__h.length && (1 !== f2.push(t3) && i2 === c2.requestAnimationFrame || ((i2 = c2.requestAnimationFrame) || w2)(j2)), t3.__H.__.forEach(function(n3) {
+  t3 && t3.__H && (t3.__H.__h.length && (1 !== f3.push(t3) && i3 === c2.requestAnimationFrame || ((i3 = c2.requestAnimationFrame) || w2)(j2)), t3.__H.__.forEach(function(n3) {
     n3.i && (n3.__H = n3.i), n3.i = void 0;
-  })), u2 = r2 = null;
+  })), u3 = r2 = null;
 }, c2.__c = function(n2, t3) {
   t3.some(function(n3) {
     try {
@@ -473,60 +429,6 @@ function D(n2, t3) {
   return "function" == typeof t3 ? t3(n2) : t3;
 }
 
-// node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js
-var f3 = 0;
-var i3 = Array.isArray;
-function u3(e3, t3, n2, o3, i4, u6) {
-  t3 || (t3 = {});
-  var a3, c3, l3 = t3;
-  "ref" in t3 && (a3 = t3.ref, delete t3.ref);
-  var p3 = { type: e3, props: l3, key: n2, ref: a3, __k: null, __: null, __b: 0, __e: null, __d: void 0, __c: null, constructor: void 0, __v: --f3, __i: -1, __u: 0, __source: i4, __self: u6 };
-  if ("function" == typeof e3 && (a3 = e3.defaultProps)) for (c3 in a3) void 0 === l3[c3] && (l3[c3] = a3[c3]);
-  return l.vnode && l.vnode(p3), p3;
-}
-
-// src/components/ActivityBar.tsx
-var PANELS = [
-  { id: "sessions", label: "Sessions", icon: "codicon-comment-discussion" },
-  { id: "workspace", label: "Workspace", icon: "codicon-files" },
-  { id: "search", label: "Search", icon: "codicon-search" },
-  { id: "plan", label: "Plan", icon: "codicon-checklist" },
-  { id: "dashboard", label: "Dashboard", icon: "codicon-dashboard" },
-  { id: "settings", label: "Settings", icon: "codicon-settings-gear", alignBottom: true }
-];
-function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
-  return /* @__PURE__ */ u3("nav", { className: "activity-bar", "aria-label": "Activity bar", children: PANELS.map((panel) => {
-    const active = panel.id === activePanel;
-    return /* @__PURE__ */ u3(
-      "button",
-      {
-        type: "button",
-        className: `activity-bar__button ${active ? "is-active" : ""} ${panel.alignBottom ? "is-bottom" : ""}`,
-        title: panel.label,
-        "aria-label": panel.label,
-        "aria-pressed": active,
-        onClick: () => panel.id === "dashboard" ? onDashboard() : onPanelChange(panel.id),
-        children: /* @__PURE__ */ u3("i", { className: `codicon ${panel.icon} icon--size-24 activity-bar__icon`, "aria-hidden": "true" })
-      },
-      panel.id
-    );
-  }) });
-}
-
-// src/components/TabBar.tsx
-function TabBar() {
-  return /* @__PURE__ */ u3("div", { className: "tab-bar", role: "tablist", "aria-label": "Central pane tabs", children: /* @__PURE__ */ u3(
-    "button",
-    {
-      role: "tab",
-      type: "button",
-      "aria-selected": true,
-      className: "tab-bar__tab tab-bar__tab--active",
-      children: /* @__PURE__ */ u3("span", { className: "tab-bar__tab__label", children: "Chat" })
-    }
-  ) });
-}
-
 // src/components/SystemStats.tsx
 var formatPercent = (value) => Number.isFinite(value) ? `${Math.round(value)}%` : "--";
 var formatBytes = (value) => {
@@ -550,11 +452,11 @@ var points = (series, maximum) => {
 function Metric({ id: id2, label, icon, value, series, maximum }) {
   const numeric = series?.at(-1);
   const level = id2 === "swap" && numeric && numeric > 0 ? "warning" : severity(numeric);
-  return /* @__PURE__ */ u3("span", { className: "sys-stats__metric", title: `${label} usage`, children: [
-    /* @__PURE__ */ u3("i", { className: `sys-stats__icon codicon ${icon}`, "aria-hidden": "true" }),
-    /* @__PURE__ */ u3("span", { className: "sys-stats__label", children: label }),
-    /* @__PURE__ */ u3("output", { id: `meter-${id2}-value`, className: `sys-stats__value${level === "normal" ? "" : ` sys-stats__value--${level}`}`, children: value }),
-    /* @__PURE__ */ u3("svg", { id: `meter-${id2}-sparkline`, className: "sys-stats__sparkline", viewBox: "0 0 48 12", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history`, children: points(series, maximum) && /* @__PURE__ */ u3("polyline", { className: "meter-sparkline", points: points(series, maximum) }) })
+  return /* @__PURE__ */ u2("span", { className: "sys-stats__metric", title: `${label} usage`, children: [
+    /* @__PURE__ */ u2("i", { className: `sys-stats__icon codicon ${icon}`, "aria-hidden": "true" }),
+    /* @__PURE__ */ u2("span", { className: "sys-stats__label", children: label }),
+    /* @__PURE__ */ u2("output", { id: `meter-${id2}-value`, className: `sys-stats__value${level === "normal" ? "" : ` sys-stats__value--${level}`}`, children: value }),
+    /* @__PURE__ */ u2("svg", { id: `meter-${id2}-sparkline`, className: "sys-stats__sparkline", viewBox: "0 0 48 12", role: "img", "aria-label": `${label === "RSS" ? "Tau RSS" : label} history`, children: points(series, maximum) && /* @__PURE__ */ u2("polyline", { className: "meter-sparkline", points: points(series, maximum) }) })
   ] });
 }
 function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed }) {
@@ -568,17 +470,131 @@ function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed })
   const cpu = formatPercent(meters?.cpu_percent), ram = formatPercent(meters?.ram_percent);
   const rss = formatBytes(meters?.process_rss_bytes), swap = formatPercent(meters?.swap_percent);
   const summary = !state.enabled ? "Meters hidden" : !meters ? "Meters unavailable" : `CPU ${cpu} \xB7 RAM ${ram} \xB7 RSS ${rss} \xB7 Swap ${swap}`;
-  return /* @__PURE__ */ u3("span", { id: "system-meters", className: "sys-stats-bar", "data-enabled": String(state.enabled), "data-collapsed": String(state.collapsed), children: [
-    /* @__PURE__ */ u3("span", { className: "sys-stats-bar__inline", children: /* @__PURE__ */ u3("span", { id: "meters-details", className: "sys-stats", children: [
-      /* @__PURE__ */ u3(Metric, { id: "cpu", label: "CPU", icon: "codicon-pulse", value: cpu, series: meters?.cpu_series, maximum: 100 }),
-      /* @__PURE__ */ u3(Metric, { id: "ram", label: "RAM", icon: "codicon-circuit-board", value: ram, series: meters?.ram_series, maximum: 100 }),
-      /* @__PURE__ */ u3(Metric, { id: "rss", label: "RSS", icon: "codicon-package", value: rss, series: meters?.process_rss_series_bytes, maximum: null }),
-      /* @__PURE__ */ u3(Metric, { id: "swap", label: "SWP", icon: "codicon-arrow-swap", value: swap, series: meters?.swap_series, maximum: 100 })
+  return /* @__PURE__ */ u2("span", { id: "system-meters", className: "sys-stats-bar", "data-enabled": String(state.enabled), "data-collapsed": String(state.collapsed), children: [
+    /* @__PURE__ */ u2("span", { className: "sys-stats-bar__inline", children: /* @__PURE__ */ u2("span", { id: "meters-details", className: "sys-stats", children: [
+      /* @__PURE__ */ u2(Metric, { id: "cpu", label: "CPU", icon: "codicon-pulse", value: cpu, series: meters?.cpu_series, maximum: 100 }),
+      /* @__PURE__ */ u2(Metric, { id: "ram", label: "RAM", icon: "codicon-circuit-board", value: ram, series: meters?.ram_series, maximum: 100 }),
+      /* @__PURE__ */ u2(Metric, { id: "rss", label: "RSS", icon: "codicon-package", value: rss, series: meters?.process_rss_series_bytes, maximum: null }),
+      /* @__PURE__ */ u2(Metric, { id: "swap", label: "SWP", icon: "codicon-arrow-swap", value: swap, series: meters?.swap_series, maximum: 100 })
     ] }) }),
-    /* @__PURE__ */ u3("output", { id: "meters-summary", className: "sys-stats-bar__compact", "aria-live": "polite", children: summary }),
-    /* @__PURE__ */ u3("button", { id: "meters-collapse-button", className: "status-bar__terminal-btn", type: "button", "aria-controls": "meters-details", "aria-expanded": !state.collapsed, title: state.collapsed ? "Expand system meters" : "Compact system meters", onClick: onToggleCollapsed, children: /* @__PURE__ */ u3("i", { className: `codicon ${state.collapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`, "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u3("button", { id: "meters-visibility-button", className: "status-bar__terminal-btn", type: "button", "aria-pressed": state.enabled, title: state.enabled ? "Hide system meters" : "Show system meters", onClick: onToggleEnabled, children: /* @__PURE__ */ u3("i", { className: `codicon ${state.enabled ? "codicon-eye" : "codicon-eye-closed"}`, "aria-hidden": "true" }) })
+    /* @__PURE__ */ u2("output", { id: "meters-summary", className: "sys-stats-bar__compact", "aria-live": "polite", children: summary }),
+    /* @__PURE__ */ u2("button", { id: "meters-collapse-button", className: "status-bar__terminal-btn", type: "button", "aria-controls": "meters-details", "aria-expanded": !state.collapsed, title: state.collapsed ? "Expand system meters" : "Compact system meters", onClick: onToggleCollapsed, children: /* @__PURE__ */ u2("i", { className: `codicon ${state.collapsed ? "codicon-chevron-up" : "codicon-chevron-down"}`, "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u2("button", { id: "meters-visibility-button", className: "status-bar__terminal-btn", type: "button", "aria-pressed": state.enabled, title: state.enabled ? "Hide system meters" : "Show system meters", onClick: onToggleEnabled, children: /* @__PURE__ */ u2("i", { className: `codicon ${state.enabled ? "codicon-eye" : "codicon-eye-closed"}`, "aria-hidden": "true" }) })
   ] });
+}
+
+// src/theme/theme.ts
+var DARK_THEME = {
+  bg: "#1e1e2e",
+  bgSidebar: "#181825",
+  bgTerminal: "#11111b",
+  bgStatus: "#181825",
+  border: "#313244",
+  text: "#cdd6f4",
+  textMuted: "#9399b2",
+  accent: "#89b4fa",
+  success: "#a6e3a1",
+  error: "#f38ba8",
+  handleHover: "#89b4fa",
+  handle: "#313244",
+  inputBg: "#11111b",
+  inputBorder: "#45475a"
+};
+var LIGHT_THEME = {
+  bg: "#f3f3f3",
+  bgSidebar: "#e8e8e8",
+  bgTerminal: "#1e1e2e",
+  bgStatus: "#dcdcdc",
+  border: "#c8c8c8",
+  text: "#1a1a1a",
+  textMuted: "#4a4a4a",
+  accent: "#0078d4",
+  success: "#16a34a",
+  error: "#d32f2f",
+  handleHover: "#0078d4",
+  handle: "#c8c8c8",
+  inputBg: "#ffffff",
+  inputBorder: "#c8c8c8"
+};
+function getSystemTheme() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return "dark";
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+// src/theme/applyTheme.ts
+function installSystemTheme() {
+  const apply2 = () => {
+    const mode = getSystemTheme();
+    const theme = mode === "dark" ? DARK_THEME : LIGHT_THEME;
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(mode);
+    const variables = {
+      "--bg": theme.bg,
+      "--bg-sidebar": theme.bgSidebar,
+      "--bg-terminal": theme.bgTerminal,
+      "--bg-status": theme.bgStatus,
+      "--border": theme.border,
+      "--text": theme.text,
+      "--text-muted": theme.textMuted,
+      "--accent": theme.accent,
+      "--success": theme.success,
+      "--error": theme.error,
+      "--handle-hover": theme.handleHover,
+      "--handle": theme.handle,
+      "--input-bg": theme.inputBg,
+      "--input-border": theme.inputBorder
+    };
+    for (const [key, value] of Object.entries(variables)) root.style.setProperty(key, value);
+  };
+  apply2();
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  media.addEventListener("change", apply2);
+  return () => media.removeEventListener("change", apply2);
+}
+
+// src/components/ActivityBar.tsx
+var PANELS = [
+  { id: "sessions", label: "Sessions", icon: "codicon-comment-discussion" },
+  { id: "workspace", label: "Workspace", icon: "codicon-files" },
+  { id: "search", label: "Search", icon: "codicon-search" },
+  { id: "plan", label: "Plan", icon: "codicon-checklist" },
+  { id: "dashboard", label: "Dashboard", icon: "codicon-dashboard" },
+  { id: "settings", label: "Settings", icon: "codicon-settings-gear", alignBottom: true }
+];
+function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
+  return /* @__PURE__ */ u2("nav", { className: "activity-bar", "aria-label": "Activity bar", children: PANELS.map((panel) => {
+    const active = panel.id === activePanel;
+    return /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        className: `activity-bar__button ${active ? "is-active" : ""} ${panel.alignBottom ? "is-bottom" : ""}`,
+        title: panel.label,
+        "aria-label": panel.label,
+        "aria-pressed": active,
+        onClick: () => panel.id === "dashboard" ? onDashboard() : onPanelChange(panel.id),
+        children: /* @__PURE__ */ u2("i", { className: `codicon ${panel.icon} icon--size-24 activity-bar__icon`, "aria-hidden": "true" })
+      },
+      panel.id
+    );
+  }) });
+}
+
+// src/components/TabBar.tsx
+function TabBar() {
+  return /* @__PURE__ */ u2("div", { className: "tab-bar", role: "tablist", "aria-label": "Central pane tabs", children: /* @__PURE__ */ u2(
+    "button",
+    {
+      role: "tab",
+      type: "button",
+      "aria-selected": true,
+      className: "tab-bar__tab tab-bar__tab--active",
+      children: /* @__PURE__ */ u2("span", { className: "tab-bar__tab__label", children: "Chat" })
+    }
+  ) });
 }
 
 // src/components/StatusBar.tsx
@@ -595,36 +611,36 @@ function StatusBar({ classic = false, dashboardOpen, metersEnabled, metersCollap
     window.addEventListener("tau:status-model", receive);
     return () => window.removeEventListener("tau:status-model", receive);
   }, []);
-  if (classic) return /* @__PURE__ */ u3("div", { className: "tau-classic-status", children: [
-    /* @__PURE__ */ u3("span", { hidden: connection.state === "live", children: /* @__PURE__ */ u3("span", { className: "compose-connection-status", children: /* @__PURE__ */ u3("span", { id: "status-stream", "data-state": connection.state, children: connection.message }) }) }),
-    /* @__PURE__ */ u3("span", { id: "status-model", className: "compose-model-hint", children: model || "Unset" }),
-    /* @__PURE__ */ u3("span", { id: "status-context", className: "sr-only", children: "No context loaded" }),
-    /* @__PURE__ */ u3("button", { id: "dashboard-toggle", className: "icon-btn", type: "button", "aria-label": "Dashboard", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, onClick: onToggleDashboard, children: [
-      /* @__PURE__ */ u3("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: /* @__PURE__ */ u3("path", { d: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" }) }),
-      /* @__PURE__ */ u3("span", { id: "dashboard-count", className: "sr-only", children: "0" })
+  if (classic) return /* @__PURE__ */ u2("div", { className: "tau-classic-status", children: [
+    /* @__PURE__ */ u2("span", { hidden: connection.state === "live", children: /* @__PURE__ */ u2("span", { className: "compose-connection-status", children: /* @__PURE__ */ u2("span", { id: "status-stream", "data-state": connection.state, children: connection.message }) }) }),
+    /* @__PURE__ */ u2("span", { id: "status-model", className: "compose-model-hint", children: model || "Unset" }),
+    /* @__PURE__ */ u2("span", { id: "status-context", className: "sr-only", children: "No context loaded" }),
+    /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "icon-btn", type: "button", "aria-label": "Dashboard", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, onClick: onToggleDashboard, children: [
+      /* @__PURE__ */ u2("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" }) }),
+      /* @__PURE__ */ u2("span", { id: "dashboard-count", className: "sr-only", children: "0" })
     ] })
   ] });
-  return /* @__PURE__ */ u3("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
-    /* @__PURE__ */ u3("span", { className: "status-bar__conn", children: [
-      /* @__PURE__ */ u3("span", { className: `status-bar__conn-dot status-bar__conn-dot--${connection.state === "live" ? "connected" : "disconnected"}`, "aria-hidden": "true" }),
-      /* @__PURE__ */ u3("span", { id: "status-stream", className: "status-bar__conn-text", "data-state": connection.state, children: connection.message })
+  return /* @__PURE__ */ u2("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
+    /* @__PURE__ */ u2("span", { className: "status-bar__conn", children: [
+      /* @__PURE__ */ u2("span", { className: `status-bar__conn-dot status-bar__conn-dot--${connection.state === "live" ? "connected" : "disconnected"}`, "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "status-stream", className: "status-bar__conn-text", "data-state": connection.state, children: connection.message })
     ] }),
-    /* @__PURE__ */ u3("span", { className: "session-pill-wrap", children: /* @__PURE__ */ u3("button", { className: "session-pill", type: "button", title: "Open sessions", onClick: onOpenSessions, children: [
-      /* @__PURE__ */ u3("span", { className: "session-pill__dot session-pill__dot--current", "aria-hidden": "true" }),
-      /* @__PURE__ */ u3("span", { id: "status-session", className: "session-pill__label", children: "No session selected" })
+    /* @__PURE__ */ u2("span", { className: "session-pill-wrap", children: /* @__PURE__ */ u2("button", { className: "session-pill", type: "button", title: "Open sessions", onClick: onOpenSessions, children: [
+      /* @__PURE__ */ u2("span", { className: "session-pill__dot session-pill__dot--current", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "status-session", className: "session-pill__label", children: "No session selected" })
     ] }) }),
-    /* @__PURE__ */ u3("span", { className: "model-badge-wrapper", children: [
-      /* @__PURE__ */ u3("span", { id: "status-model", className: `model-badge${model ? "" : " model-badge--empty"}`, children: model ? /* @__PURE__ */ u3("span", { className: "model-badge__name-wrapper", children: [
-        /* @__PURE__ */ u3("span", { className: "model-badge__provider", children: model.includes("/") ? model.slice(0, model.lastIndexOf("/") + 1) : "" }),
-        /* @__PURE__ */ u3("span", { className: "model-badge__name", children: model.split("/").pop() })
-      ] }) : /* @__PURE__ */ u3("span", { className: "model-badge__empty", children: "Unset" }) }),
-      /* @__PURE__ */ u3("span", { id: "status-context", className: "usage-badge", children: "No context loaded" })
+    /* @__PURE__ */ u2("span", { className: "model-badge-wrapper", children: [
+      /* @__PURE__ */ u2("span", { id: "status-model", className: `model-badge${model ? "" : " model-badge--empty"}`, children: model ? /* @__PURE__ */ u2("span", { className: "model-badge__name-wrapper", children: [
+        /* @__PURE__ */ u2("span", { className: "model-badge__provider", children: model.includes("/") ? model.slice(0, model.lastIndexOf("/") + 1) : "" }),
+        /* @__PURE__ */ u2("span", { className: "model-badge__name", children: model.split("/").pop() })
+      ] }) : /* @__PURE__ */ u2("span", { className: "model-badge__empty", children: "Unset" }) }),
+      /* @__PURE__ */ u2("span", { id: "status-context", className: "usage-badge", children: "No context loaded" })
     ] }),
-    /* @__PURE__ */ u3("span", { className: "status-bar__right", children: [
-      /* @__PURE__ */ u3(SystemStats, { enabled: metersEnabled, collapsed: metersCollapsed, onToggleEnabled: onToggleMetersEnabled, onToggleCollapsed: onToggleMetersCollapsed }),
-      /* @__PURE__ */ u3("button", { id: "dashboard-toggle", className: "status-bar__terminal-btn", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
-        /* @__PURE__ */ u3("i", { className: "codicon codicon-dashboard", "aria-hidden": "true" }),
-        /* @__PURE__ */ u3("span", { id: "dashboard-count", children: "0" })
+    /* @__PURE__ */ u2("span", { className: "status-bar__right", children: [
+      /* @__PURE__ */ u2(SystemStats, { enabled: metersEnabled, collapsed: metersCollapsed, onToggleEnabled: onToggleMetersEnabled, onToggleCollapsed: onToggleMetersCollapsed }),
+      /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "status-bar__terminal-btn", type: "button", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, title: "Toggle dashboard (`)", onClick: onToggleDashboard, children: [
+        /* @__PURE__ */ u2("i", { className: "codicon codicon-dashboard", "aria-hidden": "true" }),
+        /* @__PURE__ */ u2("span", { id: "dashboard-count", children: "0" })
       ] })
     ] })
   ] });
@@ -632,24 +648,24 @@ function StatusBar({ classic = false, dashboardOpen, metersEnabled, metersCollap
 
 // src/components/ClassicIcon.tsx
 function ClassicIcon({ name }) {
-  return /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", children: name === "copy" ? /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("rect", { x: "9", y: "9", width: "11", height: "11", rx: "2" }),
-    /* @__PURE__ */ u3("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
-  ] }) : name === "attach" ? /* @__PURE__ */ u3("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : /* @__PURE__ */ u3("path", { d: name === "up" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6" }) });
+  return /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", children: name === "copy" ? /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("rect", { x: "9", y: "9", width: "11", height: "11", rx: "2" }),
+    /* @__PURE__ */ u2("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
+  ] }) : name === "attach" ? /* @__PURE__ */ u2("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : /* @__PURE__ */ u2("path", { d: name === "up" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6" }) });
 }
 
 // src/components/ClassicComposerSurface.tsx
 function ClassicComposerSurface({ session, input, metadata, actions, notices, attachments, completions }) {
-  return /* @__PURE__ */ u3("div", { className: "compose-box", "data-testid": "compose-box", children: [
+  return /* @__PURE__ */ u2("div", { className: "compose-box", "data-testid": "compose-box", children: [
     notices,
     attachments,
-    /* @__PURE__ */ u3("div", { className: "compose-input-wrapper", children: [
-      /* @__PURE__ */ u3("div", { className: "compose-top-session-row", children: session }),
-      /* @__PURE__ */ u3("div", { className: "compose-input-main", children: input }),
+    /* @__PURE__ */ u2("div", { className: "compose-input-wrapper", children: [
+      /* @__PURE__ */ u2("div", { className: "compose-top-session-row", children: session }),
+      /* @__PURE__ */ u2("div", { className: "compose-input-main", children: input }),
       completions,
-      /* @__PURE__ */ u3("div", { className: "compose-footer", children: [
-        /* @__PURE__ */ u3("div", { className: "compose-meta-row", children: /* @__PURE__ */ u3("div", { className: "compose-model-meta", children: metadata }) }),
-        /* @__PURE__ */ u3("div", { className: "compose-actions", children: actions })
+      /* @__PURE__ */ u2("div", { className: "compose-footer", children: [
+        /* @__PURE__ */ u2("div", { className: "compose-meta-row", children: /* @__PURE__ */ u2("div", { className: "compose-model-meta", children: metadata }) }),
+        /* @__PURE__ */ u2("div", { className: "compose-actions", children: actions })
       ] })
     ] })
   ] });
@@ -678,33 +694,33 @@ function Composer({ classic = false, session, metadata }) {
   }, []);
   const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : void 0;
   const choose = (index) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
-  const toolbar = /* @__PURE__ */ u3(b, { children: [
+  const toolbar = /* @__PURE__ */ u2(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { className: classic ? "compose-attachment-actions" : "chat__toolbar", "aria-label": "Prompt controls", children: [
-      /* @__PURE__ */ u3("button", { id: "compose-attachment-button", className: classic ? "attach-btn" : "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: classic ? /* @__PURE__ */ u3(ClassicIcon, { name: "attach" }) : /* @__PURE__ */ u3("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
-      /* @__PURE__ */ u3("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" })
+    /* @__PURE__ */ u2("div", { className: classic ? "compose-attachment-actions" : "chat__toolbar", "aria-label": "Prompt controls", children: [
+      /* @__PURE__ */ u2("button", { id: "compose-attachment-button", className: classic ? "attach-btn" : "chat__toolbar-btn", type: "button", "aria-label": "Attach file", title: "Attach file", children: classic ? /* @__PURE__ */ u2(ClassicIcon, { name: "attach" }) : /* @__PURE__ */ u2("i", { className: "codicon codicon-attach", "aria-hidden": "true" }) }),
+      /* @__PURE__ */ u2("input", { id: "compose-file-input", type: "file", multiple: true, hidden: true, "aria-label": "Attach files" })
     ] })
   ] });
-  const adapters = /* @__PURE__ */ u3(b, { children: [
+  const adapters = /* @__PURE__ */ u2(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { className: "sr-only", "aria-hidden": "true", children: [
-      /* @__PURE__ */ u3("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter", children: adapterOptions.providers.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) }),
-      /* @__PURE__ */ u3("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter", children: adapterOptions.models.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) }),
-      /* @__PURE__ */ u3("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter", children: adapterOptions.thinking.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) })
+    /* @__PURE__ */ u2("div", { className: "sr-only", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u2("select", { id: "compose-provider-select", name: "provider_name", tabIndex: -1, "aria-label": "Provider adapter", children: adapterOptions.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+      /* @__PURE__ */ u2("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter", children: adapterOptions.models.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+      /* @__PURE__ */ u2("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter", children: adapterOptions.thinking.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
     ] })
   ] });
-  const attachmentControls = /* @__PURE__ */ u3(b, { children: [
+  const attachmentControls = /* @__PURE__ */ u2(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { id: "compose-attachment-list", hidden: !attachments.items.length, className: classic ? "compose-attachments" : "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u3("span", { className: classic ? "compose-file-pill" : "chat__attachment-pill", children: [
-      /* @__PURE__ */ u3("span", { className: classic ? "compose-file-name" : "chat__attachment-name", children: attachment.label }),
-      /* @__PURE__ */ u3("button", { className: classic ? "compose-file-remove" : "chat__attachment-remove", type: "button", "aria-label": `Remove attachment ${attachment.filename}`, disabled: attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } })), children: "\u2715" })
+    /* @__PURE__ */ u2("div", { id: "compose-attachment-list", hidden: !attachments.items.length, className: classic ? "compose-attachments" : "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u2("span", { className: classic ? "compose-file-pill" : "chat__attachment-pill", children: [
+      /* @__PURE__ */ u2("span", { className: classic ? "compose-file-name" : "chat__attachment-name", children: attachment.label }),
+      /* @__PURE__ */ u2("button", { className: classic ? "compose-file-remove" : "chat__attachment-remove", type: "button", "aria-label": `Remove attachment ${attachment.filename}`, disabled: attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } })), children: "\u2715" })
     ] }, attachment.mediaId)) }),
-    /* @__PURE__ */ u3("button", { id: "compose-clear-attachments", className: classic ? "compose-clear-attachments-btn" : "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: !attachments.items.length, disabled: !attachments.items.length || attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachments-clear")), children: "Clear all" })
+    /* @__PURE__ */ u2("button", { id: "compose-clear-attachments", className: classic ? "compose-clear-attachments-btn" : "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: !attachments.items.length, disabled: !attachments.items.length || attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachments-clear")), children: "Clear all" })
   ] });
-  const input = /* @__PURE__ */ u3(b, { children: [
+  const input = /* @__PURE__ */ u2(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("label", { className: "sr-only", htmlFor: "compose-input", children: "Send a prompt to Tau" }),
-    /* @__PURE__ */ u3(
+    /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "compose-input", children: "Send a prompt to Tau" }),
+    /* @__PURE__ */ u2(
       "textarea",
       {
         id: "compose-input",
@@ -724,22 +740,22 @@ function Composer({ classic = false, session, metadata }) {
       }
     )
   ] });
-  const context = /* @__PURE__ */ u3(b, { children: [
+  const context = /* @__PURE__ */ u2(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { className: "chat__compose-toolbar", "aria-label": "Delivery and context", children: [
-      /* @__PURE__ */ u3("div", { hidden: true, children: /* @__PURE__ */ u3("select", { id: "compose-delivery-mode", name: "delivery_mode", "aria-label": "Message delivery", tabIndex: -1, children: [
-        /* @__PURE__ */ u3("option", { value: "run", children: "Run" }),
-        /* @__PURE__ */ u3("option", { value: "follow_up", children: "Follow-up" }),
-        /* @__PURE__ */ u3("option", { value: "steer", children: "Steer" })
+    /* @__PURE__ */ u2("div", { className: "chat__compose-toolbar", "aria-label": "Delivery and context", children: [
+      /* @__PURE__ */ u2("div", { hidden: true, children: /* @__PURE__ */ u2("select", { id: "compose-delivery-mode", name: "delivery_mode", "aria-label": "Message delivery", tabIndex: -1, children: [
+        /* @__PURE__ */ u2("option", { value: "run", children: "Run" }),
+        /* @__PURE__ */ u2("option", { value: "follow_up", children: "Follow-up" }),
+        /* @__PURE__ */ u2("option", { value: "steer", children: "Steer" })
       ] }) }),
-      /* @__PURE__ */ u3("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
+      /* @__PURE__ */ u2("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
     ] })
   ] });
-  const completions = /* @__PURE__ */ u3(b, { children: [
+  const completions = /* @__PURE__ */ u2(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { id: "compose-completion-popup", className: classic ? "slash-autocomplete" : "command-palette compose-completion-popup", hidden: !completion.open, children: [
-      /* @__PURE__ */ u3("p", { id: "compose-completion-status", className: classic ? "sr-only" : "command-palette__step-hint", "aria-live": "polite", children: completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : "" }),
-      /* @__PURE__ */ u3("ul", { id: "compose-completion-listbox", className: classic ? "tau-classic-completion-list" : "command-palette__results", role: "listbox", "aria-label": "Composer completions", children: completion.items.map((item, index) => /* @__PURE__ */ u3(
+    /* @__PURE__ */ u2("div", { id: "compose-completion-popup", className: classic ? "slash-autocomplete" : "command-palette compose-completion-popup", hidden: !completion.open, children: [
+      /* @__PURE__ */ u2("p", { id: "compose-completion-status", className: classic ? "sr-only" : "command-palette__step-hint", "aria-live": "polite", children: completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : "" }),
+      /* @__PURE__ */ u2("ul", { id: "compose-completion-listbox", className: classic ? "tau-classic-completion-list" : "command-palette__results", role: "listbox", "aria-label": "Composer completions", children: completion.items.map((item, index) => /* @__PURE__ */ u2(
         "li",
         {
           id: `compose-completion-option-${index}`,
@@ -749,35 +765,35 @@ function Composer({ classic = false, session, metadata }) {
           "data-active": String(index === completion.index),
           onMouseDown: (event) => event.preventDefault(),
           onClick: () => choose(index),
-          children: classic ? /* @__PURE__ */ u3(b, { children: [
-            /* @__PURE__ */ u3("span", { className: "slash-name", children: item.label }),
-            /* @__PURE__ */ u3("span", { className: "slash-desc", children: item.detail })
-          ] }) : /* @__PURE__ */ u3(b, { children: [
-            /* @__PURE__ */ u3("strong", { className: "command-palette__label", children: item.label }),
-            /* @__PURE__ */ u3("p", { className: "command-palette__description", children: item.detail })
+          children: classic ? /* @__PURE__ */ u2(b, { children: [
+            /* @__PURE__ */ u2("span", { className: "slash-name", children: item.label }),
+            /* @__PURE__ */ u2("span", { className: "slash-desc", children: item.detail })
+          ] }) : /* @__PURE__ */ u2(b, { children: [
+            /* @__PURE__ */ u2("strong", { className: "command-palette__label", children: item.label }),
+            /* @__PURE__ */ u2("p", { className: "command-palette__description", children: item.detail })
           ] })
         }
       )) })
     ] })
   ] });
-  const send = /* @__PURE__ */ u3(b, { children: [
+  const send = /* @__PURE__ */ u2(b, { children: [
     "        ",
-    /* @__PURE__ */ u3("button", { id: "compose-submit", className: classic ? "send-btn" : "chat__send-btn", type: "submit", "aria-label": "Send", title: "Send (Enter)", children: /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u3("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
+    /* @__PURE__ */ u2("button", { id: "compose-submit", className: classic ? "send-btn" : "chat__send-btn", type: "submit", "aria-label": "Send", title: "Send (Enter)", children: /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
   ] });
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
-    /* @__PURE__ */ u3("form", { id: "compose-form", className: classic ? "tau-classic-compose-form" : "chat__compose", children: classic ? /* @__PURE__ */ u3(b, { children: [
-      /* @__PURE__ */ u3("div", { hidden: true, children: [
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_above" }),
+    /* @__PURE__ */ u2("form", { id: "compose-form", className: classic ? "tau-classic-compose-form" : "chat__compose", children: classic ? /* @__PURE__ */ u2(b, { children: [
+      /* @__PURE__ */ u2("div", { hidden: true, children: [
         adapters,
         context
       ] }),
-      /* @__PURE__ */ u3(ClassicComposerSurface, { session, input, metadata, actions: /* @__PURE__ */ u3(b, { children: [
+      /* @__PURE__ */ u2(ClassicComposerSurface, { session, input, metadata, actions: /* @__PURE__ */ u2(b, { children: [
         toolbar,
         send
       ] }), attachments: attachmentControls, completions })
-    ] }) : /* @__PURE__ */ u3(b, { children: [
+    ] }) : /* @__PURE__ */ u2(b, { children: [
       "        ",
-      /* @__PURE__ */ u3("div", { className: "chat__compose-container", children: [
+      /* @__PURE__ */ u2("div", { className: "chat__compose-container", children: [
         toolbar,
         adapters,
         attachmentControls,
@@ -787,11 +803,11 @@ function Composer({ classic = false, session, metadata }) {
       ] }),
       send
     ] }) }),
-    /* @__PURE__ */ u3("div", { className: "sr-only", children: [
-      /* @__PURE__ */ u3("p", { id: "compose-help", children: "Enter sends. Shift+Enter inserts a newline." }),
-      /* @__PURE__ */ u3("p", { id: "app-status", "aria-live": "polite", children: "Loading Tau shell\u2026" })
+    /* @__PURE__ */ u2("div", { className: "sr-only", children: [
+      /* @__PURE__ */ u2("p", { id: "compose-help", children: "Enter sends. Shift+Enter inserts a newline." }),
+      /* @__PURE__ */ u2("p", { id: "app-status", "aria-live": "polite", children: "Loading Tau shell\u2026" })
     ] }),
-    /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "compose_below" })
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "compose_below" })
   ] });
 }
 
@@ -937,7 +953,7 @@ function Dashboard({ open, onClose }) {
   const selectSession = (sessionId) => {
     window.dispatchEvent(new CustomEvent("tau:session-select", { detail: { sessionId } }));
   };
-  return /* @__PURE__ */ u3(
+  return /* @__PURE__ */ u2(
     "div",
     {
       id: "session-dashboard",
@@ -947,7 +963,7 @@ function Dashboard({ open, onClose }) {
       onMouseDown: (event) => {
         if (event.target === event.currentTarget) onClose();
       },
-      children: /* @__PURE__ */ u3(
+      children: /* @__PURE__ */ u2(
         "section",
         {
           ref: dialogRef,
@@ -957,19 +973,19 @@ function Dashboard({ open, onClose }) {
           "aria-labelledby": "dashboard-title",
           onMouseDown: (event) => event.stopPropagation(),
           children: [
-            /* @__PURE__ */ u3("header", { className: "session-dashboard__header", children: [
-              /* @__PURE__ */ u3("div", { children: [
-                /* @__PURE__ */ u3("h2", { id: "dashboard-title", className: "modal-dialog__title", children: "Session dashboard" }),
-                /* @__PURE__ */ u3("p", { className: "modal-dialog__description", children: "Live Tau sessions, queue state, context estimates, and current activity." })
+            /* @__PURE__ */ u2("header", { className: "session-dashboard__header", children: [
+              /* @__PURE__ */ u2("div", { children: [
+                /* @__PURE__ */ u2("h2", { id: "dashboard-title", className: "modal-dialog__title", children: "Session dashboard" }),
+                /* @__PURE__ */ u2("p", { className: "modal-dialog__description", children: "Live Tau sessions, queue state, context estimates, and current activity." })
               ] }),
-              /* @__PURE__ */ u3("button", { id: "dashboard-close", className: "modal-dialog__btn", type: "button", onClick: onClose, children: "Close" })
+              /* @__PURE__ */ u2("button", { id: "dashboard-close", className: "modal-dialog__btn", type: "button", onClick: onClose, children: "Close" })
             ] }),
-            /* @__PURE__ */ u3("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": view.loading, children: [
-              !view.sessions.length && /* @__PURE__ */ u3("p", { className: "dashboard-empty", children: view.loading ? "Loading dashboard sessions\u2026" : "No active sessions." }),
+            /* @__PURE__ */ u2("div", { id: "dashboard-grid", className: "session-dashboard__grid", role: "list", "aria-live": "polite", "aria-busy": view.loading, children: [
+              !view.sessions.length && /* @__PURE__ */ u2("p", { className: "dashboard-empty", children: view.loading ? "Loading dashboard sessions\u2026" : "No active sessions." }),
               view.sessions.map((session) => {
                 const sessionId = stringOrEmpty(session.session_id);
                 const selected = sessionId !== "" && sessionId === view.selectedSessionId;
-                return /* @__PURE__ */ u3("article", { className: "dashboard-tile", "data-selected": String(selected), role: "listitem", children: /* @__PURE__ */ u3(
+                return /* @__PURE__ */ u2("article", { className: "dashboard-tile", "data-selected": String(selected), role: "listitem", children: /* @__PURE__ */ u2(
                   "a",
                   {
                     href: buildSessionUrl(sessionId),
@@ -982,41 +998,41 @@ function Dashboard({ open, onClose }) {
                       selectSession(sessionId);
                     },
                     children: [
-                      /* @__PURE__ */ u3("div", { className: "dashboard-tile-header", children: [
-                        /* @__PURE__ */ u3("p", { className: "dashboard-agent", children: sessionLabel(session) }),
-                        /* @__PURE__ */ u3("span", { className: "dashboard-state", "data-state": stringOrEmpty(session.activity_state) || "idle", "data-error": String(Boolean(session.has_error)), children: dashboardActivityLabel(session) })
+                      /* @__PURE__ */ u2("div", { className: "dashboard-tile-header", children: [
+                        /* @__PURE__ */ u2("p", { className: "dashboard-agent", children: sessionLabel(session) }),
+                        /* @__PURE__ */ u2("span", { className: "dashboard-state", "data-state": stringOrEmpty(session.activity_state) || "idle", "data-error": String(Boolean(session.has_error)), children: dashboardActivityLabel(session) })
                       ] }),
-                      /* @__PURE__ */ u3("p", { className: "dashboard-identity", children: [session.agent_name ? `@${session.agent_name}` : null, shortId(session.session_id)].filter(Boolean).join(" \xB7 ") }),
-                      /* @__PURE__ */ u3("p", { className: "dashboard-workspace", children: stringOrEmpty(session.workspace) || "Workspace unavailable" }),
-                      /* @__PURE__ */ u3("p", { className: "dashboard-model", children: stringOrEmpty(session.model) || "Model unavailable" }),
-                      /* @__PURE__ */ u3("p", { className: "dashboard-preview-kind", children: dashboardPreviewKindLabel(session.preview_kind) }),
-                      /* @__PURE__ */ u3("p", { className: "dashboard-preview", children: stringOrEmpty(session.preview) || "No assistant summary yet." }),
-                      /* @__PURE__ */ u3("div", { className: "dashboard-indicators", children: [
-                        /* @__PURE__ */ u3("span", { children: `Queue ${numberOrZero(session.queue_count)}` }),
-                        /* @__PURE__ */ u3("div", { className: "dashboard-context", children: [
-                          /* @__PURE__ */ u3("span", { children: `Context ${formatDashboardContext(session)}` }),
-                          /* @__PURE__ */ u3("span", { className: "dashboard-context-track", children: /* @__PURE__ */ u3("span", { className: "dashboard-context-fill", style: { width: `${formatDashboardContextPercent(session)}%` } }) })
+                      /* @__PURE__ */ u2("p", { className: "dashboard-identity", children: [session.agent_name ? `@${session.agent_name}` : null, shortId(session.session_id)].filter(Boolean).join(" \xB7 ") }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-workspace", children: stringOrEmpty(session.workspace) || "Workspace unavailable" }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-model", children: stringOrEmpty(session.model) || "Model unavailable" }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-preview-kind", children: dashboardPreviewKindLabel(session.preview_kind) }),
+                      /* @__PURE__ */ u2("p", { className: "dashboard-preview", children: stringOrEmpty(session.preview) || "No assistant summary yet." }),
+                      /* @__PURE__ */ u2("div", { className: "dashboard-indicators", children: [
+                        /* @__PURE__ */ u2("span", { children: `Queue ${numberOrZero(session.queue_count)}` }),
+                        /* @__PURE__ */ u2("div", { className: "dashboard-context", children: [
+                          /* @__PURE__ */ u2("span", { children: `Context ${formatDashboardContext(session)}` }),
+                          /* @__PURE__ */ u2("span", { className: "dashboard-context-track", children: /* @__PURE__ */ u2("span", { className: "dashboard-context-fill", style: { width: `${formatDashboardContextPercent(session)}%` } }) })
                         ] }),
-                        session.has_error && /* @__PURE__ */ u3("span", { className: "dashboard-error", children: "Error" }),
-                        /* @__PURE__ */ u3("p", { className: "dashboard-tile-age", children: session.last_activity ? `Activity ${relativeTimeText(session.last_activity, now)}` : "Activity unknown" })
+                        session.has_error && /* @__PURE__ */ u2("span", { className: "dashboard-error", children: "Error" }),
+                        /* @__PURE__ */ u2("p", { className: "dashboard-tile-age", children: session.last_activity ? `Activity ${relativeTimeText(session.last_activity, now)}` : "Activity unknown" })
                       ] })
                     ]
                   }
                 ) }, sessionId || `${sessionLabel(session)}-${stringOrEmpty(session.last_activity)}`);
               })
             ] }),
-            /* @__PURE__ */ u3("footer", { className: "session-dashboard__footer", children: [
-              /* @__PURE__ */ u3("p", { id: "dashboard-age", className: "modal-dialog__description", children: dashboardAge }),
-              /* @__PURE__ */ u3("div", { className: "modal-dialog__actions", role: "group", "aria-label": "Dashboard pages", children: [
-                /* @__PURE__ */ u3("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", disabled: view.loading || view.page <= 1, onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-page", { detail: { delta: -1 } })), children: "Previous" }),
-                /* @__PURE__ */ u3("output", { id: "dashboard-page", children: [
+            /* @__PURE__ */ u2("footer", { className: "session-dashboard__footer", children: [
+              /* @__PURE__ */ u2("p", { id: "dashboard-age", className: "modal-dialog__description", children: dashboardAge }),
+              /* @__PURE__ */ u2("div", { className: "modal-dialog__actions", role: "group", "aria-label": "Dashboard pages", children: [
+                /* @__PURE__ */ u2("button", { id: "dashboard-previous", className: "modal-dialog__btn", type: "button", disabled: view.loading || view.page <= 1, onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-page", { detail: { delta: -1 } })), children: "Previous" }),
+                /* @__PURE__ */ u2("output", { id: "dashboard-page", children: [
                   "Page ",
                   view.page,
                   " of ",
                   view.totalPages
                 ] }),
-                /* @__PURE__ */ u3("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", disabled: view.loading || view.page >= view.totalPages, onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-page", { detail: { delta: 1 } })), children: "Next" }),
-                /* @__PURE__ */ u3("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-manage")), children: "All sessions" })
+                /* @__PURE__ */ u2("button", { id: "dashboard-next", className: "modal-dialog__btn", type: "button", disabled: view.loading || view.page >= view.totalPages, onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-page", { detail: { delta: 1 } })), children: "Next" }),
+                /* @__PURE__ */ u2("button", { id: "dashboard-manage", className: "modal-dialog__btn modal-dialog__btn--primary", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:dashboard-manage")), children: "All sessions" })
               ] })
             ] })
           ]
@@ -1046,23 +1062,23 @@ function PlanPanel({ hidden }) {
     window.addEventListener("tau:plan-render", update);
     return () => window.removeEventListener("tau:plan-render", update);
   }, []);
-  return /* @__PURE__ */ u3("section", { id: "panel-plan", className: "tasks-panel", "aria-labelledby": "tab-plan", hidden, children: [
-    /* @__PURE__ */ u3("div", { className: "tasks-panel__tabs", role: "tablist", "aria-label": "Plan views", children: /* @__PURE__ */ u3("button", { className: "tasks-panel__tab tasks-panel__tab--active", type: "button", role: "tab", "aria-selected": "true", children: "Plan" }) }),
-    /* @__PURE__ */ u3("div", { className: "tasks-panel__tasks", children: /* @__PURE__ */ u3("form", { id: "plan-form", className: "tasks-panel__card", children: [
-      /* @__PURE__ */ u3("div", { className: "tasks-panel__card-header", children: [
-        /* @__PURE__ */ u3("span", { className: "tasks-panel__card-id", children: "Session plan" }),
-        /* @__PURE__ */ u3("span", { id: "plan-revision", className: "tasks-panel__badge tasks-panel__badge--kind", children: [
+  return /* @__PURE__ */ u2("section", { id: "panel-plan", className: "tasks-panel", "aria-labelledby": "tab-plan", hidden, children: [
+    /* @__PURE__ */ u2("div", { className: "tasks-panel__tabs", role: "tablist", "aria-label": "Plan views", children: /* @__PURE__ */ u2("button", { className: "tasks-panel__tab tasks-panel__tab--active", type: "button", role: "tab", "aria-selected": "true", children: "Plan" }) }),
+    /* @__PURE__ */ u2("div", { className: "tasks-panel__tasks", children: /* @__PURE__ */ u2("form", { id: "plan-form", className: "tasks-panel__card", children: [
+      /* @__PURE__ */ u2("div", { className: "tasks-panel__card-header", children: [
+        /* @__PURE__ */ u2("span", { className: "tasks-panel__card-id", children: "Session plan" }),
+        /* @__PURE__ */ u2("span", { id: "plan-revision", className: "tasks-panel__badge tasks-panel__badge--kind", children: [
           "Revision ",
           view.revision
         ] })
       ] }),
-      /* @__PURE__ */ u3("label", { className: "tasks-panel__card-label", htmlFor: "plan-editor", children: "Shared checklist" }),
-      /* @__PURE__ */ u3("textarea", { id: "plan-editor", className: "plan-editor tasks-panel__card-mono", spellcheck: true, placeholder: "- [ ] Add a concrete next step", "aria-describedby": "plan-status", value: view.draft, disabled: view.disabled }),
-      /* @__PURE__ */ u3("p", { id: "plan-status", className: "tasks-panel__card-muted", "aria-live": "polite", children: view.status }),
-      /* @__PURE__ */ u3("div", { id: "plan-conflict", className: "tasks-panel__sessions-error tasks-panel__sessions-error--inline", role: "alert", hidden: !view.conflict, children: "The plan changed elsewhere. Reload the server version or save again after reviewing it." }),
-      /* @__PURE__ */ u3("div", { className: "tasks-panel__card-actions", children: [
-        /* @__PURE__ */ u3("button", { id: "plan-save-button", type: "submit", disabled: view.disabled || !view.dirty, children: "Save plan" }),
-        /* @__PURE__ */ u3("button", { id: "plan-reload-button", type: "button", disabled: view.reloadDisabled, children: "Reload" })
+      /* @__PURE__ */ u2("label", { className: "tasks-panel__card-label", htmlFor: "plan-editor", children: "Shared checklist" }),
+      /* @__PURE__ */ u2("textarea", { id: "plan-editor", className: "plan-editor tasks-panel__card-mono", spellcheck: true, placeholder: "- [ ] Add a concrete next step", "aria-describedby": "plan-status", value: view.draft, disabled: view.disabled }),
+      /* @__PURE__ */ u2("p", { id: "plan-status", className: "tasks-panel__card-muted", "aria-live": "polite", children: view.status }),
+      /* @__PURE__ */ u2("div", { id: "plan-conflict", className: "tasks-panel__sessions-error tasks-panel__sessions-error--inline", role: "alert", hidden: !view.conflict, children: "The plan changed elsewhere. Reload the server version or save again after reviewing it." }),
+      /* @__PURE__ */ u2("div", { className: "tasks-panel__card-actions", children: [
+        /* @__PURE__ */ u2("button", { id: "plan-save-button", type: "submit", disabled: view.disabled || !view.dirty, children: "Save plan" }),
+        /* @__PURE__ */ u2("button", { id: "plan-reload-button", type: "button", disabled: view.reloadDisabled, children: "Reload" })
       ] })
     ] }) })
   ] });
@@ -1077,21 +1093,21 @@ function SessionList({ filter, onSelectFilter }) {
     return () => window.removeEventListener("tau:sessions-render", update);
   }, []);
   const select = (sessionId) => window.dispatchEvent(new CustomEvent("tau:session-select", { detail: { sessionId } }));
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("div", { className: "sessions-panel__filters", role: "group", "aria-label": "Session list filter", children: [
-      /* @__PURE__ */ u3("button", { id: "show-active-sessions", className: "settings-panel__provider-btn", type: "button", "aria-pressed": filter === "active", onClick: () => onSelectFilter("active"), children: "Active" }),
-      /* @__PURE__ */ u3("button", { id: "show-archived-sessions", className: "settings-panel__provider-btn", type: "button", "aria-pressed": filter === "archived", onClick: () => onSelectFilter("archived"), children: "Archived" }),
-      /* @__PURE__ */ u3("span", { id: "session-count", className: "sessions-panel__count", children: [
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "sessions-panel__filters", role: "group", "aria-label": "Session list filter", children: [
+      /* @__PURE__ */ u2("button", { id: "show-active-sessions", className: "settings-panel__provider-btn", type: "button", "aria-pressed": filter === "active", onClick: () => onSelectFilter("active"), children: "Active" }),
+      /* @__PURE__ */ u2("button", { id: "show-archived-sessions", className: "settings-panel__provider-btn", type: "button", "aria-pressed": filter === "archived", onClick: () => onSelectFilter("archived"), children: "Archived" }),
+      /* @__PURE__ */ u2("span", { id: "session-count", className: "sessions-panel__count", children: [
         items.length,
         " session",
         items.length === 1 ? "" : "s"
       ] })
     ] }),
-    /* @__PURE__ */ u3("ul", { id: "session-list", className: "sessions-panel__list", "aria-label": "Available sessions", children: [
-      !items.length && /* @__PURE__ */ u3("li", { className: "sessions-panel__item sessions-panel__placeholder", children: "No sessions available." }),
-      items.map((session) => /* @__PURE__ */ u3("li", { className: "sessions-panel__item", children: /* @__PURE__ */ u3("button", { type: "button", className: "sessions-panel__session settings-panel__provider-btn", "data-active": String(session.active), onClick: () => select(session.sessionId), children: /* @__PURE__ */ u3("div", { className: "sessions-panel__session-body", children: [
-        /* @__PURE__ */ u3("strong", { className: "sessions-panel__session-title", children: session.title }),
-        /* @__PURE__ */ u3("span", { className: "sessions-panel__session-meta", children: session.meta })
+    /* @__PURE__ */ u2("ul", { id: "session-list", className: "sessions-panel__list", "aria-label": "Available sessions", children: [
+      !items.length && /* @__PURE__ */ u2("li", { className: "sessions-panel__item sessions-panel__placeholder", children: "No sessions available." }),
+      items.map((session) => /* @__PURE__ */ u2("li", { className: "sessions-panel__item", children: /* @__PURE__ */ u2("button", { type: "button", className: "sessions-panel__session settings-panel__provider-btn", "data-active": String(session.active), onClick: () => select(session.sessionId), children: /* @__PURE__ */ u2("div", { className: "sessions-panel__session-body", children: [
+        /* @__PURE__ */ u2("strong", { className: "sessions-panel__session-title", children: session.title }),
+        /* @__PURE__ */ u2("span", { className: "sessions-panel__session-meta", children: session.meta })
       ] }) }) }, session.sessionId))
     ] })
   ] });
@@ -1105,19 +1121,19 @@ function SearchResults() {
     window.addEventListener("tau:search-render", update);
     return () => window.removeEventListener("tau:search-render", update);
   }, []);
-  return /* @__PURE__ */ u3("ol", { id: "search-results", className: "search-panel__results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite", children: [
-    !items.length && /* @__PURE__ */ u3("li", { children: "Search results will appear here." }),
-    items.map((result, index) => /* @__PURE__ */ u3("li", { className: "search-panel__item", children: /* @__PURE__ */ u3("article", { children: [
-      /* @__PURE__ */ u3("div", { className: "search-panel__item-header", children: [
-        /* @__PURE__ */ u3("strong", { className: "search-panel__item-type", children: [
+  return /* @__PURE__ */ u2("ol", { id: "search-results", className: "search-panel__results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite", children: [
+    !items.length && /* @__PURE__ */ u2("li", { children: "Search results will appear here." }),
+    items.map((result, index) => /* @__PURE__ */ u2("li", { className: "search-panel__item", children: /* @__PURE__ */ u2("article", { children: [
+      /* @__PURE__ */ u2("div", { className: "search-panel__item-header", children: [
+        /* @__PURE__ */ u2("strong", { className: "search-panel__item-type", children: [
           result.entityType,
           " \xB7 ",
           result.entityId
         ] }),
-        /* @__PURE__ */ u3("span", { className: "search-panel__item-time", children: result.meta })
+        /* @__PURE__ */ u2("span", { className: "search-panel__item-time", children: result.meta })
       ] }),
-      /* @__PURE__ */ u3("span", { className: "search-panel__item-text", children: result.text }),
-      result.sessionId && /* @__PURE__ */ u3("button", { className: "settings-panel__provider-btn", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
+      /* @__PURE__ */ u2("span", { className: "search-panel__item-text", children: result.text }),
+      result.sessionId && /* @__PURE__ */ u2("button", { className: "settings-panel__provider-btn", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
     ] }) }, `${result.entityType}-${result.entityId}-${index}`))
   ] });
 }
@@ -1132,37 +1148,37 @@ function WorkspacePanel({ hidden }) {
     return () => window.removeEventListener("tau:workspace-render", update);
   }, []);
   const describedBy = view.annotations.length ? "workspace-editor-note workspace-annotations" : "workspace-editor-note";
-  return /* @__PURE__ */ u3("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden, children: [
-    /* @__PURE__ */ u3("div", { className: "workspace__pane-top", children: [
-      /* @__PURE__ */ u3("div", { className: "workspace__section-header workspace__section-header--padded", children: [
-        /* @__PURE__ */ u3("span", { children: "Files" }),
-        /* @__PURE__ */ u3("div", { className: "workspace__files-toolbar", children: [
-          /* @__PURE__ */ u3("button", { id: "workspace-up-button", className: "workspace__files-toolbar-icon codicon codicon-arrow-up", type: "button", title: "Parent directory", "aria-label": "Parent directory" }),
-          /* @__PURE__ */ u3("button", { id: "workspace-reload-button", className: "workspace__files-toolbar-icon codicon codicon-refresh", type: "button", title: "Refresh", "aria-label": "Refresh workspace" })
+  return /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden, children: [
+    /* @__PURE__ */ u2("div", { className: "workspace__pane-top", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace__section-header workspace__section-header--padded", children: [
+        /* @__PURE__ */ u2("span", { children: "Files" }),
+        /* @__PURE__ */ u2("div", { className: "workspace__files-toolbar", children: [
+          /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "workspace__files-toolbar-icon codicon codicon-arrow-up", type: "button", title: "Parent directory", "aria-label": "Parent directory" }),
+          /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "workspace__files-toolbar-icon codicon codicon-refresh", type: "button", title: "Refresh", "aria-label": "Refresh workspace" })
         ] })
       ] }),
-      /* @__PURE__ */ u3("p", { id: "workspace-path", className: "workspace__current-path", children: view.path }),
-      /* @__PURE__ */ u3("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree", children: [
-        !view.entries.length && /* @__PURE__ */ u3("div", { children: "No workspace entries available." }),
-        view.entries.map((entry) => /* @__PURE__ */ u3("div", { children: /* @__PURE__ */ u3("button", { type: "button", className: "file-tree__item", role: "treeitem", disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
-          /* @__PURE__ */ u3("span", { className: `file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`, "aria-hidden": "true" }),
-          /* @__PURE__ */ u3("span", { className: "file-tree__name", children: entry.name }),
-          /* @__PURE__ */ u3("span", { className: "file-tree__meta", children: entry.kind })
+      /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: view.path }),
+      /* @__PURE__ */ u2("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree", children: [
+        !view.entries.length && /* @__PURE__ */ u2("div", { children: "No workspace entries available." }),
+        view.entries.map((entry) => /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", className: "file-tree__item", role: "treeitem", disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
+          /* @__PURE__ */ u2("span", { className: `file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`, "aria-hidden": "true" }),
+          /* @__PURE__ */ u2("span", { className: "file-tree__name", children: entry.name }),
+          /* @__PURE__ */ u2("span", { className: "file-tree__meta", children: entry.kind })
         ] }) }, `${entry.kind}:${entry.path ?? entry.name}`))
       ] })
     ] }),
-    /* @__PURE__ */ u3("div", { className: "workspace__drag-handle", role: "separator", "aria-orientation": "horizontal" }),
-    /* @__PURE__ */ u3("div", { className: "workspace__pane-bottom", children: [
-      /* @__PURE__ */ u3("div", { className: "workspace__preview-header", children: "Preview" }),
-      /* @__PURE__ */ u3("section", { className: "workspace__preview-info", "aria-labelledby": "workspace-editor-title", children: [
-        /* @__PURE__ */ u3("div", { id: "workspace-editor-title", className: "workspace__preview-name", children: "Selected file" }),
-        /* @__PURE__ */ u3("div", { id: "workspace-editor-path", className: "workspace__preview-path", children: view.filePath ?? "No file selected" }),
-        /* @__PURE__ */ u3("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
-        /* @__PURE__ */ u3("textarea", { id: "workspace-editor", className: "workspace__preview-content", spellcheck: false, "aria-describedby": describedBy, value: view.content, readOnly: true }),
-        /* @__PURE__ */ u3("p", { id: "workspace-editor-note", className: "workspace__preview-meta", children: "Local edits are not yet persisted through the web shell." }),
-        /* @__PURE__ */ u3("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: !view.annotations.length, children: [
-          /* @__PURE__ */ u3("h4", { children: "Annotations" }),
-          /* @__PURE__ */ u3("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list", children: view.annotations.map((annotation, index) => /* @__PURE__ */ u3("li", { className: "workspace-annotation", "data-severity": annotation.severity, children: [
+    /* @__PURE__ */ u2("div", { className: "workspace__drag-handle", role: "separator", "aria-orientation": "horizontal" }),
+    /* @__PURE__ */ u2("div", { className: "workspace__pane-bottom", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace__preview-header", children: "Preview" }),
+      /* @__PURE__ */ u2("section", { className: "workspace__preview-info", "aria-labelledby": "workspace-editor-title", children: [
+        /* @__PURE__ */ u2("div", { id: "workspace-editor-title", className: "workspace__preview-name", children: "Selected file" }),
+        /* @__PURE__ */ u2("div", { id: "workspace-editor-path", className: "workspace__preview-path", children: view.filePath ?? "No file selected" }),
+        /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
+        /* @__PURE__ */ u2("textarea", { id: "workspace-editor", className: "workspace__preview-content", spellcheck: false, "aria-describedby": describedBy, value: view.content, readOnly: true }),
+        /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "workspace__preview-meta", children: "Local edits are not yet persisted through the web shell." }),
+        /* @__PURE__ */ u2("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: !view.annotations.length, children: [
+          /* @__PURE__ */ u2("h4", { children: "Annotations" }),
+          /* @__PURE__ */ u2("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list", children: view.annotations.map((annotation, index) => /* @__PURE__ */ u2("li", { className: "workspace-annotation", "data-severity": annotation.severity, children: [
             "Line ",
             annotation.line,
             annotation.endLine ? `\u2013${annotation.endLine}` : "",
@@ -1171,7 +1187,7 @@ function WorkspacePanel({ hidden }) {
             annotation.message
           ] }, `${annotation.line}:${index}`)) })
         ] }),
-        /* @__PURE__ */ u3("section", { id: "workspace-renderer", className: "workspace-renderer", "aria-label": "Extension file preview", hidden: true })
+        /* @__PURE__ */ u2("section", { id: "workspace-renderer", className: "workspace-renderer", "aria-label": "Extension file preview", hidden: true })
       ] })
     ] })
   ] });
@@ -1179,19 +1195,19 @@ function WorkspacePanel({ hidden }) {
 
 // src/components/Sidebar.tsx
 function Sidebar({ title, children, id: id2, label, actions, classic = false }) {
-  if (classic) return /* @__PURE__ */ u3("section", { id: id2, className: "tau-classic-panel", "aria-label": label, children: [
-    /* @__PURE__ */ u3("header", { className: "workspace-header", children: [
-      /* @__PURE__ */ u3("div", { className: "workspace-header-left", children: title }),
-      /* @__PURE__ */ u3("div", { className: "workspace-header-actions", children: actions })
+  if (classic) return /* @__PURE__ */ u2("section", { id: id2, className: "tau-classic-panel", "aria-label": label, children: [
+    /* @__PURE__ */ u2("header", { className: "workspace-header", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace-header-left", children: title }),
+      /* @__PURE__ */ u2("div", { className: "workspace-header-actions", children: actions })
     ] }),
-    /* @__PURE__ */ u3("div", { className: "tau-classic-panel-content", children })
+    /* @__PURE__ */ u2("div", { className: "tau-classic-panel-content", children })
   ] });
-  return /* @__PURE__ */ u3("aside", { id: id2, className: "sidebar", "aria-label": label, children: [
-    /* @__PURE__ */ u3("header", { className: "sidebar__header", children: [
-      /* @__PURE__ */ u3("span", { className: "sidebar__title", children: title.toUpperCase() }),
+  return /* @__PURE__ */ u2("aside", { id: id2, className: "sidebar", "aria-label": label, children: [
+    /* @__PURE__ */ u2("header", { className: "sidebar__header", children: [
+      /* @__PURE__ */ u2("span", { className: "sidebar__title", children: title.toUpperCase() }),
       actions
     ] }),
-    /* @__PURE__ */ u3("div", { className: "sidebar__content", children })
+    /* @__PURE__ */ u2("div", { className: "sidebar__content", children })
   ] });
 }
 
@@ -1203,43 +1219,43 @@ var TITLES = {
   plan: "Plan",
   settings: "Settings"
 };
-var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u3("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-selected": selected, onClick: () => onSelect(name), children: TITLES[name] });
+var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-selected": selected, onClick: () => onSelect(name), children: TITLES[name] });
 function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }) {
-  return /* @__PURE__ */ u3(Sidebar, { classic, id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("button", { id: "close-nav-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
-    /* @__PURE__ */ u3("button", { id: "close-panel-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
+  return /* @__PURE__ */ u2(Sidebar, { classic, id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("button", { id: "close-nav-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
+    /* @__PURE__ */ u2("button", { id: "close-panel-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
   ] }), children: [
-    /* @__PURE__ */ u3("div", { hidden: !classic, role: classic ? "group" : void 0, "aria-label": classic ? "Navigation" : void 0, children: [
-      classic && /* @__PURE__ */ u3("button", { type: "button", "aria-pressed": activeTab === "sessions", onClick: () => onSelectTab("sessions"), children: "Sessions" }),
-      /* @__PURE__ */ u3(LegacyTabAnchor, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab }),
-      /* @__PURE__ */ u3(LegacyTabAnchor, { name: "search", selected: activeTab === "search", onSelect: onSelectTab }),
-      /* @__PURE__ */ u3(LegacyTabAnchor, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab }),
-      /* @__PURE__ */ u3(LegacyTabAnchor, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab })
+    /* @__PURE__ */ u2("div", { hidden: !classic, role: classic ? "group" : void 0, "aria-label": classic ? "Navigation" : void 0, children: [
+      classic && /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": activeTab === "sessions", onClick: () => onSelectTab("sessions"), children: "Sessions" }),
+      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab }),
+      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "search", selected: activeTab === "search", onSelect: onSelectTab }),
+      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab }),
+      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab })
     ] }),
-    /* @__PURE__ */ u3("section", { id: "panel-sessions", className: "sessions-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
-      /* @__PURE__ */ u3("div", { className: "sessions-panel__toolbar", role: "group", "aria-label": "Session actions", children: [
-        /* @__PURE__ */ u3("button", { id: "new-session-button", className: "sessions-panel__new settings-panel__provider-btn", type: "button", children: [
-          /* @__PURE__ */ u3("i", { className: "codicon codicon-add", "aria-hidden": "true" }),
+    /* @__PURE__ */ u2("section", { id: "panel-sessions", className: "sessions-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
+      /* @__PURE__ */ u2("div", { className: "sessions-panel__toolbar", role: "group", "aria-label": "Session actions", children: [
+        /* @__PURE__ */ u2("button", { id: "new-session-button", className: "sessions-panel__new settings-panel__provider-btn", type: "button", children: [
+          /* @__PURE__ */ u2("i", { className: "codicon codicon-add", "aria-hidden": "true" }),
           " New"
         ] }),
-        /* @__PURE__ */ u3("button", { id: "archive-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Archive" }),
-        /* @__PURE__ */ u3("button", { id: "restore-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Restore" })
+        /* @__PURE__ */ u2("button", { id: "archive-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Archive" }),
+        /* @__PURE__ */ u2("button", { id: "restore-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Restore" })
       ] }),
-      /* @__PURE__ */ u3(SessionList, { filter: sessionFilter, onSelectFilter: onSelectSessionFilter })
+      /* @__PURE__ */ u2(SessionList, { filter: sessionFilter, onSelectFilter: onSelectSessionFilter })
     ] }),
-    /* @__PURE__ */ u3(WorkspacePanel, { hidden: activeTab !== "workspace" }),
-    /* @__PURE__ */ u3("section", { id: "panel-search", className: "search-panel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
-      /* @__PURE__ */ u3("form", { id: "search-form", children: [
-        /* @__PURE__ */ u3("label", { className: "sr-only", htmlFor: "search-input", children: "Search persisted content" }),
-        /* @__PURE__ */ u3("div", { className: "search-panel__input-wrapper", children: [
-          /* @__PURE__ */ u3("span", { className: "search-panel__icon", "aria-hidden": "true", children: "\u2315" }),
-          /* @__PURE__ */ u3("input", { id: "search-input", className: "search-panel__input", name: "query", type: "search", autoComplete: "off", spellcheck: false, placeholder: "Search messages\u2026" }),
-          /* @__PURE__ */ u3("button", { id: "search-submit-button", className: "search-panel__submit settings-panel__provider-btn", type: "submit", children: "Search" })
+    /* @__PURE__ */ u2(WorkspacePanel, { hidden: activeTab !== "workspace" }),
+    /* @__PURE__ */ u2("section", { id: "panel-search", className: "search-panel", "aria-labelledby": "tab-search", hidden: activeTab !== "search", children: [
+      /* @__PURE__ */ u2("form", { id: "search-form", children: [
+        /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "search-input", children: "Search persisted content" }),
+        /* @__PURE__ */ u2("div", { className: "search-panel__input-wrapper", children: [
+          /* @__PURE__ */ u2("span", { className: "search-panel__icon", "aria-hidden": "true", children: "\u2315" }),
+          /* @__PURE__ */ u2("input", { id: "search-input", className: "search-panel__input", name: "query", type: "search", autoComplete: "off", spellcheck: false, placeholder: "Search messages\u2026" }),
+          /* @__PURE__ */ u2("button", { id: "search-submit-button", className: "search-panel__submit settings-panel__provider-btn", type: "submit", children: "Search" })
         ] })
       ] }),
-      /* @__PURE__ */ u3(SearchResults, {})
+      /* @__PURE__ */ u2(SearchResults, {})
     ] }),
-    /* @__PURE__ */ u3(PlanPanel, { hidden: activeTab !== "plan" })
+    /* @__PURE__ */ u2(PlanPanel, { hidden: activeTab !== "plan" })
   ] });
 }
 
@@ -1260,31 +1276,31 @@ function ModelControls() {
     window.addEventListener("tau:model-options-render", update);
     return () => window.removeEventListener("tau:model-options-render", update);
   }, []);
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("form", { id: "model-form", children: [
-      /* @__PURE__ */ u3("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u3("label", { className: "settings-panel__label", htmlFor: "provider-input", children: "Provider" }),
-        /* @__PURE__ */ u3("input", { id: "provider-input", className: "settings-panel__input", list: "provider-options", autoComplete: "off" }),
-        /* @__PURE__ */ u3("datalist", { id: "provider-options", children: options.providers.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) })
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("form", { id: "model-form", children: [
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "provider-input", children: "Provider" }),
+        /* @__PURE__ */ u2("input", { id: "provider-input", className: "settings-panel__input", list: "provider-options", autoComplete: "off" }),
+        /* @__PURE__ */ u2("datalist", { id: "provider-options", children: options.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
       ] }),
-      /* @__PURE__ */ u3("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u3("label", { className: "settings-panel__label", htmlFor: "model-input", children: "Model" }),
-        /* @__PURE__ */ u3("input", { id: "model-input", className: "settings-panel__input", list: "model-options", autoComplete: "off" }),
-        /* @__PURE__ */ u3("datalist", { id: "model-options", children: options.models.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) })
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "model-input", children: "Model" }),
+        /* @__PURE__ */ u2("input", { id: "model-input", className: "settings-panel__input", list: "model-options", autoComplete: "off" }),
+        /* @__PURE__ */ u2("datalist", { id: "model-options", children: options.models.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
       ] }),
-      /* @__PURE__ */ u3("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u3("span", { className: "settings-panel__label" }),
-        /* @__PURE__ */ u3("button", { id: "apply-model-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply to session" }),
-        /* @__PURE__ */ u3("button", { id: "refresh-button", className: "settings-panel__provider-btn", type: "button", children: "Refresh" })
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("span", { className: "settings-panel__label" }),
+        /* @__PURE__ */ u2("button", { id: "apply-model-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply to session" }),
+        /* @__PURE__ */ u2("button", { id: "refresh-button", className: "settings-panel__provider-btn", type: "button", children: "Refresh" })
       ] })
     ] }),
-    /* @__PURE__ */ u3("form", { id: "thinking-form", children: [
-      /* @__PURE__ */ u3("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u3("label", { className: "settings-panel__label", htmlFor: "thinking-level-select", children: "Thinking level" }),
-        /* @__PURE__ */ u3("select", { id: "thinking-level-select", className: "settings-panel__select", name: "thinking_level", children: thinking.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) }),
-        /* @__PURE__ */ u3("button", { id: "apply-thinking-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply" })
+    /* @__PURE__ */ u2("form", { id: "thinking-form", children: [
+      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "thinking-level-select", children: "Thinking level" }),
+        /* @__PURE__ */ u2("select", { id: "thinking-level-select", className: "settings-panel__select", name: "thinking_level", children: thinking.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+        /* @__PURE__ */ u2("button", { id: "apply-thinking-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply" })
       ] }),
-      /* @__PURE__ */ u3("p", { id: "thinking-help", className: "settings-panel__description", children: "Updates session thinking with optimistic concurrency checks." })
+      /* @__PURE__ */ u2("p", { id: "thinking-help", className: "settings-panel__description", children: "Updates session thinking with optimistic concurrency checks." })
     ] })
   ] });
 }
@@ -1297,9 +1313,9 @@ function SettingsSummary() {
     window.addEventListener("tau:settings-render", update);
     return () => window.removeEventListener("tau:settings-render", update);
   }, []);
-  return /* @__PURE__ */ u3("dl", { id: "settings-summary", className: "settings-summary", children: items === null ? /* @__PURE__ */ u3("div", { children: /* @__PURE__ */ u3("dd", { className: "muted-text", children: "Runtime settings unavailable." }) }) : items.map((item) => /* @__PURE__ */ u3("div", { children: [
-    /* @__PURE__ */ u3("dt", { children: item.label }),
-    /* @__PURE__ */ u3("dd", { children: item.value })
+  return /* @__PURE__ */ u2("dl", { id: "settings-summary", className: "settings-summary", children: items === null ? /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("dd", { className: "muted-text", children: "Runtime settings unavailable." }) }) : items.map((item) => /* @__PURE__ */ u2("div", { children: [
+    /* @__PURE__ */ u2("dt", { children: item.label }),
+    /* @__PURE__ */ u2("dd", { children: item.value })
   ] }, item.label)) });
 }
 
@@ -1311,8 +1327,8 @@ function SettingsPanel({ hidden }) {
     { id: "model", label: "Model", icon: "symbol-parameter" },
     { id: "runtime", label: "Runtime", icon: "server" }
   ];
-  return /* @__PURE__ */ u3("section", { id: "panel-settings", className: "settings-panel", "aria-labelledby": "tab-settings", hidden, children: [
-    /* @__PURE__ */ u3("nav", { className: "settings-panel__nav", "aria-label": "Settings categories", children: categories.map((item) => /* @__PURE__ */ u3(
+  return /* @__PURE__ */ u2("section", { id: "panel-settings", className: "settings-panel", "aria-labelledby": "tab-settings", hidden, children: [
+    /* @__PURE__ */ u2("nav", { className: "settings-panel__nav", "aria-label": "Settings categories", children: categories.map((item) => /* @__PURE__ */ u2(
       "a",
       {
         className: `settings-panel__nav-item${category === item.id ? " settings-panel__nav-item--active" : ""}`,
@@ -1323,40 +1339,40 @@ function SettingsPanel({ hidden }) {
           setCategory(item.id);
         },
         children: [
-          /* @__PURE__ */ u3("i", { className: `codicon codicon-${item.icon}`, "aria-hidden": "true" }),
+          /* @__PURE__ */ u2("i", { className: `codicon codicon-${item.icon}`, "aria-hidden": "true" }),
           item.label
         ]
       },
       item.id
     )) }),
-    /* @__PURE__ */ u3("div", { className: "settings-panel__content", children: [
-      /* @__PURE__ */ u3("section", { id: "tau-settings-auth", className: "settings-panel__section", children: [
-        /* @__PURE__ */ u3("h2", { className: "settings-panel__section-title", children: "Authentication" }),
-        /* @__PURE__ */ u3("button", { className: "settings-panel__provider-btn settings-provider-setup", type: "button", onClick: () => {
+    /* @__PURE__ */ u2("div", { className: "settings-panel__content", children: [
+      /* @__PURE__ */ u2("section", { id: "tau-settings-auth", className: "settings-panel__section", children: [
+        /* @__PURE__ */ u2("h2", { className: "settings-panel__section-title", children: "Authentication" }),
+        /* @__PURE__ */ u2("button", { className: "settings-panel__provider-btn settings-provider-setup", type: "button", onClick: () => {
           window.dispatchEvent(new CustomEvent("tau:switch-tab", { detail: { tab: "workspace" } }));
           document.querySelector(".provider-setup-trigger")?.click();
         }, children: "Provider setup" }),
-        /* @__PURE__ */ u3("form", { id: "auth-form", children: [
-          /* @__PURE__ */ u3("div", { className: "settings-panel__field", children: [
-            /* @__PURE__ */ u3("label", { className: "settings-panel__label", htmlFor: "auth-token", children: "Bearer token" }),
-            /* @__PURE__ */ u3("input", { id: "auth-token", className: "settings-panel__input", type: "password", autoComplete: "off" })
+        /* @__PURE__ */ u2("form", { id: "auth-form", children: [
+          /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+            /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "auth-token", children: "Bearer token" }),
+            /* @__PURE__ */ u2("input", { id: "auth-token", className: "settings-panel__input", type: "password", autoComplete: "off" })
           ] }),
-          /* @__PURE__ */ u3("div", { className: "settings-panel__field", children: [
-            /* @__PURE__ */ u3("span", { className: "settings-panel__label" }),
-            /* @__PURE__ */ u3("button", { id: "save-auth-button", className: "settings-panel__provider-btn", type: "submit", children: "Save token" }),
-            /* @__PURE__ */ u3("button", { id: "clear-auth-button", className: "settings-panel__provider-btn settings-panel__provider-btn--logout", type: "button", children: "Clear token" })
+          /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
+            /* @__PURE__ */ u2("span", { className: "settings-panel__label" }),
+            /* @__PURE__ */ u2("button", { id: "save-auth-button", className: "settings-panel__provider-btn", type: "submit", children: "Save token" }),
+            /* @__PURE__ */ u2("button", { id: "clear-auth-button", className: "settings-panel__provider-btn settings-panel__provider-btn--logout", type: "button", children: "Clear token" })
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ u3("section", { id: "tau-settings-model", className: "settings-panel__section", children: [
-        /* @__PURE__ */ u3("h2", { className: "settings-panel__section-title", children: "Model" }),
-        /* @__PURE__ */ u3(ModelControls, {})
+      /* @__PURE__ */ u2("section", { id: "tau-settings-model", className: "settings-panel__section", children: [
+        /* @__PURE__ */ u2("h2", { className: "settings-panel__section-title", children: "Model" }),
+        /* @__PURE__ */ u2(ModelControls, {})
       ] }),
-      /* @__PURE__ */ u3("section", { id: "tau-settings-runtime", className: "settings-panel__section", "aria-labelledby": "settings-summary-title", children: [
-        /* @__PURE__ */ u3("h2", { id: "settings-summary-title", className: "settings-panel__section-title", children: "Runtime" }),
-        /* @__PURE__ */ u3(SettingsSummary, {}),
-        /* @__PURE__ */ u3("p", { id: "streaming-note", className: "settings-panel__description", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
-        /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "sidebar" })
+      /* @__PURE__ */ u2("section", { id: "tau-settings-runtime", className: "settings-panel__section", "aria-labelledby": "settings-summary-title", children: [
+        /* @__PURE__ */ u2("h2", { id: "settings-summary-title", className: "settings-panel__section-title", children: "Runtime" }),
+        /* @__PURE__ */ u2(SettingsSummary, {}),
+        /* @__PURE__ */ u2("p", { id: "streaming-note", className: "settings-panel__description", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
+        /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "sidebar" })
       ] })
     ] })
   ] });
@@ -1364,15 +1380,15 @@ function SettingsPanel({ hidden }) {
 
 // src/components/ClassicPost.tsx
 function ClassicPost({ id: id2, agent, author, time, avatar, actions, children }) {
-  return /* @__PURE__ */ u3("article", { id: id2, className: `post${agent ? " agent-post" : ""}`, children: [
-    /* @__PURE__ */ u3("div", { className: `post-avatar${agent ? " agent-avatar" : ""}`, "aria-hidden": "true", children: avatar }),
-    /* @__PURE__ */ u3("div", { className: "post-body", children: [
-      actions && /* @__PURE__ */ u3("div", { className: "post-actions", children: actions }),
-      /* @__PURE__ */ u3("div", { className: "post-meta", children: [
-        /* @__PURE__ */ u3("span", { className: "post-author", children: author }),
-        /* @__PURE__ */ u3("span", { className: "post-time", children: time })
+  return /* @__PURE__ */ u2("article", { id: id2, className: `post${agent ? " agent-post" : ""}`, children: [
+    /* @__PURE__ */ u2("div", { className: `post-avatar${agent ? " agent-avatar" : ""}`, "aria-hidden": "true", children: avatar }),
+    /* @__PURE__ */ u2("div", { className: "post-body", children: [
+      actions && /* @__PURE__ */ u2("div", { className: "post-actions", children: actions }),
+      /* @__PURE__ */ u2("div", { className: "post-meta", children: [
+        /* @__PURE__ */ u2("span", { className: "post-author", children: author }),
+        /* @__PURE__ */ u2("span", { className: "post-time", children: time })
       ] }),
-      /* @__PURE__ */ u3("div", { className: "post-content", children })
+      /* @__PURE__ */ u2("div", { className: "post-content", children })
     ] })
   ] });
 }
@@ -1383,7 +1399,7 @@ function CopyButton({ text: text2, classic = false }) {
   const [failed, setFailed] = h2(false);
   const timer = A2();
   y2(() => () => clearTimeout(timer.current), []);
-  return /* @__PURE__ */ u3(
+  return /* @__PURE__ */ u2(
     "button",
     {
       type: "button",
@@ -1404,7 +1420,7 @@ function CopyButton({ text: text2, classic = false }) {
           setFailed(true);
         }
       },
-      children: copied ? "\u2713" : classic ? /* @__PURE__ */ u3(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" })
+      children: copied ? "\u2713" : classic ? /* @__PURE__ */ u2(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u2("i", { className: "codicon codicon-copy", "aria-hidden": "true" })
     }
   );
 }
@@ -4251,8 +4267,8 @@ function MarkdownContent({ content }) {
     }
     return template.innerHTML;
   }, [content]);
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("div", { className: "message-list__content", onClick: async (event) => {
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "message-list__content", onClick: async (event) => {
       const button = event.target.closest("button.code-block__copy");
       if (!button || !event.currentTarget.contains(button)) return;
       try {
@@ -4263,24 +4279,24 @@ function MarkdownContent({ content }) {
         setCopyStatus("Unable to copy code; try again");
       }
     }, dangerouslySetInnerHTML: { __html: html2 } }),
-    /* @__PURE__ */ u3("span", { className: "sr-only", role: "status", "aria-label": "Code clipboard status", children: copyStatus })
+    /* @__PURE__ */ u2("span", { className: "sr-only", role: "status", "aria-label": "Code clipboard status", children: copyStatus })
   ] });
 }
 
 // src/components/MessageActionBar.tsx
 function MessageActionBar({ content, collapsed, onToggle, toggleRef, classic = false }) {
   const [feedback, setFeedback] = h2("");
-  return /* @__PURE__ */ u3("div", { className: classic ? "post-action-controls" : "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
-    content && /* @__PURE__ */ u3("button", { type: "button", className: classic ? "post-action-btn post-copy-btn" : "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
+  return /* @__PURE__ */ u2("div", { className: classic ? "post-action-controls" : "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
+    content && /* @__PURE__ */ u2("button", { type: "button", className: classic ? "post-action-btn post-copy-btn" : "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
       try {
         await navigator.clipboard.writeText(content);
         setFeedback("Message copied");
       } catch {
         setFeedback("Unable to copy message");
       }
-    }, children: classic ? /* @__PURE__ */ u3(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u3("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u3("button", { ref: toggleRef, type: "button", className: classic ? "post-action-btn" : "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: classic ? /* @__PURE__ */ u3(ClassicIcon, { name: collapsed ? "down" : "up" }) : /* @__PURE__ */ u3("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
-    /* @__PURE__ */ u3("span", { className: "sr-only", role: "status", children: feedback })
+    }, children: classic ? /* @__PURE__ */ u2(ClassicIcon, { name: "copy" }) : /* @__PURE__ */ u2("i", { className: "codicon codicon-copy", "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u2("button", { ref: toggleRef, type: "button", className: classic ? "post-action-btn" : "message-action-bar__btn", title: collapsed ? "Expand message" : "Collapse message", "aria-label": collapsed ? "Expand message" : "Collapse message", "aria-expanded": !collapsed, onClick: onToggle, children: classic ? /* @__PURE__ */ u2(ClassicIcon, { name: collapsed ? "down" : "up" }) : /* @__PURE__ */ u2("i", { className: `codicon codicon-${collapsed ? "chevron-down" : "chevron-up"}`, "aria-hidden": "true" }) }),
+    /* @__PURE__ */ u2("span", { className: "sr-only", role: "status", children: feedback })
   ] });
 }
 
@@ -4303,47 +4319,47 @@ function ToolCallBlock({ call, result, classic = false }) {
   const lines = output.split("\n");
   const hiddenLines = !expanded && lines.length > 20 ? lines.length - 20 : 0;
   const displayedOutput = hiddenLines ? lines.slice(-20).join("\n") : output;
-  if (classic) return /* @__PURE__ */ u3("section", { className: "agent-thinking", "data-expanded": open, children: [
-    /* @__PURE__ */ u3("div", { className: "agent-thinking-title tool-output", children: /* @__PURE__ */ u3("button", { type: "button", className: "thinking-toggle", "aria-expanded": open, onClick: () => setOpen((value) => !value), children: [
+  if (classic) return /* @__PURE__ */ u2("section", { className: "agent-thinking", "data-expanded": open, children: [
+    /* @__PURE__ */ u2("div", { className: "agent-thinking-title tool-output", children: /* @__PURE__ */ u2("button", { type: "button", className: "thinking-toggle", "aria-expanded": open, onClick: () => setOpen((value) => !value), children: [
       name,
       " ",
       result ? result.toolOk === false ? "\xB7 failed" : "\xB7 done" : "",
       " ",
       open ? "\u25B4" : "\u25BE"
     ] }) }),
-    open && /* @__PURE__ */ u3("div", { className: "agent-thinking-body", children: [
-      input && /* @__PURE__ */ u3("div", { children: [
-        /* @__PURE__ */ u3(CopyButton, { classic: true, text: input }),
-        /* @__PURE__ */ u3("pre", { children: input })
+    open && /* @__PURE__ */ u2("div", { className: "agent-thinking-body", children: [
+      input && /* @__PURE__ */ u2("div", { children: [
+        /* @__PURE__ */ u2(CopyButton, { classic: true, text: input }),
+        /* @__PURE__ */ u2("pre", { children: input })
       ] }),
-      result && /* @__PURE__ */ u3("div", { children: [
-        /* @__PURE__ */ u3(CopyButton, { classic: true, text: output }),
-        /* @__PURE__ */ u3("pre", { children: displayedOutput }),
-        lines.length > 20 && /* @__PURE__ */ u3("button", { type: "button", className: "thinking-toggle", onClick: () => setExpanded((value) => !value), children: expanded ? "Collapse output" : `Show ${lines.length - 20} hidden lines` })
+      result && /* @__PURE__ */ u2("div", { children: [
+        /* @__PURE__ */ u2(CopyButton, { classic: true, text: output }),
+        /* @__PURE__ */ u2("pre", { children: displayedOutput }),
+        lines.length > 20 && /* @__PURE__ */ u2("button", { type: "button", className: "thinking-toggle", onClick: () => setExpanded((value) => !value), children: expanded ? "Collapse output" : `Show ${lines.length - 20} hidden lines` })
       ] })
     ] })
   ] });
-  return /* @__PURE__ */ u3("div", { className: "message-list__tool-call", children: [
-    /* @__PURE__ */ u3("button", { className: "message-list__tool-call-header", type: "button", onClick: () => setOpen((value) => !value), "aria-expanded": open, children: [
-      /* @__PURE__ */ u3("span", { className: "message-list__tool-call-icon", children: open ? "\u25BE" : "\u25B8" }),
-      /* @__PURE__ */ u3("span", { className: "message-list__tool-call-name", children: name }),
-      result && /* @__PURE__ */ u3("span", { className: "message-list__tool-call-badge", children: result.toolOk === false ? "failed" : "done" })
+  return /* @__PURE__ */ u2("div", { className: "message-list__tool-call", children: [
+    /* @__PURE__ */ u2("button", { className: "message-list__tool-call-header", type: "button", onClick: () => setOpen((value) => !value), "aria-expanded": open, children: [
+      /* @__PURE__ */ u2("span", { className: "message-list__tool-call-icon", children: open ? "\u25BE" : "\u25B8" }),
+      /* @__PURE__ */ u2("span", { className: "message-list__tool-call-name", children: name }),
+      result && /* @__PURE__ */ u2("span", { className: "message-list__tool-call-badge", children: result.toolOk === false ? "failed" : "done" })
     ] }),
-    open && /* @__PURE__ */ u3("div", { className: "message-list__tool-call-body", children: [
-      input && /* @__PURE__ */ u3("div", { className: "tool-call__pre-wrapper", children: [
-        /* @__PURE__ */ u3(CopyButton, { text: input }),
-        /* @__PURE__ */ u3("pre", { className: "message-list__tool-call-code", children: input })
+    open && /* @__PURE__ */ u2("div", { className: "message-list__tool-call-body", children: [
+      input && /* @__PURE__ */ u2("div", { className: "tool-call__pre-wrapper", children: [
+        /* @__PURE__ */ u2(CopyButton, { text: input }),
+        /* @__PURE__ */ u2("pre", { className: "message-list__tool-call-code", children: input })
       ] }),
-      output && /* @__PURE__ */ u3(b, { children: [
-        /* @__PURE__ */ u3("div", { className: "message-list__tool-call-result-label", children: "Result" }),
-        /* @__PURE__ */ u3("div", { className: "tool-call__pre-wrapper", children: [
-          hiddenLines > 0 && /* @__PURE__ */ u3("button", { type: "button", className: "tool-call__hidden-lines", title: "Show full output", onClick: () => setExpanded(true), children: [
+      output && /* @__PURE__ */ u2(b, { children: [
+        /* @__PURE__ */ u2("div", { className: "message-list__tool-call-result-label", children: "Result" }),
+        /* @__PURE__ */ u2("div", { className: "tool-call__pre-wrapper", children: [
+          hiddenLines > 0 && /* @__PURE__ */ u2("button", { type: "button", className: "tool-call__hidden-lines", title: "Show full output", onClick: () => setExpanded(true), children: [
             hiddenLines,
             " lines hidden \u2014 click to expand"
           ] }),
-          expanded && /* @__PURE__ */ u3("button", { type: "button", className: "tool-call__hidden-lines tool-call__hidden-lines--collapse", onClick: () => setExpanded(false), children: "collapse" }),
-          /* @__PURE__ */ u3(CopyButton, { text: output }),
-          /* @__PURE__ */ u3("pre", { className: "message-list__tool-call-code", children: displayedOutput })
+          expanded && /* @__PURE__ */ u2("button", { type: "button", className: "tool-call__hidden-lines tool-call__hidden-lines--collapse", onClick: () => setExpanded(false), children: "collapse" }),
+          /* @__PURE__ */ u2(CopyButton, { text: output }),
+          /* @__PURE__ */ u2("pre", { className: "message-list__tool-call-code", children: displayedOutput })
         ] })
       ] })
     ] })
@@ -4379,18 +4395,18 @@ function AttachmentChip({ attachment, classic = false }) {
     link.click();
     URL.revokeObjectURL(objectUrl);
   };
-  if (classic && attachment.mediaType.startsWith("image/")) return /* @__PURE__ */ u3("div", { className: "media-preview", children: /* @__PURE__ */ u3("a", { href: contentUrl, target: "_blank", rel: "noopener", title: `Open ${attachment.filename}`, onClick: (event) => void download(event), children: /* @__PURE__ */ u3("img", { src: previewUrl ?? thumbnailUrl, alt: attachment.filename, loading: "lazy", decoding: "async" }) }) });
-  if (classic) return /* @__PURE__ */ u3("a", { className: "post-file-pill", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
-    /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: [
-      /* @__PURE__ */ u3("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
-      /* @__PURE__ */ u3("polyline", { points: "14 2 14 8 20 8" })
+  if (classic && attachment.mediaType.startsWith("image/")) return /* @__PURE__ */ u2("div", { className: "media-preview", children: /* @__PURE__ */ u2("a", { href: contentUrl, target: "_blank", rel: "noopener", title: `Open ${attachment.filename}`, onClick: (event) => void download(event), children: /* @__PURE__ */ u2("img", { src: previewUrl ?? thumbnailUrl, alt: attachment.filename, loading: "lazy", decoding: "async" }) }) });
+  if (classic) return /* @__PURE__ */ u2("a", { className: "post-file-pill", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
+    /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u2("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+      /* @__PURE__ */ u2("polyline", { points: "14 2 14 8 20 8" })
     ] }),
-    /* @__PURE__ */ u3("span", { className: "post-file-name", children: attachment.filename })
+    /* @__PURE__ */ u2("span", { className: "post-file-name", children: attachment.filename })
   ] });
-  return /* @__PURE__ */ u3("a", { className: "attachment-chip", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
-    attachment.mediaType.startsWith("image/") ? /* @__PURE__ */ u3("img", { className: "attachment-chip__preview", src: previewUrl ?? thumbnailUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ u3("span", { className: "attachment-chip__icon", "aria-hidden": "true", children: "\u{1F4C4}" }),
-    /* @__PURE__ */ u3("span", { className: "attachment-chip__name", children: attachment.filename }),
-    /* @__PURE__ */ u3("i", { className: "codicon codicon-desktop-download attachment-chip__action", "aria-hidden": "true" })
+  return /* @__PURE__ */ u2("a", { className: "attachment-chip", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
+    attachment.mediaType.startsWith("image/") ? /* @__PURE__ */ u2("img", { className: "attachment-chip__preview", src: previewUrl ?? thumbnailUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ u2("span", { className: "attachment-chip__icon", "aria-hidden": "true", children: "\u{1F4C4}" }),
+    /* @__PURE__ */ u2("span", { className: "attachment-chip__name", children: attachment.filename }),
+    /* @__PURE__ */ u2("i", { className: "codicon codicon-desktop-download attachment-chip__action", "aria-hidden": "true" })
   ] });
 }
 function MessageItem({ item, resultByCall, classic = false }) {
@@ -4408,7 +4424,7 @@ function MessageItem({ item, resultByCall, classic = false }) {
   const isUser = item.role === "user";
   const isTool = item.role === "tool";
   if (isTool) return null;
-  if (classic) return /* @__PURE__ */ u3(
+  if (classic) return /* @__PURE__ */ u2(
     ClassicPost,
     {
       id: `post-${item.id}`,
@@ -4416,34 +4432,34 @@ function MessageItem({ item, resultByCall, classic = false }) {
       author: isUser ? "You" : "Tau",
       time: item.live ? "live" : item.meta ?? "",
       avatar: isUser ? "Y" : "\u03C4",
-      actions: /* @__PURE__ */ u3(MessageActionBar, { classic: true, content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
-      children: collapsed ? /* @__PURE__ */ u3("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u3(b, { children: [
-        item.toolCalls?.map((call, index) => /* @__PURE__ */ u3(ToolCallBlock, { classic: true, call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
-        item.content && (isUser ? /* @__PURE__ */ u3("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u3(MarkdownContent, { content: item.content })),
-        item.attachments?.map((attachment) => /* @__PURE__ */ u3(AttachmentChip, { classic: true, attachment }, attachment.mediaId))
+      actions: /* @__PURE__ */ u2(MessageActionBar, { classic: true, content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
+      children: collapsed ? /* @__PURE__ */ u2("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u2(b, { children: [
+        item.toolCalls?.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { classic: true, call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
+        item.content && (isUser ? /* @__PURE__ */ u2("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u2(MarkdownContent, { content: item.content })),
+        item.attachments?.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { classic: true, attachment }, attachment.mediaId))
       ] })
     }
   );
-  if (collapsed) return /* @__PURE__ */ u3("div", { className: `message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
-    /* @__PURE__ */ u3("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
-    /* @__PURE__ */ u3("div", { className: "message-list__body message-list__body--collapsed", children: [
-      /* @__PURE__ */ u3(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
-      /* @__PURE__ */ u3("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
-      /* @__PURE__ */ u3("span", { className: "message-list__time", children: item.live ? "live" : item.meta }),
-      /* @__PURE__ */ u3("span", { className: "message-list__collapsed-preview", children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.length > 120 ? "\u2026" : "") : "\u2014 collapsed" })
+  if (collapsed) return /* @__PURE__ */ u2("div", { className: `message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
+    /* @__PURE__ */ u2("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
+    /* @__PURE__ */ u2("div", { className: "message-list__body message-list__body--collapsed", children: [
+      /* @__PURE__ */ u2(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
+      /* @__PURE__ */ u2("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
+      /* @__PURE__ */ u2("span", { className: "message-list__time", children: item.live ? "live" : item.meta }),
+      /* @__PURE__ */ u2("span", { className: "message-list__collapsed-preview", children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.length > 120 ? "\u2026" : "") : "\u2014 collapsed" })
     ] })
   ] });
-  return /* @__PURE__ */ u3("div", { className: `message-list__item message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
-    /* @__PURE__ */ u3("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
-    /* @__PURE__ */ u3("div", { className: item.live ? "message-list__body message-list__body--draft" : "message-list__body", children: [
-      /* @__PURE__ */ u3("div", { className: "message-list__header", children: [
-        /* @__PURE__ */ u3(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
-        /* @__PURE__ */ u3("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
-        /* @__PURE__ */ u3("span", { className: "message-list__time", children: item.live ? "live" : item.meta })
+  return /* @__PURE__ */ u2("div", { className: `message-list__item message-list__item--${isUser ? "user" : "agent"}`, "data-message-id": item.id, children: [
+    /* @__PURE__ */ u2("div", { className: `message-list__avatar-circle message-list__avatar-circle--${isUser ? "user" : "agent"}`, "aria-hidden": "true", children: isUser ? "Y" : "\u03C4" }),
+    /* @__PURE__ */ u2("div", { className: item.live ? "message-list__body message-list__body--draft" : "message-list__body", children: [
+      /* @__PURE__ */ u2("div", { className: "message-list__header", children: [
+        /* @__PURE__ */ u2(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
+        /* @__PURE__ */ u2("span", { className: `message-list__name message-list__name--${isUser ? "user" : "agent"}`, children: isUser ? "You" : "Tau" }),
+        /* @__PURE__ */ u2("span", { className: "message-list__time", children: item.live ? "live" : item.meta })
       ] }),
-      item.toolCalls && item.toolCalls.length > 0 && /* @__PURE__ */ u3("div", { className: "message-list__tool-calls", children: item.toolCalls.map((call, index) => /* @__PURE__ */ u3(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)) }),
-      item.content && (isUser ? /* @__PURE__ */ u3("div", { className: "message-list__content", children: item.content }) : /* @__PURE__ */ u3(MarkdownContent, { content: item.content })),
-      item.attachments && item.attachments.length > 0 && /* @__PURE__ */ u3("div", { className: "message-list__attachments", children: item.attachments.map((attachment) => /* @__PURE__ */ u3(AttachmentChip, { attachment }, attachment.mediaId)) })
+      item.toolCalls && item.toolCalls.length > 0 && /* @__PURE__ */ u2("div", { className: "message-list__tool-calls", children: item.toolCalls.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)) }),
+      item.content && (isUser ? /* @__PURE__ */ u2("div", { className: "message-list__content", children: item.content }) : /* @__PURE__ */ u2(MarkdownContent, { content: item.content })),
+      item.attachments && item.attachments.length > 0 && /* @__PURE__ */ u2("div", { className: "message-list__attachments", children: item.attachments.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { attachment }, attachment.mediaId)) })
     ] })
   ] });
 }
@@ -4461,13 +4477,13 @@ function Timeline({ classic = false }) {
   for (const item of timeline.items) if (item.role === "tool" && item.toolCallId) resultByCall.set(item.toolCallId, item);
   const visibleItems = timeline.items.filter((item) => item.role !== "tool");
   const empty2 = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
-    /* @__PURE__ */ u3("div", { id: "timeline-main", className: classic ? "timeline reverse" : "chat__messages", tabIndex: -1, children: [
-      /* @__PURE__ */ u3("div", { id: "timeline-meta", className: "sr-only", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
-      /* @__PURE__ */ u3("div", { id: "timeline-list", className: classic ? "timeline-content" : "message-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u3("div", { className: "message-list__empty", children: /* @__PURE__ */ u3("p", { children: empty2 }) }) : (classic ? visibleItems : [...visibleItems].reverse()).map((item, index) => /* @__PURE__ */ u3(MessageItem, { item, resultByCall, classic }, item.id ?? index)) })
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
+    /* @__PURE__ */ u2("div", { id: "timeline-main", className: classic ? "timeline reverse" : "chat__messages", tabIndex: -1, children: [
+      /* @__PURE__ */ u2("div", { id: "timeline-meta", className: "sr-only", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
+      /* @__PURE__ */ u2("div", { id: "timeline-list", className: classic ? "timeline-content" : "message-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u2("div", { className: "message-list__empty", children: /* @__PURE__ */ u2("p", { children: empty2 }) }) : (classic ? visibleItems : [...visibleItems].reverse()).map((item, index) => /* @__PURE__ */ u2(MessageItem, { item, resultByCall, classic }, item.id ?? index)) })
     ] }),
-    /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
+    /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
   ] });
 }
 function SessionRuntime() {
@@ -4477,14 +4493,14 @@ function SessionRuntime() {
     window.addEventListener("tau:branches-render", update);
     return () => window.removeEventListener("tau:branches-render", update);
   }, []);
-  return /* @__PURE__ */ u3("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
-    /* @__PURE__ */ u3("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
-      /* @__PURE__ */ u3("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
-      /* @__PURE__ */ u3("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
+  return /* @__PURE__ */ u2("div", { className: "agent-status-panel", "aria-label": "Session runtime", children: [
+    /* @__PURE__ */ u2("div", { className: "agent-status-panel__status", "aria-live": "polite", children: [
+      /* @__PURE__ */ u2("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
     ] }),
-    /* @__PURE__ */ u3("section", { className: "agent-status-panel__section", hidden: !branches.length, children: [
-      /* @__PURE__ */ u3("div", { className: "agent-status-panel__title", children: "Session branch" }),
-      /* @__PURE__ */ u3("div", { id: "branch-list", className: "agent-status-panel__tools", children: branches.map((branch) => /* @__PURE__ */ u3("button", { type: "button", className: "branch-button settings-panel__provider-btn", "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })) })
+    /* @__PURE__ */ u2("section", { className: "agent-status-panel__section", hidden: !branches.length, children: [
+      /* @__PURE__ */ u2("div", { className: "agent-status-panel__title", children: "Session branch" }),
+      /* @__PURE__ */ u2("div", { id: "branch-list", className: "agent-status-panel__tools", children: branches.map((branch) => /* @__PURE__ */ u2("button", { type: "button", className: "branch-button settings-panel__provider-btn", "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })) })
     ] })
   ] });
 }
@@ -4721,28 +4737,28 @@ function Onboarding({ onOpenChange }) {
     }
   }
   if (!state && !error) return null;
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("button", { className: "provider-setup-trigger", type: "button", onClick: () => setOpen(true), children: "Provider setup" }),
-    open && state ? /* @__PURE__ */ u3("div", { className: "provider-wizard", children: /* @__PURE__ */ u3("section", { className: "provider-wizard__content", "aria-labelledby": "onboarding-title", children: [
-      /* @__PURE__ */ u3("h2", { id: "onboarding-title", className: "provider-wizard__title", children: "Connect a model provider" }),
-      /* @__PURE__ */ u3("p", { className: "provider-wizard__subtitle", children: "Choose a provider and model. Credentials are stored locally and never returned by this API." }),
-      /* @__PURE__ */ u3("form", { className: "provider-wizard__apikey-form", onSubmit: submit, children: [
-        /* @__PURE__ */ u3("label", { className: "settings-panel__field", children: [
-          /* @__PURE__ */ u3("span", { className: "settings-panel__label", children: "Provider" }),
-          /* @__PURE__ */ u3("select", { className: "settings-panel__select", value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u3("option", { value: item.name, children: item.name })) })
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("button", { className: "provider-setup-trigger", type: "button", onClick: () => setOpen(true), children: "Provider setup" }),
+    open && state ? /* @__PURE__ */ u2("div", { className: "provider-wizard", children: /* @__PURE__ */ u2("section", { className: "provider-wizard__content", "aria-labelledby": "onboarding-title", children: [
+      /* @__PURE__ */ u2("h2", { id: "onboarding-title", className: "provider-wizard__title", children: "Connect a model provider" }),
+      /* @__PURE__ */ u2("p", { className: "provider-wizard__subtitle", children: "Choose a provider and model. Credentials are stored locally and never returned by this API." }),
+      /* @__PURE__ */ u2("form", { className: "provider-wizard__apikey-form", onSubmit: submit, children: [
+        /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
+          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "Provider" }),
+          /* @__PURE__ */ u2("select", { className: "settings-panel__select", value: provider, onChange: (event) => chooseProvider(event.currentTarget.value), children: state.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.name, children: item.name })) })
         ] }),
-        /* @__PURE__ */ u3("label", { className: "settings-panel__field", children: [
-          /* @__PURE__ */ u3("span", { className: "settings-panel__label", children: "Model" }),
-          /* @__PURE__ */ u3("select", { className: "settings-panel__select", value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u3("option", { value: item, children: item })) })
+        /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
+          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "Model" }),
+          /* @__PURE__ */ u2("select", { className: "settings-panel__select", value: model, onChange: (event) => setModel(event.currentTarget.value), children: (selected?.models ?? []).map((item) => /* @__PURE__ */ u2("option", { value: item, children: item })) })
         ] }),
-        selected?.credential_name ? /* @__PURE__ */ u3("label", { className: "settings-panel__field", children: [
-          /* @__PURE__ */ u3("span", { className: "settings-panel__label", children: "API key" }),
-          /* @__PURE__ */ u3("input", { className: "provider-wizard__input", type: "password", value: credential, autocomplete: "off", onInput: (event) => setCredential(event.currentTarget.value), placeholder: selected.configured ? "Stored credential (leave blank to keep)" : "Required" })
+        selected?.credential_name ? /* @__PURE__ */ u2("label", { className: "settings-panel__field", children: [
+          /* @__PURE__ */ u2("span", { className: "settings-panel__label", children: "API key" }),
+          /* @__PURE__ */ u2("input", { className: "provider-wizard__input", type: "password", value: credential, autocomplete: "off", onInput: (event) => setCredential(event.currentTarget.value), placeholder: selected.configured ? "Stored credential (leave blank to keep)" : "Required" })
         ] }) : null,
-        error ? /* @__PURE__ */ u3("p", { className: "provider-wizard__error", role: "alert", children: error }) : null,
-        /* @__PURE__ */ u3("div", { className: "provider-wizard__apikey-actions", children: [
-          /* @__PURE__ */ u3("button", { className: "provider-wizard__btn provider-wizard__btn--secondary", type: "button", onClick: () => setOpen(false), children: "Cancel" }),
-          /* @__PURE__ */ u3("button", { className: "provider-wizard__btn provider-wizard__btn--primary", type: "submit", disabled: saving || !provider || !model || Boolean(selected?.credential_name && !selected.configured && !credential.trim()), children: saving ? "Saving\u2026" : "Save and continue" })
+        error ? /* @__PURE__ */ u2("p", { className: "provider-wizard__error", role: "alert", children: error }) : null,
+        /* @__PURE__ */ u2("div", { className: "provider-wizard__apikey-actions", children: [
+          /* @__PURE__ */ u2("button", { className: "provider-wizard__btn provider-wizard__btn--secondary", type: "button", onClick: () => setOpen(false), children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { className: "provider-wizard__btn provider-wizard__btn--primary", type: "submit", disabled: saving || !provider || !model || Boolean(selected?.credential_name && !selected.configured && !credential.trim()), children: saving ? "Saving\u2026" : "Save and continue" })
         ] })
       ] })
     ] }) }) : null
@@ -4826,19 +4842,19 @@ function QueueStack() {
   for (const item of items) {
     if (!firstByKind.has(item.queue_kind)) firstByKind.set(item.queue_kind, item.queue_id);
   }
-  return /* @__PURE__ */ u3("div", { className: "queue-stack", "aria-label": "Queued messages", children: [
-    error && /* @__PURE__ */ u3("div", { className: "queue-stack__error", role: "status", children: error }),
+  return /* @__PURE__ */ u2("div", { className: "queue-stack", "aria-label": "Queued messages", children: [
+    error && /* @__PURE__ */ u2("div", { className: "queue-stack__error", role: "status", children: error }),
     items.map((item) => {
       const text2 = queueText(item.content);
       const isHead = firstByKind.get(item.queue_kind) === item.queue_id;
-      return /* @__PURE__ */ u3("div", { className: "queue-stack__item", children: [
-        /* @__PURE__ */ u3("div", { className: "queue-stack__content", title: text2, children: [
-          /* @__PURE__ */ u3("span", { className: "queue-stack__kind", children: item.queue_kind === "follow_up" ? "Follow-up" : "Steer" }),
+      return /* @__PURE__ */ u2("div", { className: "queue-stack__item", children: [
+        /* @__PURE__ */ u2("div", { className: "queue-stack__content", title: text2, children: [
+          /* @__PURE__ */ u2("span", { className: "queue-stack__kind", children: item.queue_kind === "follow_up" ? "Follow-up" : "Steer" }),
           text2.length > 80 ? `${text2.slice(0, 80)}\u2026` : text2
         ] }),
-        /* @__PURE__ */ u3("div", { className: "queue-stack__actions", children: [
-          /* @__PURE__ */ u3("button", { type: "button", className: "queue-stack__btn queue-stack__btn--edit", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u3("i", { className: "codicon codicon-edit", "aria-hidden": "true" }) }),
-          isHead && /* @__PURE__ */ u3("button", { type: "button", className: "queue-stack__btn queue-stack__btn--steer", disabled: !state.activeRun || busyKind === item.queue_kind, onClick: () => void dispatch(item.queue_kind), title: state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required", children: "\u21B5 Dispatch" })
+        /* @__PURE__ */ u2("div", { className: "queue-stack__actions", children: [
+          /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--edit", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-edit", "aria-hidden": "true" }) }),
+          isHead && /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--steer", disabled: !state.activeRun || busyKind === item.queue_kind, onClick: () => void dispatch(item.queue_kind), title: state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required", children: "\u21B5 Dispatch" })
         ] })
       ] }, item.queue_id);
     })
@@ -4875,17 +4891,17 @@ function ApprovalDialog() {
     window.dispatchEvent(new CustomEvent("tau:approval-response", { detail: { approvalId: approval.approval_id, decision } }));
   };
   if (!approval) return null;
-  return /* @__PURE__ */ u3("div", { className: "modal-dialog__backdrop approval-backdrop", "data-approval-id": approval.approval_id, role: "presentation", children: /* @__PURE__ */ u3("section", { className: "modal-dialog approval-prompt", role: "alertdialog", "aria-modal": "true", "aria-labelledby": "approval-title", "aria-describedby": "approval-description", onMouseDown: (event) => event.stopPropagation(), children: [
-    /* @__PURE__ */ u3("h2", { id: "approval-title", className: "modal-dialog__title", children: [
+  return /* @__PURE__ */ u2("div", { className: "modal-dialog__backdrop approval-backdrop", "data-approval-id": approval.approval_id, role: "presentation", children: /* @__PURE__ */ u2("section", { className: "modal-dialog approval-prompt", role: "alertdialog", "aria-modal": "true", "aria-labelledby": "approval-title", "aria-describedby": "approval-description", onMouseDown: (event) => event.stopPropagation(), children: [
+    /* @__PURE__ */ u2("h2", { id: "approval-title", className: "modal-dialog__title", children: [
       "Allow ",
       approval.tool_name || "tool",
       "?"
     ] }),
-    /* @__PURE__ */ u3("p", { id: "approval-description", className: "modal-dialog__description", children: approval.description || "The agent requested permission to run this tool." }),
-    /* @__PURE__ */ u3("pre", { className: "modal-dialog__description approval-arguments", children: JSON.stringify(approval.arguments ?? {}, null, 2) }),
-    /* @__PURE__ */ u3("div", { className: "modal-dialog__actions approval-actions", children: [
-      /* @__PURE__ */ u3("button", { ref: denyRef, type: "button", className: "modal-dialog__btn modal-dialog__btn--destructive", disabled: busy, onClick: () => respond("deny"), children: "Deny" }),
-      /* @__PURE__ */ u3("button", { type: "button", className: "modal-dialog__btn modal-dialog__btn--primary", disabled: busy, onClick: () => respond("allow"), children: "Allow once" })
+    /* @__PURE__ */ u2("p", { id: "approval-description", className: "modal-dialog__description", children: approval.description || "The agent requested permission to run this tool." }),
+    /* @__PURE__ */ u2("pre", { className: "modal-dialog__description approval-arguments", children: JSON.stringify(approval.arguments ?? {}, null, 2) }),
+    /* @__PURE__ */ u2("div", { className: "modal-dialog__actions approval-actions", children: [
+      /* @__PURE__ */ u2("button", { ref: denyRef, type: "button", className: "modal-dialog__btn modal-dialog__btn--destructive", disabled: busy, onClick: () => respond("deny"), children: "Deny" }),
+      /* @__PURE__ */ u2("button", { type: "button", className: "modal-dialog__btn modal-dialog__btn--primary", disabled: busy, onClick: () => respond("allow"), children: "Allow once" })
     ] })
   ] }) });
 }
@@ -4998,6 +5014,7 @@ function useSidebarTabs() {
 }
 
 // src/index.tsx
+var classicPreview = new URLSearchParams(location.search).get("ui") === "classic";
 function TauShell() {
   const { drawer, close, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
@@ -5020,44 +5037,79 @@ function TauShell() {
       if (drawer !== target) toggle(target);
     }
   };
-  return /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
-    /* @__PURE__ */ u3("div", { className: "app-layout", children: [
-      /* @__PURE__ */ u3(ActivityBar, { activePanel: activeTab, onPanelChange: selectPanel, onDashboard: () => setDashboardOpen(true) }),
-      /* @__PURE__ */ u3("main", { className: "app-layout__main", children: [
-        /* @__PURE__ */ u3("div", { className: "app-layout__content-area", children: [
-          /* @__PURE__ */ u3("div", { className: "app-layout__sidebar-wrapper", hidden: settingsOpen, style: { width: sidebarOpen ? "250px" : "0" }, children: /* @__PURE__ */ u3(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close, sessionFilter, onSelectSessionFilter: selectSessionFilter }) }),
-          /* @__PURE__ */ u3("button", { id: "drawer-backdrop", className: "app-layout__sidebar-backdrop", type: "button", "aria-label": "Close sidebar", hidden: !sidebarOpen, onClick: close }),
-          sidebarOpen && /* @__PURE__ */ u3("div", { className: "app-layout__resize-handle", role: "separator", "aria-orientation": "vertical", "aria-label": "Resize sidebar" }),
-          /* @__PURE__ */ u3("div", { className: "app-layout__panel", children: [
-            /* @__PURE__ */ u3(SettingsPanel, { hidden: !settingsOpen }),
-            !settingsOpen && /* @__PURE__ */ u3(TabBar, {}),
-            /* @__PURE__ */ u3("div", { className: "app-layout__tab-viewport", hidden: settingsOpen, children: /* @__PURE__ */ u3("div", { className: "app-layout__tab-content", children: [
-              /* @__PURE__ */ u3(Onboarding, { onOpenChange: setOnboardingOpen }),
-              /* @__PURE__ */ u3("section", { className: "chat", "aria-label": "Tau chat", hidden: onboardingOpen, children: [
-                /* @__PURE__ */ u3("div", { className: "chat__messages", children: /* @__PURE__ */ u3(Timeline, {}) }),
-                /* @__PURE__ */ u3(SessionRuntime, {}),
-                /* @__PURE__ */ u3(QueueStack, {}),
-                /* @__PURE__ */ u3(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
-                /* @__PURE__ */ u3(Composer, {})
+  if (classicPreview) return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2(ClassicChatFrame, { workspaceOpen: sidebarOpen || settingsOpen, sidebar: /* @__PURE__ */ u2(b, { children: [
+      /* @__PURE__ */ u2(SidePanel, { classic: true, activeTab, onSelectTab: selectTab, onClose: () => {
+        close();
+        if (settingsOpen) selectTab("sessions");
+      }, sessionFilter, onSelectSessionFilter: selectSessionFilter }),
+      /* @__PURE__ */ u2(SettingsPanel, { hidden: !settingsOpen }),
+      /* @__PURE__ */ u2(SystemStats, { enabled: metersEnabled, collapsed: metersCollapsed, onToggleEnabled: toggleMetersEnabled, onToggleCollapsed: toggleMetersCollapsed })
+    ] }), children: [
+      /* @__PURE__ */ u2(Onboarding, { onOpenChange: setOnboardingOpen }),
+      /* @__PURE__ */ u2("div", { className: "tau-classic-chat", hidden: onboardingOpen, children: [
+        /* @__PURE__ */ u2(Timeline, { classic: true }),
+        /* @__PURE__ */ u2(SessionRuntime, {}),
+        /* @__PURE__ */ u2(QueueStack, {}),
+        /* @__PURE__ */ u2(Composer, { classic: true, session: /* @__PURE__ */ u2(ClassicSessionControl, { open: sidebarOpen, onToggle: () => selectPanel("sessions") }), metadata: /* @__PURE__ */ u2(StatusBar, { classic: true, dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions: () => selectPanel("sessions"), onToggleDashboard: () => setDashboardOpen((value) => !value), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
+    /* @__PURE__ */ u2(ApprovalDialog, {}),
+    /* @__PURE__ */ u2("div", { hidden: true, children: [
+      /* @__PURE__ */ u2("aside", { id: "session-nav" }),
+      /* @__PURE__ */ u2("button", { id: "mobile-nav-toggle", onClick: () => selectPanel("sessions") }),
+      /* @__PURE__ */ u2("button", { id: "mobile-panel-toggle", onClick: () => selectPanel("workspace") }),
+      /* @__PURE__ */ u2("button", { id: "drawer-backdrop", onClick: close })
+    ] })
+  ] });
+  return /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
+    /* @__PURE__ */ u2("div", { className: "app-layout", children: [
+      /* @__PURE__ */ u2(ActivityBar, { activePanel: activeTab, onPanelChange: selectPanel, onDashboard: () => setDashboardOpen(true) }),
+      /* @__PURE__ */ u2("main", { className: "app-layout__main", children: [
+        /* @__PURE__ */ u2("div", { className: "app-layout__content-area", children: [
+          /* @__PURE__ */ u2("div", { className: "app-layout__sidebar-wrapper", hidden: settingsOpen, style: { width: sidebarOpen ? "250px" : "0" }, children: /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close, sessionFilter, onSelectSessionFilter: selectSessionFilter }) }),
+          /* @__PURE__ */ u2("button", { id: "drawer-backdrop", className: "app-layout__sidebar-backdrop", type: "button", "aria-label": "Close sidebar", hidden: !sidebarOpen, onClick: close }),
+          sidebarOpen && /* @__PURE__ */ u2("div", { className: "app-layout__resize-handle", role: "separator", "aria-orientation": "vertical", "aria-label": "Resize sidebar" }),
+          /* @__PURE__ */ u2("div", { className: "app-layout__panel", children: [
+            /* @__PURE__ */ u2(SettingsPanel, { hidden: !settingsOpen }),
+            !settingsOpen && /* @__PURE__ */ u2(TabBar, {}),
+            /* @__PURE__ */ u2("div", { className: "app-layout__tab-viewport", hidden: settingsOpen, children: /* @__PURE__ */ u2("div", { className: "app-layout__tab-content", children: [
+              /* @__PURE__ */ u2(Onboarding, { onOpenChange: setOnboardingOpen }),
+              /* @__PURE__ */ u2("section", { className: "chat", "aria-label": "Tau chat", hidden: onboardingOpen, children: [
+                /* @__PURE__ */ u2("div", { className: "chat__messages", children: /* @__PURE__ */ u2(Timeline, {}) }),
+                /* @__PURE__ */ u2(SessionRuntime, {}),
+                /* @__PURE__ */ u2(QueueStack, {}),
+                /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
+                /* @__PURE__ */ u2(Composer, {})
               ] })
             ] }) })
           ] })
         ] }),
-        /* @__PURE__ */ u3(StatusBar, { dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions: () => selectPanel("sessions"), onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
-        /* @__PURE__ */ u3("div", { className: "mobile-toolbar", children: [
-          /* @__PURE__ */ u3("button", { id: "mobile-nav-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open sessions", "aria-expanded": drawer === "nav", onClick: () => selectPanel("sessions"), children: "Sessions" }),
-          /* @__PURE__ */ u3("span", { className: "mobile-toolbar__model-slot", children: "Tau" }),
-          /* @__PURE__ */ u3("button", { id: "mobile-panel-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open workspace", "aria-expanded": drawer === "panel", onClick: () => selectPanel("workspace"), children: "Workspace" })
+        /* @__PURE__ */ u2(StatusBar, { dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions: () => selectPanel("sessions"), onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
+        /* @__PURE__ */ u2("div", { className: "mobile-toolbar", children: [
+          /* @__PURE__ */ u2("button", { id: "mobile-nav-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open sessions", "aria-expanded": drawer === "nav", onClick: () => selectPanel("sessions"), children: "Sessions" }),
+          /* @__PURE__ */ u2("span", { className: "mobile-toolbar__model-slot", children: "Tau" }),
+          /* @__PURE__ */ u2("button", { id: "mobile-panel-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open workspace", "aria-expanded": drawer === "panel", onClick: () => selectPanel("workspace"), children: "Workspace" })
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ u3(ApprovalDialog, {}),
-    /* @__PURE__ */ u3("aside", { id: "session-nav", hidden: true }),
-    /* @__PURE__ */ u3("noscript", { children: /* @__PURE__ */ u3("p", { className: "noscript-banner", children: "Tau Web requires JavaScript." }) })
+    /* @__PURE__ */ u2(ApprovalDialog, {}),
+    /* @__PURE__ */ u2("aside", { id: "session-nav", hidden: true }),
+    /* @__PURE__ */ u2("noscript", { children: /* @__PURE__ */ u2("p", { className: "noscript-banner", children: "Tau Web requires JavaScript." }) })
   ] });
 }
 var mount = document.getElementById("app");
 if (!mount) throw new Error("Missing #app root element");
-installSystemTheme();
-B(/* @__PURE__ */ u3(TauShell, {}), mount);
+if (classicPreview) {
+  document.documentElement.dataset.tauUi = "classic";
+  for (const link of Array.from(document.querySelectorAll('link[rel="stylesheet"]'))) link.remove();
+  for (const name of ["piclaw-classic.css", "tau-classic.css"]) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "/static/" + name;
+    document.head.append(link);
+  }
+} else installSystemTheme();
+B(/* @__PURE__ */ u2(TauShell, {}), mount);

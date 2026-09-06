@@ -205,3 +205,15 @@ pills. Filename alt text and encoded content link retained; existing authenticat
 thumbnail/blob lifecycle and download handler reused. Checks verify src/alt/link
 markup (not image decoding or an upstream lightbox); classic matrix 30 passed,
 build/TypeScript pass. Tau still opens/downloads media, not Piclaw's lightbox.
+
+## Real adapter preview cutover
+
+`/?ui=classic` now assembles classic frame/timeline/composer/status/session and
+secondary navigation against actual app.js, removing visual styles in this
+preview only. Default unchanged. Metrics remain mounted in sidebar; forms and
+approval/dashboard retained. Scoped tau-classic.css handles semantic hidden,
+flex/adapter wrappers and completion list reset; no vendor edits.
+Real-adapter six-target boot/navigation checks pass with zero page errors;
+build/TypeScript and focused Python 46 pass. Panel styling, responsiveness,
+submission/end-to-end behavior and screenshot review remain before default
+cutover. Preview is not visual acceptance or offline-cache coverage.

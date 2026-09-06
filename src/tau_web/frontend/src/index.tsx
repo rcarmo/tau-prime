@@ -1,3 +1,6 @@
+import { ClassicChatFrame } from "./components/ClassicChatFrame";
+import { ClassicSessionControl } from "./components/ClassicSessionControl";
+import { SystemStats } from "./components/SystemStats";
 import { Fragment, render } from "preact";
 import { installSystemTheme } from "./theme/applyTheme";
 import { useState } from "preact/hooks";
@@ -17,6 +20,8 @@ import { useDrawers } from "./hooks/useDrawers";
 import { useMeterControls } from "./hooks/useMeterControls";
 import { useSessionFilter } from "./hooks/useSessionFilter";
 import { useSidebarTabs } from "./hooks/useSidebarTabs";
+
+const classicPreview = new URLSearchParams(location.search).get("ui") === "classic";
 
 /** Piclaw's shell hierarchy with Tau's existing API bindings mapped into it. */
 function TauShell() {
@@ -43,6 +48,24 @@ function TauShell() {
       if (drawer !== target) toggle(target);
     }
   };
+
+  if (classicPreview) return <Fragment>
+    <ClassicChatFrame workspaceOpen={sidebarOpen || settingsOpen} sidebar={<>
+      <SidePanel classic activeTab={activeTab} onSelectTab={selectTab} onClose={() => { close(); if(settingsOpen) selectTab("sessions"); }} sessionFilter={sessionFilter} onSelectSessionFilter={selectSessionFilter} />
+      <SettingsPanel hidden={!settingsOpen} />
+      <SystemStats enabled={metersEnabled} collapsed={metersCollapsed} onToggleEnabled={toggleMetersEnabled} onToggleCollapsed={toggleMetersCollapsed} />
+    </>}>
+      <Onboarding onOpenChange={setOnboardingOpen} />
+      <div className="tau-classic-chat" hidden={onboardingOpen}>
+        <Timeline classic />
+        <SessionRuntime /><QueueStack />
+        <Composer classic session={<ClassicSessionControl open={sidebarOpen} onToggle={() => selectPanel("sessions")} />} metadata={<StatusBar classic dashboardOpen={dashboardOpen} metersEnabled={metersEnabled} metersCollapsed={metersCollapsed} onOpenSessions={() => selectPanel("sessions")} onToggleDashboard={() => setDashboardOpen(value=>!value)} onToggleMetersEnabled={toggleMetersEnabled} onToggleMetersCollapsed={toggleMetersCollapsed} />} />
+      </div>
+    </ClassicChatFrame>
+    <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
+    <ApprovalDialog />
+    <div hidden><aside id="session-nav" /><button id="mobile-nav-toggle" onClick={() => selectPanel("sessions")} /><button id="mobile-panel-toggle" onClick={() => selectPanel("workspace")} /><button id="drawer-backdrop" onClick={close} /></div>
+  </Fragment>;
 
   return (
     <Fragment>
@@ -91,5 +114,11 @@ function TauShell() {
 
 const mount = document.getElementById("app");
 if (!mount) throw new Error("Missing #app root element");
-installSystemTheme();
+if (classicPreview) {
+  document.documentElement.dataset.tauUi = "classic";
+  for (const link of Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))) link.remove();
+  for (const name of ["piclaw-classic.css", "tau-classic.css"]) {
+    const link = document.createElement("link"); link.rel = "stylesheet"; link.href = "/static/" + name; document.head.append(link);
+  }
+} else installSystemTheme();
 render(<TauShell />, mount);
