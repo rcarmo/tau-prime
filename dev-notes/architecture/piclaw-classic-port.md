@@ -437,3 +437,11 @@ hidden-live status and classic geometry inventory. Outputs use new
 `tau-classic-audit` / `tau-classic-populated-review` directories, preventing silent
 mixing with rejected visual-mode captures. Chat/Workspace/Search/Settings capture
 matrix 18 passed. These are Tau-only captures pending genuine classic pairing.
+
+## Third capped triage / Search migration
+
+Capped full run reached 52 passed, 6 failed, 1 interrupted, 331 not run. Next
+failures are Search/session/Settings navigation assumptions. Migrated populated
+Search rendering and both-theme a11y specs to session-pill navigation, preserving
+snippet/margin/action and contrast/bounds checks: 18 passed. No production changes.
+Full browser suite remains unresolved; log /workspace/tmp/classic-triage-third.log.

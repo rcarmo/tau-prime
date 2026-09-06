@@ -7,8 +7,10 @@ for(const colorScheme of ['light','dark']) {
   await page.goto('/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancel=page.getByRole('button',{name:'Cancel',exact:true});
+  await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
   if(await cancel.isVisible()) await cancel.click();
-  await page.getByRole('button',{name:'Search',exact:true}).first().click();
+  await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+  await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Search',exact:true}).click();
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:search-render',{detail:{items:[{entityType:'message',entityId:'review-result',meta:'Review session · Rank 1.25',text:'Matching workspace content with a long descriptive result.',sessionId:'review'}]}})));
   await expect(page.locator('.search-panel__item')).toHaveCount(1);
   const result=await new AxeBuilder({page}).include('#panel-search').analyze();

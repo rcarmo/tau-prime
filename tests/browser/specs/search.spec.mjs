@@ -10,7 +10,8 @@ test('search results render through Piclaw search cards', async ({ page }) => {
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:search-render', { detail: { items: [
     { entityType: 'message', entityId: 'entry-1', meta: 'Session abc123 · Rank 1.25', text: 'Matching content', sessionId: 'session-1' },
   ] } })));
-  await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+  await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+  await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Search',exact:true}).click();
   const result = page.locator('#search-results .search-panel__item');
   await expect(result).toHaveCount(1);
   await expect(result.locator('.search-panel__item-type')).toHaveText('message · entry-1');
