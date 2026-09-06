@@ -421,3 +421,11 @@ Retained actual directory/file keyboard activation and café/日本語 file-cont
 checks. Exposed concatenated accessible names (`notesdirectory`); workspace
 items now have explicit filename aria-label. Responsive + pane a11y matrix
 18 passed; build/TypeScript pass. Visual workspace styling still needs review.
+
+## Whole-page accessibility migration
+
+Retained global axe and keyboard-focus indicator test, replacing visual shell
+controls with classic Send/session pill and compose-input-wrapper. Whole-page
+scan caught WebKit native dark background on Provider setup trigger, missed by
+chat-scoped tests; applied scoped button color/appearance. Both themes/six-target
+matrix 12 passed, including visible focus after Ctrl/Cmd-N and phone navigation.

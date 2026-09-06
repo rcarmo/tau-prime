@@ -16,6 +16,7 @@
 .tau-classic-panel button { color:var(--text-primary); background:var(--bg-secondary); }
 [data-tau-ui="classic"] .compose-session-switcher-pill { appearance:none; color:var(--text-primary); background:var(--bg-secondary); }
 [data-tau-ui="classic"] .workspace-header-left { color:var(--text-primary); }
+[data-tau-ui="classic"] .provider-setup-trigger,
 [data-tau-ui="classic"] #panel-settings button { appearance:none; color:var(--text-primary); background:var(--bg-secondary); }
 /* Populated chat: small timestamps and selected completion labels need AA contrast. */
 [data-tau-ui="classic"] .post-time,

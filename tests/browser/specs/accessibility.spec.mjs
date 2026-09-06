@@ -6,9 +6,7 @@ const BLOCKING_IMPACTS = new Set(['serious', 'critical']);
 async function waitForShell(page) {
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeAttached();
-  await expect
-    .poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '')
-    .not.toMatch(/Loading Tau shell/i);
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
@@ -53,42 +51,14 @@ async function expectNoBlockingAxeViolations(page, label) {
 }
 
 async function assertCoreAccessibleControls(page) {
-  await expect(page.getByRole('combobox', { name: /send a prompt to tau/i })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: /^run$/i })).toHaveCount(1);
-  await expect(page.getByRole('navigation', { name: /activity bar/i })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: /^sessions$/i })).toHaveCount(1);
-
-  for (const panelName of ['Workspace', 'Search', 'Plan', 'Settings']) {
-    await expect(page.locator(`.activity-bar__button[aria-label="${panelName}"]`)).toHaveCount(1);
-  }
+ await expect(page.getByRole('combobox',{name:/send a prompt to tau/i})).toHaveCount(1);
+ await expect(page.getByRole('button',{name:'Send',exact:true})).toHaveCount(1);
+ await expect(page.getByRole('button',{name:'Open sessions',exact:true})).toHaveCount(1);
+ await expect(page.locator('.activity-bar')).toHaveCount(0);
 }
-
 async function openPhoneSurfaceForSecondScan(page) {
-  const navToggle = page.locator('#mobile-nav-toggle');
-  if (await navToggle.isVisible()) {
-    if ((await navToggle.getAttribute('aria-expanded')) !== 'true') {
-      await navToggle.click();
-    }
-    await expect(navToggle).toHaveAttribute('aria-expanded', 'true');
-    return;
-  }
-
-  const dashboardToggle = page.locator('#dashboard-toggle');
-  if (await dashboardToggle.isVisible()) {
-    if ((await dashboardToggle.getAttribute('aria-expanded')) !== 'true') {
-      await dashboardToggle.click();
-    }
-    await expect(dashboardToggle).toHaveAttribute('aria-expanded', 'true');
-    return;
-  }
-
-  const panelToggle = page.locator('#mobile-panel-toggle');
-  if (await panelToggle.isVisible()) {
-    if ((await panelToggle.getAttribute('aria-expanded')) !== 'true') {
-      await panelToggle.click();
-    }
-    await expect(panelToggle).toHaveAttribute('aria-expanded', 'true');
-  }
+ await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+ await expect(page.locator('#panel-sessions')).toBeVisible();
 }
 
 async function assertComposeFocusIndicatorAfterGlobalShortcut(page) {
@@ -98,7 +68,7 @@ async function assertComposeFocusIndicatorAfterGlobalShortcut(page) {
     : 'Control';
 
   await page.locator('#timeline-main').focus();
-  const composeSurface = page.locator('.chat__compose-container');
+  const composeSurface = page.locator('.compose-input-wrapper');
   const before = await composeSurface.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
