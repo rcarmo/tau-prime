@@ -378,3 +378,11 @@ and collapse-edge specs; restored missing truncated-preview ellipsis in classic
 MessageItem. Await setup dismissal before interacting. Focused six-target matrix
 12 passed; build/TypeScript pass. Remaining triage log:
 /workspace/tmp/tau-classic-full-triage.log.
+
+## Keyboard regression migrated
+
+Keyboard test now opens session pill and classic secondary navigation instead
+of activity/mobile-toolbar buttons. Keeps session creation/selection, Ctrl/Cmd-K,
+new-session shortcut, slash completion dismissal, Tab/Shift-Tab traversal,
+keyboard workspace reload, and Escape closure assertions. Six targets pass.
+No production change required in this checkpoint.

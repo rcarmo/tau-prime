@@ -3,9 +3,7 @@ import { expect, test } from '@playwright/test';
 async function waitForShell(page) {
   await page.goto('/');
   await expect(page.locator('#compose-input')).toBeAttached();
-  await expect
-    .poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '')
-    .not.toMatch(/Loading Tau shell/i);
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
@@ -19,61 +17,22 @@ async function drawerState(page) {
 }
 
 async function closeDrawersIfNeeded(page) {
-  const navToggle = page.locator('#mobile-nav-toggle');
-  const panelToggle = page.locator('#mobile-panel-toggle');
-  if (!(await navToggle.isVisible()) && !(await panelToggle.isVisible())) {
-    return;
-  }
-
   await page.keyboard.press('Escape');
-  await expect.poll(() => drawerState(page)).toEqual({ nav: 'false', panel: 'false' });
-
-  const drawerBackdrop = page.locator('#drawer-backdrop');
-  if (await drawerBackdrop.isVisible()) {
-    await drawerBackdrop.focus();
-    await expect(drawerBackdrop).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect.poll(() => drawerState(page)).toEqual({ nav: 'false', panel: 'false' });
-  }
-
-  if (await navToggle.isVisible()) {
-    await expect(navToggle).toHaveAttribute('aria-expanded', 'false');
-  }
-  if (await panelToggle.isVisible()) {
-    await expect(panelToggle).toHaveAttribute('aria-expanded', 'false');
-  }
+  await expect.poll(() => drawerState(page)).toEqual({nav:'false',panel:'false'});
 }
 
 async function openNavIfNeeded(page) {
   if ((await drawerState(page)).nav === 'true') return;
-
-  const navToggle = page.locator('#mobile-nav-toggle');
-  const trigger = (await navToggle.isVisible())
-    ? navToggle
-    : page.getByRole('button', { name: 'Sessions', exact: true }).first();
-
   await closeDrawersIfNeeded(page);
-  await trigger.focus();
-  await expect(trigger).toBeFocused();
-  await page.keyboard.press('Enter');
-
-  await expect(navToggle).toHaveAttribute('aria-expanded', 'true');
-  await expect.poll(() => drawerState(page)).toEqual({ nav: 'true', panel: 'false' });
+  const trigger=page.getByRole('button',{name:'Open sessions',exact:true});
+  await trigger.focus();await page.keyboard.press('Enter');
+  await expect(trigger).toHaveAttribute('aria-expanded','true');
+  await expect(page.locator('#panel-sessions')).toBeVisible();
 }
 
 async function openSidePanelIfNeeded(page) {
-  const panelToggle = page.locator('#mobile-panel-toggle');
-  if (!(await panelToggle.isVisible())) {
-    return;
-  }
-
-  await closeDrawersIfNeeded(page);
-  await panelToggle.focus();
-  await expect(panelToggle).toBeFocused();
-  await page.keyboard.press('Enter');
-
-  await expect(panelToggle).toHaveAttribute('aria-expanded', 'true');
-  await expect.poll(() => drawerState(page)).toEqual({ nav: 'false', panel: 'true' });
+  await openNavIfNeeded(page);
+  await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Workspace',exact:true}).click();
 }
 
 async function ensureSessionSelected(page) {
@@ -103,7 +62,7 @@ test('keyboard shortcuts, completion behavior, and focus traversal', async ({ pa
   const focusedAfterPalette = await page.evaluate(() => document.activeElement?.id ?? '');
   expect(['search-input', 'compose-input']).toContain(focusedAfterPalette);
   if (focusedAfterPalette === 'search-input') {
-    await expect(page.locator('#tab-search')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#tab-search')).toHaveAttribute('aria-pressed', 'true');
   }
 
   await page.evaluate((activeModifier) => {
@@ -147,8 +106,6 @@ test('keyboard shortcuts, completion behavior, and focus traversal', async ({ pa
   await expect(composeInput).toBeFocused();
 
   await openSidePanelIfNeeded(page);
-  const workspacePanelButton = page.locator('.activity-bar__button[aria-label="Workspace"]');
-  if (await workspacePanelButton.isVisible()) await workspacePanelButton.click();
   await expect(page.locator('#panel-workspace')).toBeVisible();
 
   const reloadButton = page.locator('#workspace-reload-button');
@@ -157,17 +114,9 @@ test('keyboard shortcuts, completion behavior, and focus traversal', async ({ pa
   await page.keyboard.press('Enter');
   await expect(page.locator('#app-status')).toContainText('Workspace reloaded.');
 
-  const navToggle = page.locator('#mobile-nav-toggle');
-  if (await navToggle.isVisible()) {
-    await closeDrawersIfNeeded(page);
-    await navToggle.focus();
-    await expect(navToggle).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(navToggle).toHaveAttribute('aria-expanded', 'true');
-    await expect.poll(() => drawerState(page)).toEqual({ nav: 'true', panel: 'false' });
+  await closeDrawersIfNeeded(page);
+  await openNavIfNeeded(page);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => drawerState(page)).toEqual({nav:'false',panel:'false'});
 
-    await page.keyboard.press('Escape');
-    await expect(navToggle).toHaveAttribute('aria-expanded', 'false');
-    await expect.poll(() => drawerState(page)).toEqual({ nav: 'false', panel: 'false' });
-  }
 });
