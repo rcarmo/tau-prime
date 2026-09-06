@@ -336,3 +336,11 @@ FontFace under actual page CSP, composer SVG controls render, visual CSS links
 are absent, and four removed visual assets return 404. Six targets pass.
 Removed shell-styles spec whose only assertion preserved the rejected visual
 shell geometry; classic-frame supplies the correct structural coverage instead.
+
+## Classic-only Python checkpoint (4358283)
+
+Complete Python suite: 1326 passed in 73.39s with PATH=.venv/bin and
+PYTHONPATH=src:. Count differs from historical baselines because rejected
+visual asset tests were replaced, not because this is the same suite unchanged.
+Browser classic-focused suites are green as recorded above; full legacy browser
+suite is not yet reconciled and no full-browser success is claimed.
