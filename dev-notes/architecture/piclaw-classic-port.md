@@ -328,3 +328,11 @@ font assets, no visual CSS/JetBrains entries, and no cached API data. Offline
 Chromium asserts classic app-shell rather than rejected activity bar. Matrix:
 9 passed / 3 existing documented WebKit offline skips. No skip was removed or
 newly hidden. Remaining visual-reference test inventory is still being replaced.
+
+## Browser asset-test replacement
+
+Replaced visual-assets spec with classic-assets: both Fira Code fonts load via
+FontFace under actual page CSP, composer SVG controls render, visual CSS links
+are absent, and four removed visual assets return 404. Six targets pass.
+Removed shell-styles spec whose only assertion preserved the rejected visual
+shell geometry; classic-frame supplies the correct structural coverage instead.
