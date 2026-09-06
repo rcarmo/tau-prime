@@ -61,3 +61,10 @@
 .tau-search-controls { display:flex; gap:6px; align-items:center; padding:8px 0; }
 .tau-search-input { flex:1; min-width:0; width:100%; padding:6px; border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); background:var(--bg-secondary); font:inherit; }
 .tau-search-submit { flex:none; padding:6px 8px; border:1px solid var(--border-color); border-radius:var(--radius-md); font:inherit; }
+/* Tau shared-plan form is not classic's scheduled-task interface. */
+.tau-plan-card { display:flex; flex-direction:column; gap:8px; }
+.tau-plan-card-header,.tau-plan-card-actions { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; }
+.tau-plan-panel .plan-editor { width:100%; min-height:180px; box-sizing:border-box; resize:vertical; padding:8px; color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); font:13px monospace; }
+.tau-plan-card-muted,.tau-plan-revision { font-size:12px; color:var(--text-primary); }
+.tau-plan-conflict { padding:8px; border:1px solid var(--danger-color); border-radius:var(--radius-md); }
+.tau-plan-card-actions button { appearance:none; padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--radius-md); }

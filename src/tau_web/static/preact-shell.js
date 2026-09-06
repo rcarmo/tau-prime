@@ -978,26 +978,23 @@ function PlanPanel({ hidden }) {
     window.addEventListener("tau:plan-render", update);
     return () => window.removeEventListener("tau:plan-render", update);
   }, []);
-  return /* @__PURE__ */ u2("section", { id: "panel-plan", className: "tasks-panel", "aria-labelledby": "tab-plan", hidden, children: [
-    /* @__PURE__ */ u2("div", { className: "tasks-panel__tabs", role: "tablist", "aria-label": "Plan views", children: /* @__PURE__ */ u2("button", { className: "tasks-panel__tab tasks-panel__tab--active", type: "button", role: "tab", "aria-selected": "true", children: "Plan" }) }),
-    /* @__PURE__ */ u2("div", { className: "tasks-panel__tasks", children: /* @__PURE__ */ u2("form", { id: "plan-form", className: "tasks-panel__card", children: [
-      /* @__PURE__ */ u2("div", { className: "tasks-panel__card-header", children: [
-        /* @__PURE__ */ u2("span", { className: "tasks-panel__card-id", children: "Session plan" }),
-        /* @__PURE__ */ u2("span", { id: "plan-revision", className: "tasks-panel__badge tasks-panel__badge--kind", children: [
-          "Revision ",
-          view.revision
-        ] })
-      ] }),
-      /* @__PURE__ */ u2("label", { className: "tasks-panel__card-label", htmlFor: "plan-editor", children: "Shared checklist" }),
-      /* @__PURE__ */ u2("textarea", { id: "plan-editor", className: "plan-editor tasks-panel__card-mono", spellcheck: true, placeholder: "- [ ] Add a concrete next step", "aria-describedby": "plan-status", value: view.draft, disabled: view.disabled }),
-      /* @__PURE__ */ u2("p", { id: "plan-status", className: "tasks-panel__card-muted", "aria-live": "polite", children: view.status }),
-      /* @__PURE__ */ u2("div", { id: "plan-conflict", className: "tasks-panel__sessions-error tasks-panel__sessions-error--inline", role: "alert", hidden: !view.conflict, children: "The plan changed elsewhere. Reload the server version or save again after reviewing it." }),
-      /* @__PURE__ */ u2("div", { className: "tasks-panel__card-actions", children: [
-        /* @__PURE__ */ u2("button", { id: "plan-save-button", type: "submit", disabled: view.disabled || !view.dirty, children: "Save plan" }),
-        /* @__PURE__ */ u2("button", { id: "plan-reload-button", type: "button", disabled: view.reloadDisabled, children: "Reload" })
+  return /* @__PURE__ */ u2("section", { id: "panel-plan", className: "tau-plan-panel", "aria-labelledby": "tab-plan", hidden, children: /* @__PURE__ */ u2("div", { className: "tau-plan-tasks", children: /* @__PURE__ */ u2("form", { id: "plan-form", className: "tau-plan-card", children: [
+    /* @__PURE__ */ u2("div", { className: "tau-plan-card-header", children: [
+      /* @__PURE__ */ u2("span", { className: "tau-plan-card-id", children: "Session plan" }),
+      /* @__PURE__ */ u2("span", { id: "plan-revision", className: "tau-plan-revision", children: [
+        "Revision ",
+        view.revision
       ] })
-    ] }) })
-  ] });
+    ] }),
+    /* @__PURE__ */ u2("label", { className: "tau-plan-card-label", htmlFor: "plan-editor", children: "Shared checklist" }),
+    /* @__PURE__ */ u2("textarea", { id: "plan-editor", className: "plan-editor tau-plan-card-mono", spellcheck: true, placeholder: "- [ ] Add a concrete next step", "aria-describedby": "plan-status", value: view.draft, disabled: view.disabled }),
+    /* @__PURE__ */ u2("p", { id: "plan-status", className: "tau-plan-card-muted", "aria-live": "polite", children: view.status }),
+    /* @__PURE__ */ u2("div", { id: "plan-conflict", className: "tau-plan-conflict", role: "alert", hidden: !view.conflict, children: "The plan changed elsewhere. Reload the server version or save again after reviewing it." }),
+    /* @__PURE__ */ u2("div", { className: "tau-plan-card-actions", children: [
+      /* @__PURE__ */ u2("button", { id: "plan-save-button", type: "submit", disabled: view.disabled || !view.dirty, children: "Save plan" }),
+      /* @__PURE__ */ u2("button", { id: "plan-reload-button", type: "button", disabled: view.reloadDisabled, children: "Reload" })
+    ] })
+  ] }) }) });
 }
 
 // src/components/SessionList.tsx

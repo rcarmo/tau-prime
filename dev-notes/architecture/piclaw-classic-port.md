@@ -778,3 +778,11 @@ sidebar search uses explicit tau-* native controls styled with classic tokens;
 retains form IDs, submit behavior, labels and shortcuts. No claim that this is
 upstream's composer search workflow. Search/axe/keyboard matrix 24 passed;
 build/TypeScript pass. No added font/image assets.
+
+## Shared-plan visual-task leftovers removed
+
+Removed single decorative Plan tab and visual Tasks-panel classes. Shared plan
+is explicitly Tau-specific, styled with classic tokens and native form controls;
+revision/conflict/status/editor IDs preserved. Plan, both-theme pane a11y and
+Dashboard dirty-draft acceptance/cancellation matrix 30 passed; build/TypeScript
+pass. Does not pretend Tau shared plans are classic scheduled tasks.
