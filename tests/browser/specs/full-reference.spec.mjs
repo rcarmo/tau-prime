@@ -23,6 +23,7 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
     }
     if(url.pathname === '/fixture-marked.js') return route.fulfill({contentType:'application/javascript',body:await readFile(markedModule)});
     const json = data => route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
+    if(url.pathname === '/search') return json({results:[{id:1,data:{type:'user_message'},content:'Review the workspace and preserve the existing API.',created_at:'2026-09-01T12:00:00Z'}]});
     if(url.pathname === '/timeline') return json({posts:[...piclawPosts].reverse(),has_more:false});
     if(url.pathname === '/agent/system-metrics') return json(piclawMeters);
     if(url.pathname === '/workspace/tree') return json({root:{name:'workspace',path:'',type:'directory',children:[{name:'src',path:'src',type:'directory',children:[]},{name:'README.md',path:'README.md',type:'file'}]}});
@@ -67,6 +68,11 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
   await page.getByRole('button', {name:'Workspace',exact:true}).click();
   await expect(page.locator('.file-tree')).toContainText('README.md');
   await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}-workspace.png`});
+  await page.getByRole('button', {name:'Search',exact:true}).click();
+  await page.getByPlaceholder('Search messages…').fill('workspace');
+  await expect(page.locator('.search-panel__item')).toHaveCount(1);
+  await expect(page.locator('.search-panel__item-text')).toHaveText('Review the workspace and preserve the existing API.');
+  await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}-search.png`});
   expect(errors).toEqual([]);
   expect(unexpected).toEqual([]);
 });

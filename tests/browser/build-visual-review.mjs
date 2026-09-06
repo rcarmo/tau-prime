@@ -6,11 +6,11 @@ const revision = execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).t
 const output = process.argv[2] ?? '/workspace/tmp/tau-visual-review.html';
 const image = async file => `data:image/png;base64,${(await readFile(file)).toString('base64')}`;
 const panel = process.argv[3] ?? 'chat';
-if (!['chat', 'workspace'].includes(panel)) throw new Error('Panel must be chat or workspace');
+if (!['chat', 'workspace', 'search'].includes(panel)) throw new Error('Panel must be chat, workspace or search');
 const sections = [];
 for (const engine of ['chromium','webkit']) for (const [viewport,size] of [['phone','390×844'],['tablet','820×1180'],['desktop','1440×900']]) for (const theme of ['light','dark']) {
   const key = `${engine}-${viewport}-${theme}`;
-  const reference = await image(`/workspace/tmp/piclaw-full-reference/${key}${panel === 'chat' ? '' : '-workspace'}.png`);
+  const reference = await image(`/workspace/tmp/piclaw-full-reference/${key}${panel === 'chat' ? '' : `-${panel}`}.png`);
   const tau = await image(`/workspace/tmp/tau-populated-review/${key}-${panel}.png`);
   sections.push(`<section id="${key}"><h2>${engine} · ${size} · ${theme}</h2><div class="pair"><figure><figcaption>Piclaw 2.15.3 — genuine bundle, isolated fixture</figcaption><img src="${reference}" alt="Piclaw ${key}"></figure><figure><figcaption>Tau — shared content, selected review session</figcaption><img src="${tau}" alt="Tau ${key}"></figure></div></section>`);
 }

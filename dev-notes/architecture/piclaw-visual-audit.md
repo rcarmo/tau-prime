@@ -436,3 +436,13 @@ Both-theme/six-target capture suites pass 24/24. Exporter accepts `workspace`
 as its second argument to produce 12 populated panel pairs. Tau retains its
 read-only preview/annotation controls; this is a comparison, not a claim that
 its filesystem API or editor is equivalent to Piclaw's. No runtime changes.
+
+## Populated Search comparison
+
+Added shared query/message text to populated Search screenshots on both sides.
+Reference uses the real search endpoint adapter and nested data.type for author
+label; Tau uses its existing component event fixture and session-open control.
+Tau captures pass 12/12; reference corrected-selector rerun passes 12/12.
+Exporter now supports `search`, delivering twelve labeled pairs. Search author,
+timestamp, filters and navigation differ; do not equate Tau's Open session with
+Piclaw's scroll-to-message action. No production changes or acceptance claim.
