@@ -413,3 +413,17 @@ images and explicit limitations. Delivered `tau-piclaw-paired-review.html` for
 human assessment. This is not a fresh capture or an approval. Generator output
 structure verified (12 sections, 24 images); diff checks clean. Current inputs
 are connected-state captures from the 30cdb61/8c3977c fixture checkpoints.
+
+## Reproducible bdf435a artifact and full installed suite
+
+Built twice with `SOURCE_DATE_EPOCH=$(git show -s --format=%ct bdf435a)` using
+`build_backend.build_wheel`: byte-identical wheels.
+SHA-256 `bfd1d8d662e666cd7fa96c5ab471a228d81c0300279ffef12384fb323ce8ae9a`
+for `tau_prime-42.3.0-py3-none-any.whl`.
+Installed into the separate audit venv and ran the entire browser suite with
+`TAU_BROWSER_PORT=8877 TAU_BROWSER_BIN=/workspace/tmp/tau-installed-audit/bin/tau`.
+Initial run: 350 passed, 3 skipped, 1 meters fixture race. That test still mocked
+EventSource rather than Tau's fetch SSE; replaced the obsolete stub with the
+persistent test stream and durable shell-ready wait. Full installed rerun:
+351 passed, 3 documented WebKit offline skips. No application bytes changed.
+Focused frontend/packaging tests: 44 passed. Visual approval is still pending.
