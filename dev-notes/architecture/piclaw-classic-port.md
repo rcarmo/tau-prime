@@ -320,3 +320,11 @@ are always available in classic secondary panel. Renamed legacy tab helper to
 PanelNavigationButton. Removed obsolete visual Sidebar parity spec; classic
 navigation/closure and accessibility coverage retained. Classic suite 78 passed;
 frontend/packaging 42 passed; build/TypeScript pass.
+
+## Classic-only offline cache validation
+
+Service-worker spec now checks v12, classic CSS/adaptation assets, exactly two
+font assets, no visual CSS/JetBrains entries, and no cached API data. Offline
+Chromium asserts classic app-shell rather than rejected activity bar. Matrix:
+9 passed / 3 existing documented WebKit offline skips. No skip was removed or
+newly hidden. Remaining visual-reference test inventory is still being replaced.

@@ -8,13 +8,13 @@ async function verifyCache(page) {
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open('tau-web-shell-v11');
+    const cache = await caches.open('tau-web-shell-v12');
     return (await cache.keys()).map(request => new URL(request.url).pathname);
   });
   expect(cached).toContain('/');
   expect(cached).toContain('/static/preact-shell.js');
   const unusable = await page.evaluate(async () => {
-    const cache = await caches.open('tau-web-shell-v11');
+    const cache = await caches.open('tau-web-shell-v12');
     const failures = [];
     for (const request of await cache.keys()) {
       const response = await cache.match(request);
@@ -23,7 +23,10 @@ async function verifyCache(page) {
     return failures;
   });
   expect(unusable).toEqual([]);
-  expect(cached.filter(name => /\.(woff2|ttf)$/.test(name))).toHaveLength(4);
+  expect(cached.filter(name => /\.(woff2|ttf)$/.test(name))).toHaveLength(2);
+  expect(cached).toContain('/static/piclaw-classic.css');
+  expect(cached).toContain('/static/tau-classic.css');
+  expect(cached.some(name => /piclaw-reference|piclaw-parity|JetBrains/.test(name))).toBe(false);
   expect(cached.some(name => name.startsWith('/api/'))).toBe(false);
 }
 
@@ -38,7 +41,8 @@ test('service worker supports offline reload', async ({ page, context, browserNa
   try {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.locator('#compose-input')).toBeVisible();
-    await expect(page.locator('.activity-bar')).toBeVisible();
+    await expect(page.locator('.app-shell')).toBeVisible();
+    await expect(page.locator('.activity-bar')).toHaveCount(0);
   } finally {
     await context.setOffline(false);
   }
