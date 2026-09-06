@@ -34,6 +34,14 @@ for (const colorScheme of ['light','dark']) {
     const geometry = await page.locator('.activity-bar, .app-layout__sidebar-wrapper, .tab-bar, .chat__compose, .chat__compose-container, .chat__input, .chat__toolbar, .chat__send-btn, .app-layout__status-bar').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {fontSize:s.fontSize,fontFamily:s.fontFamily,verticalAlign:s.verticalAlign,whiteSpace:s.whiteSpace,padding:s.padding,margin:s.margin,display:s.display,gap:s.gap,lineHeight:s.lineHeight,className:el.className,x:r.x,y:r.y,width:r.width,height:r.height};}));
     expect(geometry.find(item=>item.className==='activity-bar').y).toBe(0);
     await writeFile(path.join(dir,`${info.project.name}-${colorScheme}-geometry.json`),JSON.stringify(geometry,null,2));
+    await page.getByRole('button',{name:'Workspace',exact:true}).click();
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:workspace-render', {detail:{
+      configured:true,path:'/workspace',loading:false,notice:'',hasSelection:false,
+      entries:[{name:'src',path:'/workspace/src',kind:'directory'},{name:'README.md',path:'/workspace/README.md',kind:'file'}],
+      editorPath:'No file selected',editorContent:'',editorNotice:'Select a file to preview.',annotations:[],annotationCount:0,
+    }})));
+    await expect(page.locator('#workspace-list')).toContainText('README.md');
+    await page.screenshot({path:path.join(dir,`${info.project.name}-${colorScheme}-workspace.png`)});
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await expect(page.locator('#panel-settings')).toBeVisible();
     await page.screenshot({path:path.join(dir,`${info.project.name}-${colorScheme}-settings.png`)});

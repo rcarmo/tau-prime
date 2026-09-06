@@ -25,7 +25,7 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
     const json = data => route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
     if(url.pathname === '/timeline') return json({posts:[...piclawPosts].reverse(),has_more:false});
     if(url.pathname === '/agent/system-metrics') return json(piclawMeters);
-    if(url.pathname === '/workspace/tree') return json({root:{name:'workspace',path:'',type:'directory',children:[]}});
+    if(url.pathname === '/workspace/tree') return json({root:{name:'workspace',path:'',type:'directory',children:[{name:'src',path:'src',type:'directory',children:[]},{name:'README.md',path:'README.md',type:'file'}]}});
     if(url.pathname === '/agent/addons/web-entries') return json({entries:[]});
     if(url.pathname === '/agent/active-chats') return json({chats:[]});
     if(url.pathname === '/agent/status') return json({status:'idle',data:null});
@@ -64,6 +64,9 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
     highlightedCodeSpans: document.querySelectorAll('pre code span').length,
   }));
   await writeFile(`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}.json`,JSON.stringify({requests:[...new Set(requests)],errors,unexpected,geometry,renderingCapabilities},null,2));
+  await page.getByRole('button', {name:'Workspace',exact:true}).click();
+  await expect(page.locator('.file-tree')).toContainText('README.md');
+  await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}-workspace.png`});
   expect(errors).toEqual([]);
   expect(unexpected).toEqual([]);
 });

@@ -427,3 +427,12 @@ EventSource rather than Tau's fetch SSE; replaced the obsolete stub with the
 persistent test stream and durable shell-ready wait. Full installed rerun:
 351 passed, 3 documented WebKit offline skips. No application bytes changed.
 Focused frontend/packaging tests: 44 passed. Visual approval is still pending.
+
+## Populated Workspace comparison
+
+Added a two-entry Workspace fixture (src directory, README.md file) to both
+capture adapters, and asserted visible file content before screenshots.
+Both-theme/six-target capture suites pass 24/24. Exporter accepts `workspace`
+as its second argument to produce 12 populated panel pairs. Tau retains its
+read-only preview/annotation controls; this is a comparison, not a claim that
+its filesystem API or editor is equivalent to Piclaw's. No runtime changes.
