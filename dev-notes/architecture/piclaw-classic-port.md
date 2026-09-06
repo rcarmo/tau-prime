@@ -429,3 +429,11 @@ controls with classic Send/session pill and compose-input-wrapper. Whole-page
 scan caught WebKit native dark background on Provider setup trigger, missed by
 chat-scoped tests; applied scoped button color/appearance. Both themes/six-target
 matrix 12 passed, including visible focus after Ctrl/Cmd-N and phone navigation.
+
+## Capture migration to classic-only output
+
+Migrated layout-audit/populated-layout to classic navigation, post/tool selectors,
+hidden-live status and classic geometry inventory. Outputs use new
+`tau-classic-audit` / `tau-classic-populated-review` directories, preventing silent
+mixing with rejected visual-mode captures. Chat/Workspace/Search/Settings capture
+matrix 18 passed. These are Tau-only captures pending genuine classic pairing.
