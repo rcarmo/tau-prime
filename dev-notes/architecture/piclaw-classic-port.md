@@ -744,3 +744,12 @@ entries while retaining the message-only chat background. Reference/Tau matrix
 24 passed. Review exporter supports classic Workspace inputs (no visual-mode
 paths); delivered 12-pair HTML. Tau navigation/preview/telemetry differences remain
 visible, not hidden to improve agreement. Human visual assessment still pending.
+
+## Installed secondary-panel artifact (a742e08)
+
+Double SOURCE_DATE_EPOCH-pinned build is byte-identical; SHA-256
+ e1ad71960e5fbba16cd8f70e790e9feec1e947600bc9561e1393e8c9f6bbdf5d
+for tau_prime-42.3.0-py3-none-any.whl. Separate installed runtime passed 108
+classic root/resize, queue, sessions, metrics, Workspace, Dashboard accept/decline,
+and populated accessibility checks. Delivered wheel/checksum. Supersedes 58e98bf
+artifact; current secondary changes and draft fix included. Visual approval open.
