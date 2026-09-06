@@ -753,3 +753,11 @@ for tau_prime-42.3.0-py3-none-any.whl. Separate installed runtime passed 108
 classic root/resize, queue, sessions, metrics, Workspace, Dashboard accept/decline,
 and populated accessibility checks. Delivered wheel/checksum. Supersedes 58e98bf
 artifact; current secondary changes and draft fix included. Visual approval open.
+
+## Composer viewport-change correction
+
+Resize state/ARIA bounds now refresh on window resize, clamp stored height to
+new classic limits and clean up listener. Previously CSS could clamp visually
+while ARIA/state stayed stale until another render. Added desktop→phone→desktop
+check with draft preservation and Home reset; rotation + pointer/keyboard resize
+matrix 12 passed; build/TypeScript pass. Latest artifact predates this small fix.

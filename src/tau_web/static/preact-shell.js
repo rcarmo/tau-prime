@@ -524,7 +524,16 @@ function ClassicComposerSurface({ session, input, metadata, actions, notices, at
   const drag = A2(null);
   const [height, setHeight] = h2(50);
   const limits = () => ({ min: window.innerWidth >= 1024 ? 70 : 50, max: window.innerWidth < 640 ? Math.min(window.innerHeight * 0.3, 200) : Math.min(window.innerHeight * 0.5, 520) });
-  const bounds = limits();
+  const [bounds, setBounds] = h2(limits);
+  y2(() => {
+    const update = () => {
+      const next = limits();
+      setBounds(next);
+      setHeight((current) => Math.max(next.min, Math.min(next.max, current)));
+    };
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   _2(() => {
     const textarea = root.current?.querySelector("textarea");
     if (textarea) {

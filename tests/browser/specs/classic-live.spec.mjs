@@ -100,3 +100,20 @@ test('classic composer resize supports keyboard and pointer without changing dra
  await page.keyboard.press('Home');await expect(input).toHaveCSS('height',`${baseline}px`);
  await expect(handle).toHaveAttribute('aria-valuemin',String(baseline));
 });
+
+test('composer clamps resize state when viewport changes',async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');await page.setViewportSize({width:1440,height:900});await page.goto('/');
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ const input=page.locator('#compose-input'),handle=page.getByRole('separator',{name:'Resize message input'});
+ await input.fill('Preserve on rotation');await handle.focus();for(let i=0;i<40;i++)await page.keyboard.press('ArrowUp');
+ await page.setViewportSize({width:390,height:600});
+ await expect(handle).toHaveAttribute('aria-valuemax','180');
+ await expect(handle).toHaveAttribute('aria-valuemin','50');
+ await expect(input).toHaveCSS('height','180px');
+ await expect(input).toHaveValue('Preserve on rotation');
+ await page.setViewportSize({width:1440,height:900});
+ await expect(handle).toHaveAttribute('aria-valuemin','70');
+ await expect(handle).toHaveAttribute('aria-valuemax','450');
+ await handle.focus();await page.keyboard.press('Home');await expect(input).toHaveCSS('height','70px');
+});

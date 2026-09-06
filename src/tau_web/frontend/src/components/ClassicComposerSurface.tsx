@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 /** Structure ported from classic components/compose-box.ts.
  * Slots keep Tau's adapter IDs, state and event ownership in the caller.
@@ -18,7 +18,16 @@ export function ClassicComposerSurface({ session, input, metadata, actions, noti
   const [height, setHeight] = useState(50);
   // Match the pinned classic chat.css/responsive.css textarea limits.
   const limits = () => ({ min: window.innerWidth >= 1024 ? 70 : 50, max: window.innerWidth < 640 ? Math.min(window.innerHeight * 0.3, 200) : Math.min(window.innerHeight * 0.5, 520) });
-  const bounds = limits();
+  const [bounds, setBounds] = useState(limits);
+  useEffect(() => {
+    const update = () => {
+      const next = limits();
+      setBounds(next);
+      setHeight(current => Math.max(next.min, Math.min(next.max, current)));
+    };
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   useLayoutEffect(() => {
     const textarea = root.current?.querySelector("textarea");
     if (textarea) { textarea.style.height = `${Math.max(bounds.min, Math.min(bounds.max, height))}px`; textarea.style.flex = "none"; textarea.style.boxSizing = "border-box"; }
