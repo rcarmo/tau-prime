@@ -9,16 +9,18 @@ export function SearchResults() {
     window.addEventListener("tau:search-render", update);
     return () => window.removeEventListener("tau:search-render", update);
   }, []);
-  return <ol id="search-results" className="search-panel__results" tabIndex={0} aria-label="Search results" aria-live="polite">
+  return <ol id="search-results" className="tau-search-results" tabIndex={0} aria-label="Search results" aria-live="polite">
     {!items.length && <li>Search results will appear here.</li>}
-    {items.map((result, index) => <li className="search-panel__item" key={`${result.entityType}-${result.entityId}-${index}`}>
-      <article>
-        <div className="search-panel__item-header">
-          <strong className="search-panel__item-type">{result.entityType} · {result.entityId}</strong>
-          <span className="search-panel__item-time">{result.meta}</span>
+    {items.map((result, index) => <li className="tau-search-result" key={`${result.entityType}-${result.entityId}-${index}`}>
+      <article className="post">
+        <div className="post-body">
+        <div className="post-meta">
+          <strong className="post-author">{result.entityType} · {result.entityId}</strong>
+          <span className="post-time">{result.meta}</span>
         </div>
-        <span className="search-panel__item-text">{result.text}</span>
+        <span className="post-content">{result.text}</span>
         {result.sessionId && <button className="settings-panel__provider-btn" type="button" onClick={() => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } }))}>Open session</button>}
+        </div>
       </article>
     </li>)}
   </ol>;

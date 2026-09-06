@@ -1037,20 +1037,20 @@ function SearchResults() {
     window.addEventListener("tau:search-render", update);
     return () => window.removeEventListener("tau:search-render", update);
   }, []);
-  return /* @__PURE__ */ u2("ol", { id: "search-results", className: "search-panel__results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite", children: [
+  return /* @__PURE__ */ u2("ol", { id: "search-results", className: "tau-search-results", tabIndex: 0, "aria-label": "Search results", "aria-live": "polite", children: [
     !items.length && /* @__PURE__ */ u2("li", { children: "Search results will appear here." }),
-    items.map((result, index) => /* @__PURE__ */ u2("li", { className: "search-panel__item", children: /* @__PURE__ */ u2("article", { children: [
-      /* @__PURE__ */ u2("div", { className: "search-panel__item-header", children: [
-        /* @__PURE__ */ u2("strong", { className: "search-panel__item-type", children: [
+    items.map((result, index) => /* @__PURE__ */ u2("li", { className: "tau-search-result", children: /* @__PURE__ */ u2("article", { className: "post", children: /* @__PURE__ */ u2("div", { className: "post-body", children: [
+      /* @__PURE__ */ u2("div", { className: "post-meta", children: [
+        /* @__PURE__ */ u2("strong", { className: "post-author", children: [
           result.entityType,
           " \xB7 ",
           result.entityId
         ] }),
-        /* @__PURE__ */ u2("span", { className: "search-panel__item-time", children: result.meta })
+        /* @__PURE__ */ u2("span", { className: "post-time", children: result.meta })
       ] }),
-      /* @__PURE__ */ u2("span", { className: "search-panel__item-text", children: result.text }),
+      /* @__PURE__ */ u2("span", { className: "post-content", children: result.text }),
       result.sessionId && /* @__PURE__ */ u2("button", { className: "settings-panel__provider-btn", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
-    ] }) }, `${result.entityType}-${result.entityId}-${index}`))
+    ] }) }) }, `${result.entityType}-${result.entityId}-${index}`))
   ] });
 }
 

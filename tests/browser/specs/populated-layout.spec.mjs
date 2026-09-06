@@ -48,7 +48,7 @@ for (const colorScheme of ['light','dark']) {
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:search-render', {detail:{items:[{
       entityType:'message',entityId:'user',meta:'Review session',text:'Review the workspace and preserve the existing API.',sessionId:'visual-review',
     }]}})));
-    await expect(page.locator('#search-results .search-panel__item')).toHaveCount(1);
+    await expect(page.locator('#search-results .tau-search-result')).toHaveCount(1);
     await page.screenshot({path:path.join(dir,`${info.project.name}-${colorScheme}-search.png`)});
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await expect(page.locator('#panel-settings')).toBeVisible();

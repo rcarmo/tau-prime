@@ -14,11 +14,11 @@ test('search results render through Piclaw search cards', async ({ page }) => {
   ] } })));
   await page.getByRole('button',{name:'Open sessions',exact:true}).click();
   await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Search',exact:true}).click();
-  const result = page.locator('#search-results .search-panel__item');
+  const result = page.locator('#search-results .tau-search-result');
   await expect(result).toHaveCount(1);
-  await expect(result.locator('.search-panel__item-type')).toHaveText('message · entry-1');
-  await expect(result.locator('.search-panel__item-text')).toHaveText('Matching content');
-  const snippet = result.locator('.search-panel__item-text');
+  await expect(result.locator('.post-author')).toHaveText('message · entry-1');
+  await expect(result.locator('.post-content')).toHaveText('Matching content');
+  const snippet = result.locator('.post-content');
   expect(await snippet.evaluate(el => ({tag:el.tagName,top:getComputedStyle(el).marginTop,bottom:getComputedStyle(el).marginBottom}))).toEqual({tag:'SPAN',top:'0px',bottom:'0px'});
   await expect(result.getByRole('button', { name: 'Open session' })).toBeVisible();
 });

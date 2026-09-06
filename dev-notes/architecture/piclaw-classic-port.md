@@ -761,3 +761,12 @@ new classic limits and clean up listener. Previously CSS could clamp visually
 while ARIA/state stayed stale until another render. Added desktop→phone→desktop
 check with draft preservation and Home reset; rotation + pointer/keyboard resize
 matrix 12 passed; build/TypeScript pass. Latest artifact predates this small fix.
+
+## Classic Search result adaptation
+
+Removed unstyled visual search-card result classes. Tau results now use classic
+post/body/meta/author/time/content structure inside a semantic result list;
+metadata and Open session action retained (classic itself searches timeline posts).
+Scoped list/padding/wrapping adapts rows to Tau sidebar. Search rendering and
+both-theme a11y matrix 18 passed; build/TypeScript pass. Search form container
+still requires audit; no claim of identical upstream search workflow.
