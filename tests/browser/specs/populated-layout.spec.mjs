@@ -1,3 +1,4 @@
+import { installLiveStream } from '../fixtures/live-stream.mjs';
 import { installSelectedSession } from '../fixtures/selected-session.mjs';
 import { tauItems, fixedTime, tauMeters } from "../fixtures/visual-state.mjs";
 import { expect, test } from '@playwright/test';
@@ -7,6 +8,7 @@ import path from 'node:path';
 for (const colorScheme of ['light','dark']) {
   test(`capture populated ${colorScheme} chat and settings for review`, async ({ page }, info) => {
     await installSelectedSession(page);
+    await installLiveStream(page, 'tau');
     await page.emulateMedia({colorScheme});
     await page.clock.setFixedTime(new Date(fixedTime));
     await page.route('**/api/events*', route=>route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'}));
@@ -21,6 +23,8 @@ for (const colorScheme of ['light','dark']) {
     await page.locator('.message-list__tool-call-header').click();
     await expect(page.locator('.message-list__tool-call-body')).toBeVisible();
     await expect(page.locator('.queue-stack__error')).toHaveCount(0);
+    await expect(page.locator('#status-stream')).toHaveText('Live');
+    await expect(page.locator('.status-bar__conn-dot')).toHaveClass(/--connected/);
     await expect(page.locator('#status-session')).toHaveText('Review session');
     await expect(page.locator('#status-model')).toHaveText('test/review-model');
     await expect(page.locator('#meters-summary')).toHaveText('CPU 10% · RAM 25% · RSS 80 MB · Swap 0%');

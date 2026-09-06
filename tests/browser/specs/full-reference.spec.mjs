@@ -1,3 +1,4 @@
+import { installLiveStream } from '../fixtures/live-stream.mjs';
 import { piclawPosts, fixedTime, piclawMeters, modelName, providerName } from '../fixtures/visual-state.mjs';
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
@@ -9,6 +10,7 @@ const dist = '/opt/piclaw/releases/piclaw-2.15.3-linux-x64-baseline/app/runtime/
 
 for (const colorScheme of ['light', 'dark']) {
 test(`capture actual Piclaw ${colorScheme} application bundle with isolated backend fixture`, async ({ page }, info) => {
+  await installLiveStream(page, 'piclaw');
   await page.emulateMedia({ colorScheme });
   const requests = [], errors = [], unexpected = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -47,6 +49,7 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
   // Wait for successful status/model polling, not just the timeline mount.
   await expect(page.locator('.model-badge__name')).toHaveText([modelName, modelName]);
   await expect(page.locator('.model-badge__provider')).toHaveText([`${providerName}/`, `${providerName}/`]);
+  await expect(page.locator('.status-bar__conn')).toHaveCount(0);
   await page.locator('.message-list__tool-call-header').click();
   await expect(page.locator('.message-list__tool-call-body')).toBeVisible();
   await page.evaluate(()=>document.fonts.ready);

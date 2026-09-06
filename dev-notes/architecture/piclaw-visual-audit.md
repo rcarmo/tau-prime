@@ -385,3 +385,14 @@ returns `{status:"idle",data:null}` and asserts both mounted model badges show
 `test/review-model` before screenshots. All 12 reference captures pass; Tau's
 12 populated captures also pass. These refresh the paired evidence, not approval.
 Connection probes/SSE lifetime and identity/avatar deviations remain to review.
+
+## Persistent connected capture fixtures
+
+Replaced finite SSE lifetime for the populated comparison with screenshot-only
+persistent transports: fetch ReadableStream for Tau, EventSource open lifecycle
+for Piclaw. No application/runtime changes. Both capture suites pass 24/24;
+reference rerun with explicit absence-of-offline assertion passes 12/12.
+Tau asserts Live + connected dot. Piclaw intentionally hides its connection
+indicator when connected (App.tsx), whereas Tau retains the Live indicator;
+this is now a documented UI difference rather than an accidental EOF race.
+Real backend SSE recovery remains covered independently, not by this mock.
