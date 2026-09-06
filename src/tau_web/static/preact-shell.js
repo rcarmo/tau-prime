@@ -483,120 +483,6 @@ function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed })
   ] });
 }
 
-// src/theme/theme.ts
-var DARK_THEME = {
-  bg: "#1e1e2e",
-  bgSidebar: "#181825",
-  bgTerminal: "#11111b",
-  bgStatus: "#181825",
-  border: "#313244",
-  text: "#cdd6f4",
-  textMuted: "#9399b2",
-  accent: "#89b4fa",
-  success: "#a6e3a1",
-  error: "#f38ba8",
-  handleHover: "#89b4fa",
-  handle: "#313244",
-  inputBg: "#11111b",
-  inputBorder: "#45475a"
-};
-var LIGHT_THEME = {
-  bg: "#f3f3f3",
-  bgSidebar: "#e8e8e8",
-  bgTerminal: "#1e1e2e",
-  bgStatus: "#dcdcdc",
-  border: "#c8c8c8",
-  text: "#1a1a1a",
-  textMuted: "#4a4a4a",
-  accent: "#0078d4",
-  success: "#16a34a",
-  error: "#d32f2f",
-  handleHover: "#0078d4",
-  handle: "#c8c8c8",
-  inputBg: "#ffffff",
-  inputBorder: "#c8c8c8"
-};
-function getSystemTheme() {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return "dark";
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-// src/theme/applyTheme.ts
-function installSystemTheme() {
-  const apply2 = () => {
-    const mode = getSystemTheme();
-    const theme = mode === "dark" ? DARK_THEME : LIGHT_THEME;
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(mode);
-    const variables = {
-      "--bg": theme.bg,
-      "--bg-sidebar": theme.bgSidebar,
-      "--bg-terminal": theme.bgTerminal,
-      "--bg-status": theme.bgStatus,
-      "--border": theme.border,
-      "--text": theme.text,
-      "--text-muted": theme.textMuted,
-      "--accent": theme.accent,
-      "--success": theme.success,
-      "--error": theme.error,
-      "--handle-hover": theme.handleHover,
-      "--handle": theme.handle,
-      "--input-bg": theme.inputBg,
-      "--input-border": theme.inputBorder
-    };
-    for (const [key, value] of Object.entries(variables)) root.style.setProperty(key, value);
-  };
-  apply2();
-  const media = window.matchMedia("(prefers-color-scheme: dark)");
-  media.addEventListener("change", apply2);
-  return () => media.removeEventListener("change", apply2);
-}
-
-// src/components/ActivityBar.tsx
-var PANELS = [
-  { id: "sessions", label: "Sessions", icon: "codicon-comment-discussion" },
-  { id: "workspace", label: "Workspace", icon: "codicon-files" },
-  { id: "search", label: "Search", icon: "codicon-search" },
-  { id: "plan", label: "Plan", icon: "codicon-checklist" },
-  { id: "dashboard", label: "Dashboard", icon: "codicon-dashboard" },
-  { id: "settings", label: "Settings", icon: "codicon-settings-gear", alignBottom: true }
-];
-function ActivityBar({ activePanel, onPanelChange, onDashboard }) {
-  return /* @__PURE__ */ u2("nav", { className: "activity-bar", "aria-label": "Activity bar", children: PANELS.map((panel) => {
-    const active = panel.id === activePanel;
-    return /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        className: `activity-bar__button ${active ? "is-active" : ""} ${panel.alignBottom ? "is-bottom" : ""}`,
-        title: panel.label,
-        "aria-label": panel.label,
-        "aria-pressed": active,
-        onClick: () => panel.id === "dashboard" ? onDashboard() : onPanelChange(panel.id),
-        children: /* @__PURE__ */ u2("i", { className: `codicon ${panel.icon} icon--size-24 activity-bar__icon`, "aria-hidden": "true" })
-      },
-      panel.id
-    );
-  }) });
-}
-
-// src/components/TabBar.tsx
-function TabBar() {
-  return /* @__PURE__ */ u2("div", { className: "tab-bar", role: "tablist", "aria-label": "Central pane tabs", children: /* @__PURE__ */ u2(
-    "button",
-    {
-      role: "tab",
-      type: "button",
-      "aria-selected": true,
-      className: "tab-bar__tab tab-bar__tab--active",
-      children: /* @__PURE__ */ u2("span", { className: "tab-bar__tab__label", children: "Chat" })
-    }
-  ) });
-}
-
 // src/components/StatusBar.tsx
 function StatusBar({ classic = false, dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
   const [model, setModel] = h2("");
@@ -5014,7 +4900,6 @@ function useSidebarTabs() {
 }
 
 // src/index.tsx
-var classicPreview = new URLSearchParams(location.search).get("ui") === "classic";
 function TauShell() {
   const { drawer, close, toggle } = useDrawers();
   const { activeTab, selectTab } = useSidebarTabs();
@@ -5037,7 +4922,7 @@ function TauShell() {
       if (drawer !== target) toggle(target);
     }
   };
-  if (classicPreview) return /* @__PURE__ */ u2(b, { children: [
+  return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2(ClassicChatFrame, { workspaceOpen: sidebarOpen || settingsOpen, sidebar: /* @__PURE__ */ u2(b, { children: [
       /* @__PURE__ */ u2(SidePanel, { classic: true, activeTab, onSelectTab: selectTab, onClose: () => {
         close();
@@ -5063,53 +4948,8 @@ function TauShell() {
       /* @__PURE__ */ u2("button", { id: "drawer-backdrop", onClick: close })
     ] })
   ] });
-  return /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2("a", { className: "skip-link", href: "#timeline-main", children: "Skip to timeline" }),
-    /* @__PURE__ */ u2("div", { className: "app-layout", children: [
-      /* @__PURE__ */ u2(ActivityBar, { activePanel: activeTab, onPanelChange: selectPanel, onDashboard: () => setDashboardOpen(true) }),
-      /* @__PURE__ */ u2("main", { className: "app-layout__main", children: [
-        /* @__PURE__ */ u2("div", { className: "app-layout__content-area", children: [
-          /* @__PURE__ */ u2("div", { className: "app-layout__sidebar-wrapper", hidden: settingsOpen, style: { width: sidebarOpen ? "250px" : "0" }, children: /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close, sessionFilter, onSelectSessionFilter: selectSessionFilter }) }),
-          /* @__PURE__ */ u2("button", { id: "drawer-backdrop", className: "app-layout__sidebar-backdrop", type: "button", "aria-label": "Close sidebar", hidden: !sidebarOpen, onClick: close }),
-          sidebarOpen && /* @__PURE__ */ u2("div", { className: "app-layout__resize-handle", role: "separator", "aria-orientation": "vertical", "aria-label": "Resize sidebar" }),
-          /* @__PURE__ */ u2("div", { className: "app-layout__panel", children: [
-            /* @__PURE__ */ u2(SettingsPanel, { hidden: !settingsOpen }),
-            !settingsOpen && /* @__PURE__ */ u2(TabBar, {}),
-            /* @__PURE__ */ u2("div", { className: "app-layout__tab-viewport", hidden: settingsOpen, children: /* @__PURE__ */ u2("div", { className: "app-layout__tab-content", children: [
-              /* @__PURE__ */ u2(Onboarding, { onOpenChange: setOnboardingOpen }),
-              /* @__PURE__ */ u2("section", { className: "chat", "aria-label": "Tau chat", hidden: onboardingOpen, children: [
-                /* @__PURE__ */ u2("div", { className: "chat__messages", children: /* @__PURE__ */ u2(Timeline, {}) }),
-                /* @__PURE__ */ u2(SessionRuntime, {}),
-                /* @__PURE__ */ u2(QueueStack, {}),
-                /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),
-                /* @__PURE__ */ u2(Composer, {})
-              ] })
-            ] }) })
-          ] })
-        ] }),
-        /* @__PURE__ */ u2(StatusBar, { dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions: () => selectPanel("sessions"), onToggleDashboard: () => setDashboardOpen((current) => !current), onToggleMetersEnabled: toggleMetersEnabled, onToggleMetersCollapsed: toggleMetersCollapsed }),
-        /* @__PURE__ */ u2("div", { className: "mobile-toolbar", children: [
-          /* @__PURE__ */ u2("button", { id: "mobile-nav-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open sessions", "aria-expanded": drawer === "nav", onClick: () => selectPanel("sessions"), children: "Sessions" }),
-          /* @__PURE__ */ u2("span", { className: "mobile-toolbar__model-slot", children: "Tau" }),
-          /* @__PURE__ */ u2("button", { id: "mobile-panel-toggle", className: "mobile-toolbar__terminal-btn", type: "button", "aria-label": "Open workspace", "aria-expanded": drawer === "panel", onClick: () => selectPanel("workspace"), children: "Workspace" })
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ u2(ApprovalDialog, {}),
-    /* @__PURE__ */ u2("aside", { id: "session-nav", hidden: true }),
-    /* @__PURE__ */ u2("noscript", { children: /* @__PURE__ */ u2("p", { className: "noscript-banner", children: "Tau Web requires JavaScript." }) })
-  ] });
 }
 var mount = document.getElementById("app");
 if (!mount) throw new Error("Missing #app root element");
-if (classicPreview) {
-  document.documentElement.dataset.tauUi = "classic";
-  for (const link of Array.from(document.querySelectorAll('link[rel="stylesheet"]'))) link.remove();
-  for (const name of ["piclaw-classic.css", "tau-classic.css"]) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "/static/" + name;
-    document.head.append(link);
-  }
-} else installSystemTheme();
+document.documentElement.dataset.tauUi = "classic";
 B(/* @__PURE__ */ u2(TauShell, {}), mount);

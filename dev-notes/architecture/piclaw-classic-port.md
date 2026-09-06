@@ -250,3 +250,14 @@ and WebKit native-button dark backgrounds. Corrected pressed semantics and
 scoped classic control/text colors/appearance without modifying vendor CSS.
 Full six-target/both-theme scan 12 passed (four surfaces each); TypeScript passed.
 Scans currently use idle/empty content, not complete populated message coverage.
+
+## Classic-only direction (Rui correction)
+
+Classic is now the sole root shell: no query switch or alternative render branch.
+HTML/service worker use classic CSS plus scoped Tau adaptations; cache advanced
+to v12. Deleted visual reference/parity CSS and both visual-only JetBrains fonts,
+and removed their public routes and replaced wrong-reference packaging tests.
+Classic root integration 36 passed; updated frontend/packaging 42 passed.
+Obsolete visual component branches/tests still need removal. Populated dark axe
+scan currently has unresolved failures; do not treat default cutover as complete
+visual/accessibility acceptance. Prior preview wording is superseded.

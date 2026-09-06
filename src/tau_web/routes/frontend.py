@@ -14,8 +14,6 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/index.html",
         "/manifest.webmanifest",
         "/sw.js",
-        "/static/piclaw-reference.css",
-        "/static/piclaw-parity.css",
     "/static/piclaw-classic.css",
     "/static/tau-classic.css",
         "/static/app.js",
@@ -23,8 +21,6 @@ _FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
         "/static/widget-bridge.js",
         "/static/frontend-sdk.js",
         "/static/preact-shell.js",
-        "/static/JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
-        "/static/JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
         "/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
         "/static/firacode-nerd-font-mono-regular-f4sytzp8.ttf",
     }
@@ -69,18 +65,6 @@ _ROOT_ASSETS: Final[dict[str, FrontendAsset]] = {
 }
 
 _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
-    "JetBrainsMonoNFM-Medium-hh38vnv1.woff2": FrontendAsset(
-        resource_name="JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
-        content_type="font/woff2",
-        charset=None,
-        cache_control="public, max-age=31536000, immutable",
-    ),
-    "JetBrainsMonoNFM-Regular-rhdb9m6d.woff2": FrontendAsset(
-        resource_name="JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
-        content_type="font/woff2",
-        charset=None,
-        cache_control="public, max-age=31536000, immutable",
-    ),
     "firacode-nerd-font-mono-bold-v7nf8tpn.ttf": FrontendAsset(
         resource_name="firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
         content_type="font/ttf",
@@ -93,24 +77,12 @@ _STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
         charset=None,
         cache_control="public, max-age=31536000, immutable",
     ),
-    "piclaw-reference.css": FrontendAsset(
-        resource_name="piclaw-reference.css",
-        content_type="text/css",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
     "tau-classic.css": FrontendAsset(
         resource_name="tau-classic.css", content_type="text/css", charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",
     ),
     "piclaw-classic.css": FrontendAsset(
         resource_name="piclaw-classic.css",
-        content_type="text/css",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "piclaw-parity.css": FrontendAsset(
-        resource_name="piclaw-parity.css",
         content_type="text/css",
         charset="utf-8",
         cache_control="public, max-age=3600, must-revalidate",

@@ -3,9 +3,10 @@ import {mkdir} from 'node:fs/promises';
 import {installSelectedSession} from '../fixtures/selected-session.mjs';
 import {installLiveStream} from '../fixtures/live-stream.mjs';
 
-test('classic preview boots the real Tau adapter with session navigation',async({page})=>{
+test('classic shell boots the real Tau adapter with session navigation',async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/?ui=classic',{waitUntil:'domcontentloaded'});
+ await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
  const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
  await expect(page.locator('#compose-input')).toBeVisible();
@@ -18,7 +19,7 @@ test('classic preview boots the real Tau adapter with session navigation',async(
 
 for(const colorScheme of ['light','dark']) test(`classic populated ${colorScheme} preview fits viewport`,async({page},info)=>{
  await installSelectedSession(page);await installLiveStream(page,'tau');await page.emulateMedia({colorScheme});
- await page.goto('/?ui=classic',{waitUntil:'domcontentloaded'});
+ await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
  const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'one',role:'user',content:'Review the workspace and preserve the existing API.',meta:'2m'},{id:'two',role:'assistant',content:'## Workspace review\n\nThe API is **unchanged**.\n\n- Routes retained\n- Streaming retained',meta:'1m'}]}})));
@@ -40,7 +41,7 @@ for(const via of ['button','keyboard']) test(`classic ${via} submission preserve
   submitted.push(route.request().postDataJSON());
   return route.fulfill({status:fail?500:201,json:fail?{error:'Fixture rejection'}:{run_id:'classic-run',status:'pending'}});
  });
- await page.goto('/?ui=classic',{waitUntil:'domcontentloaded'});
+ await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
  const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
  const input=page.locator('#compose-input');await input.fill('Review');
@@ -58,7 +59,7 @@ for(const via of ['button','keyboard']) test(`classic ${via} submission preserve
 
  test('classic secondary panels keep controls within the viewport',async({page})=>{
  await installSelectedSession(page);await installLiveStream(page,'tau');
- await page.goto('/?ui=classic',{waitUntil:'domcontentloaded'});
+ await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
  const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
  await page.getByRole('button',{name:'Open sessions',exact:true}).click();

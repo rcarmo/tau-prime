@@ -34,10 +34,7 @@ FRONTEND_ASSETS = (
     ("/index.html", "text/html"),
     ("/manifest.webmanifest", "application/manifest+json"),
     ("/sw.js", "application/javascript"),
-    ("/static/piclaw-reference.css", "text/css"),
     ("/static/piclaw-classic.css", "text/css"),
-    ("/static/JetBrainsMonoNFM-Medium-hh38vnv1.woff2", "font/woff2"),
-    ("/static/JetBrainsMonoNFM-Regular-rhdb9m6d.woff2", "font/woff2"),
     ("/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf", "font/ttf"),
     ("/static/firacode-nerd-font-mono-regular-f4sytzp8.ttf", "font/ttf"),
     ("/static/app.js", "application/javascript"),
@@ -106,7 +103,7 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
     assert root_html == index_html
     assert '<script type="module" src="/static/preact-shell.js"></script>' in root_html
     assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
-    assert '<link rel="stylesheet" href="/static/piclaw-reference.css" />' in root_html
+    assert '<link rel="stylesheet" href="/static/piclaw-classic.css" />' in root_html
     assert '<link rel="stylesheet" href="/static/app.css" />' not in root_html
     assert '<script type="module" src="/static/live-ui.js"></script>' not in root_html
 
@@ -394,12 +391,12 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
         "theme_color": "#0f172a",
         "lang": "en",
     }
-    assert 'const CACHE_NAME = "tau-web-shell-v11";' in worker
+    assert 'const CACHE_NAME = "tau-web-shell-v12";' in worker
     for asset_path in (
         "/",
         "/index.html",
         "/manifest.webmanifest",
-        "/static/piclaw-reference.css",
+        "/static/piclaw-classic.css",
         "/static/app.js",
         "/static/extension-ui.js",
         "/static/widget-bridge.js",
@@ -444,8 +441,8 @@ def test_preact_owns_mobile_drawer_state() -> None:
     assert "document.body.dataset.navOpen" in hook
     assert 'window.addEventListener("keydown", keydown)' in hook
     assert "const sidebarOpen = drawer !== null" in shell
-    assert 'style={{ width: sidebarOpen ? "250px" : "0" }}' in shell
-    assert 'className="app-layout__sidebar-wrapper"' in shell
+    assert '<ClassicChatFrame workspaceOpen={sidebarOpen || settingsOpen}' in shell
+    assert 'className="app-layout__sidebar-wrapper"' not in shell
     assert 'addEventListener("click", () => toggleDrawer' not in legacy
     assert 'new CustomEvent("tau:close-drawers")' in legacy
 
