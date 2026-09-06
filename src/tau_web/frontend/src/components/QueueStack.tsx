@@ -99,23 +99,23 @@ export function QueueStack() {
   }
 
   return (
-    <div className="queue-stack" aria-label="Queued messages">
-      {error && <div className="queue-stack__error" role="status">{error}</div>}
+    <div className="compose-queue-stack" role="list" aria-label="Queued messages">
+      {error && <div className="tau-queue-error" role="status">{error}</div>}
       {items.map((item) => {
         const text = queueText(item.content);
         const isHead = firstByKind.get(item.queue_kind) === item.queue_id;
         return (
-          <div key={item.queue_id} className="queue-stack__item">
-            <div className="queue-stack__content" title={text}>
-              <span className="queue-stack__kind">{item.queue_kind === "follow_up" ? "Follow-up" : "Steer"}</span>
+          <div key={item.queue_id} className="compose-queue-stack-item" role="listitem">
+            <div className="compose-queue-stack-content" title={text}>
+              <span className="tau-queue-kind">{item.queue_kind === "follow_up" ? "Follow-up" : "Steer"}</span>
               {text.length > 80 ? `${text.slice(0, 80)}\u2026` : text}
             </div>
-            <div className="queue-stack__actions">
-              <button type="button" className="queue-stack__btn queue-stack__btn--edit" onClick={() => copyToComposer(item)} title="Copy to compose" aria-label="Copy queued message to compose">
+            <div className="compose-queue-stack-actions">
+              <button type="button" className="compose-queue-stack-edit-btn" onClick={() => copyToComposer(item)} title="Copy to compose" aria-label="Copy queued message to compose">
                 <ClassicIcon name="edit" />
               </button>
               {isHead && (
-                <button type="button" className="queue-stack__btn queue-stack__btn--steer" disabled={!state.activeRun || busyKind === item.queue_kind} onClick={() => void dispatch(item.queue_kind)} title={state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required"}>
+                <button type="button" className="compose-queue-stack-steer-btn" disabled={!state.activeRun || busyKind === item.queue_kind} onClick={() => void dispatch(item.queue_kind)} title={state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required"}>
                   ↵ Dispatch
                 </button>
               )}

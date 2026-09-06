@@ -4718,19 +4718,19 @@ function QueueStack() {
   for (const item of items) {
     if (!firstByKind.has(item.queue_kind)) firstByKind.set(item.queue_kind, item.queue_id);
   }
-  return /* @__PURE__ */ u2("div", { className: "queue-stack", "aria-label": "Queued messages", children: [
-    error && /* @__PURE__ */ u2("div", { className: "queue-stack__error", role: "status", children: error }),
+  return /* @__PURE__ */ u2("div", { className: "compose-queue-stack", role: "list", "aria-label": "Queued messages", children: [
+    error && /* @__PURE__ */ u2("div", { className: "tau-queue-error", role: "status", children: error }),
     items.map((item) => {
       const text2 = queueText(item.content);
       const isHead = firstByKind.get(item.queue_kind) === item.queue_id;
-      return /* @__PURE__ */ u2("div", { className: "queue-stack__item", children: [
-        /* @__PURE__ */ u2("div", { className: "queue-stack__content", title: text2, children: [
-          /* @__PURE__ */ u2("span", { className: "queue-stack__kind", children: item.queue_kind === "follow_up" ? "Follow-up" : "Steer" }),
+      return /* @__PURE__ */ u2("div", { className: "compose-queue-stack-item", role: "listitem", children: [
+        /* @__PURE__ */ u2("div", { className: "compose-queue-stack-content", title: text2, children: [
+          /* @__PURE__ */ u2("span", { className: "tau-queue-kind", children: item.queue_kind === "follow_up" ? "Follow-up" : "Steer" }),
           text2.length > 80 ? `${text2.slice(0, 80)}\u2026` : text2
         ] }),
-        /* @__PURE__ */ u2("div", { className: "queue-stack__actions", children: [
-          /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--edit", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u2(ClassicIcon, { name: "edit" }) }),
-          isHead && /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--steer", disabled: !state.activeRun || busyKind === item.queue_kind, onClick: () => void dispatch(item.queue_kind), title: state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required", children: "\u21B5 Dispatch" })
+        /* @__PURE__ */ u2("div", { className: "compose-queue-stack-actions", children: [
+          /* @__PURE__ */ u2("button", { type: "button", className: "compose-queue-stack-edit-btn", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u2(ClassicIcon, { name: "edit" }) }),
+          isHead && /* @__PURE__ */ u2("button", { type: "button", className: "compose-queue-stack-steer-btn", disabled: !state.activeRun || busyKind === item.queue_kind, onClick: () => void dispatch(item.queue_kind), title: state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required", children: "\u21B5 Dispatch" })
         ] })
       ] }, item.queue_id);
     })

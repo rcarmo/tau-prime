@@ -34,19 +34,22 @@ test('queue stack preserves independent FIFO heads and uses Tau dispatch routes'
   if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:session-selected', { detail: { sessionId: 'queue-test' } })));
 
-  const stack = page.locator('.queue-stack');
-  await expect(stack.locator('.queue-stack__item')).toHaveCount(3);
+  const stack = page.locator('.compose-queue-stack');
+  await expect(stack.locator('.compose-queue-stack-item')).toHaveCount(3);
+  await expect(stack).toHaveAttribute('role','list');
+  const outside=await stack.locator('button').evaluateAll(els=>els.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.left<0||r.right>innerWidth+1);}).map(el=>el.textContent));
+  expect(outside).toEqual([]);
   await expect(stack.locator('.codicon')).toHaveCount(0);
   await expect(stack.getByRole('button',{name:'Copy queued message to compose'}).first().locator('svg')).toBeVisible();
   await expect(stack.getByRole('button', { name: /Dispatch/ })).toHaveCount(2);
   await expect(stack.getByText('First follow-up')).toBeVisible();
   await expect(stack.getByText('Second follow-up')).toBeVisible();
 
-  await stack.locator('.queue-stack__item').filter({ hasText: 'First follow-up' }).getByRole('button', { name: /Dispatch/ }).click();
+  await stack.locator('.compose-queue-stack-item').filter({ hasText: 'First follow-up' }).getByRole('button', { name: /Dispatch/ }).click();
   const dispatched = await page.evaluate(() => window.__tauDispatched);
   expect(dispatched).toHaveLength(1);
   expect(dispatched[0]).toContain('/api/runs/run-active/queue/follow_up/dispatch');
 
-  await stack.locator('.queue-stack__item').filter({ hasText: 'Urgent steer' }).getByRole('button', { name: 'Copy queued message to compose' }).click();
+  await stack.locator('.compose-queue-stack-item').filter({ hasText: 'Urgent steer' }).getByRole('button', { name: 'Copy queued message to compose' }).click();
   await expect(page.locator('#compose-input')).toHaveValue('Urgent steer');
 });

@@ -22,7 +22,7 @@ for (const colorScheme of ['light','dark']) {
     await expect(page.locator('.post-content h2')).toHaveText('Workspace review');
     await page.locator('.agent-thinking-title button').click();
     await expect(page.locator('.agent-thinking-body')).toBeVisible();
-    await expect(page.locator('.queue-stack__error')).toHaveCount(0);
+    await expect(page.locator('.tau-queue-error')).toHaveCount(0);
     await expect(page.locator('#status-stream')).toHaveText('Live');
     await expect(page.locator('#status-stream')).toBeHidden();
     await expect(page.locator('#status-session')).toHaveText('Review session');

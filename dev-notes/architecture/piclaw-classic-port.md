@@ -649,3 +649,12 @@ SVGs, not unavailable Codicon font nodes. Queue test asserts actual SVG visibili
 and absence of Codicons while retaining dispatch/copy checks. Queue/session/
 keyboard matrix 18 passed; build/TypeScript pass. Queue container styling remains
 part of secondary-surface conversion, not closed by this icon change.
+
+## Classic queue structure
+
+Replaced queue-stack visual-era classes with actual compose-queue-stack/item/
+content/actions/edit/steer classes and list semantics. Tau-specific kind/error
+labels retain explicit tau-* names. FIFO per-kind dispatch and copy-to-compose
+unchanged; no unsupported reorder/remove added. Queue controls stay within
+viewport; queue/populated matrix 18 passed; build/TypeScript pass. Populated
+queue both-theme accessibility and reference assessment remain to check.
