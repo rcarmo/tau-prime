@@ -966,3 +966,12 @@ port 8892 passed 90 modal/layout/a11y/onboarding/root/navigation/resize checks.
 Delivered current wheel/checksum; supersedes pre-dialog 0d274e6 artifact.
 Full source regression remains 465 pass/3 skips and Python 1326; visual approval
 not inferred from installation tests.
+
+## Settings category presentation correction
+
+Classic Settings now displays one selected section at a time instead of stacking
+all forms. All sections remain mounted, preserving adapter anchors and drafts.
+Layout test verifies hidden categories retain unsaved token value. Modal/layout/
+setup matrix 18 passed; each of three categories scanned in both themes/all six
+targets: 12 runs passed. Build/TypeScript pass. Artifact/full regression and
+updated category screenshots still pending after this production change.

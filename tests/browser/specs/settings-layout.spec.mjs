@@ -13,6 +13,8 @@ test('settings in classic dialog without remounting Tau API form anchors', async
   await settings.click();
   await expect(page.locator('.settings-dialog > #panel-settings')).toBeVisible();
   await expect(page.locator('#auth-token')).toBeVisible();
+  await expect(page.locator('#model-input')).toBeHidden();
+  await page.locator('#auth-token').fill('unsaved-token-fixture');
   const overflow = await page.locator('#panel-settings').evaluate(el => ({
     scroll: el.scrollWidth - el.clientWidth,
     controls: [...el.querySelectorAll('input, select, button')].filter(control => {
@@ -25,6 +27,9 @@ test('settings in classic dialog without remounting Tau API form anchors', async
   const modelCategory=page.getByRole('link',{name:'Model',exact:true});
   await modelCategory.focus(); await page.keyboard.press('Enter');
   await expect(modelCategory).toHaveAttribute('aria-current','location');
+  await expect(page.locator('#model-input')).toBeVisible();
+  await expect(page.locator('#auth-token')).toBeHidden();
+  await expect(page.locator('#auth-token')).toHaveValue('unsaved-token-fixture');
   await expect(page.locator('.settings-nav-item.active')).toHaveCount(1);
   await expect(page.getByRole('link',{name:'Authentication',exact:true})).not.toHaveAttribute('aria-current','location');
   await page.getByRole('button',{name:'Close settings',exact:true}).click();

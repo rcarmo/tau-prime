@@ -1311,7 +1311,7 @@ function SettingsPanel({ hidden }) {
       item.id
     )) }),
     /* @__PURE__ */ u3("div", { className: "settings-content", children: [
-      /* @__PURE__ */ u3("section", { id: "tau-settings-auth", className: "settings-section", children: [
+      /* @__PURE__ */ u3("section", { id: "tau-settings-auth", className: "settings-section", hidden: category !== "auth", children: [
         /* @__PURE__ */ u3("h2", { className: "tau-settings-heading", children: "Authentication" }),
         /* @__PURE__ */ u3("button", { className: "tau-settings-button settings-provider-setup", type: "button", onClick: () => {
           window.dispatchEvent(new CustomEvent("tau:switch-tab", { detail: { tab: "workspace" } }));
@@ -1330,11 +1330,11 @@ function SettingsPanel({ hidden }) {
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ u3("section", { id: "tau-settings-model", className: "settings-section", children: [
+      /* @__PURE__ */ u3("section", { id: "tau-settings-model", className: "settings-section", hidden: category !== "model", children: [
         /* @__PURE__ */ u3("h2", { className: "tau-settings-heading", children: "Model" }),
         /* @__PURE__ */ u3(ModelControls, {})
       ] }),
-      /* @__PURE__ */ u3("section", { id: "tau-settings-runtime", className: "settings-section", "aria-labelledby": "settings-summary-title", children: [
+      /* @__PURE__ */ u3("section", { id: "tau-settings-runtime", hidden: category !== "runtime", className: "settings-section", "aria-labelledby": "settings-summary-title", children: [
         /* @__PURE__ */ u3("h2", { id: "settings-summary-title", className: "tau-settings-heading", children: "Runtime" }),
         /* @__PURE__ */ u3(SettingsSummary, {}),
         /* @__PURE__ */ u3("p", { id: "streaming-note", className: "tau-settings-description", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
