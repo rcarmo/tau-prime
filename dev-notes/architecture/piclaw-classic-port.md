@@ -279,3 +279,11 @@ classic --bg-primary media-query behavior and absence of visual stylesheet
 links. Theme preservation test now compares classic vendor/scoped styles.
 12 theme checks pass; build/TypeScript pass. Remaining dual component branches
 and other visual fixture tests are still pending cleanup.
+
+## Classic-only footer implementation
+
+Deleted visual StatusBar render branch and unused session/meter props. The
+single footer implementation retains model/connection events and Dashboard
+access. Metrics continue in the secondary sidebar; session pill stays in the
+composer row. Updated live/fixture callers. Classic frame + real adapter suite:
+66 passed; build/TypeScript pass. Remaining dual-mode components still pending.
