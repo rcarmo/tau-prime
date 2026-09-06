@@ -803,3 +803,12 @@ and category/form state. Classic hides labels on phone in favor of icons; Tau's
 text-only adaptation explicitly keeps labels visible. Settings layout/keyboard
 category/form identity and both-theme a11y matrix 18 passed; build/TypeScript pass.
 Settings form internals still use old field classes and require final styling audit.
+
+## Classic Settings field conversion
+
+SettingsPanel/ModelControls now use classic settings-section/row structure and
+explicit Tau native-field/button adaptations rather than visual settings-panel__
+classes. Provider/model inputs explicitly type=text; forms stay mounted and IDs,
+datalists, optimistic concurrency handlers unchanged. Settings layout/a11y/model
+matrix 24 passed; build/TypeScript pass. Secondary sidebar placement is still
+an explicit difference from upstream Settings dialog for visual review.

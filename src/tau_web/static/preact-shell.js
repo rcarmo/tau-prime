@@ -1182,29 +1182,29 @@ function ModelControls() {
   }, []);
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("form", { id: "model-form", children: [
-      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "provider-input", children: "Provider" }),
-        /* @__PURE__ */ u2("input", { id: "provider-input", className: "settings-panel__input", list: "provider-options", autoComplete: "off" }),
+      /* @__PURE__ */ u2("div", { className: "settings-row settings-row-vertical", children: [
+        /* @__PURE__ */ u2("label", { className: "tau-settings-label", htmlFor: "provider-input", children: "Provider" }),
+        /* @__PURE__ */ u2("input", { id: "provider-input", type: "text", className: "tau-settings-input", list: "provider-options", autoComplete: "off" }),
         /* @__PURE__ */ u2("datalist", { id: "provider-options", children: options.providers.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
       ] }),
-      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "model-input", children: "Model" }),
-        /* @__PURE__ */ u2("input", { id: "model-input", className: "settings-panel__input", list: "model-options", autoComplete: "off" }),
+      /* @__PURE__ */ u2("div", { className: "settings-row settings-row-vertical", children: [
+        /* @__PURE__ */ u2("label", { className: "tau-settings-label", htmlFor: "model-input", children: "Model" }),
+        /* @__PURE__ */ u2("input", { id: "model-input", type: "text", className: "tau-settings-input", list: "model-options", autoComplete: "off" }),
         /* @__PURE__ */ u2("datalist", { id: "model-options", children: options.models.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) })
       ] }),
-      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u2("span", { className: "settings-panel__label" }),
-        /* @__PURE__ */ u2("button", { id: "apply-model-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply to session" }),
-        /* @__PURE__ */ u2("button", { id: "refresh-button", className: "settings-panel__provider-btn", type: "button", children: "Refresh" })
+      /* @__PURE__ */ u2("div", { className: "settings-row settings-row-vertical", children: [
+        /* @__PURE__ */ u2("span", { className: "tau-settings-label" }),
+        /* @__PURE__ */ u2("button", { id: "apply-model-button", className: "tau-settings-button", type: "submit", children: "Apply to session" }),
+        /* @__PURE__ */ u2("button", { id: "refresh-button", className: "tau-settings-button", type: "button", children: "Refresh" })
       ] })
     ] }),
     /* @__PURE__ */ u2("form", { id: "thinking-form", children: [
-      /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-        /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "thinking-level-select", children: "Thinking level" }),
-        /* @__PURE__ */ u2("select", { id: "thinking-level-select", className: "settings-panel__select", name: "thinking_level", children: thinking.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
-        /* @__PURE__ */ u2("button", { id: "apply-thinking-button", className: "settings-panel__provider-btn", type: "submit", children: "Apply" })
+      /* @__PURE__ */ u2("div", { className: "settings-row settings-row-vertical", children: [
+        /* @__PURE__ */ u2("label", { className: "tau-settings-label", htmlFor: "thinking-level-select", children: "Thinking level" }),
+        /* @__PURE__ */ u2("select", { id: "thinking-level-select", className: "tau-settings-input", name: "thinking_level", children: thinking.map((item) => /* @__PURE__ */ u2("option", { value: item.value, children: item.label }, item.value)) }),
+        /* @__PURE__ */ u2("button", { id: "apply-thinking-button", className: "tau-settings-button", type: "submit", children: "Apply" })
       ] }),
-      /* @__PURE__ */ u2("p", { id: "thinking-help", className: "settings-panel__description", children: "Updates session thinking with optimistic concurrency checks." })
+      /* @__PURE__ */ u2("p", { id: "thinking-help", className: "tau-settings-description", children: "Updates session thinking with optimistic concurrency checks." })
     ] })
   ] });
 }
@@ -1246,34 +1246,34 @@ function SettingsPanel({ hidden }) {
       },
       item.id
     )) }),
-    /* @__PURE__ */ u2("div", { className: "settings-panel__content", children: [
-      /* @__PURE__ */ u2("section", { id: "tau-settings-auth", className: "settings-panel__section", children: [
-        /* @__PURE__ */ u2("h2", { className: "settings-panel__section-title", children: "Authentication" }),
-        /* @__PURE__ */ u2("button", { className: "settings-panel__provider-btn settings-provider-setup", type: "button", onClick: () => {
+    /* @__PURE__ */ u2("div", { className: "tau-settings-content", children: [
+      /* @__PURE__ */ u2("section", { id: "tau-settings-auth", className: "settings-section", children: [
+        /* @__PURE__ */ u2("h2", { className: "tau-settings-heading", children: "Authentication" }),
+        /* @__PURE__ */ u2("button", { className: "tau-settings-button settings-provider-setup", type: "button", onClick: () => {
           window.dispatchEvent(new CustomEvent("tau:switch-tab", { detail: { tab: "workspace" } }));
           window.dispatchEvent(new CustomEvent("tau:close-drawers"));
           document.querySelector(".provider-setup-trigger")?.click();
         }, children: "Provider setup" }),
         /* @__PURE__ */ u2("form", { id: "auth-form", children: [
-          /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-            /* @__PURE__ */ u2("label", { className: "settings-panel__label", htmlFor: "auth-token", children: "Bearer token" }),
-            /* @__PURE__ */ u2("input", { id: "auth-token", className: "settings-panel__input", type: "password", autoComplete: "off" })
+          /* @__PURE__ */ u2("div", { className: "settings-row settings-row-vertical", children: [
+            /* @__PURE__ */ u2("label", { className: "tau-settings-label", htmlFor: "auth-token", children: "Bearer token" }),
+            /* @__PURE__ */ u2("input", { id: "auth-token", className: "tau-settings-input", type: "password", autoComplete: "off" })
           ] }),
-          /* @__PURE__ */ u2("div", { className: "settings-panel__field", children: [
-            /* @__PURE__ */ u2("span", { className: "settings-panel__label" }),
-            /* @__PURE__ */ u2("button", { id: "save-auth-button", className: "settings-panel__provider-btn", type: "submit", children: "Save token" }),
-            /* @__PURE__ */ u2("button", { id: "clear-auth-button", className: "settings-panel__provider-btn settings-panel__provider-btn--logout", type: "button", children: "Clear token" })
+          /* @__PURE__ */ u2("div", { className: "settings-row settings-row-vertical", children: [
+            /* @__PURE__ */ u2("span", { className: "tau-settings-label" }),
+            /* @__PURE__ */ u2("button", { id: "save-auth-button", className: "tau-settings-button", type: "submit", children: "Save token" }),
+            /* @__PURE__ */ u2("button", { id: "clear-auth-button", className: "tau-settings-button tau-settings-button--logout", type: "button", children: "Clear token" })
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ u2("section", { id: "tau-settings-model", className: "settings-panel__section", children: [
-        /* @__PURE__ */ u2("h2", { className: "settings-panel__section-title", children: "Model" }),
+      /* @__PURE__ */ u2("section", { id: "tau-settings-model", className: "settings-section", children: [
+        /* @__PURE__ */ u2("h2", { className: "tau-settings-heading", children: "Model" }),
         /* @__PURE__ */ u2(ModelControls, {})
       ] }),
-      /* @__PURE__ */ u2("section", { id: "tau-settings-runtime", className: "settings-panel__section", "aria-labelledby": "settings-summary-title", children: [
-        /* @__PURE__ */ u2("h2", { id: "settings-summary-title", className: "settings-panel__section-title", children: "Runtime" }),
+      /* @__PURE__ */ u2("section", { id: "tau-settings-runtime", className: "settings-section", "aria-labelledby": "settings-summary-title", children: [
+        /* @__PURE__ */ u2("h2", { id: "settings-summary-title", className: "tau-settings-heading", children: "Runtime" }),
         /* @__PURE__ */ u2(SettingsSummary, {}),
-        /* @__PURE__ */ u2("p", { id: "streaming-note", className: "settings-panel__description", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
+        /* @__PURE__ */ u2("p", { id: "streaming-note", className: "tau-settings-description", children: "Live streaming, queue controls, and persisted timeline playback use safe DOM updates." }),
         /* @__PURE__ */ u2("div", { className: "extension-slot", "data-extension-slot": "sidebar" })
       ] })
     ] })

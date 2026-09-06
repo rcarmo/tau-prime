@@ -77,3 +77,9 @@
 #panel-settings .settings-nav { width:auto; min-width:0; max-width:100%; display:flex; flex-wrap:wrap; padding:6px; gap:4px; }
 #panel-settings a.settings-nav-item { color:var(--text-primary); text-decoration:none; }
 #panel-settings .settings-nav-label { display:inline; }
+/* Classic settings rows adapted to Tau's narrower, persistently mounted forms. */
+#panel-settings .settings-row { align-items:stretch; flex-direction:column; gap:6px; }
+#panel-settings .tau-settings-input { width:100%; max-width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); background:var(--bg-secondary); font:inherit; }
+#panel-settings .tau-settings-button { padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--radius-md); font:inherit; }
+#panel-settings .tau-settings-description { color:var(--text-primary); font-size:12px; }
+#panel-settings .tau-settings-heading { font-size:16px; }
