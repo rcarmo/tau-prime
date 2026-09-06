@@ -55,3 +55,25 @@ posts require `{id, timestamp, data:{type, content}}`, with `agent_response` /
 `user_message` types, unlike the earlier visual fixture. Auxiliary responses
 are minimal idle mocks, not proof of those features. Timing and paths still
 need normalization before the full comparison matrix.
+
+## Concrete shell adapter map
+
+Observed classic tablet DOM at 820×1180 (populated idle fixture):
+`app-shell.workspace-collapsed` fills viewport; `.container` is centered at
+x=41, width=738; `.timeline.reverse` occupies y=0..1075; `.compose-box` is
+105px high, with a 50px textarea and 26px footer. These are fixture observations,
+not universal dimensions to hard-code.
+
+| Current Tau owner | Classic structure to port | Preserve |
+| --- | --- | --- |
+| TauShell / ActivityBar / TabBar | app-shell + workspace-sidebar + centered container | session and panel selection callbacks; mounted settings |
+| Timeline | timeline.reverse > timeline-content > post | message IDs, chronological presentation, tool association, copy/collapse |
+| Message content | post-avatar + post-body + post-actions | Tau identity, sanitizer and clipboard failure handling |
+| Composer | compose-box + resize handle + textarea + compose-footer | compose-form/input/submit anchors, upload, completions, Enter semantics |
+| StatusBar | applicable compose-meta-row / model hint | model/context/connection adapter events; no separate visual status strip |
+
+Do not hard-code the 738px measured width: import the classic layout rules and
+verify responsive results. Runtime/queue/approval extension surfaces need explicit
+placement during shell conversion, not removal to reduce screenshot differences.
+The reference capture now fails on unknown endpoints/page errors and waits for
+actual message/font readiness; it also exports a bounded DOM/geometry inventory.
