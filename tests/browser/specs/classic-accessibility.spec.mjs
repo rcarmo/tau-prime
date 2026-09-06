@@ -22,3 +22,21 @@ for(const colorScheme of ['light','dark']) test(`classic ${colorScheme} chat and
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),surface).toEqual([]);
  }
 });
+
+for(const colorScheme of ['light','dark']) test(`classic ${colorScheme} large-code controls stay accessible and bounded`,async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');await page.emulateMedia({colorScheme});
+ await page.goto('/');await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'large-code',role:'assistant',content:'```txt\n'+('unbroken'.repeat(60)+'\n').repeat(45)+'```',meta:'1m'}]}})));
+ const block=page.locator('#post-large-code .post-code-block');
+ for(const expanded of [false,true]) {
+  if(expanded)await block.getByRole('button',{name:/Expand code/}).click();
+  const result=await new AxeBuilder({page}).include('#post-large-code').analyze();
+  expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);
+  for(const button of await block.locator('button').all()) {
+   await button.scrollIntoViewIfNeeded();const r=await button.boundingBox();
+   expect(r.x).toBeGreaterThanOrEqual(0);expect(r.x+r.width).toBeLessThanOrEqual(page.viewportSize().width+1);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize().width);
+ }
+});

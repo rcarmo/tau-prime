@@ -588,3 +588,11 @@ Added exact 40-line/24KiB threshold checks, final-newline accounting, UTF-8
 byte-size case (8192 Japanese characters plus newline = 24577 bytes), and reset
 of expanded state when message content changes. Complete Markdown matrix
 18 passed across six targets. No production changes in this checkpoint.
+
+## Large-code visual/a11y corrections
+
+Expanded/collapsed long-unbroken-line scans found expand-button contrast failure.
+Scoped primary color fixes it; corrected toggle ordering to prepend before pre,
+as classic does (preserving its adjoining border rules). Both-theme/six-target
+large-code a11y/bounds 12 passed; Markdown safety/boundary/copy 18 passed;
+build/TypeScript pass. No page horizontal overflow in tested long-code states.

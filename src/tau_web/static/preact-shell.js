@@ -4174,7 +4174,7 @@ function MarkdownContent({ content }) {
         toggle.dataset.blockIndex = String(index);
         toggle.setAttribute("aria-expanded", String(isExpanded));
         toggle.textContent = isExpanded ? "Collapse code" : `Expand code (${lineCount} lines, ${bytes.length} bytes)`;
-        block.append(toggle);
+        block.prepend(toggle);
       }
     }
     return template.innerHTML;
