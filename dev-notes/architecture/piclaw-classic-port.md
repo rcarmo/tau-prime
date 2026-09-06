@@ -604,3 +604,12 @@ added only after user Markdown sanitization. Accessible Copy code name and
 clipboard success/error status retained. SVG visibility/empty visible label
 checks added; Markdown plus populated/large-code a11y matrix 42 passed;
 build/TypeScript pass. Current artifact/review refresh remains pending.
+
+## Full code-block integration checkpoint (af9ef66)
+
+Complete browser suite: 429 passed, 3 documented WebKit offline skips (432 total),
+no failures. Focused frontend/packaging 42 passed; diff checks clean. Refreshed
+classic paired HTML/PDF from this run, including code-wrapper/copy-icon fixes.
+PDF cover's earlier through-f43ccbb label is stale provenance text; actual images
+are the current full-run outputs. Current artifact still predates code changes.
+Explicit visual approval remains outstanding.
