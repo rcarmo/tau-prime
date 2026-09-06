@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import zipfile
 from pathlib import Path
@@ -63,6 +64,22 @@ def test_wheel_includes_frontend_static_assets() -> None:
     assert "tau_web/static/widget-bridge.js" in archive_names
     assert "tau_web/static/frontend-sdk.js" in archive_names
     assert "tau_web/static/preact-shell.js" in archive_names
+
+
+def test_vendored_assets_match_pinned_piclaw_2_15_3() -> None:
+    # Verified byte-for-byte against the 2.15.3 release's visual/dist assets.
+    # Pin upstream bytes, not a digest generated from Tau during the test:
+    # reference comparisons must not silently drift with local CSS edits.
+    expected = {
+        "piclaw-reference.css": "50e8f293f4553cae89a383b2c35497c0a31c442a734ff38e858d7d3244e007ad",
+        "JetBrainsMonoNFM-Medium-hh38vnv1.woff2": "e9d33faabc0c688c5b417d5b5e40e874edaf232bfa553fc504f1bce99b872d03",
+        "JetBrainsMonoNFM-Regular-rhdb9m6d.woff2": "3154cf51aa75c0aa9f6ed786a539b04624297da2d95ea322d5bf38cbfc82bbb0",
+        "firacode-nerd-font-mono-bold-v7nf8tpn.ttf": "bd014a21f3cd64203dd0850437091d716e929a4518b0e5848d6d3ad6af12b21d",
+        "firacode-nerd-font-mono-regular-f4sytzp8.ttf": "ad88c69cb6a497db9f2714e4b414817aabbee621484a1560bfdb3fd73abdd564",
+    }
+    static_root = build_backend.ROOT / "src" / "tau_web" / "static"
+    for name, digest in expected.items():
+        assert hashlib.sha256((static_root / name).read_bytes()).hexdigest() == digest, name
 
 
 def test_built_wheel_preserves_piclaw_css_and_font_bytes(tmp_path: Path) -> None:

@@ -352,6 +352,10 @@ New decline-switch test first exposed startup losing URL-selected session: apply
 
 Complete browser suite after initialization/selection dismissal corrections: 351 passed / 3 documented WebKit offline skips, no failures. Full Python suite 1327 passed; diff checks pass. This checkpoint verifies functional regression coverage, not the still-open optional rendering/full visual acceptance items.
 
+## Current installed Dashboard/session checkpoint
+
+Built wheel at 677d974, reinstalled in separate audit venv, ran installed Dashboard accept/decline/focus/inertness/accessibility, populated Search both themes, and real SSE network recovery: 48/48 pass. No source PYTHONPATH injection. This closes installed validation lag for these fixes; whole-image approval and optional rendering gaps remain.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.
@@ -360,3 +364,14 @@ Complete browser suite after initialization/selection dismissal corrections: 351
 4. Port missing logical components and remove incompatible compatibility CSS based on those observations.
 5. Verify wheel contents, binary font loading under CSP, all browser interactions, and full regression suite after structural changes.
 6. Present paired visual evidence before claiming completion.
+
+## Pinned reference asset provenance
+
+Compared `piclaw-reference.css` byte-for-byte with the installed Piclaw
+2.15.3 `runtime/web/static/visual/dist/app.bundle.css`, and all four referenced
+fonts with their corresponding upstream dist files: identical. Added a portable
+SHA-256 pin test in `tests/web/test_packaging.py`, separate from the existing
+wheel/source-byte preservation check. This prevents accidental local vendor
+edits from silently changing both sides of component comparisons. Focused
+frontend/packaging suite: 44 passed; `git diff --check` clean. No runtime changes
+or visual-acceptance claim in this checkpoint.
