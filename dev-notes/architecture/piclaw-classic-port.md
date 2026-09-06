@@ -143,3 +143,12 @@ Listbox semantics remain Tau-owned (list reset to be included in scoped classic
 adaptation stylesheet at cutover). Attachment removal event and completion
 selection state checked; combined classic/existing composer suite 36 passed.
 Build/TypeScript pass. No live-shell switch in this checkpoint.
+
+## Tool output adaptation
+
+Classic mode tool results now use agent-thinking/title/body structure from
+classic status.ts, retaining Tau's persisted input/output and tail/full controls.
+This is an explicit backend adaptation: classic normally presents this in live
+status panels, not visual-mode tool cards. Copy feedback handler reused with
+classic button class. Exact tail/full content checks plus classic and existing
+tool matrix: 30 passed; build/TypeScript pass. Default live shell unchanged.

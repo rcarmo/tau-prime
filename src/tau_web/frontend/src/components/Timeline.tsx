@@ -27,7 +27,7 @@ function valueText(value: unknown): string {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
-export function ToolCallBlock({ call, result }: { call: ToolCall; result?: TimelineMessage }) {
+export function ToolCallBlock({ call, result, classic = false }: { call: ToolCall; result?: TimelineMessage; classic?: boolean }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const name = call.name || result?.toolName || "tool";
@@ -36,6 +36,17 @@ export function ToolCallBlock({ call, result }: { call: ToolCall; result?: Timel
   const lines = output.split("\n");
   const hiddenLines = !expanded && lines.length > 20 ? lines.length - 20 : 0;
   const displayedOutput = hiddenLines ? lines.slice(-20).join("\n") : output;
+  if (classic) return <section className="agent-thinking" data-expanded={open}>
+    <div className="agent-thinking-title tool-output">
+      <button type="button" className="thinking-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}>{name} {result ? result.toolOk === false ? "· failed" : "· done" : ""} {open ? "▴" : "▾"}</button>
+    </div>
+    {open && <div className="agent-thinking-body">
+      {input && <div><CopyButton classic text={input} /><pre>{input}</pre></div>}
+      {result && <div><CopyButton classic text={output} /><pre>{displayedOutput}</pre>
+        {lines.length > 20 && <button type="button" className="thinking-toggle" onClick={() => setExpanded(value => !value)}>{expanded ? "Collapse output" : `Show ${lines.length - 20} hidden lines`}</button>}
+      </div>}
+    </div>}
+  </section>;
   return (
     <div className="message-list__tool-call">
       <button className="message-list__tool-call-header" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
@@ -116,7 +127,7 @@ export function MessageItem({ item, resultByCall, classic = false }: { item: Tim
   if (classic) return <ClassicPost id={`post-${item.id}`} agent={!isUser} author={isUser ? "You" : "Tau"} time={item.live ? "live" : item.meta ?? ""} avatar={isUser ? "Y" : "τ"}
     actions={<MessageActionBar classic content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />}>
     {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "— collapsed"}</span> : <>
-      {item.toolCalls?.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
+      {item.toolCalls?.map((call, index) => <ToolCallBlock classic key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
       {item.content && (isUser ? <div style={{whiteSpace:"pre-wrap"}}>{item.content}</div> : <MarkdownContent content={item.content} />)}
       {item.attachments?.map(attachment => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}
     </>}

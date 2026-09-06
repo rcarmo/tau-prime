@@ -1353,7 +1353,7 @@ function ClassicPost({ id: id2, agent, author, time, avatar, actions, children }
 }
 
 // src/components/CopyButton.tsx
-function CopyButton({ text: text2 }) {
+function CopyButton({ text: text2, classic = false }) {
   const [copied, setCopied] = h2(false);
   const [failed, setFailed] = h2(false);
   const timer = A2();
@@ -1362,7 +1362,7 @@ function CopyButton({ text: text2 }) {
     "button",
     {
       type: "button",
-      className: `tool-call__copy${copied ? " tool-call__copy--copied" : ""}`,
+      className: classic ? "post-action-btn" : `tool-call__copy${copied ? " tool-call__copy--copied" : ""}`,
       title: failed ? "Copy failed \u2014 retry" : copied ? "Copied!" : "Copy",
       "aria-label": failed ? "Copy failed \u2014 retry" : copied ? "Copied!" : "Copy",
       onClick: async (event) => {
@@ -4269,7 +4269,7 @@ function valueText(value) {
     return String(value);
   }
 }
-function ToolCallBlock({ call, result }) {
+function ToolCallBlock({ call, result, classic = false }) {
   const [open, setOpen] = h2(false);
   const [expanded, setExpanded] = h2(false);
   const name = call.name || result?.toolName || "tool";
@@ -4278,6 +4278,26 @@ function ToolCallBlock({ call, result }) {
   const lines = output.split("\n");
   const hiddenLines = !expanded && lines.length > 20 ? lines.length - 20 : 0;
   const displayedOutput = hiddenLines ? lines.slice(-20).join("\n") : output;
+  if (classic) return /* @__PURE__ */ u3("section", { className: "agent-thinking", "data-expanded": open, children: [
+    /* @__PURE__ */ u3("div", { className: "agent-thinking-title tool-output", children: /* @__PURE__ */ u3("button", { type: "button", className: "thinking-toggle", "aria-expanded": open, onClick: () => setOpen((value) => !value), children: [
+      name,
+      " ",
+      result ? result.toolOk === false ? "\xB7 failed" : "\xB7 done" : "",
+      " ",
+      open ? "\u25B4" : "\u25BE"
+    ] }) }),
+    open && /* @__PURE__ */ u3("div", { className: "agent-thinking-body", children: [
+      input && /* @__PURE__ */ u3("div", { children: [
+        /* @__PURE__ */ u3(CopyButton, { classic: true, text: input }),
+        /* @__PURE__ */ u3("pre", { children: input })
+      ] }),
+      result && /* @__PURE__ */ u3("div", { children: [
+        /* @__PURE__ */ u3(CopyButton, { classic: true, text: output }),
+        /* @__PURE__ */ u3("pre", { children: displayedOutput }),
+        lines.length > 20 && /* @__PURE__ */ u3("button", { type: "button", className: "thinking-toggle", onClick: () => setExpanded((value) => !value), children: expanded ? "Collapse output" : `Show ${lines.length - 20} hidden lines` })
+      ] })
+    ] })
+  ] });
   return /* @__PURE__ */ u3("div", { className: "message-list__tool-call", children: [
     /* @__PURE__ */ u3("button", { className: "message-list__tool-call-header", type: "button", onClick: () => setOpen((value) => !value), "aria-expanded": open, children: [
       /* @__PURE__ */ u3("span", { className: "message-list__tool-call-icon", children: open ? "\u25BE" : "\u25B8" }),
@@ -4365,7 +4385,7 @@ function MessageItem({ item, resultByCall, classic = false }) {
       avatar: isUser ? "Y" : "\u03C4",
       actions: /* @__PURE__ */ u3(MessageActionBar, { classic: true, content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
       children: collapsed ? /* @__PURE__ */ u3("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u3(b, { children: [
-        item.toolCalls?.map((call, index) => /* @__PURE__ */ u3(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
+        item.toolCalls?.map((call, index) => /* @__PURE__ */ u3(ToolCallBlock, { classic: true, call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
         item.content && (isUser ? /* @__PURE__ */ u3("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u3(MarkdownContent, { content: item.content })),
         item.attachments?.map((attachment) => /* @__PURE__ */ u3(AttachmentChip, { attachment }, attachment.mediaId))
       ] })
