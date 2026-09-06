@@ -49,3 +49,7 @@
 #workspace-list .workspace-row { width:100%; appearance:none; border:0; padding:0 6px; background:transparent; color:var(--text-primary); text-align:left; }
 #workspace-list .workspace-row:hover,#workspace-list .workspace-row:focus-visible { background:var(--bg-secondary); }
 #workspace-list .workspace-row > svg { flex:none; }
+/* Read-only Tau preview retains native textarea semantics within classic chrome. */
+.tau-workspace-path { overflow-wrap:anywhere; font-size:12px; color:var(--text-primary); }
+.tau-workspace-source { width:100%; min-height:120px; resize:vertical; color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); font:12px monospace; }
+.tau-workspace-note { font-size:12px; color:var(--text-primary); }

@@ -692,3 +692,12 @@ semantics, explicit filenames, and existing click adapter. Scoped button reset
 accounts for upstream div rows; no unsupported rename/drop interactions added.
 Workspace/responsive/pane accessibility matrix 24 passed; build/TypeScript pass.
 Preview/header container conversion still pending.
+
+## Workspace header/preview conversion
+
+Replaced remaining workspace__ visual wrappers with classic workspace header,
+tree, preview/header/body/title classes and scoped Tau read-only source styles.
+Removed nonfunctional separator rather than implying unsupported drag resizing.
+Native textarea resizing remains available. Existing file navigation/UTF-8,
+annotations and pane a11y checks pass 24/24; build/TypeScript pass. No editor,
+rename or delete functionality invented. Paired panel visual review still open.

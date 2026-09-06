@@ -1055,16 +1055,16 @@ function WorkspacePanel({ hidden }) {
     return () => window.removeEventListener("tau:workspace-render", update);
   }, []);
   const describedBy = view.annotations.length ? "workspace-editor-note workspace-annotations" : "workspace-editor-note";
-  return /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "workspace", "aria-labelledby": "tab-workspace", hidden, children: [
-    /* @__PURE__ */ u2("div", { className: "workspace__pane-top", children: [
-      /* @__PURE__ */ u2("div", { className: "workspace__section-header workspace__section-header--padded", children: [
+  return /* @__PURE__ */ u2("section", { id: "panel-workspace", className: "tau-workspace", "aria-labelledby": "tab-workspace", hidden, children: [
+    /* @__PURE__ */ u2("div", { className: "workspace-tree", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace-header", children: [
         /* @__PURE__ */ u2("span", { children: "Files" }),
-        /* @__PURE__ */ u2("div", { className: "workspace__files-toolbar", children: [
+        /* @__PURE__ */ u2("div", { className: "workspace-header-actions", children: [
           /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "icon-btn", type: "button", title: "Parent directory", "aria-label": "Parent directory", children: /* @__PURE__ */ u2(ClassicIcon, { name: "up" }) }),
           /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "icon-btn", type: "button", title: "Refresh", "aria-label": "Refresh workspace", children: /* @__PURE__ */ u2(ClassicIcon, { name: "refresh" }) })
         ] })
       ] }),
-      /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: view.path }),
+      /* @__PURE__ */ u2("p", { id: "workspace-path", className: "tau-workspace-path", children: view.path }),
       /* @__PURE__ */ u2("div", { id: "workspace-list", className: "workspace-tree-list", role: "tree", "aria-label": "Workspace tree", children: [
         !view.entries.length && /* @__PURE__ */ u2("div", { children: "No workspace entries available." }),
         view.entries.map((entry) => /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", className: "workspace-row", role: "treeitem", "aria-label": entry.name, disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
@@ -1074,15 +1074,14 @@ function WorkspacePanel({ hidden }) {
         ] }) }, `${entry.kind}:${entry.path ?? entry.name}`))
       ] })
     ] }),
-    /* @__PURE__ */ u2("div", { className: "workspace__drag-handle", role: "separator", "aria-orientation": "horizontal" }),
-    /* @__PURE__ */ u2("div", { className: "workspace__pane-bottom", children: [
-      /* @__PURE__ */ u2("div", { className: "workspace__preview-header", children: "Preview" }),
-      /* @__PURE__ */ u2("section", { className: "workspace__preview-info", "aria-labelledby": "workspace-editor-title", children: [
-        /* @__PURE__ */ u2("div", { id: "workspace-editor-title", className: "workspace__preview-name", children: "Selected file" }),
-        /* @__PURE__ */ u2("div", { id: "workspace-editor-path", className: "workspace__preview-path", children: view.filePath ?? "No file selected" }),
+    /* @__PURE__ */ u2("div", { className: "workspace-preview", children: [
+      /* @__PURE__ */ u2("div", { className: "workspace-preview-header", children: "Preview" }),
+      /* @__PURE__ */ u2("section", { className: "workspace-preview-body", "aria-labelledby": "workspace-editor-title", children: [
+        /* @__PURE__ */ u2("div", { id: "workspace-editor-title", className: "workspace-preview-title", children: "Selected file" }),
+        /* @__PURE__ */ u2("div", { id: "workspace-editor-path", className: "tau-workspace-path", children: view.filePath ?? "No file selected" }),
         /* @__PURE__ */ u2("label", { className: "sr-only", htmlFor: "workspace-editor", children: "Workspace file editor" }),
-        /* @__PURE__ */ u2("textarea", { id: "workspace-editor", className: "workspace__preview-content", spellcheck: false, "aria-describedby": describedBy, value: view.content, readOnly: true }),
-        /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "workspace__preview-meta", children: "Local edits are not yet persisted through the web shell." }),
+        /* @__PURE__ */ u2("textarea", { id: "workspace-editor", className: "tau-workspace-source", spellcheck: false, "aria-describedby": describedBy, value: view.content, readOnly: true }),
+        /* @__PURE__ */ u2("p", { id: "workspace-editor-note", className: "tau-workspace-note", children: "Local edits are not yet persisted through the web shell." }),
         /* @__PURE__ */ u2("section", { id: "workspace-annotations", className: "workspace-annotations", hidden: !view.annotations.length, children: [
           /* @__PURE__ */ u2("h4", { children: "Annotations" }),
           /* @__PURE__ */ u2("ul", { id: "workspace-annotation-list", className: "workspace-annotation-list", children: view.annotations.map((annotation, index) => /* @__PURE__ */ u2("li", { className: "workspace-annotation", "data-severity": annotation.severity, children: [
