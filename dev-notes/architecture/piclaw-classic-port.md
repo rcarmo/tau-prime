@@ -633,3 +633,11 @@ and some Codicon nodes (Workspace/SessionList/metrics/queue etc.); these are not
 approved merely because core chat matches classic. Their visual conversion/review
 remains explicit engineering work. Audit script directory contains only classic
 capture probe; no visual reference source override remains.
+
+## Workspace icon repair
+
+Removed Workspace Codicon nodes left without a font after classic-only cleanup.
+Parent/refresh now use inline SVG icon-btn controls; directory/file rows use
+inline folder/file SVGs. Existing IDs/keyboard navigation/editor/annotations
+preserved. Workspace/responsive/pane a11y matrix 24 passed; build/TypeScript pass.
+Broader Workspace container styling remains a separate visual review item.

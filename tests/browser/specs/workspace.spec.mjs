@@ -15,6 +15,9 @@ test('workspace tree and annotations render through Preact', async ({ page }) =>
   await page.getByRole('button',{name:'Open sessions',exact:true}).click();
   await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Workspace',exact:true}).click();
   await expect(page.locator('#workspace-path')).toHaveText('/workspace/src');
+  await expect(page.locator('#workspace-up-button svg')).toBeVisible();
+  await expect(page.locator('#workspace-reload-button svg')).toBeVisible();
+  await expect(page.locator('#panel-workspace .codicon')).toHaveCount(0);
   await expect(page.locator('#workspace-list .file-tree__item')).toHaveCount(2);
   await expect(page.locator('#workspace-editor')).toHaveValue('const value = 1;');
   await expect(page.locator('#workspace-annotation-list')).toContainText('Line 1 · lint: Review value');

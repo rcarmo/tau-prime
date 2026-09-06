@@ -510,7 +510,13 @@ function ClassicIcon({ name }) {
   return /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", children: name === "copy" ? /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("rect", { x: "9", y: "9", width: "11", height: "11", rx: "2" }),
     /* @__PURE__ */ u2("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
-  ] }) : name === "attach" ? /* @__PURE__ */ u2("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : /* @__PURE__ */ u2("path", { d: name === "up" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6" }) });
+  ] }) : name === "attach" ? /* @__PURE__ */ u2("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : name === "refresh" ? /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("path", { d: "M20 7v5h-5M4 17v-5h5" }),
+    /* @__PURE__ */ u2("path", { d: "M6 6a8 8 0 0 1 13 2M5 16a8 8 0 0 0 13 2" })
+  ] }) : name === "folder" ? /* @__PURE__ */ u2("path", { d: "M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }) : name === "file" ? /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+    /* @__PURE__ */ u2("polyline", { points: "14 2 14 8 20 8" })
+  ] }) : /* @__PURE__ */ u2("path", { d: name === "up" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6" }) });
 }
 
 // src/components/ClassicComposerSurface.tsx
@@ -1055,15 +1061,15 @@ function WorkspacePanel({ hidden }) {
       /* @__PURE__ */ u2("div", { className: "workspace__section-header workspace__section-header--padded", children: [
         /* @__PURE__ */ u2("span", { children: "Files" }),
         /* @__PURE__ */ u2("div", { className: "workspace__files-toolbar", children: [
-          /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "workspace__files-toolbar-icon codicon codicon-arrow-up", type: "button", title: "Parent directory", "aria-label": "Parent directory" }),
-          /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "workspace__files-toolbar-icon codicon codicon-refresh", type: "button", title: "Refresh", "aria-label": "Refresh workspace" })
+          /* @__PURE__ */ u2("button", { id: "workspace-up-button", className: "icon-btn", type: "button", title: "Parent directory", "aria-label": "Parent directory", children: /* @__PURE__ */ u2(ClassicIcon, { name: "up" }) }),
+          /* @__PURE__ */ u2("button", { id: "workspace-reload-button", className: "icon-btn", type: "button", title: "Refresh", "aria-label": "Refresh workspace", children: /* @__PURE__ */ u2(ClassicIcon, { name: "refresh" }) })
         ] })
       ] }),
       /* @__PURE__ */ u2("p", { id: "workspace-path", className: "workspace__current-path", children: view.path }),
       /* @__PURE__ */ u2("div", { id: "workspace-list", className: "file-tree", role: "tree", "aria-label": "Workspace tree", children: [
         !view.entries.length && /* @__PURE__ */ u2("div", { children: "No workspace entries available." }),
         view.entries.map((entry) => /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", className: "file-tree__item", role: "treeitem", "aria-label": entry.name, disabled: entry.kind !== "directory" && entry.kind !== "file", onClick: () => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } })), children: [
-          /* @__PURE__ */ u2("span", { className: `file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`, "aria-hidden": "true" }),
+          /* @__PURE__ */ u2(ClassicIcon, { name: entry.kind === "directory" ? "folder" : "file" }),
           /* @__PURE__ */ u2("span", { className: "file-tree__name", children: entry.name }),
           /* @__PURE__ */ u2("span", { className: "file-tree__meta", children: entry.kind })
         ] }) }, `${entry.kind}:${entry.path ?? entry.name}`))

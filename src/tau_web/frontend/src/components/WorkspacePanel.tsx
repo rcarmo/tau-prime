@@ -1,3 +1,4 @@
+import { ClassicIcon } from "./ClassicIcon";
 import { useLayoutEffect, useState } from "preact/hooks";
 
 type Entry = { name: string; kind: string; path?: string };
@@ -16,14 +17,14 @@ export function WorkspacePanel({ hidden }: { hidden: boolean }) {
   return <section id="panel-workspace" className="workspace" aria-labelledby="tab-workspace" hidden={hidden}>
     <div className="workspace__pane-top">
       <div className="workspace__section-header workspace__section-header--padded"><span>Files</span><div className="workspace__files-toolbar">
-        <button id="workspace-up-button" className="workspace__files-toolbar-icon codicon codicon-arrow-up" type="button" title="Parent directory" aria-label="Parent directory" />
-        <button id="workspace-reload-button" className="workspace__files-toolbar-icon codicon codicon-refresh" type="button" title="Refresh" aria-label="Refresh workspace" />
+        <button id="workspace-up-button" className="icon-btn" type="button" title="Parent directory" aria-label="Parent directory"><ClassicIcon name="up" /></button>
+        <button id="workspace-reload-button" className="icon-btn" type="button" title="Refresh" aria-label="Refresh workspace"><ClassicIcon name="refresh" /></button>
       </div></div>
       <p id="workspace-path" className="workspace__current-path">{view.path}</p>
       <div id="workspace-list" className="file-tree" role="tree" aria-label="Workspace tree">
         {!view.entries.length && <div>No workspace entries available.</div>}
         {view.entries.map((entry) => <div key={`${entry.kind}:${entry.path ?? entry.name}`}><button type="button" className="file-tree__item" role="treeitem" aria-label={entry.name} disabled={entry.kind !== "directory" && entry.kind !== "file"} onClick={() => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } }))}>
-          <span className={`file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`} aria-hidden="true" /><span className="file-tree__name">{entry.name}</span><span className="file-tree__meta">{entry.kind}</span>
+          <ClassicIcon name={entry.kind === "directory" ? "folder" : "file"} /><span className="file-tree__name">{entry.name}</span><span className="file-tree__meta">{entry.kind}</span>
         </button></div>)}
       </div>
     </div>
