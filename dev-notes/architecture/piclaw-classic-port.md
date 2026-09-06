@@ -873,3 +873,14 @@ shortcut: 459 passed, 3 documented WebKit offline skips (462 total). Focused
 frontend/packaging 42 passed; diff clean. Latest installed artifact a742e08
 predates rotation/search/settings/runtime/control changes; refresh pending.
 Visual review/acceptance remains independent of these regression results.
+
+## Full installed 0d274e6 attempt
+
+Built twice byte-identically (SHA-256
+f1e7e2f667bde0b0e3dd6b49ab54e54ecf21ccd93139f0a98c7f80a5c4d30441).
+Full installed browser run: 457 passed, 2 failed, 3 offline skips. Keyboard test
+raced selectSession's async final focus; Dashboard component fixture used weak
+startup wait/live transport. Wait for final timeline focus before shortcuts,
+use durable shell-ready + isolated SSE for Dashboard injection. Same installed
+wheel targeted rerun 12 passed. No production changes; complete installed rerun
+still required before calling package validation complete.

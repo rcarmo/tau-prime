@@ -48,6 +48,8 @@ async function ensureSessionSelected(page) {
   await expect
     .poll(() => page.locator('#session-list .session-item[data-active="true"]').count())
     .toBeGreaterThan(0);
+  // selectSession focuses the timeline only after its async refresh completes.
+  await expect(page.locator('#timeline-main')).toBeFocused();
 }
 
 test('keyboard shortcuts, completion behavior, and focus traversal', async ({ page }) => {
