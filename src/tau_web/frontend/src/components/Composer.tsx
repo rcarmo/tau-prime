@@ -46,13 +46,13 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
           </div>
 
 </>);
-  const attachmentControls = (<>          <div id="compose-attachment-list" hidden={!attachments.items.length} className="chat__attachments" role="region" aria-live="polite" aria-label="Staged attachments">
-            {attachments.items.map((attachment) => <span className="chat__attachment-pill" key={attachment.mediaId}>
-              <span className="chat__attachment-name">{attachment.label}</span>
-              <button className="chat__attachment-remove" type="button" aria-label={`Remove attachment ${attachment.filename}`} disabled={attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } }))}>✕</button>
+  const attachmentControls = (<>          <div id="compose-attachment-list" hidden={!attachments.items.length} className={classic ? "compose-attachments" : "chat__attachments"} role="region" aria-live="polite" aria-label="Staged attachments">
+            {attachments.items.map((attachment) => <span className={classic ? "compose-file-pill" : "chat__attachment-pill"} key={attachment.mediaId}>
+              <span className={classic ? "compose-file-name" : "chat__attachment-name"}>{attachment.label}</span>
+              <button className={classic ? "compose-file-remove" : "chat__attachment-remove"} type="button" aria-label={`Remove attachment ${attachment.filename}`} disabled={attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } }))}>✕</button>
             </span>)}
           </div>
-          <button id="compose-clear-attachments" className="chat__attachment-clear" type="button" aria-label="Clear all attachments" hidden={!attachments.items.length} disabled={!attachments.items.length || attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachments-clear"))}>Clear all</button>
+          <button id="compose-clear-attachments" className={classic ? "compose-clear-attachments-btn" : "chat__attachment-clear"} type="button" aria-label="Clear all attachments" hidden={!attachments.items.length} disabled={!attachments.items.length || attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachments-clear"))}>Clear all</button>
 
 </>);
   const input = (<>          <label className="sr-only" htmlFor="compose-input">Send a prompt to Tau</label>
@@ -86,18 +86,18 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
             <span id="compose-context-readout" className="usage-badge">No session selected. Sending will create one.</span>
           </div>
 </>);
-  const completions = (<>          <div id="compose-completion-popup" className="command-palette compose-completion-popup" hidden={!completion.open}>
-            <p id="compose-completion-status" className="command-palette__step-hint" aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
-            <ul id="compose-completion-listbox" className="command-palette__results" role="listbox" aria-label="Composer completions">
+  const completions = (<>          <div id="compose-completion-popup" className={classic ? "slash-autocomplete" : "command-palette compose-completion-popup"} hidden={!completion.open}>
+            <p id="compose-completion-status" className={classic ? "sr-only" : "command-palette__step-hint"} aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
+            <ul id="compose-completion-listbox" className={classic ? "tau-classic-completion-list" : "command-palette__results"} role="listbox" aria-label="Composer completions">
               {completion.items.map((item, index) => <li
                 id={`compose-completion-option-${index}`}
-                className={`command-palette__row${index === completion.index ? " is-active" : ""}`}
+                className={classic ? `slash-item${index === completion.index ? " active" : ""}` : `command-palette__row${index === completion.index ? " is-active" : ""}`}
                 role="option"
                 aria-selected={index === completion.index}
                 data-active={String(index === completion.index)}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(index)}
-              ><strong className="command-palette__label">{item.label}</strong><p className="command-palette__description">{item.detail}</p></li>)}
+              >{classic ? <><span className="slash-name">{item.label}</span><span className="slash-desc">{item.detail}</span></> : <><strong className="command-palette__label">{item.label}</strong><p className="command-palette__description">{item.detail}</p></>}</li>)}
             </ul>
           </div>
 </>);

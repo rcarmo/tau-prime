@@ -134,3 +134,12 @@ Classic mode hides legacy context/delivery controls, places attach/send in the
 footer, and accepts session/model slots. Live default unchanged pending cutover.
 24 classic frame/timeline/composer checks and 12 existing composer checks pass;
 TypeScript/build pass. Completion and attachment styling still needs conversion.
+
+## Composer file/completion markup
+
+Classic mode now uses compose-file-pill/name/remove and clear-button classes
+from FilePill/compose-box, plus slash-autocomplete/item/name/desc markup.
+Listbox semantics remain Tau-owned (list reset to be included in scoped classic
+adaptation stylesheet at cutover). Attachment removal event and completion
+selection state checked; combined classic/existing composer suite 36 passed.
+Build/TypeScript pass. No live-shell switch in this checkpoint.

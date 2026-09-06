@@ -678,11 +678,11 @@ function Composer({ classic = false, session, metadata }) {
   ] });
   const attachmentControls = /* @__PURE__ */ u3(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { id: "compose-attachment-list", hidden: !attachments.items.length, className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u3("span", { className: "chat__attachment-pill", children: [
-      /* @__PURE__ */ u3("span", { className: "chat__attachment-name", children: attachment.label }),
-      /* @__PURE__ */ u3("button", { className: "chat__attachment-remove", type: "button", "aria-label": `Remove attachment ${attachment.filename}`, disabled: attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } })), children: "\u2715" })
+    /* @__PURE__ */ u3("div", { id: "compose-attachment-list", hidden: !attachments.items.length, className: classic ? "compose-attachments" : "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u3("span", { className: classic ? "compose-file-pill" : "chat__attachment-pill", children: [
+      /* @__PURE__ */ u3("span", { className: classic ? "compose-file-name" : "chat__attachment-name", children: attachment.label }),
+      /* @__PURE__ */ u3("button", { className: classic ? "compose-file-remove" : "chat__attachment-remove", type: "button", "aria-label": `Remove attachment ${attachment.filename}`, disabled: attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } })), children: "\u2715" })
     ] }, attachment.mediaId)) }),
-    /* @__PURE__ */ u3("button", { id: "compose-clear-attachments", className: "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: !attachments.items.length, disabled: !attachments.items.length || attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachments-clear")), children: "Clear all" })
+    /* @__PURE__ */ u3("button", { id: "compose-clear-attachments", className: classic ? "compose-clear-attachments-btn" : "chat__attachment-clear", type: "button", "aria-label": "Clear all attachments", hidden: !attachments.items.length, disabled: !attachments.items.length || attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachments-clear")), children: "Clear all" })
   ] });
   const input = /* @__PURE__ */ u3(b, { children: [
     "          ",
@@ -720,22 +720,25 @@ function Composer({ classic = false, session, metadata }) {
   ] });
   const completions = /* @__PURE__ */ u3(b, { children: [
     "          ",
-    /* @__PURE__ */ u3("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: !completion.open, children: [
-      /* @__PURE__ */ u3("p", { id: "compose-completion-status", className: "command-palette__step-hint", "aria-live": "polite", children: completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : "" }),
-      /* @__PURE__ */ u3("ul", { id: "compose-completion-listbox", className: "command-palette__results", role: "listbox", "aria-label": "Composer completions", children: completion.items.map((item, index) => /* @__PURE__ */ u3(
+    /* @__PURE__ */ u3("div", { id: "compose-completion-popup", className: classic ? "slash-autocomplete" : "command-palette compose-completion-popup", hidden: !completion.open, children: [
+      /* @__PURE__ */ u3("p", { id: "compose-completion-status", className: classic ? "sr-only" : "command-palette__step-hint", "aria-live": "polite", children: completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : "" }),
+      /* @__PURE__ */ u3("ul", { id: "compose-completion-listbox", className: classic ? "tau-classic-completion-list" : "command-palette__results", role: "listbox", "aria-label": "Composer completions", children: completion.items.map((item, index) => /* @__PURE__ */ u3(
         "li",
         {
           id: `compose-completion-option-${index}`,
-          className: `command-palette__row${index === completion.index ? " is-active" : ""}`,
+          className: classic ? `slash-item${index === completion.index ? " active" : ""}` : `command-palette__row${index === completion.index ? " is-active" : ""}`,
           role: "option",
           "aria-selected": index === completion.index,
           "data-active": String(index === completion.index),
           onMouseDown: (event) => event.preventDefault(),
           onClick: () => choose(index),
-          children: [
+          children: classic ? /* @__PURE__ */ u3(b, { children: [
+            /* @__PURE__ */ u3("span", { className: "slash-name", children: item.label }),
+            /* @__PURE__ */ u3("span", { className: "slash-desc", children: item.detail })
+          ] }) : /* @__PURE__ */ u3(b, { children: [
             /* @__PURE__ */ u3("strong", { className: "command-palette__label", children: item.label }),
             /* @__PURE__ */ u3("p", { className: "command-palette__description", children: item.detail })
-          ]
+          ] })
         }
       )) })
     ] })

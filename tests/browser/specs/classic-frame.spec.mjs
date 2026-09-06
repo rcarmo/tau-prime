@@ -61,4 +61,10 @@ test('classic composer retains adapter anchors and completion events',async({pag
  await expect(page.locator('#compose-input')).toHaveAttribute('aria-expanded','true');
  await expect(page.locator('#compose-completion-option-0')).toContainText('/help');
  await expect(page.locator('#compose-form')).toHaveCount(1);
+ await expect(page.locator('.slash-item.active .slash-name')).toHaveText('/help');
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:attachments-render',{detail:{busy:false,items:[{mediaId:'file-1',filename:'notes.txt',label:'notes.txt'}]}})));
+ await expect(page.locator('.compose-file-pill')).toContainText('notes.txt');
+ await page.evaluate(()=>window.addEventListener('tau:attachment-remove',e=>window.removedClassicFile=e.detail.mediaId,{once:true}));
+ await page.getByRole('button',{name:'Remove attachment notes.txt'}).click();
+ await expect.poll(()=>page.evaluate(()=>window.removedClassicFile)).toBe('file-1');
 });
