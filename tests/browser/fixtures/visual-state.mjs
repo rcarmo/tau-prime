@@ -1,4 +1,6 @@
 // Visible content shared by genuine Piclaw and Tau full-shell capture adapters.
+export const modelName = 'review-model';
+export const providerName = 'test';
 export const fixedTime = '2026-09-01T12:02:00Z';
 export const userText = 'Review the workspace and preserve the existing API.';
 export const agentText = '## Workspace review\n\nThe API is **unchanged**.\n\n- Routes retained\n- Streaming retained\n\n```ts\nconst ready = true;\n```';

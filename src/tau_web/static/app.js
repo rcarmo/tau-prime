@@ -363,6 +363,13 @@ function installEventHandlers() {
   });
 
   window.addEventListener("keydown", handleKeyboardShortcuts);
+  window.addEventListener("offline", () => {
+    stopEventStream();
+    setStreamStatus("Offline");
+  });
+  window.addEventListener("online", () => {
+    if (state.selectedSessionId) startEventStream(state.selectedSessionId);
+  });
   document.addEventListener("visibilitychange", handleMetersVisibilityChange);
   window.addEventListener("beforeunload", () => {
     stopEventStream();
@@ -2631,16 +2638,10 @@ function announce(message) {
 }
 
 function setStreamStatus(message) {
-  ui.statusStream.textContent = message;
-  if (/^live$/i.test(message)) {
-    ui.statusStream.dataset.state = "live";
-  } else if (/^connect/i.test(message)) {
-    ui.statusStream.dataset.state = "connecting";
-  } else if (/^retry/i.test(message)) {
-    ui.statusStream.dataset.state = "retrying";
-  } else {
-    ui.statusStream.dataset.state = "offline";
-  }
+  const state = /^live$/i.test(message) ? "live"
+    : /^(?:re)?connect/i.test(message) ? "connecting"
+    : /^retry/i.test(message) ? "retrying" : "offline";
+  window.dispatchEvent(new CustomEvent("tau:connection-state", { detail: { message, state } }));
 }
 
 function handleError(error, fallbackMessage) {

@@ -1,4 +1,4 @@
-import { piclawPosts, fixedTime, piclawMeters } from '../fixtures/visual-state.mjs';
+import { piclawPosts, fixedTime, piclawMeters, modelName, providerName } from '../fixtures/visual-state.mjs';
 import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -31,7 +31,7 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
     if(url.pathname === '/agent/roster') return json({agents:[]});
     if(url.pathname === '/static/icon-192.png') return route.fulfill({contentType:'image/png',body:await readFile(path.resolve(dist,'../../icon-192.png'))});
     if(url.pathname.startsWith('/avatar/')) return route.fulfill({status:404,body:''});
-    if(url.pathname === '/agent/models') return json({models:[],oobe:{provider_ready_completed_instance:true}});
+    if(url.pathname === '/agent/models') return json({current:`${providerName}/${modelName}`,models:[`${providerName}/${modelName}`],oobe:{provider_ready_completed_instance:true}});
     if(url.pathname === '/agent/branches') return json({chats:[]});
     if(url.pathname.includes('events') || url.pathname === '/sse/stream') return route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'});
     unexpected.push(url.pathname);

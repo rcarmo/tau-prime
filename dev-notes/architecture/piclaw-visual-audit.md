@@ -244,6 +244,30 @@ Moved fixed CPU/RAM/RSS/swap values into shared visual-state fixture with Tau/Pi
 
 Latest full browser run after action/composer/shared telemetry updates: 249 passed / 3 documented WebKit offline skips, no failures. Build/TypeScript and focused frontend/packaging 43/43 pass; diff check clean. Visual differences and optional features remain open; do not infer acceptance from this test count.
 
+## Model/session fixture work in progress
+
+Reference models response now uses explicit test/review-model from shared fixture. Attempted Tau session-response normalization did not select a session (empty-server state); reverted that incomplete interception rather than weakening the expected label. Desktop both-app/theme captures pass 4/4; Tau session/model determinism still requires a fully seeded selected session/context fixture. No production behavior changed.
+
+## Selected-session fixture and model listener race
+
+Added complete selected visual-review session/detail/branches/messages/context/plan/approvals GET fixture; status session/model labels now asserted. Prior normalization failure traced to request.method function being compared instead of invoked; fixed fixture method(). Fast fixture exposed status model event missed by deferred useEffect in WebKit; changed listener registration to useLayoutEffect. Both-theme populated matrix passes 12/12 after fix; build/TypeScript pass. Messages still injected separately for component capture; connection/avatar semantics remain differing.
+
+## Collapse edge states
+
+Verified tool-only message collapse/expand restores tool blocks, and long text previews truncate at 120 characters while expansion preserves full source. Removed meaningless Copy message action for empty content, matching upstream conditional action behavior. Edge-state and existing copy/focus tests pass 12/12 across six targets; build/TypeScript pass.
+
+## Connection indicator state
+
+Status dot was permanently disconnected while app.js updated only text. Moved connection message/state rendering into StatusBar via tau:connection-state; dot now uses upstream connected/disconnected classes from same state as label. Reconnecting is correctly classified as connecting. Six-target state tests plus both-theme accessibility pass 18/18; frontend Python 36/36 and build/TypeScript pass. Tests inject adapter states; a full real-SSE transition check is still distinct.
+
+## Real SSE connectivity regression
+
+Added real-backend session/SSE test (no stream route mocking), network offline then online recovery. Initial test reproduced Live state persisting through offline in all engines. Added browser offline handler to abort stream and show Offline; online restarts selected-session stream. Six-target real Live→Offline→Live indicator tests pass; frontend/packaging 43/43. Test sessions are isolated harness data. This verifies browser network events, not every server failure mode.
+
+## Connection/fixture integrated checkpoint
+
+Combined current browser suite: 267 passed / 3 documented WebKit offline-navigation skips, including real SSE connectivity. Full Python: 1327 passed. Build/TypeScript/diff checks pass. This checkpoint includes explicit selected-session capture fixture, initial status-model subscription timing fix, conditional empty copy action, connection label/dot state and offline/online recovery. Visual acceptance and optional feature gaps remain open.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.

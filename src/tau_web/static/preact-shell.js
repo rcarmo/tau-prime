@@ -584,15 +584,21 @@ function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed })
 // src/components/StatusBar.tsx
 function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
   const [model, setModel] = h2("");
-  y2(() => {
+  const [connection, setConnection] = h2({ message: "Connecting\u2026", state: "connecting" });
+  _2(() => {
+    const receive = (event) => setConnection(event.detail);
+    window.addEventListener("tau:connection-state", receive);
+    return () => window.removeEventListener("tau:connection-state", receive);
+  }, []);
+  _2(() => {
     const receive = (event) => setModel(event.detail.model);
     window.addEventListener("tau:status-model", receive);
     return () => window.removeEventListener("tau:status-model", receive);
   }, []);
   return /* @__PURE__ */ u3("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
     /* @__PURE__ */ u3("span", { className: "status-bar__conn", children: [
-      /* @__PURE__ */ u3("span", { className: "status-bar__conn-dot status-bar__conn-dot--disconnected", "aria-hidden": "true" }),
-      /* @__PURE__ */ u3("span", { id: "status-stream", className: "status-bar__conn-text", children: "Connecting\u2026" })
+      /* @__PURE__ */ u3("span", { className: `status-bar__conn-dot status-bar__conn-dot--${connection.state === "live" ? "connected" : "disconnected"}`, "aria-hidden": "true" }),
+      /* @__PURE__ */ u3("span", { id: "status-stream", className: "status-bar__conn-text", "data-state": connection.state, children: connection.message })
     ] }),
     /* @__PURE__ */ u3("span", { className: "session-pill-wrap", children: /* @__PURE__ */ u3("button", { className: "session-pill", type: "button", title: "Open sessions", onClick: onOpenSessions, children: [
       /* @__PURE__ */ u3("span", { className: "session-pill__dot session-pill__dot--current", "aria-hidden": "true" }),
@@ -4106,7 +4112,7 @@ function MarkdownContent({ content }) {
 function MessageActionBar({ content, collapsed, onToggle, toggleRef }) {
   const [feedback, setFeedback] = h2("");
   return /* @__PURE__ */ u3("div", { className: "message-action-bar", onClick: (event) => event.stopPropagation(), children: [
-    /* @__PURE__ */ u3("button", { type: "button", className: "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
+    content && /* @__PURE__ */ u3("button", { type: "button", className: "message-action-bar__btn", "aria-label": "Copy message", title: "Copy message", onClick: async () => {
       try {
         await navigator.clipboard.writeText(content);
         setFeedback("Message copied");

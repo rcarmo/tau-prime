@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useLayoutEffect, useState } from "preact/hooks";
 import { SystemStats } from "./SystemStats";
 
 export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }: {
@@ -11,7 +11,13 @@ export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpe
   onToggleMetersCollapsed: () => void;
 }) {
   const [model, setModel] = useState("");
-  useEffect(() => {
+  const [connection, setConnection] = useState({ message: "Connecting…", state: "connecting" });
+  useLayoutEffect(() => {
+    const receive = (event: Event) => setConnection((event as CustomEvent<{ message: string; state: string }>).detail);
+    window.addEventListener("tau:connection-state", receive);
+    return () => window.removeEventListener("tau:connection-state", receive);
+  }, []);
+  useLayoutEffect(() => {
     const receive = (event: Event) => setModel((event as CustomEvent<{ model: string }>).detail.model);
     window.addEventListener("tau:status-model", receive);
     return () => window.removeEventListener("tau:status-model", receive);
@@ -19,8 +25,8 @@ export function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpe
   return (
     <footer className="app-layout__status-bar" role="banner" aria-label="Tau status bar">
       <span className="status-bar__conn">
-        <span className="status-bar__conn-dot status-bar__conn-dot--disconnected" aria-hidden="true" />
-        <span id="status-stream" className="status-bar__conn-text">Connecting…</span>
+        <span className={`status-bar__conn-dot status-bar__conn-dot--${connection.state === "live" ? "connected" : "disconnected"}`} aria-hidden="true" />
+        <span id="status-stream" className="status-bar__conn-text" data-state={connection.state}>{connection.message}</span>
       </span>
 
       <span className="session-pill-wrap">
