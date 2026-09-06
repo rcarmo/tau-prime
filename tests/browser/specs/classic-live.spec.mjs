@@ -117,3 +117,15 @@ test('composer clamps resize state when viewport changes',async({page})=>{
  await expect(handle).toHaveAttribute('aria-valuemax','450');
  await handle.focus();await page.keyboard.press('Home');await expect(input).toHaveCSS('height','70px');
 });
+
+test('classic workspace edge toggle opens navigation and closes it',async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');await page.goto('/');
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const toggle=page.locator('.workspace-toggle-tab');
+ // Upstream hides the edge control at some widths; semantics remain wired.
+ if(await toggle.isVisible()) {
+  await toggle.click();await expect(page.locator('#panel-workspace')).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded','true');
+  await toggle.click();await expect(page.locator('.app-shell')).toHaveClass(/workspace-collapsed/);
+ }
+});

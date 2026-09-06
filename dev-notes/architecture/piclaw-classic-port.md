@@ -840,3 +840,12 @@ Full browser suite on fresh port 8891 with reuse disabled: 447 passed,
 conversions and stale-harness prevention. Supersedes stale 8876-run failure
 counts. Latest installed artifact a742e08 predates those changes; refresh pending.
 Explicit classic visual approval and final secondary-surface review remain open.
+
+## Workspace shell control omission corrected
+
+Added actual classic workspace-toggle-tab and workspace-drawer-backdrop markup,
+wired to existing navigation state. Previously Workspace could only be reached
+through session navigation. Upstream CSS determines edge-control visibility;
+where visible, test verifies real open/close interaction. Classic-live/populated
+accessibility matrix 78 passed; build/TypeScript pass. Backdrop preserves classic
+overlay behavior without restoring the visual activity bar.

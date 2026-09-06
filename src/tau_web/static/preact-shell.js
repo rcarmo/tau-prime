@@ -266,9 +266,13 @@ function u2(e3, t3, n2, o3, i4, u6) {
 }
 
 // src/components/ClassicChatFrame.tsx
-function ClassicChatFrame({ sidebar, children, workspaceOpen = false }) {
+function ClassicChatFrame({ sidebar, children, workspaceOpen = false, onToggleWorkspace }) {
   return /* @__PURE__ */ u2("div", { className: `app-shell${workspaceOpen ? "" : " workspace-collapsed"}`, style: { "--sidebar-width": "280px" }, children: [
     /* @__PURE__ */ u2("aside", { className: "workspace-sidebar", "aria-label": "Workspace", inert: !workspaceOpen, children: sidebar }),
+    onToggleWorkspace && /* @__PURE__ */ u2(b, { children: [
+      workspaceOpen && /* @__PURE__ */ u2("div", { className: "workspace-drawer-backdrop", onClick: onToggleWorkspace, "aria-hidden": "true" }),
+      /* @__PURE__ */ u2("button", { type: "button", className: `workspace-toggle-tab ${workspaceOpen ? "open" : "closed"}`, onClick: onToggleWorkspace, title: workspaceOpen ? "Hide workspace" : "Show workspace", "aria-label": workspaceOpen ? "Hide workspace" : "Show workspace", "aria-expanded": workspaceOpen, children: /* @__PURE__ */ u2("svg", { className: "workspace-toggle-tab-icon", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ u2("polyline", { points: "6 3 11 8 6 13" }) }) })
+    ] }),
     /* @__PURE__ */ u2("main", { className: "container", "aria-label": "Chat", children })
   ] });
 }
@@ -4913,7 +4917,12 @@ function TauShell() {
     }
   };
   return /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2(ClassicChatFrame, { workspaceOpen: sidebarOpen || settingsOpen, sidebar: /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2(ClassicChatFrame, { workspaceOpen: sidebarOpen || settingsOpen, onToggleWorkspace: () => {
+      if (sidebarOpen || settingsOpen) {
+        close();
+        if (settingsOpen) selectTab("workspace");
+      } else selectPanel("workspace");
+    }, sidebar: /* @__PURE__ */ u2(b, { children: [
       /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: () => {
         close();
         if (settingsOpen) selectTab("sessions");
