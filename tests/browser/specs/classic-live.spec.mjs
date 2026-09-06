@@ -55,3 +55,27 @@ for(const via of ['button','keyboard']) test(`classic ${via} submission preserve
  expect(submitted).toEqual([{content:'Review\nthe workspace'},{content:'Review\nthe workspace'}]);
  await expect(page.locator('#compose-delivery-mode')).toBeHidden();
 });
+
+ test('classic secondary panels keep controls within the viewport',async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');
+ await page.goto('/?ui=classic',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
+ await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+ for(const name of ['Workspace','Search','Plan','Settings']) {
+  await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name,exact:true}).click();
+  const panel=page.locator(`#panel-${name.toLowerCase()}`);await expect(panel).toBeVisible();
+  const outside=await panel.locator('input,textarea,select,button').evaluateAll(els=>els.filter(el=>{
+   const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&(r.left < -1||r.right>innerWidth+1);
+  }).map(el=>el.id||el.textContent));
+  expect(outside).toEqual([]);
+ }
+ const last=page.locator('#panel-settings button:visible').last();
+ await last.scrollIntoViewIfNeeded();
+ const box=await last.boundingBox();
+ expect(box.y).toBeGreaterThanOrEqual(0);
+ expect(box.y+box.height).toBeLessThanOrEqual(page.viewportSize().height+1);
+ await page.locator('#close-panel-drawer').click();
+ await expect(page.locator('.app-shell')).toHaveClass(/workspace-collapsed/);
+ await expect(page.locator('#compose-input')).toBeVisible();
+ });

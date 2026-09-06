@@ -234,3 +234,10 @@ responses (no model execution): Send click and Enter preserve exact content;
 Shift+Enter inserts a newline without submission; rejected request retains draft
 and re-enables Send; successful retry clears draft. Delivery selector remains
 hidden. Both methods across six targets pass 12/12. Backend payload unchanged.
+
+## Integrated secondary-panel reachability
+
+Classic preview now has real panel-switching checks for Workspace/Search/Plan/
+Settings, horizontal form-control bounds, scrolling to the last Settings button,
+and closing Settings back to the composer. Six targets pass. No production fix
+needed in this check; reachability is not visual/a11y approval of panel styling.
