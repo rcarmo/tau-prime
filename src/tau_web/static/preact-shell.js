@@ -4379,6 +4379,7 @@ function AttachmentChip({ attachment, classic = false }) {
     link.click();
     URL.revokeObjectURL(objectUrl);
   };
+  if (classic && attachment.mediaType.startsWith("image/")) return /* @__PURE__ */ u3("div", { className: "media-preview", children: /* @__PURE__ */ u3("a", { href: contentUrl, target: "_blank", rel: "noopener", title: `Open ${attachment.filename}`, onClick: (event) => void download(event), children: /* @__PURE__ */ u3("img", { src: previewUrl ?? thumbnailUrl, alt: attachment.filename, loading: "lazy", decoding: "async" }) }) });
   if (classic) return /* @__PURE__ */ u3("a", { className: "post-file-pill", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
     /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: [
       /* @__PURE__ */ u3("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),

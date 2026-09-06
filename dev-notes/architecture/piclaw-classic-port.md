@@ -197,3 +197,11 @@ Current classic branch renders image attachments as file links too: image
 preview parity remains open and must be resolved before acceptance/cutover.
 Checks cover encoded text-file link and absence of visual attachment chip;
 classic plus existing timeline matrix 36 passed; build/TypeScript pass.
+
+## Classic image previews
+
+Classic image attachments now render media-preview thumbnails rather than file
+pills. Filename alt text and encoded content link retained; existing authenticated
+thumbnail/blob lifecycle and download handler reused. Checks verify src/alt/link
+markup (not image decoding or an upstream lightbox); classic matrix 30 passed,
+build/TypeScript pass. Tau still opens/downloads media, not Piclaw's lightbox.
