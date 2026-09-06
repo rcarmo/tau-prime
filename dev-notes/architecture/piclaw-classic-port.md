@@ -613,3 +613,13 @@ classic paired HTML/PDF from this run, including code-wrapper/copy-icon fixes.
 PDF cover's earlier through-f43ccbb label is stale provenance text; actual images
 are the current full-run outputs. Current artifact still predates code changes.
 Explicit visual approval remains outstanding.
+
+## Installed code-block artifact (58e98bf)
+
+Two SOURCE_DATE_EPOCH-pinned wheel builds byte-identical. SHA-256:
+9f82a942db92b5940f2f45e7290979a145fde639794ffbb88b98a334dcdd6aff
+(tau_prime-42.3.0-py3-none-any.whl). Separate installed runtime passed 90 checks:
+classic root/resize, populated and large-code a11y, classic assets, Markdown
+sanitization/copy/threshold behavior. Delivered wheel/checksum and revised PDF
+whose cover now correctly cites af9ef66 code / 58e98bf full regression.
+Visual acceptance remains pending; no production change in this checkpoint.
