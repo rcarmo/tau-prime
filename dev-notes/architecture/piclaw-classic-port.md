@@ -727,3 +727,12 @@ no failures. Complete Python: 1326 passed; diff clean. Includes queue/session/
 workspace/telemetry conversion and same-revision draft protection. Latest
 installed artifact remains 58e98bf and predates these changes; refresh needed.
 Paired secondary-panel assessment and explicit visual approval remain open.
+
+## Genuine classic Workspace captures
+
+Reference matrix now opens Workspace via actual Menu → Show workspace, expands
+root, and captures populated src/README.md entries. Corrected reference API type
+from visual-style `directory` to classic `dir`; initial attempts caught both
+wrong navigation and wrong node type rather than bypassing them. Twelve captures
+pass with no page errors/unmapped requests. Images alongside chat reference as
+*-workspace.png; paired Tau panel review not yet generated.
