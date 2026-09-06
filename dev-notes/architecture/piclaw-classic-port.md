@@ -999,3 +999,14 @@ layout. Actual classic dialog CSS now controls responsive navigation width and
 orientation; accessible anchor text treatment remains. Layout/category a11y
 matrix 18 passed, additional desktop navigation-width regression 6 passed.
 No vendor CSS changed. Latest artifact/evidence predates this styling correction.
+
+## Final navigation-correction installed checkpoint (c4f892a)
+
+Two epoch-pinned wheel builds byte-identical. Fresh installed-package full browser
+matrix on port 8892: 465 passed, 3 documented WebKit offline skips. Full Python:
+1326 passed. Installed captures refreshed across all three Settings categories,
+themes, engines and sizes; delivered 36-page c4f892a PDF, wheel and SHA256SUMS.
+This supersedes prior Settings artifacts, including the sidebar override.
+Delegate review attempted but blocked by model-selection policy (unclassified
+current model); no independent review claimed. Explicit visual acceptance and
+remaining source/adaptation review remain open.
