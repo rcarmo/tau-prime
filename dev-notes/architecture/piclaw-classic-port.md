@@ -471,3 +471,12 @@ skips. Six failures were WebKit native-button contrast in Dashboard/onboarding;
 one Search fixture race. Scoped Dashboard/secondary wizard button appearance,
 isolated Search fetch SSE and awaited Dashboard setup dismissal. Affected matrix
 30 passed after fixes. Complete suite still needs rerun; no green full claim yet.
+
+## Combined classic-only regression checkpoint (e478647)
+
+Complete browser rerun: 387 passed, 3 documented WebKit offline skips, no
+failures (390 total). Complete Python rerun: 1326 passed. Diff checks clean.
+This verifies functional/interaction migration, not classic visual acceptance.
+The remaining full-reference capture spec still targets the rejected visual
+bundle and must be replaced; passing it does not contribute classic parity
+proof. Fresh installed-classic artifact and paired screenshots remain pending.
