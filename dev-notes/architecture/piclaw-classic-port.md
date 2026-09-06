@@ -1010,3 +1010,30 @@ This supersedes prior Settings artifacts, including the sidebar override.
 Delegate review attempted but blocked by model-selection policy (unclassified
 current model); no independent review claimed. Explicit visual acceptance and
 remaining source/adaptation review remain open.
+
+## Remaining surface audit at 434d07f
+
+Read-only source review (not independent review; delegation policy blocked):
+
+- `components/SearchResults.tsx` renders Tau search results in classic post
+  hierarchy and keeps `tau:search-open-session`; `PlanPanel.tsx` retains dirty/
+  revision/conflict Save/Reload semantics. These are native Tau adaptations,
+  not copies of upstream feature inventories. Appearance acceptance remains.
+- `components/ModelControls.tsx` uses provider/model datalists and thinking
+  controls. Upstream extracted `components/model-picker.ts` uses a catalogue
+  projection, context-fit/pricing descriptions and keyboard active-key state.
+  Opening Tau's Model Settings is NOT equivalent to porting that picker. This
+  remains an explicit UX scope gap, not closed by model-controls tests.
+- `components/MessageActionBar.tsx` offers copy/collapse only. Upstream
+  `components/post-speech.ts` implements speech synthesis. Read-aloud remains
+  unported; message deletion is separately backend-constrained.
+- Media previews/authenticated downloads remain Tau adaptations; no upstream
+  lightbox equivalence is established. Advanced Markdown capabilities remain
+  unverified and must not be inferred from the isolated reference fixture.
+- `piclaw-remaining-visual-gaps.md` is historical VISUAL-mode evidence (it names
+  the visual index and piclaw-parity.css). Its old pass counts and screenshots
+  cannot close CLASSIC acceptance. This classic record is authoritative.
+
+No production edits made during this audit. The remaining decisions are real:
+accept native Tau model controls/media/actions as scoped adaptations, or request
+specific further classic features. Do not silently turn these into parity claims.
