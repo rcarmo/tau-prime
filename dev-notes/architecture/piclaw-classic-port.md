@@ -454,3 +454,12 @@ control bounds, both-theme axe checks and selected-session event. Replaced
 obsolete EventSource mock with persistent fetch SSE fixture for sessions.
 24 checks passed. Settings currently occupies secondary sidebar, a Tau-specific
 placement still subject to visual review; no production change in this pass.
+
+## Fourth triage / timeline-workspace migration
+
+Capped full run reached 168 passed, 6 failed, 1 interrupted, 215 not run.
+Migrated remaining timeline/workspace specs to classic post/file/tool structure
+and secondary navigation. Retained correct tool-result association, code payload,
+annotations/editor data and chronological visual order; replaced wrong visual
+DOM-reversal/10px-gap assertions with classic chronological DOM and composer
+boundary checks. Focused matrix 18 passed. Full suite still needs rerun.

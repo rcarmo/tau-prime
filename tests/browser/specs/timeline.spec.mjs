@@ -23,11 +23,11 @@ test('timeline uses Piclaw message, tool, and attachment component mapping', asy
   } })));
 
   const timeline = page.locator('#timeline-list');
-  await expect(timeline.locator('.message-list__item')).toHaveCount(2);
-  await expect(timeline.locator('.attachment-chip__name')).toHaveText('notes.txt');
-  const tool = timeline.locator('.message-list__tool-call');
-  await expect(tool.locator('.message-list__tool-call-badge')).toHaveText('done');
-  await tool.locator('.message-list__tool-call-header').click();
-  await expect(tool.locator('.message-list__tool-call-code')).toHaveCount(2);
+  await expect(timeline.locator('.post')).toHaveCount(2);
+  await expect(timeline.locator('.post-file-name')).toHaveText('notes.txt');
+  const tool = timeline.locator('.agent-thinking');
+  await expect(tool.locator('.agent-thinking-title')).toContainText('done');
+  await tool.locator('.agent-thinking-title button').click();
+  await expect(tool.locator('pre')).toHaveCount(2);
   await expect(tool).toContainText('file contents');
 });

@@ -12,7 +12,8 @@ test('workspace tree and annotations render through Preact', async ({ page }) =>
     entries: [{ name: 'components', kind: 'directory', path: '/workspace/src/components' }, { name: 'app.ts', kind: 'file', path: '/workspace/src/app.ts' }],
     annotations: [{ line: 1, endLine: null, severity: 'warning', source: 'lint', message: 'Review value' }],
   } })));
-  await page.getByRole('button', { name: 'Workspace', exact: true }).first().click();
+  await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+  await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Workspace',exact:true}).click();
   await expect(page.locator('#workspace-path')).toHaveText('/workspace/src');
   await expect(page.locator('#workspace-list .file-tree__item')).toHaveCount(2);
   await expect(page.locator('#workspace-editor')).toHaveValue('const value = 1;');
