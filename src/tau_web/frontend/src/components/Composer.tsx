@@ -9,7 +9,7 @@ type CompletionView = { open: boolean; index: number; items: CompletionItem[] };
 type AttachmentView = { items: Array<{ mediaId: string; filename: string; label: string }>; busy: boolean };
 type AdapterOptions = { providers: Array<{ value: string; label: string }>; models: Array<{ value: string; label: string }>; thinking: Array<{ value: string; label: string }> };
 
-export function Composer({ classic = false, session, metadata }: { classic?: boolean; session?: ComponentChildren; metadata?: ComponentChildren }) {
+export function Composer({ session, metadata }: { session?: ComponentChildren; metadata?: ComponentChildren }) {
   const [completion, setCompletion] = useState<CompletionView>({ open: false, index: 0, items: [] });
   const [attachments, setAttachments] = useState<AttachmentView>({ items: [], busy: false });
   const [adapterOptions, setAdapterOptions] = useState<AdapterOptions>({ providers: [], models: [], thinking: [] });
@@ -31,9 +31,9 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
   }, []);
   const activeDescendant = completion.open ? `compose-completion-option-${completion.index}` : undefined;
   const choose = (index: number) => window.dispatchEvent(new CustomEvent("tau:completion-select", { detail: { index } }));
-  const toolbar = (<>          <div className={classic ? "compose-attachment-actions" : "chat__toolbar"} aria-label="Prompt controls">
-            <button id="compose-attachment-button" className={classic ? "attach-btn" : "chat__toolbar-btn"} type="button" aria-label="Attach file" title="Attach file">
-              {classic ? <ClassicIcon name="attach" /> : <i className="codicon codicon-attach" aria-hidden="true" />}
+  const toolbar = (<>          <div className="compose-attachment-actions" aria-label="Prompt controls">
+            <button id="compose-attachment-button" className="attach-btn" type="button" aria-label="Attach file" title="Attach file">
+              <ClassicIcon name="attach" />
             </button>
             <input id="compose-file-input" type="file" multiple hidden aria-label="Attach files" />
 
@@ -47,22 +47,21 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
           </div>
 
 </>);
-  const attachmentControls = (<>          <div id="compose-attachment-list" hidden={!attachments.items.length} className={classic ? "compose-attachments" : "chat__attachments"} role="region" aria-live="polite" aria-label="Staged attachments">
-            {attachments.items.map((attachment) => <span className={classic ? "compose-file-pill" : "chat__attachment-pill"} key={attachment.mediaId}>
-              <span className={classic ? "compose-file-name" : "chat__attachment-name"}>{attachment.label}</span>
-              <button className={classic ? "compose-file-remove" : "chat__attachment-remove"} type="button" aria-label={`Remove attachment ${attachment.filename}`} disabled={attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } }))}>✕</button>
+  const attachmentControls = (<>          <div id="compose-attachment-list" hidden={!attachments.items.length} className="compose-attachments" role="region" aria-live="polite" aria-label="Staged attachments">
+            {attachments.items.map((attachment) => <span className="compose-file-pill" key={attachment.mediaId}>
+              <span className="compose-file-name">{attachment.label}</span>
+              <button className="compose-file-remove" type="button" aria-label={`Remove attachment ${attachment.filename}`} disabled={attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } }))}>✕</button>
             </span>)}
           </div>
-          <button id="compose-clear-attachments" className={classic ? "compose-clear-attachments-btn" : "chat__attachment-clear"} type="button" aria-label="Clear all attachments" hidden={!attachments.items.length} disabled={!attachments.items.length || attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachments-clear"))}>Clear all</button>
+          <button id="compose-clear-attachments" className="compose-clear-attachments-btn" type="button" aria-label="Clear all attachments" hidden={!attachments.items.length} disabled={!attachments.items.length || attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachments-clear"))}>Clear all</button>
 
 </>);
   const input = (<>          <label className="sr-only" htmlFor="compose-input">Send a prompt to Tau</label>
           <textarea
             id="compose-input"
-            className={classic ? undefined : "chat__input"}
             name="prompt"
-            rows={classic ? 1 : 3}
-            style={classic ? {height:"50px"} : undefined}
+            rows={1}
+            style={{height:"50px"}}
             autoComplete="off"
             role="combobox"
             aria-autocomplete="list"
@@ -75,7 +74,7 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
           />
 
 </>);
-  const context = (<>          <div className="chat__compose-toolbar" aria-label="Delivery and context">
+  const context = (<>          <div  aria-label="Delivery and context">
             {/* Hidden compatibility anchor for the submission adapter. */}
             <div hidden>
               <select id="compose-delivery-mode" name="delivery_mode" aria-label="Message delivery" tabIndex={-1}>
@@ -84,43 +83,34 @@ export function Composer({ classic = false, session, metadata }: { classic?: boo
                 <option value="steer">Steer</option>
               </select>
             </div>
-            <span id="compose-context-readout" className="usage-badge">No session selected. Sending will create one.</span>
+            <span id="compose-context-readout" >No session selected. Sending will create one.</span>
           </div>
 </>);
-  const completions = (<>          <div id="compose-completion-popup" className={classic ? "slash-autocomplete" : "command-palette compose-completion-popup"} hidden={!completion.open}>
-            <p id="compose-completion-status" className={classic ? "sr-only" : "command-palette__step-hint"} aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
-            <ul id="compose-completion-listbox" className={classic ? "tau-classic-completion-list" : "command-palette__results"} role="listbox" aria-label="Composer completions">
+  const completions = (<>          <div id="compose-completion-popup" className="slash-autocomplete" hidden={!completion.open}>
+            <p id="compose-completion-status" className="sr-only" aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
+            <ul id="compose-completion-listbox" className="tau-classic-completion-list" role="listbox" aria-label="Composer completions">
               {completion.items.map((item, index) => <li
                 id={`compose-completion-option-${index}`}
-                className={classic ? `slash-item${index === completion.index ? " active" : ""}` : `command-palette__row${index === completion.index ? " is-active" : ""}`}
+                className={`slash-item${index === completion.index ? " active" : ""}`}
                 role="option"
                 aria-selected={index === completion.index}
                 data-active={String(index === completion.index)}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(index)}
-              >{classic ? <><span className="slash-name">{item.label}</span><span className="slash-desc">{item.detail}</span></> : <><strong className="command-palette__label">{item.label}</strong><p className="command-palette__description">{item.detail}</p></>}</li>)}
+              ><><span className="slash-name">{item.label}</span><span className="slash-desc">{item.detail}</span></></li>)}
             </ul>
           </div>
 </>);
-  const send = (<>        <button id="compose-submit" className={classic ? "send-btn" : "chat__send-btn"} type="submit" aria-label="Send" title="Send (Enter)">
+  const send = (<>        <button id="compose-submit" className="send-btn" type="submit" aria-label="Send" title="Send (Enter)">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
         </button>
 </>);
   return (
     <Fragment>
       <div className="extension-slot" data-extension-slot="compose_above" />
-      <form id="compose-form" className={classic ? "tau-classic-compose-form" : "chat__compose"}>
-        {classic ? <><div hidden>{adapters}{context}</div><ClassicComposerSurface session={session} input={input} metadata={metadata} actions={<>{toolbar}{send}</>} attachments={attachmentControls} completions={completions} /></> : <>        <div className="chat__compose-container">
-{toolbar}
-{adapters}
-{attachmentControls}
-{input}
-{context}
-{completions}
-        </div>
-
-{send}
-</>}
+      <form id="compose-form" className="tau-classic-compose-form">
+        <div hidden>{adapters}{context}</div>
+        <ClassicComposerSurface session={session} input={input} metadata={metadata} actions={<>{toolbar}{send}</>} attachments={attachmentControls} completions={completions} />
       </form>
       <div className="sr-only">
         <p id="compose-help">Enter sends. Shift+Enter inserts a newline.</p>

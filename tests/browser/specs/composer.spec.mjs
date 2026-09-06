@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('composer renders staged attachments through Piclaw chip markup', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#compose-input')).toBeAttached();
-  await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready', 'true');
   const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
   await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
@@ -15,9 +15,9 @@ test('composer renders staged attachments through Piclaw chip markup', async ({ 
     ] } }));
   });
 
-  const chip = page.locator('#compose-attachment-list .chat__attachment-pill');
+  const chip = page.locator('#compose-attachment-list .compose-file-pill');
   await expect(chip).toHaveCount(1);
-  await expect(chip.locator('.chat__attachment-name')).toHaveText('notes.txt · 2 KB');
+  await expect(chip.locator('.compose-file-name')).toHaveText('notes.txt · 2 KB');
   await expect(page.locator('#compose-clear-attachments')).toBeVisible();
   await chip.getByRole('button', { name: 'Remove attachment notes.txt' }).evaluate((button) => button.click());
   await expect.poll(() => page.evaluate(() => window.__tauRemovedAttachment)).toBe('media-7');

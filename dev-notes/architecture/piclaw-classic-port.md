@@ -287,3 +287,11 @@ single footer implementation retains model/connection events and Dashboard
 access. Metrics continue in the secondary sidebar; session pill stays in the
 composer row. Updated live/fixture callers. Classic frame + real adapter suite:
 66 passed; build/TypeScript pass. Remaining dual-mode components still pending.
+
+## Classic-only composer cleanup
+
+Removed Composer mode prop, visual layout branch, conditional visual classes
+and Codicon alternative. Classic surface is now its sole layout. Updated live
+and fixture callers and existing attachment behavior test selectors. Classic
+frame/root matrix 66 passed; composer regressions 12 passed; build/TypeScript
+pass. Timeline/action/sidebar dual branches are separate pending cleanup.
