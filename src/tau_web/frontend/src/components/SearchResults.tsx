@@ -18,7 +18,7 @@ export function SearchResults() {
           <span className="search-panel__item-time">{result.meta}</span>
         </div>
         <span className="search-panel__item-text">{result.text}</span>
-        {result.sessionId && <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } }))}>Open session</button>}
+        {result.sessionId && <button className="settings-panel__provider-btn" type="button" onClick={() => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } }))}>Open session</button>}
       </article>
     </li>)}
   </ol>;

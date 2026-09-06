@@ -1000,7 +1000,7 @@ function SearchResults() {
         /* @__PURE__ */ u3("span", { className: "search-panel__item-time", children: result.meta })
       ] }),
       /* @__PURE__ */ u3("span", { className: "search-panel__item-text", children: result.text }),
-      result.sessionId && /* @__PURE__ */ u3("button", { type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
+      result.sessionId && /* @__PURE__ */ u3("button", { className: "settings-panel__provider-btn", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("tau:search-open-session", { detail: { sessionId: result.sessionId } })), children: "Open session" })
     ] }) }, `${result.entityType}-${result.entityId}-${index}`))
   ] });
 }
@@ -1109,7 +1109,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
         /* @__PURE__ */ u3("div", { className: "search-panel__input-wrapper", children: [
           /* @__PURE__ */ u3("span", { className: "search-panel__icon", "aria-hidden": "true", children: "\u2315" }),
           /* @__PURE__ */ u3("input", { id: "search-input", className: "search-panel__input", name: "query", type: "search", autoComplete: "off", spellcheck: false, placeholder: "Search messages\u2026" }),
-          /* @__PURE__ */ u3("button", { id: "search-submit-button", className: "search-panel__submit", type: "submit", children: "Search" })
+          /* @__PURE__ */ u3("button", { id: "search-submit-button", className: "search-panel__submit settings-panel__provider-btn", type: "submit", children: "Search" })
         ] })
       ] }),
       /* @__PURE__ */ u3(SearchResults, {})

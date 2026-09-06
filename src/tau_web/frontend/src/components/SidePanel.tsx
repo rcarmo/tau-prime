@@ -54,7 +54,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
             <div className="search-panel__input-wrapper">
               <span className="search-panel__icon" aria-hidden="true">⌕</span>
               <input id="search-input" className="search-panel__input" name="query" type="search" autoComplete="off" spellcheck={false} placeholder="Search messages…" />
-              <button id="search-submit-button" className="search-panel__submit" type="submit">Search</button>
+              <button id="search-submit-button" className="search-panel__submit settings-panel__provider-btn" type="submit">Search</button>
             </div>
           </form>
           <SearchResults />

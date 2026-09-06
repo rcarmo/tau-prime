@@ -168,3 +168,8 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 #panel-plan #plan-status { color: var(--text); opacity: 1; }
 .dark #panel-plan .tasks-panel__card-label,
 .dark #panel-plan .tasks-panel__card-actions button { color: var(--text); }
+
+/* Search metadata and Tau-specific action buttons use the active pane tokens. */
+.light #panel-search .search-panel__item-type { color: var(--text); }
+.dark #panel-search .search-panel__item-time { color: var(--text-muted); }
+.dark #panel-search .settings-panel__provider-btn { color: var(--text); }

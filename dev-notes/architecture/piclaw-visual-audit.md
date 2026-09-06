@@ -308,6 +308,18 @@ Combined run exposed dark Plan label/reload failures that isolated empty-session
 
 After enabled Plan contrast corrections, combined browser run passes 303 tests with 3 documented WebKit offline skips and no failures. Frontend/packaging 43/43, build/TypeScript/diff checks pass. Checkpoint includes clipboard retry feedback, queue/run fixture completeness and Workspace/Plan accessibility fixes. Remaining full-image/feature gaps are tracked separately; no visual approval implied.
 
+## Latest installed package and remote sync
+
+Rebuilt wheel at 4a90859 and reinstalled into separate audit environment. Installed-pane accessibility (both themes), tool/Markdown clipboard and real SSE connectivity matrix passes 54/54, with no checkout PYTHONPATH. Pushed pending commits f9f193e/a829bc8/4a90859 to tau-prime branch. This is verified partial delivery; optional rendering/features and final paired visual acceptance remain unresolved.
+
+## Populated Search audit
+
+Added populated search result both-theme axe/control-bounds checks. Found light result-type and dark metadata contrast plus native action buttons. Mapped Tau submit/open-session buttons to existing standard button primitive and scoped result metadata to active theme tokens. Twelve search accessibility/bounds cases pass, build/TypeScript pass. Full app snapshot comparison still distinct.
+
+## Search checkpoint
+
+Search result behavior, both-theme populated Search axe/bounds and settings layout pass 24/24 together. Frontend/packaging 43/43 and diff checks pass. This checkpoint does not extend the last full-suite result; final visual gaps remain documented in the separate gap inventory.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.
