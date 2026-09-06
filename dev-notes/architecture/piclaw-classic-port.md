@@ -865,3 +865,11 @@ Composer model action now selects Settings' Model category through a mounted
 Preact listener before focusing input; Authentication no longer stays marked
 active. Listener cleans up on unmount. Six model-entry tests verify category,
 focus and single form anchor; build/TypeScript pass.
+
+## Classic control integration checkpoint (4f68546)
+
+Fresh-server complete browser suite with workspace edge toggle and model-entry
+shortcut: 459 passed, 3 documented WebKit offline skips (462 total). Focused
+frontend/packaging 42 passed; diff clean. Latest installed artifact a742e08
+predates rotation/search/settings/runtime/control changes; refresh pending.
+Visual review/acceptance remains independent of these regression results.
