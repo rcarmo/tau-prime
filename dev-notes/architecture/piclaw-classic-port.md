@@ -641,3 +641,11 @@ Parent/refresh now use inline SVG icon-btn controls; directory/file rows use
 inline folder/file SVGs. Existing IDs/keyboard navigation/editor/annotations
 preserved. Workspace/responsive/pane a11y matrix 24 passed; build/TypeScript pass.
 Broader Workspace container styling remains a separate visual review item.
+
+## Session/queue icon repair
+
+New-session and queued-message copy-to-compose controls now use inline add/edit
+SVGs, not unavailable Codicon font nodes. Queue test asserts actual SVG visibility
+and absence of Codicons while retaining dispatch/copy checks. Queue/session/
+keyboard matrix 18 passed; build/TypeScript pass. Queue container styling remains
+part of secondary-surface conversion, not closed by this icon change.

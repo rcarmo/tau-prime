@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from "preact/hooks";
+import { ClassicIcon } from "./ClassicIcon";
 import { TauApi } from "../api/tau";
 import type { QueueItem, QueueKind, RunRecord } from "../api/types";
 
@@ -111,7 +112,7 @@ export function QueueStack() {
             </div>
             <div className="queue-stack__actions">
               <button type="button" className="queue-stack__btn queue-stack__btn--edit" onClick={() => copyToComposer(item)} title="Copy to compose" aria-label="Copy queued message to compose">
-                <i className="codicon codicon-edit" aria-hidden="true" />
+                <ClassicIcon name="edit" />
               </button>
               {isHead && (
                 <button type="button" className="queue-stack__btn queue-stack__btn--steer" disabled={!state.activeRun || busyKind === item.queue_kind} onClick={() => void dispatch(item.queue_kind)} title={state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required"}>

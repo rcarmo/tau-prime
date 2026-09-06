@@ -36,6 +36,8 @@ test('queue stack preserves independent FIFO heads and uses Tau dispatch routes'
 
   const stack = page.locator('.queue-stack');
   await expect(stack.locator('.queue-stack__item')).toHaveCount(3);
+  await expect(stack.locator('.codicon')).toHaveCount(0);
+  await expect(stack.getByRole('button',{name:'Copy queued message to compose'}).first().locator('svg')).toBeVisible();
   await expect(stack.getByRole('button', { name: /Dispatch/ })).toHaveCount(2);
   await expect(stack.getByText('First follow-up')).toBeVisible();
   await expect(stack.getByText('Second follow-up')).toBeVisible();

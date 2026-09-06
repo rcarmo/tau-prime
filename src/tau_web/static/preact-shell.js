@@ -510,7 +510,7 @@ function ClassicIcon({ name }) {
   return /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", focusable: "false", children: name === "copy" ? /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("rect", { x: "9", y: "9", width: "11", height: "11", rx: "2" }),
     /* @__PURE__ */ u2("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
-  ] }) : name === "attach" ? /* @__PURE__ */ u2("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : name === "refresh" ? /* @__PURE__ */ u2(b, { children: [
+  ] }) : name === "attach" ? /* @__PURE__ */ u2("path", { d: "M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l10.61-10.6a4 4 0 0 1 5.66 5.65L9.41 17.41a2 2 0 0 1-2.83-2.82l9.9-9.9" }) : name === "add" ? /* @__PURE__ */ u2("path", { d: "M12 5v14M5 12h14" }) : name === "edit" ? /* @__PURE__ */ u2(b, { children: /* @__PURE__ */ u2("path", { d: "M16 3l5 5L8 21H3v-5zM14 5l5 5" }) }) : name === "refresh" ? /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("path", { d: "M20 7v5h-5M4 17v-5h5" }),
     /* @__PURE__ */ u2("path", { d: "M6 6a8 8 0 0 1 13 2M5 16a8 8 0 0 0 13 2" })
   ] }) : name === "folder" ? /* @__PURE__ */ u2("path", { d: "M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }) : name === "file" ? /* @__PURE__ */ u2(b, { children: [
@@ -1136,7 +1136,7 @@ function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSes
     /* @__PURE__ */ u2("section", { id: "panel-sessions", className: "sessions-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
       /* @__PURE__ */ u2("div", { className: "sessions-panel__toolbar", role: "group", "aria-label": "Session actions", children: [
         /* @__PURE__ */ u2("button", { id: "new-session-button", className: "sessions-panel__new settings-panel__provider-btn", type: "button", children: [
-          /* @__PURE__ */ u2("i", { className: "codicon codicon-add", "aria-hidden": "true" }),
+          /* @__PURE__ */ u2(ClassicIcon, { name: "add" }),
           " New"
         ] }),
         /* @__PURE__ */ u2("button", { id: "archive-session-button", className: "sessions-panel__action settings-panel__provider-btn", type: "button", children: "Archive" }),
@@ -4729,7 +4729,7 @@ function QueueStack() {
           text2.length > 80 ? `${text2.slice(0, 80)}\u2026` : text2
         ] }),
         /* @__PURE__ */ u2("div", { className: "queue-stack__actions", children: [
-          /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--edit", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u2("i", { className: "codicon codicon-edit", "aria-hidden": "true" }) }),
+          /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--edit", onClick: () => copyToComposer(item), title: "Copy to compose", "aria-label": "Copy queued message to compose", children: /* @__PURE__ */ u2(ClassicIcon, { name: "edit" }) }),
           isHead && /* @__PURE__ */ u2("button", { type: "button", className: "queue-stack__btn queue-stack__btn--steer", disabled: !state.activeRun || busyKind === item.queue_kind, onClick: () => void dispatch(item.queue_kind), title: state.activeRun ? `Dispatch next ${item.queue_kind === "follow_up" ? "follow-up" : "steer"}` : "A pending or running run is required", children: "\u21B5 Dispatch" })
         ] })
       ] }, item.queue_id);

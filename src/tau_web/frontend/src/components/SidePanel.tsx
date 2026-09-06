@@ -1,3 +1,4 @@
+import { ClassicIcon } from "./ClassicIcon";
 import type { SidebarTab } from "../hooks/useSidebarTabs";
 import type { SessionFilter } from "../hooks/useSessionFilter";
 import { PlanPanel } from "./PlanPanel";
@@ -40,7 +41,7 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
 
         <section id="panel-sessions" className="sessions-panel" aria-label="Session navigation" hidden={activeTab !== "sessions"}>
           <div className="sessions-panel__toolbar" role="group" aria-label="Session actions">
-            <button id="new-session-button" className="sessions-panel__new settings-panel__provider-btn" type="button"><i className="codicon codicon-add" aria-hidden="true" /> New</button>
+            <button id="new-session-button" className="sessions-panel__new settings-panel__provider-btn" type="button"><ClassicIcon name="add" /> New</button>
             <button id="archive-session-button" className="sessions-panel__action settings-panel__provider-btn" type="button">Archive</button>
             <button id="restore-session-button" className="sessions-panel__action settings-panel__provider-btn" type="button">Restore</button>
           </div>
