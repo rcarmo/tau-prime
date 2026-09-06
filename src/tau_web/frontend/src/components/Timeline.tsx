@@ -107,7 +107,7 @@ export function MessageItem({ item, resultByCall }: { item: TimelineMessage; res
   if (isTool) return null;
   return <ClassicPost id={`post-${item.id}`} agent={!isUser} author={isUser ? "You" : "Tau"} time={item.live ? "live" : item.meta ?? ""} avatar={isUser ? "Y" : "τ"}
     actions={<MessageActionBar content={item.content ?? ""} collapsed={collapsed} onToggle={toggle} toggleRef={toggleRef} />}>
-    {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "— collapsed"}</span> : <>
+    {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.replace(/\s+/g, " ").length > 120 ? "…" : "") : "— collapsed"}</span> : <>
       {item.toolCalls?.map((call, index) => <ToolCallBlock key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
       {item.content && (isUser ? <div style={{whiteSpace:"pre-wrap"}}>{item.content}</div> : <MarkdownContent content={item.content} />)}
       {item.attachments?.map(attachment => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}

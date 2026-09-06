@@ -5,22 +5,24 @@ test('tool-only and long message collapse retains preview and full content', asy
   await page.goto('/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancel=page.getByRole('button',{name:'Cancel',exact:true});
+  await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
   if(await cancel.isVisible()) await cancel.click();
+  await expect(page.locator('#compose-input')).toBeVisible();
   const text='A long message with content. '.repeat(12);
   await page.evaluate(text=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[
     {id:'long',role:'user',content:text},
     {id:'toolonly',role:'assistant',toolCalls:[{id:'read',name:'read',arguments:{path:'file'}}]},
     {id:'result',role:'tool',toolCallId:'read',content:'Tool result',toolOk:true},
   ]}})),text);
-  const tool=page.locator('[data-message-id="toolonly"]');
+  const tool=page.locator('#post-toolonly');
   await expect(tool.getByRole('button',{name:'Copy message',exact:true})).toHaveCount(0);
   await tool.getByRole('button',{name:'Collapse message',exact:true}).focus(); await page.keyboard.press('Enter');
-  await expect(tool.locator('.message-list__collapsed-preview')).toHaveText('— collapsed');
+  await expect(tool.locator('.post-content > span')).toHaveText('— collapsed');
   await page.keyboard.press('Enter');
-  await expect(tool.locator('.message-list__tool-call')).toBeVisible();
-  const long=page.locator('[data-message-id="long"]');
+  await expect(tool.locator('.agent-thinking')).toBeVisible();
+  const long=page.locator('#post-long');
   await long.getByRole('button',{name:'Collapse message',exact:true}).focus(); await page.keyboard.press('Enter');
-  await expect(long.locator('.message-list__collapsed-preview')).toHaveText(text.replace(/\s+/g,' ').slice(0,120)+'…');
+  await expect(long.locator('.post-content > span')).toHaveText(text.replace(/\s+/g,' ').slice(0,120)+'…');
   await page.keyboard.press('Enter');
-  await expect(long.locator('.message-list__content')).toHaveText(text);
+  await expect(long.locator('.post-content')).toHaveText(text);
 });

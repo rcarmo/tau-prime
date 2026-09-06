@@ -5,13 +5,15 @@ test('agent Markdown renders semantic content without active HTML', async ({ pag
   await page.goto('/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
   const cancel=page.getByRole('button',{name:'Cancel',exact:true});
+  await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});
   if(await cancel.isVisible()) await cancel.click();
+  await expect(page.locator('#compose-input')).toBeVisible();
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {configurable:true,value:{writeText:async text=>{window.copiedCode=text;}}}));
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[
     {id:'agent',role:'assistant',content:'# Review\n\n**Ready** and `code`.\n\n- First\n- Second\n\n```js\nconst n = 1; // café 日本語 🚀\n```\n\n[Unsafe](javascript:alert(1)) <img src="x" onerror="window.pwned=true"><script>window.pwned=true</script>'},
     {id:'user',role:'user',content:'**literal user text**'},
   ]}})));
-  const content=page.locator('.message-list__item--agent .message-list__content');
+  const content=page.locator('#post-agent .post-content');
   await expect(content.locator('h1')).toHaveText('Review');
   await expect(content.locator('strong')).toHaveText('Ready');
   await expect(content.locator('li')).toHaveCount(2);
@@ -27,5 +29,5 @@ test('agent Markdown renders semantic content without active HTML', async ({ pag
   await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedCode=text;}}}));
   await content.getByRole('button',{name:'Copy code',exact:true}).click();
   await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveText('Code copied');
-  await expect(page.locator('.message-list__item--user .message-list__content')).toHaveText('**literal user text**');
+  await expect(page.locator('#post-user .post-content')).toHaveText('**literal user text**');
 });

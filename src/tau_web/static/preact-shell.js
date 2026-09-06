@@ -4243,7 +4243,7 @@ function MessageItem({ item, resultByCall }) {
       time: item.live ? "live" : item.meta ?? "",
       avatar: isUser ? "Y" : "\u03C4",
       actions: /* @__PURE__ */ u2(MessageActionBar, { content: item.content ?? "", collapsed, onToggle: toggle, toggleRef }),
-      children: collapsed ? /* @__PURE__ */ u2("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u2(b, { children: [
+      children: collapsed ? /* @__PURE__ */ u2("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) + (item.content.replace(/\s+/g, " ").length > 120 ? "\u2026" : "") : "\u2014 collapsed" }) : /* @__PURE__ */ u2(b, { children: [
         item.toolCalls?.map((call, index) => /* @__PURE__ */ u2(ToolCallBlock, { call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
         item.content && (isUser ? /* @__PURE__ */ u2("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u2(MarkdownContent, { content: item.content })),
         item.attachments?.map((attachment) => /* @__PURE__ */ u2(AttachmentChip, { attachment }, attachment.mediaId))

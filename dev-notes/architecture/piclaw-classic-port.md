@@ -368,3 +368,13 @@ access through classic session navigation, closed overlay sidebar before clickin
 Dashboard, and awaited setup cancellation in focus test. These are actual user
 steps, not forced clicks through overlay. Full matrix 18 passed; no Dashboard
 production fix required. Unsaved plan stays intact when session switch declined.
+
+## Full browser triage and content regression
+
+Ran full browser suite with max-failures=12: 31 passed, 12 failed, 1 interrupted,
+376 not run. Failures mix removed visual fixtures/selectors and migration gaps;
+this is not a full green run. Migrated Markdown sanitization/Unicode code copy
+and collapse-edge specs; restored missing truncated-preview ellipsis in classic
+MessageItem. Await setup dismissal before interacting. Focused six-target matrix
+12 passed; build/TypeScript pass. Remaining triage log:
+/workspace/tmp/tau-classic-full-triage.log.
