@@ -849,3 +849,12 @@ through session navigation. Upstream CSS determines edge-control visibility;
 where visible, test verifies real open/close interaction. Classic-live/populated
 accessibility matrix 78 passed; build/TypeScript pass. Backdrop preserves classic
 overlay behavior without restoring the visual activity bar.
+
+## Actionable classic model hint
+
+Composer model hint now uses classic button markup and opens existing Tau model
+settings with focus on model input; avoids passive label or fake picker. Native
+Settings form/API preserved. Six keyboard model-entry checks and 30 a11y/keyboard
+checks pass; build/TypeScript pass. Large-code a11y now awaits finite animations
+before contrast scan (one transient author/time failure exposed timing race).
+This is an explicit settings-navigation adaptation, not upstream popup parity.

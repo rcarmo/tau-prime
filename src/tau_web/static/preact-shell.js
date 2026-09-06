@@ -484,7 +484,7 @@ function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed })
 }
 
 // src/components/StatusBar.tsx
-function StatusBar({ dashboardOpen, onToggleDashboard }) {
+function StatusBar({ dashboardOpen, onToggleDashboard, onOpenModel }) {
   const [model, setModel] = h2("");
   const [connection, setConnection] = h2({ message: "Connecting\u2026", state: "connecting" });
   _2(() => {
@@ -499,7 +499,7 @@ function StatusBar({ dashboardOpen, onToggleDashboard }) {
   }, []);
   return /* @__PURE__ */ u2("div", { className: "tau-classic-status", children: [
     /* @__PURE__ */ u2("span", { hidden: connection.state === "live", children: /* @__PURE__ */ u2("span", { className: "compose-connection-status", children: /* @__PURE__ */ u2("span", { id: "status-stream", "data-state": connection.state, children: connection.message }) }) }),
-    /* @__PURE__ */ u2("span", { id: "status-model", className: "compose-model-hint", children: model || "Unset" }),
+    /* @__PURE__ */ u2("button", { id: "status-model", type: "button", className: "compose-model-hint compose-model-hint-btn", "aria-label": "Open model settings", onClick: onOpenModel, children: model || "Unset" }),
     /* @__PURE__ */ u2("span", { id: "status-context", className: "sr-only", children: "No context loaded" }),
     /* @__PURE__ */ u2("button", { id: "dashboard-toggle", className: "icon-btn", type: "button", "aria-label": "Dashboard", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, onClick: onToggleDashboard, children: [
       /* @__PURE__ */ u2("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" }) }),
@@ -4935,7 +4935,11 @@ function TauShell() {
         /* @__PURE__ */ u2(Timeline, {}),
         /* @__PURE__ */ u2(SessionRuntime, {}),
         /* @__PURE__ */ u2(QueueStack, {}),
-        /* @__PURE__ */ u2(Composer, { session: /* @__PURE__ */ u2(ClassicSessionControl, { open: sidebarOpen, onToggle: () => selectPanel("sessions") }), metadata: /* @__PURE__ */ u2(StatusBar, { dashboardOpen, onToggleDashboard: () => setDashboardOpen((value) => !value) }) })
+        /* @__PURE__ */ u2(Composer, { session: /* @__PURE__ */ u2(ClassicSessionControl, { open: sidebarOpen, onToggle: () => selectPanel("sessions") }), metadata: /* @__PURE__ */ u2(StatusBar, { onOpenModel: () => {
+          selectTab("settings");
+          close();
+          requestAnimationFrame(() => document.getElementById("model-input")?.focus());
+        }, dashboardOpen, onToggleDashboard: () => setDashboardOpen((value) => !value) }) })
       ] })
     ] }),
     /* @__PURE__ */ u2(Dashboard, { open: dashboardOpen, onClose: () => setDashboardOpen(false) }),

@@ -129,3 +129,13 @@ test('classic workspace edge toggle opens navigation and closes it',async({page}
   await toggle.click();await expect(page.locator('.app-shell')).toHaveClass(/workspace-collapsed/);
  }
 });
+
+test('classic model hint opens existing model settings with keyboard focus',async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');await page.goto('/');
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ await page.getByRole('button',{name:'Open model settings',exact:true}).focus();await page.keyboard.press('Enter');
+ await expect(page.locator('#panel-settings')).toBeVisible();
+ await expect(page.locator('#model-input')).toBeFocused();
+ await expect(page.locator('#model-form')).toHaveCount(1);
+});

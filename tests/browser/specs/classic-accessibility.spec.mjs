@@ -31,6 +31,7 @@ for(const colorScheme of ['light','dark']) test(`classic ${colorScheme} large-co
  const block=page.locator('#post-large-code .post-code-block');
  for(const expanded of [false,true]) {
   if(expanded)await block.getByRole('button',{name:/Expand code/}).click();
+  await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})));});
   const result=await new AxeBuilder({page}).include('#post-large-code').analyze();
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);
   for(const button of await block.locator('button').all()) {

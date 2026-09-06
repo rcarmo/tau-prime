@@ -56,7 +56,7 @@ function TauShell() {
       <div className="tau-classic-chat" hidden={onboardingOpen}>
         <Timeline />
         <SessionRuntime /><QueueStack />
-        <Composer session={<ClassicSessionControl open={sidebarOpen} onToggle={() => selectPanel("sessions")} />} metadata={<StatusBar dashboardOpen={dashboardOpen} onToggleDashboard={() => setDashboardOpen(value=>!value)} />} />
+        <Composer session={<ClassicSessionControl open={sidebarOpen} onToggle={() => selectPanel("sessions")} />} metadata={<StatusBar onOpenModel={() => { selectTab("settings"); close(); requestAnimationFrame(() => document.getElementById("model-input")?.focus()); }} dashboardOpen={dashboardOpen} onToggleDashboard={() => setDashboardOpen(value=>!value)} />} />
       </div>
     </ClassicChatFrame>
     <Dashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-export function StatusBar({ dashboardOpen, onToggleDashboard }: {
+export function StatusBar({ dashboardOpen, onToggleDashboard, onOpenModel }: {
+  onOpenModel?: () => void;
   dashboardOpen: boolean;
   onToggleDashboard: () => void;
 }) {
@@ -20,7 +21,7 @@ export function StatusBar({ dashboardOpen, onToggleDashboard }: {
     <span hidden={connection.state === "live"}><span className="compose-connection-status">
       <span id="status-stream" data-state={connection.state}>{connection.message}</span>
     </span></span>
-    <span id="status-model" className="compose-model-hint">{model || "Unset"}</span>
+    <button id="status-model" type="button" className="compose-model-hint compose-model-hint-btn" aria-label="Open model settings" onClick={onOpenModel}>{model || "Unset"}</button>
     <span id="status-context" className="sr-only">No context loaded</span>
     <button id="dashboard-toggle" className="icon-btn" type="button" aria-label="Dashboard" aria-controls="session-dashboard" aria-expanded={dashboardOpen} onClick={onToggleDashboard}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" /></svg>
