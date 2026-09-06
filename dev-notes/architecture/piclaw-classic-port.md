@@ -500,3 +500,13 @@ with classic-only outputs and removed old visual/panel options. Delivered
 Tau-Piclaw-Classic-Paired-Review.html with 12 labeled pairs. Identity/session/
 runtime/action differences remain visible. This is evidence for review, not
 acceptance; no pixel score or self-approved screenshot baseline used.
+
+## Fresh reproducible classic artifact (afbdf82)
+
+Built twice with SOURCE_DATE_EPOCH from afbdf82: byte-identical wheel.
+SHA-256: 1ed5ff8e07a3af32e2b6e3a1fed40275f3e0d2f7244b3a5b65991a80e8dfd14b
+Filename: tau_prime-42.3.0-py3-none-any.whl. Delivered wheel/checksum to chat.
+Installed separately, tested using TAU_BROWSER_BIN audit venv and port 8877
+(no checkout PYTHONPATH): classic root sending/navigation, populated a11y,
+asset/font loading + removed-asset 404 checks, real SSE recovery: 60 passed.
+This supersedes the earlier visual-mode wheel; visual acceptance still pending.
