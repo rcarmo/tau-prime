@@ -1219,7 +1219,7 @@ var TITLES = {
   plan: "Plan",
   settings: "Settings"
 };
-var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-selected": selected, onClick: () => onSelect(name), children: TITLES[name] });
+var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-pressed": selected, onClick: () => onSelect(name), children: TITLES[name] });
 function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }) {
   return /* @__PURE__ */ u2(Sidebar, { classic, id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2("button", { id: "close-nav-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),

@@ -241,3 +241,12 @@ Classic preview now has real panel-switching checks for Workspace/Search/Plan/
 Settings, horizontal form-control bounds, scrolling to the last Settings button,
 and closing Settings back to the composer. Six targets pass. No production fix
 needed in this check; reachability is not visual/a11y approval of panel styling.
+
+## Integrated accessibility correction
+
+Both-theme classic chat/session navigation/Search/Settings axe scans exposed
+low model text contrast, invalid aria-selected on ordinary navigation buttons,
+and WebKit native-button dark backgrounds. Corrected pressed semantics and
+scoped classic control/text colors/appearance without modifying vendor CSS.
+Full six-target/both-theme scan 12 passed (four surfaces each); TypeScript passed.
+Scans currently use idle/empty content, not complete populated message coverage.

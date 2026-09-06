@@ -15,7 +15,7 @@ const LegacyTabAnchor = ({ name, selected, onSelect }: {
   selected: boolean;
   onSelect: (tab: SidebarTab) => void;
 }) => (
-  <button id={`tab-${name}`} type="button" aria-controls={`panel-${name}`} aria-selected={selected} onClick={() => onSelect(name)}>{TITLES[name]}</button>
+  <button id={`tab-${name}`} type="button" aria-controls={`panel-${name}`} aria-pressed={selected} onClick={() => onSelect(name)}>{TITLES[name]}</button>
 );
 
 export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }: {

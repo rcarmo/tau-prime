@@ -10,3 +10,10 @@
 .tau-classic-panel [aria-label="Navigation"] { display:flex; flex-wrap:wrap; gap:4px; }
 .tau-classic-panel input,.tau-classic-panel textarea,.tau-classic-panel select { max-width:100%; box-sizing:border-box; }
 .tau-classic-chat .extension-slot:empty { display:none; }
+/* Small model text must retain AA contrast in both themes. */
+.tau-classic-status .compose-model-hint { color:var(--text-primary); opacity:1; }
+.tau-classic-panel [aria-label="Navigation"] button { color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px; padding:4px 8px; }
+.tau-classic-panel button { color:var(--text-primary); background:var(--bg-secondary); }
+[data-tau-ui="classic"] .compose-session-switcher-pill { appearance:none; color:var(--text-primary); background:var(--bg-secondary); }
+[data-tau-ui="classic"] .workspace-header-left { color:var(--text-primary); }
+[data-tau-ui="classic"] #panel-settings button { appearance:none; color:var(--text-primary); background:var(--bg-secondary); }
