@@ -1170,7 +1170,14 @@ function WorkspacePanel({ hidden }) {
 }
 
 // src/components/Sidebar.tsx
-function Sidebar({ title, children, id: id2, label, actions }) {
+function Sidebar({ title, children, id: id2, label, actions, classic = false }) {
+  if (classic) return /* @__PURE__ */ u3("section", { id: id2, className: "tau-classic-panel", "aria-label": label, children: [
+    /* @__PURE__ */ u3("header", { className: "workspace-header", children: [
+      /* @__PURE__ */ u3("div", { className: "workspace-header-left", children: title }),
+      /* @__PURE__ */ u3("div", { className: "workspace-header-actions", children: actions })
+    ] }),
+    /* @__PURE__ */ u3("div", { className: "tau-classic-panel-content", children })
+  ] });
   return /* @__PURE__ */ u3("aside", { id: id2, className: "sidebar", "aria-label": label, children: [
     /* @__PURE__ */ u3("header", { className: "sidebar__header", children: [
       /* @__PURE__ */ u3("span", { className: "sidebar__title", children: title.toUpperCase() }),
@@ -1189,12 +1196,13 @@ var TITLES = {
   settings: "Settings"
 };
 var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u3("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-selected": selected, onClick: () => onSelect(name), children: TITLES[name] });
-function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter }) {
-  return /* @__PURE__ */ u3(Sidebar, { id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u3(b, { children: [
-    /* @__PURE__ */ u3("button", { id: "close-nav-drawer", className: "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
-    /* @__PURE__ */ u3("button", { id: "close-panel-drawer", className: "sidebar__close mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
+function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }) {
+  return /* @__PURE__ */ u3(Sidebar, { classic, id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u3(b, { children: [
+    /* @__PURE__ */ u3("button", { id: "close-nav-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
+    /* @__PURE__ */ u3("button", { id: "close-panel-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
   ] }), children: [
-    /* @__PURE__ */ u3("div", { hidden: true, children: [
+    /* @__PURE__ */ u3("div", { hidden: !classic, role: classic ? "group" : void 0, "aria-label": classic ? "Navigation" : void 0, children: [
+      classic && /* @__PURE__ */ u3("button", { type: "button", "aria-pressed": activeTab === "sessions", onClick: () => onSelectTab("sessions"), children: "Sessions" }),
       /* @__PURE__ */ u3(LegacyTabAnchor, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab }),
       /* @__PURE__ */ u3(LegacyTabAnchor, { name: "search", selected: activeTab === "search", onSelect: onSelectTab }),
       /* @__PURE__ */ u3(LegacyTabAnchor, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab }),

@@ -170,3 +170,12 @@ retaining status-session adapter ID and expanded/controls semantics. Composer
 fixture verifies label mutation and navigation callback. Classic matrix 24
 passed; TypeScript passes. This is still staged; it does not itself implement
 the session navigation surface or replace the live shell.
+
+## Classic secondary navigation adapter
+
+SidePanel/Sidebar internal classic mode exposes Tau panel navigation within a
+classic workspace-header wrapper (no visual activity/sidebar markup). Retains
+existing IDs and close/select callbacks. This is a Tau navigation adaptation,
+not a replica of all Piclaw sidebar features. Six classic callback checks pass;
+18 existing sidebar/workspace/search checks pass; build/TypeScript pass.
+Panel internals and scoped CSS still need conversion before production cutover.

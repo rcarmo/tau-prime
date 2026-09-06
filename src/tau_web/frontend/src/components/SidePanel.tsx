@@ -18,7 +18,8 @@ const LegacyTabAnchor = ({ name, selected, onSelect }: {
   <button id={`tab-${name}`} type="button" aria-controls={`panel-${name}`} aria-selected={selected} onClick={() => onSelect(name)}>{TITLES[name]}</button>
 );
 
-export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter }: {
+export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }: {
+  classic?: boolean;
   activeTab: SidebarTab;
   onSelectTab: (tab: SidebarTab) => void;
   onClose: () => void;
@@ -26,11 +27,12 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
   onSelectSessionFilter: (filter: SessionFilter) => void;
 }) {
   return (
-    <Sidebar id="side-panel" title={TITLES[activeTab]} label={`${TITLES[activeTab]} sidebar`} actions={<>
-        <button id="close-nav-drawer" className="sidebar__close mobile-only" type="button" aria-label="Close sessions drawer" hidden={activeTab !== "sessions"} onClick={onClose}>✕</button>
-        <button id="close-panel-drawer" className="sidebar__close mobile-only" type="button" aria-label="Close workspace drawer" hidden={activeTab === "sessions"} onClick={onClose}>✕</button>
+    <Sidebar classic={classic} id="side-panel" title={TITLES[activeTab]} label={`${TITLES[activeTab]} sidebar`} actions={<>
+        <button id="close-nav-drawer" className={classic ? "icon-btn" : "sidebar__close mobile-only"} type="button" aria-label="Close sessions drawer" hidden={activeTab !== "sessions"} onClick={onClose}>✕</button>
+        <button id="close-panel-drawer" className={classic ? "icon-btn" : "sidebar__close mobile-only"} type="button" aria-label="Close workspace drawer" hidden={activeTab === "sessions"} onClick={onClose}>✕</button>
       </>}>
-        <div hidden>
+        <div hidden={!classic} role={classic ? "group" : undefined} aria-label={classic ? "Navigation" : undefined}>
+          {classic && <button type="button" aria-pressed={activeTab === "sessions"} onClick={() => onSelectTab("sessions")}>Sessions</button>}
           <LegacyTabAnchor name="workspace" selected={activeTab === "workspace"} onSelect={onSelectTab} />
           <LegacyTabAnchor name="search" selected={activeTab === "search"} onSelect={onSelectTab} />
           <LegacyTabAnchor name="plan" selected={activeTab === "plan"} onSelect={onSelectTab} />
