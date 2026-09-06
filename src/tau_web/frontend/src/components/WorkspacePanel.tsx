@@ -22,7 +22,7 @@ export function WorkspacePanel({ hidden }: { hidden: boolean }) {
       <p id="workspace-path" className="workspace__current-path">{view.path}</p>
       <div id="workspace-list" className="file-tree" role="tree" aria-label="Workspace tree">
         {!view.entries.length && <div>No workspace entries available.</div>}
-        {view.entries.map((entry) => <div key={`${entry.kind}:${entry.path ?? entry.name}`}><button type="button" className="file-tree__item" role="treeitem" disabled={entry.kind !== "directory" && entry.kind !== "file"} onClick={() => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } }))}>
+        {view.entries.map((entry) => <div key={`${entry.kind}:${entry.path ?? entry.name}`}><button type="button" className="file-tree__item" role="treeitem" aria-label={entry.name} disabled={entry.kind !== "directory" && entry.kind !== "file"} onClick={() => window.dispatchEvent(new CustomEvent("tau:workspace-open", { detail: { entry } }))}>
           <span className={`file-tree__icon codicon codicon-${entry.kind === "directory" ? "folder" : "file"}`} aria-hidden="true" /><span className="file-tree__name">{entry.name}</span><span className="file-tree__meta">{entry.kind}</span>
         </button></div>)}
       </div>

@@ -413,3 +413,11 @@ preservation. Exposed mobile/tablet sidebar intercepting wizard Cancel after
 reopening setup from Settings. Settings now dispatches tau:close-drawers before
 opening wizard; no forced clicks. Setup + full classic-live matrix 42 passed;
 build/TypeScript pass. Composer remains mounted and retains draft.
+
+## Responsive UTF-8 workspace regression
+
+Migrated responsive test to classic session pill/navigation and Send (no Run).
+Retained actual directory/file keyboard activation and café/日本語 file-content
+checks. Exposed concatenated accessible names (`notesdirectory`); workspace
+items now have explicit filename aria-label. Responsive + pane a11y matrix
+18 passed; build/TypeScript pass. Visual workspace styling still needs review.
