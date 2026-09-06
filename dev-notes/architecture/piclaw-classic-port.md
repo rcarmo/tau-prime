@@ -623,3 +623,13 @@ classic root/resize, populated and large-code a11y, classic assets, Markdown
 sanitization/copy/threshold behavior. Delivered wheel/checksum and revised PDF
 whose cover now correctly cites af9ef66 code / 58e98bf full regression.
 Visual acceptance remains pending; no production change in this checkpoint.
+
+## Remaining-source audit checkpoint
+
+No visual source paths, mode conditionals or visual stylesheet loads remain in
+runtime TS/JS; only negative browser asset checks mention deleted asset names.
+Corrected stale frontend README. Secondary panels still contain old class names
+and some Codicon nodes (Workspace/SessionList/metrics/queue etc.); these are not
+approved merely because core chat matches classic. Their visual conversion/review
+remains explicit engineering work. Audit script directory contains only classic
+capture probe; no visual reference source override remains.

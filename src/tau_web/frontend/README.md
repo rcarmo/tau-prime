@@ -25,6 +25,8 @@ PYTHONPATH=.:src pytest -q tests/web/test_frontend.py tests/web/test_routes_asse
 
 The Preact shell owns the visible application markup. Components preserve IDs, extension slots, accessibility attributes, and event attachment points consumed by the headless `app.js` adapter, `extension-ui.js`, and `frontend-sdk.js`. Imperative DOM is restricted to extension/widget hosts.
 
-Piclaw's vendored `piclaw-reference.css` is the visual source of truth. Keep `piclaw-parity.css` limited to Tau-specific compatibility and accessibility bridges; do not hide structural differences with broad CSS overlays.
+Piclaw **classic** is the only UX. The pinned `piclaw-classic.css` is copied unchanged from its classic bundle; `tau-classic.css` contains scoped Tau semantic/accessibility adaptations. There is no visual-mode shell, stylesheet, or mode switch. Do not reintroduce an activity bar or alternative UX.
 
-Component-owned regions include the activity bar, status bar, session dashboard, session navigation, central timeline, composer, workspace/search/plan/settings side panel, editor shell, queue stack, and overlays.
+Component-owned regions include the classic chat frame, composer session/status controls, message and code blocks, session dashboard/navigation, workspace/search/plan/settings secondary panels, queue stack, and overlays. Some secondary-panel internals still require classic markup/style review; passing functional tests is not visual acceptance.
+
+See `dev-notes/architecture/piclaw-classic-port.md` for source provenance, current tests, known adaptations and remaining review. Genuine reference captures use the shipped classic index/bundle, not the rejected visual frontend.
