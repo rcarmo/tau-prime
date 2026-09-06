@@ -582,7 +582,7 @@ function SystemStats({ enabled, collapsed, onToggleEnabled, onToggleCollapsed })
 }
 
 // src/components/StatusBar.tsx
-function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
+function StatusBar({ classic = false, dashboardOpen, metersEnabled, metersCollapsed, onOpenSessions, onToggleDashboard, onToggleMetersEnabled, onToggleMetersCollapsed }) {
   const [model, setModel] = h2("");
   const [connection, setConnection] = h2({ message: "Connecting\u2026", state: "connecting" });
   _2(() => {
@@ -595,6 +595,15 @@ function StatusBar({ dashboardOpen, metersEnabled, metersCollapsed, onOpenSessio
     window.addEventListener("tau:status-model", receive);
     return () => window.removeEventListener("tau:status-model", receive);
   }, []);
+  if (classic) return /* @__PURE__ */ u3("div", { className: "tau-classic-status", children: [
+    /* @__PURE__ */ u3("span", { hidden: connection.state === "live", children: /* @__PURE__ */ u3("span", { className: "compose-connection-status", children: /* @__PURE__ */ u3("span", { id: "status-stream", "data-state": connection.state, children: connection.message }) }) }),
+    /* @__PURE__ */ u3("span", { id: "status-model", className: "compose-model-hint", children: model || "Unset" }),
+    /* @__PURE__ */ u3("span", { id: "status-context", className: "sr-only", children: "No context loaded" }),
+    /* @__PURE__ */ u3("button", { id: "dashboard-toggle", className: "icon-btn", type: "button", "aria-label": "Dashboard", "aria-controls": "session-dashboard", "aria-expanded": dashboardOpen, onClick: onToggleDashboard, children: [
+      /* @__PURE__ */ u3("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: /* @__PURE__ */ u3("path", { d: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" }) }),
+      /* @__PURE__ */ u3("span", { id: "dashboard-count", className: "sr-only", children: "0" })
+    ] })
+  ] });
   return /* @__PURE__ */ u3("footer", { className: "app-layout__status-bar", role: "banner", "aria-label": "Tau status bar", children: [
     /* @__PURE__ */ u3("span", { className: "status-bar__conn", children: [
       /* @__PURE__ */ u3("span", { className: `status-bar__conn-dot status-bar__conn-dot--${connection.state === "live" ? "connected" : "disconnected"}`, "aria-hidden": "true" }),

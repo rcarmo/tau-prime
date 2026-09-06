@@ -152,3 +152,13 @@ This is an explicit backend adaptation: classic normally presents this in live
 status panels, not visual-mode tool cards. Copy feedback handler reused with
 classic button class. Exact tail/full content checks plus classic and existing
 tool matrix: 30 passed; build/TypeScript pass. Default live shell unchanged.
+
+## Classic footer status adapter
+
+StatusBar internal classic mode now consumes existing model/connection events
+inside composer metadata, hides connected status (matching classic), and keeps
+Dashboard action/count anchors. Session control is supplied by composer session
+slot; SystemStats must move to a secondary surface at cutover, not disappear.
+Classic CSS overrides display on the connection class, so hidden state lives on
+an unstyled wrapper. Classic/status matrix 30 passed; build/TypeScript pass.
+Live shell still unchanged.
