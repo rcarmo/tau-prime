@@ -106,3 +106,12 @@ Slots preserve Tau ownership of inputs and handlers; no delivery selector or
 unsupported inert resize handle introduced. Integrated into isolated frame
 fixture; 12/12 checks pass including footer below textarea and session/model
 rows. TypeScript passes. This is staged structure, not live adapter cutover.
+
+## Classic post structure
+
+Added ClassicPost using classic post/avatar/body/actions/meta/content hierarchy.
+Tau identity and actions are supplied by caller; no copied Piclaw identity or
+unsupported delete action. Uses semantic article and noninteractive timestamp
+until permalink behavior is wired. Combined staged frame/composer/posts pass
+12/12 both-theme/engine/viewport checks, including chronology and messages above
+composer. TypeScript passes. Live Timeline adapter remains to be switched.

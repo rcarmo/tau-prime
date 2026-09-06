@@ -6,7 +6,7 @@ const frontend=path.resolve(import.meta.dirname,'../../../src/tau_web/frontend')
 const require=createRequire(path.join(frontend,'package.json'));
 const {build}=require('esbuild');
 const css=await readFile(path.resolve(frontend,'../static/piclaw-classic.css'),'utf8');
-const bundle=await build({stdin:{contents:`import {h,render} from 'preact';import {ClassicChatFrame} from './src/components/ClassicChatFrame.tsx';import {ClassicComposerSurface} from './src/components/ClassicComposerSurface.tsx';render(h(ClassicChatFrame,{workspaceOpen:false},h('div',{class:'timeline reverse'},'Review message'),h(ClassicComposerSurface,{session:h('button',{class:'compose-session-switcher-pill',type:'button'},'Sessions'),input:h('textarea',{'aria-label':'Message',rows:1,style:{height:'50px'}}),metadata:h('button',{class:'compose-model-hint compose-model-hint-btn',type:'button'},'test/review-model'),actions:h('button',{class:'send-btn',type:'button'},'Send')})),document.getElementById('app'));`,resolveDir:frontend,loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',jsxImportSource:'preact',nodePaths:[path.join(frontend,'node_modules')]});
+const bundle=await build({stdin:{contents:`import {h,render} from 'preact';import {ClassicChatFrame} from './src/components/ClassicChatFrame.tsx';import {ClassicComposerSurface} from './src/components/ClassicComposerSurface.tsx';import {ClassicPost} from './src/components/ClassicPost.tsx';render(h(ClassicChatFrame,{workspaceOpen:false},h('div',{class:'timeline reverse'},h('div',{class:'timeline-content'},h(ClassicPost,{id:'user',agent:false,author:'You',time:'2m',avatar:'Y'},'Review the workspace.'),h(ClassicPost,{id:'agent',agent:true,author:'Tau',time:'1m',avatar:'τ',actions:h('button',{class:'post-action-btn',type:'button','aria-label':'Copy'},'Copy')},h('p',null,'The API is unchanged.')))),h(ClassicComposerSurface,{session:h('button',{class:'compose-session-switcher-pill',type:'button'},'Sessions'),input:h('textarea',{'aria-label':'Message',rows:1,style:{height:'50px'}}),metadata:h('button',{class:'compose-model-hint compose-model-hint-btn',type:'button'},'test/review-model'),actions:h('button',{class:'send-btn',type:'button'},'Send')})),document.getElementById('app'));`,resolveDir:frontend,loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',jsxImportSource:'preact',nodePaths:[path.join(frontend,'node_modules')]});
 for(const theme of ['light','dark']) test(`classic ${theme} frame uses centered column without visual shell`,async({page})=>{
  await page.route('**/classic-frame-fixture',route=>route.fulfill({contentType:'text/html',body:`<html data-theme="${theme}"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="app"></div></body></html>`}));
  await page.goto('/classic-frame-fixture');
@@ -26,4 +26,10 @@ for(const theme of ['light','dark']) test(`classic ${theme} frame uses centered 
  const footer=await page.locator('.compose-footer').boundingBox();
  expect(footer.y).toBeGreaterThanOrEqual(input.y+input.height-0.02);
  await expect(page.locator('.compose-box select')).toHaveCount(0);
+ const user=await page.locator('#user').boundingBox();
+ const agent=await page.locator('#agent').boundingBox();
+ expect(user.y+user.height).toBeLessThanOrEqual(agent.y+0.02);
+ expect(agent.y+agent.height).toBeLessThanOrEqual((await page.locator('.compose-box').boundingBox()).y+0.02);
+ await expect(page.locator('#agent .post-author')).toHaveText('Tau');
+ await expect(page.locator('#agent .post-actions button')).toHaveAccessibleName('Copy');
 });
