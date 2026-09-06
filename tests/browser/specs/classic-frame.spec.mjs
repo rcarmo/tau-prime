@@ -38,11 +38,14 @@ test('classic timeline consumes Tau events and preserves collapse focus',async({
  await page.route('**/classic-timeline-fixture',r=>r.fulfill({contentType:'text/html',body:'<meta name="viewport" content="width=device-width, initial-scale=1"><div id="app"></div>'}));
  await page.goto('/classic-timeline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:bundle.outputFiles[0].text});
  await page.evaluate(()=>window.mountClassicTimeline());
- await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'one',role:'user',content:'User text',meta:'2m'},{id:'two',role:'assistant',content:'**Agent text**',meta:'1m',toolCalls:[{id:'read',name:'read',arguments:{path:'README.md'}}]},{id:'result',role:'tool',toolCallId:'read',content:Array.from({length:25},(_,i)=>`line ${i+1}`).join('\n'),meta:''}]}})));
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'one',role:'user',content:'User text',meta:'2m'},{id:'two',role:'assistant',content:'**Agent text**',meta:'1m',attachments:[{mediaId:'report 1',filename:'report.txt',mediaType:'text/plain'}],toolCalls:[{id:'read',name:'read',arguments:{path:'README.md'}}]},{id:'result',role:'tool',toolCallId:'read',content:Array.from({length:25},(_,i)=>`line ${i+1}`).join('\n'),meta:''}]}})));
  await expect(page.locator('.post')).toHaveCount(2);
  await expect(page.locator('#post-two strong')).toHaveText('Agent text');
  await expect(page.locator('#post-two .post-actions .codicon')).toHaveCount(0);
  await expect(page.locator('#post-two .post-actions svg')).toHaveCount(2);
+ await expect(page.locator('#post-two .post-file-pill')).toHaveAttribute('href','/api/media/report%201/content');
+ await expect(page.locator('#post-two .post-file-name')).toHaveText('report.txt');
+ await expect(page.locator('#post-two .attachment-chip')).toHaveCount(0);
  const collapse=page.locator('#post-two').getByRole('button',{name:'Collapse message'});
  await collapse.focus();await page.keyboard.press('Enter');
  const expand=page.locator('#post-two').getByRole('button',{name:'Expand message'});

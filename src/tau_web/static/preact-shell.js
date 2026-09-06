@@ -4349,7 +4349,7 @@ function ToolCallBlock({ call, result, classic = false }) {
     ] })
   ] });
 }
-function AttachmentChip({ attachment }) {
+function AttachmentChip({ attachment, classic = false }) {
   const [previewUrl, setPreviewUrl] = h2(null);
   const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
   const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
@@ -4379,6 +4379,13 @@ function AttachmentChip({ attachment }) {
     link.click();
     URL.revokeObjectURL(objectUrl);
   };
+  if (classic) return /* @__PURE__ */ u3("a", { className: "post-file-pill", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
+    /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "none", stroke: "currentColor", strokeWidth: "2", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u3("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+      /* @__PURE__ */ u3("polyline", { points: "14 2 14 8 20 8" })
+    ] }),
+    /* @__PURE__ */ u3("span", { className: "post-file-name", children: attachment.filename })
+  ] });
   return /* @__PURE__ */ u3("a", { className: "attachment-chip", href: contentUrl, target: "_blank", rel: "noopener", title: attachment.filename, onClick: (event) => void download(event), children: [
     attachment.mediaType.startsWith("image/") ? /* @__PURE__ */ u3("img", { className: "attachment-chip__preview", src: previewUrl ?? thumbnailUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ u3("span", { className: "attachment-chip__icon", "aria-hidden": "true", children: "\u{1F4C4}" }),
     /* @__PURE__ */ u3("span", { className: "attachment-chip__name", children: attachment.filename }),
@@ -4412,7 +4419,7 @@ function MessageItem({ item, resultByCall, classic = false }) {
       children: collapsed ? /* @__PURE__ */ u3("span", { children: item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "\u2014 collapsed" }) : /* @__PURE__ */ u3(b, { children: [
         item.toolCalls?.map((call, index) => /* @__PURE__ */ u3(ToolCallBlock, { classic: true, call, result: call.id ? resultByCall.get(call.id) : void 0 }, call.id ?? index)),
         item.content && (isUser ? /* @__PURE__ */ u3("div", { style: { whiteSpace: "pre-wrap" }, children: item.content }) : /* @__PURE__ */ u3(MarkdownContent, { content: item.content })),
-        item.attachments?.map((attachment) => /* @__PURE__ */ u3(AttachmentChip, { attachment }, attachment.mediaId))
+        item.attachments?.map((attachment) => /* @__PURE__ */ u3(AttachmentChip, { classic: true, attachment }, attachment.mediaId))
       ] })
     }
   );

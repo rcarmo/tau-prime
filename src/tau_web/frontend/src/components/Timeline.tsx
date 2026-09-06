@@ -68,7 +68,7 @@ export function ToolCallBlock({ call, result, classic = false }: { call: ToolCal
   );
 }
 
-function AttachmentChip({ attachment }: { attachment: Attachment }) {
+function AttachmentChip({ attachment, classic = false }: { attachment: Attachment; classic?: boolean }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const contentUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/content`;
   const thumbnailUrl = `/api/media/${encodeURIComponent(attachment.mediaId)}/thumbnail`;
@@ -98,6 +98,10 @@ function AttachmentChip({ attachment }: { attachment: Attachment }) {
     URL.revokeObjectURL(objectUrl);
   };
 
+  if (classic) return <a className="post-file-pill" href={contentUrl} target="_blank" rel="noopener" title={attachment.filename} onClick={event => void download(event)}>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span className="post-file-name">{attachment.filename}</span>
+  </a>;
   return (
     <a className="attachment-chip" href={contentUrl} target="_blank" rel="noopener" title={attachment.filename} onClick={(event) => void download(event)}>
       {attachment.mediaType.startsWith("image/") ? (
@@ -129,7 +133,7 @@ export function MessageItem({ item, resultByCall, classic = false }: { item: Tim
     {collapsed ? <span>{item.content ? item.content.replace(/\s+/g, " ").slice(0, 120) : "— collapsed"}</span> : <>
       {item.toolCalls?.map((call, index) => <ToolCallBlock classic key={call.id ?? index} call={call} result={call.id ? resultByCall.get(call.id) : undefined} />)}
       {item.content && (isUser ? <div style={{whiteSpace:"pre-wrap"}}>{item.content}</div> : <MarkdownContent content={item.content} />)}
-      {item.attachments?.map(attachment => <AttachmentChip key={attachment.mediaId} attachment={attachment} />)}
+      {item.attachments?.map(attachment => <AttachmentChip classic key={attachment.mediaId} attachment={attachment} />)}
     </>}
   </ClassicPost>;
   if (collapsed) return <div className={`message-list__item message-list__item--collapsed message-list__item--${isUser ? "user" : "agent"}`} data-message-id={item.id}>
