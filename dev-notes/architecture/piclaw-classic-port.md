@@ -217,3 +217,12 @@ Real-adapter six-target boot/navigation checks pass with zero page errors;
 build/TypeScript and focused Python 46 pass. Panel styling, responsiveness,
 submission/end-to-end behavior and screenshot review remain before default
 cutover. Preview is not visual acceptance or offline-cache coverage.
+
+## Integrated populated captures
+
+classic-live.spec now captures populated preview across both themes and all six
+targets with selected session and persistent synthetic SSE. Message text matches
+the classic probe; timestamps/identity are not yet normalized for pixel review.
+18 boot/populated checks pass, including textarea bounds and no horizontal page
+overflow. Delivered tablet preview screenshot. Runtime/branch placement and
+secondary panel appearance remain open; these are not acceptance captures.
