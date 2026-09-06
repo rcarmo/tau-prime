@@ -4127,7 +4127,6 @@ function createDOMPurify() {
 var purify = createDOMPurify();
 
 // src/components/MarkdownContent.tsx
-var labels = { js: "JavaScript", javascript: "JavaScript", ts: "TypeScript", typescript: "TypeScript", py: "Python", python: "Python", sh: "Shell", bash: "Bash", json: "JSON", go: "Go", css: "CSS", html: "HTML" };
 function MarkdownContent({ content }) {
   const [copyStatus, setCopyStatus] = h2("");
   const html2 = T2(() => {
@@ -4143,29 +4142,22 @@ function MarkdownContent({ content }) {
       const language = Array.from(code.classList).find((c3) => c3.startsWith("language-"))?.slice(9) ?? "";
       code.className = `hljs${language ? ` language-${language}` : ""}`;
       const block = document.createElement("div");
-      block.className = "code-block";
-      const header = document.createElement("div");
-      header.className = "code-block__header";
-      const label = document.createElement("span");
-      label.className = "code-block__lang";
-      label.textContent = labels[language.toLowerCase()] || language || "Text";
+      block.className = "post-code-block";
       const button = document.createElement("button");
-      button.className = "code-block__copy";
+      button.className = "post-code-copy-btn";
+      button.type = "button";
       button.setAttribute("aria-label", "Copy code");
       const bytes = new TextEncoder().encode(code.textContent ?? "");
       button.dataset.code = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""));
-      const icon = document.createElement("i");
-      icon.className = "codicon codicon-copy";
-      button.append(icon);
-      header.append(label, button);
+      button.textContent = "Copy";
       pre.replaceWith(block);
-      block.append(header, pre);
+      block.append(pre, button);
     }
     return template.innerHTML;
   }, [content]);
   return /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2("div", { className: "message-list__content", onClick: async (event) => {
-      const button = event.target.closest("button.code-block__copy");
+    /* @__PURE__ */ u2("div", { className: "tau-markdown", onClick: async (event) => {
+      const button = event.target.closest("button.post-code-copy-btn");
       if (!button || !event.currentTarget.contains(button)) return;
       try {
         const bytes = Uint8Array.from(atob(button.dataset.code ?? ""), (c3) => c3.charCodeAt(0));

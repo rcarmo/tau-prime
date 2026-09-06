@@ -563,3 +563,12 @@ for tau_prime-42.3.0-py3-none-any.whl. Delivered with checksum using valid wheel
 filename. Separate installed audit venv, TAU_BROWSER_BIN and port 8877: 72 root,
 submission/resize, populated accessibility, asset and spacing checks passed.
 This supersedes afbdf82 artifact; explicit visual approval remains outstanding.
+
+## Classic Markdown/code wrapper correction
+
+Removed remaining visual message-list/code-block header and Codicon markup from
+MarkdownContent. Uses actual classic post-code-block/post-code-copy-btn structure
+with full Unicode copy payload and retained sanitizer/status feedback. Code copy
+currently has text label rather than upstream SVG; large-code collapse remains
+unported. Markdown safety/copy, populated a11y and paired captures: 30 passed;
+build/TypeScript pass. Existing artifact/review predates this correction.

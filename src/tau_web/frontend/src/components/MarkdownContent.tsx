@@ -2,8 +2,6 @@ import { useMemo, useState } from "preact/hooks";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 
-const labels: Record<string, string> = { js: "JavaScript", javascript: "JavaScript", ts: "TypeScript", typescript: "TypeScript", py: "Python", python: "Python", sh: "Shell", bash: "Bash", json: "JSON", go: "Go", css: "CSS", html: "HTML" };
-
 /** Sanitized core Markdown; optional Piclaw math/diagram plugins are not yet ported. */
 export function MarkdownContent({ content }: { content: string }) {
   const [copyStatus, setCopyStatus] = useState("");
@@ -21,28 +19,21 @@ export function MarkdownContent({ content }: { content: string }) {
       const language = Array.from(code.classList).find(c => c.startsWith("language-"))?.slice(9) ?? "";
       code.className = `hljs${language ? ` language-${language}` : ""}`;
       const block = document.createElement("div");
-      block.className = "code-block";
-      const header = document.createElement("div");
-      header.className = "code-block__header";
-      const label = document.createElement("span");
-      label.className = "code-block__lang";
-      label.textContent = labels[language.toLowerCase()] || language || "Text";
+      block.className = "post-code-block";
       const button = document.createElement("button");
-      button.className = "code-block__copy";
+      button.className = "post-code-copy-btn";
+      button.type = "button";
       button.setAttribute("aria-label", "Copy code");
       const bytes = new TextEncoder().encode(code.textContent ?? "");
       button.dataset.code = btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
-      const icon = document.createElement("i");
-      icon.className = "codicon codicon-copy";
-      button.append(icon);
-      header.append(label, button);
+      button.textContent = "Copy";
       pre.replaceWith(block);
-      block.append(header, pre);
+      block.append(pre, button);
     }
     return template.innerHTML;
   }, [content]);
-  return <><div className="message-list__content" onClick={async event => {
-    const button = (event.target as Element).closest<HTMLButtonElement>("button.code-block__copy");
+  return <><div className="tau-markdown" onClick={async event => {
+    const button = (event.target as Element).closest<HTMLButtonElement>("button.post-code-copy-btn");
     if (!button || !event.currentTarget.contains(button)) return;
     try {
       const bytes = Uint8Array.from(atob(button.dataset.code ?? ""), c => c.charCodeAt(0));
