@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 test('model and thinking options are Preact-owned', async ({ page }) => {
-  await page.goto('/');
+  await page.route('**/api/events*', route => route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'}));
+  await page.goto('/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('#compose-input')).toBeAttached();
-  await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready', 'true');
   const cancel = page.getByRole('button', { name: 'Cancel' });
   await cancel.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await cancel.isVisible()) await cancel.click();

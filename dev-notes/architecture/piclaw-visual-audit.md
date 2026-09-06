@@ -320,6 +320,26 @@ Added populated search result both-theme axe/control-bounds checks. Found light 
 
 Search result behavior, both-theme populated Search axe/bounds and settings layout pass 24/24 together. Frontend/packaging 43/43 and diff checks pass. This checkpoint does not extend the last full-suite result; final visual gaps remain documented in the separate gap inventory.
 
+## Dashboard modal focus
+
+Reproduced Dashboard leaving keyboard focus on its background trigger. Added component-owned initial Close focus, Tab/Shift-Tab wrapping, Escape dismissal and connected-trigger restoration. Stable close callback ref avoids effect reset on renders. Six-target focus + dashboard content tests pass 12/12; build/TypeScript pass. Background inertness and a full dashboard axe scan remain separate follow-up checks.
+
+## Populated Dashboard audit
+
+Dashboard axe/bounds test now uses a fixed routed API response (not injected state raced by polling). Found light All sessions action contrast, dark description contrast, and phone footer overflow. Scoped contrast exceptions and wrapping header/footer/page-controls fix them. Populated both-theme axe/bounds plus keyboard modal tests pass 18/18. Background inertness still not independently verified.
+
+## Dashboard background inertness
+
+Dashboard now marks sibling regions along its ancestor path inert while open, preserving and restoring prior inert flags. It does not inert the ancestor containing the overlay. Test attempts programmatic composer focus while open (blocked), then verifies focus and interactivity restore on close. Modal focus + both-theme populated axe/bounds checks pass 18/18; build/TypeScript pass. Nested modal behavior still requires care if future overlays can open concurrently.
+
+## Dashboard modified links
+
+Dashboard link handler now intercepts only unmodified primary activation; Shift/Alt/middle behavior is preserved alongside Ctrl/Cmd. Synthetic-event test observes default prevention before suppressing navigation in the harness and confirms only ordinary click dispatches selection. Link/focus matrix passes 12/12; build/TypeScript pass. Test verifies handler semantics, not OS popup/download UX.
+
+## Dashboard integrated checkpoint
+
+Full combined run initially hit model-options injection replaced by server data. Added durable shell-ready/SSE isolation to that component spec; full rerun 339 passed / 3 documented WebKit offline skips. Frontend/packaging 43/43, TypeScript/diff checks pass. Dashboard focus/inertness/modified-links/contrast/wrapping fixes are checkpointed without claiming final visual acceptance.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.

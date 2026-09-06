@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useState, useRef } from "preact/hooks";
 
 type DashboardSession = {
   session_id?: string | null;
@@ -111,6 +111,44 @@ function relativeTimeText(value: string | null | undefined, now: number) {
 export function Dashboard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [view, setView] = useState<DashboardView>(EMPTY_DASHBOARD);
   const [now, setNow] = useState(() => Date.now());
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLButtonElement>("#dashboard-close")?.focus();
+    // The overlay is nested in chat: disable siblings along its ancestor path,
+    // never an ancestor containing the dialog itself. Preserve existing inert state.
+    const background: Array<{ element: HTMLElement; inert: boolean }> = [];
+    let region = dialog?.parentElement;
+    while (region && region !== document.body) {
+      for (const sibling of Array.from(region.parentElement?.children ?? [])) {
+        if (sibling !== region && sibling instanceof HTMLElement) {
+          background.push({ element: sibling, inert: sibling.inert });
+          sibling.inert = true;
+        }
+      }
+      region = region.parentElement;
+    }
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault(); event.stopPropagation(); closeRef.current();
+      } else if (event.key === "Tab" && dialog) {
+        const controls = Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]')).filter(el => el.getClientRects().length > 0);
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener("keydown", keydown, true);
+    return () => {
+      document.removeEventListener("keydown", keydown, true);
+      for (const { element, inert } of background) element.inert = inert;
+      if (previous?.isConnected) previous.focus();
+    };
+  }, [open]);
 
   useLayoutEffect(() => {
     const update = (event: Event) => {
@@ -155,6 +193,7 @@ export function Dashboard({ open, onClose }: { open: boolean; onClose: () => voi
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <section
+        ref={dialogRef}
         className="modal-dialog session-dashboard__dialog"
         role="dialog"
         aria-modal="true"
@@ -181,7 +220,7 @@ export function Dashboard({ open, onClose }: { open: boolean; onClose: () => voi
                   aria-current={selected ? "page" : "false"}
                   title="Open this session. Ctrl-click or Cmd-click opens it in a new tab."
                   onClick={(event) => {
-                    if (!sessionId || event.metaKey || event.ctrlKey) return;
+                    if (!sessionId || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                     event.preventDefault();
                     selectSession(sessionId);
                   }}

@@ -173,3 +173,10 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 .light #panel-search .search-panel__item-type { color: var(--text); }
 .dark #panel-search .search-panel__item-time { color: var(--text-muted); }
 .dark #panel-search .settings-panel__provider-btn { color: var(--text); }
+
+/* Dashboard action/description contrast on the active modal surfaces. */
+.light #dashboard-manage { color: #fff; }
+.dark #session-dashboard .modal-dialog__description { color: var(--text-muted); }
+.session-dashboard__header,
+.session-dashboard__footer,
+.session-dashboard__footer .modal-dialog__actions { flex-wrap: wrap; }

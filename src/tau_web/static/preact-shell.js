@@ -795,6 +795,49 @@ function relativeTimeText(value, now) {
 function Dashboard({ open, onClose }) {
   const [view, setView] = h2(EMPTY_DASHBOARD);
   const [now, setNow] = h2(() => Date.now());
+  const dialogRef = A2(null);
+  const closeRef = A2(onClose);
+  closeRef.current = onClose;
+  y2(() => {
+    if (!open) return;
+    const previous = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog?.querySelector("#dashboard-close")?.focus();
+    const background = [];
+    let region = dialog?.parentElement;
+    while (region && region !== document.body) {
+      for (const sibling of Array.from(region.parentElement?.children ?? [])) {
+        if (sibling !== region && sibling instanceof HTMLElement) {
+          background.push({ element: sibling, inert: sibling.inert });
+          sibling.inert = true;
+        }
+      }
+      region = region.parentElement;
+    }
+    const keydown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRef.current();
+      } else if (event.key === "Tab" && dialog) {
+        const controls = Array.from(dialog.querySelectorAll('button:not(:disabled), a[href], [tabindex="0"]')).filter((el) => el.getClientRects().length > 0);
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", keydown, true);
+    return () => {
+      document.removeEventListener("keydown", keydown, true);
+      for (const { element, inert } of background) element.inert = inert;
+      if (previous?.isConnected) previous.focus();
+    };
+  }, [open]);
   _2(() => {
     const update = (event) => {
       const detail = event.detail;
@@ -834,6 +877,7 @@ function Dashboard({ open, onClose }) {
       children: /* @__PURE__ */ u3(
         "section",
         {
+          ref: dialogRef,
           className: "modal-dialog session-dashboard__dialog",
           role: "dialog",
           "aria-modal": "true",
@@ -860,7 +904,7 @@ function Dashboard({ open, onClose }) {
                     "aria-current": selected ? "page" : "false",
                     title: "Open this session. Ctrl-click or Cmd-click opens it in a new tab.",
                     onClick: (event) => {
-                      if (!sessionId || event.metaKey || event.ctrlKey) return;
+                      if (!sessionId || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                       event.preventDefault();
                       selectSession(sessionId);
                     },
