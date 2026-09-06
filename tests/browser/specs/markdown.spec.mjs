@@ -20,6 +20,8 @@ test('agent Markdown renders semantic content without active HTML', async ({ pag
   await expect(content.locator('pre code')).toContainText('const n = 1;');
   await expect(content.locator('script, [onerror], a[href^="javascript:"]')).toHaveCount(0);
   expect(await page.evaluate(()=>window.pwned)).toBeUndefined();
+  await expect(content.getByRole('button',{name:'Copy code',exact:true}).locator('svg')).toBeVisible();
+  await expect(content.getByRole('button',{name:'Copy code',exact:true})).toHaveText('');
   await content.getByRole('button',{name:'Copy code',exact:true}).click();
   expect(await page.evaluate(()=>window.copiedCode)).toBe('const n = 1; // café 日本語 🚀\n');
   await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveText('Code copied');

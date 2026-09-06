@@ -596,3 +596,11 @@ Scoped primary color fixes it; corrected toggle ordering to prepend before pre,
 as classic does (preserving its adjoining border rules). Both-theme/six-target
 large-code a11y/bounds 12 passed; Markdown safety/boundary/copy 18 passed;
 build/TypeScript pass. No page horizontal overflow in tested long-code states.
+
+## Code-copy icon fidelity
+
+Replaced temporary Copy text with trusted static SVG from classic post.ts,
+added only after user Markdown sanitization. Accessible Copy code name and
+clipboard success/error status retained. SVG visibility/empty visible label
+checks added; Markdown plus populated/large-code a11y matrix 42 passed;
+build/TypeScript pass. Current artifact/review refresh remains pending.

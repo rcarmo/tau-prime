@@ -35,7 +35,8 @@ export function MarkdownContent({ content }: { content: string }) {
       button.setAttribute("aria-label", "Copy code");
       const bytes = new TextEncoder().encode(code.textContent ?? "");
       button.dataset.code = btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
-      button.textContent = "Copy";
+      // Trusted static SVG from classic post.ts, added after content sanitization.
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="9" width="10" height="10" rx="2"></rect><path d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"></path></svg>';
       pre.replaceWith(block);
       block.append(pre, button);
       const text = code.textContent ?? "";
