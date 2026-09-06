@@ -375,3 +375,13 @@ wheel/source-byte preservation check. This prevents accidental local vendor
 edits from silently changing both sides of component comparisons. Focused
 frontend/packaging suite: 44 passed; `git diff --check` clean. No runtime changes
 or visual-acceptance claim in this checkpoint.
+
+## Reference idle-status fixture correction
+
+Upstream `components/model-context-bar/useStatusPolling.ts` reads
+`statusData.addon_api` before requesting models. Returning JSON null from
+`/agent/status` made that polling path throw internally. The reference now
+returns `{status:"idle",data:null}` and asserts both mounted model badges show
+`test/review-model` before screenshots. All 12 reference captures pass; Tau's
+12 populated captures also pass. These refresh the paired evidence, not approval.
+Connection probes/SSE lifetime and identity/avatar deviations remain to review.

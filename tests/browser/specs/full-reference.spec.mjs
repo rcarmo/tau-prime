@@ -26,7 +26,7 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
     if(url.pathname === '/workspace/tree') return json({root:{name:'workspace',path:'',type:'directory',children:[]}});
     if(url.pathname === '/agent/addons/web-entries') return json({entries:[]});
     if(url.pathname === '/agent/active-chats') return json({chats:[]});
-    if(url.pathname === '/agent/status') return json(null);
+    if(url.pathname === '/agent/status') return json({status:'idle',data:null});
     if(url.pathname === '/agent/context') return json({tokens:null});
     if(url.pathname === '/agent/roster') return json({agents:[]});
     if(url.pathname === '/static/icon-192.png') return route.fulfill({contentType:'image/png',body:await readFile(path.resolve(dist,'../../icon-192.png'))});
@@ -44,6 +44,9 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
   await expect(page.locator('html')).toHaveClass(new RegExp(colorScheme));
   await expect(page.locator('.message-list__item--user .message-list__content')).toContainText('Review the workspace');
   await expect(page.locator('.message-list__content h2')).toHaveText('Workspace review');
+  // Wait for successful status/model polling, not just the timeline mount.
+  await expect(page.locator('.model-badge__name')).toHaveText([modelName, modelName]);
+  await expect(page.locator('.model-badge__provider')).toHaveText([`${providerName}/`, `${providerName}/`]);
   await page.locator('.message-list__tool-call-header').click();
   await expect(page.locator('.message-list__tool-call-body')).toBeVisible();
   await page.evaluate(()=>document.fonts.ready);
