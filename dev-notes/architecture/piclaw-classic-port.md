@@ -709,3 +709,13 @@ existing WebKit offline skips (438 total). Failure: WebKit phone threshold
 fixture replaced during click by live session updates. Added selected-session
 and persistent SSE isolation to all Markdown tests; focused 18 passed. No
 production change for this failure. Full rerun remains required.
+
+## Same-revision plan draft protection
+
+Full rerun: 434 passed/1 failed/3 offline skips. Decline-switch test intermittently
+never received confirmation. Source audit found background same-revision plan
+responses cleared dirty drafts; now every non-forced same-session response
+preserves them, only newer revision sets conflict. Forced reload still replaces.
+Direct production-function regression plus Dashboard accept/decline: 18 passed.
+This is a real draft-loss correction, not test-only SSE suppression. Full rerun
+and artifact refresh pending.

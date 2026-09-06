@@ -571,8 +571,10 @@ function applyPlanResponse(plan, { sessionId, force = false } = {}) {
   }
   const samePlan = state.plan?.session_id === sessionId;
   const changedRemotely = samePlan && plan.revision !== state.plan.revision;
-  if (!force && state.planDirty && changedRemotely) {
-    state.planConflict = plan;
+  // Background refreshes must never discard an unsaved local draft, even
+  // when the response repeats the currently loaded revision.
+  if (!force && state.planDirty && samePlan) {
+    if (changedRemotely) state.planConflict = plan;
     renderPlan();
     return;
   }
