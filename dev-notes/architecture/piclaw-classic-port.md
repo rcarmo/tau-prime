@@ -261,3 +261,12 @@ Classic root integration 36 passed; updated frontend/packaging 42 passed.
 Obsolete visual component branches/tests still need removal. Populated dark axe
 scan currently has unresolved failures; do not treat default cutover as complete
 visual/accessibility acceptance. Prior preview wording is superseded.
+
+## Populated accessibility at classic-only root
+
+Resolved completion-description contrast and WebKit native styling on Tau's
+persisted-tool disclosure button. Scoped style uses primary text and transparent
+button background, retaining upstream CSS bytes. Full populated axe plus root
+integration matrix: 48 passed (12 accessibility runs over four surfaces and 36
+boot/capture/submission/navigation checks). This supersedes the earlier populated
+dark failure, but is not whole-application accessibility or visual acceptance.
