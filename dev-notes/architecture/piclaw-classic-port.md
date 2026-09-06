@@ -975,3 +975,10 @@ Layout test verifies hidden categories retain unsaved token value. Modal/layout/
 setup matrix 18 passed; each of three categories scanned in both themes/all six
 targets: 12 runs passed. Build/TypeScript pass. Artifact/full regression and
 updated category screenshots still pending after this production change.
+
+## Selected-category full checkpoint (0c0ae38)
+
+Fresh full browser suite after category visibility correction: 465 passed,
+3 documented WebKit offline skips, no failures (468 total). Focused Python 42
+passed; diff clean. Prior full Python 1326 remains baseline. Current wheel/PDF
+predate selected-category behavior and need update; visual approval outstanding.
