@@ -270,3 +270,12 @@ button background, retaining upstream CSS bytes. Full populated axe plus root
 integration matrix: 48 passed (12 accessibility runs over four surfaces and 36
 boot/capture/submission/navigation checks). This supersedes the earlier populated
 dark failure, but is not whole-application accessibility or visual acceptance.
+
+## Obsolete shell/theme removal
+
+Deleted unreferenced visual ActivityBar/TabBar and visual JS theme modules,
+plus the rejected TabBar parity spec. Replaced system-theme expectations with
+classic --bg-primary media-query behavior and absence of visual stylesheet
+links. Theme preservation test now compares classic vendor/scoped styles.
+12 theme checks pass; build/TypeScript pass. Remaining dual component branches
+and other visual fixture tests are still pending cleanup.

@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-test('shell applies Piclaw system theme classes and tokens and follows changes', async ({ page }) => {
+test('classic shell follows system theme without visual-mode tokens', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
-  await expect(page.locator('html')).toHaveClass(/light/);
-  expect(await page.locator('html').evaluate(el => getComputedStyle(el).getPropertyValue('--bg').trim())).toBe('#f3f3f3');
+  await expect(page.locator('html')).toHaveAttribute('data-tau-ui','classic');
+  const background=()=>page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg-primary').trim());
+  await expect.poll(background).toBe('#fff');
   await page.emulateMedia({ colorScheme: 'dark' });
-  await expect(page.locator('html')).toHaveClass(/dark/);
-  expect(await page.locator('html').evaluate(el => getComputedStyle(el).getPropertyValue('--bg').trim())).toBe('#1e1e2e');
+  await expect.poll(background).toBe('#000');
+  await expect(page.locator('link[href*="piclaw-reference"],link[href*="piclaw-parity"]')).toHaveCount(0);
 });
