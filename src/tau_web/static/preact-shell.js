@@ -515,7 +515,63 @@ function ClassicIcon({ name }) {
 
 // src/components/ClassicComposerSurface.tsx
 function ClassicComposerSurface({ session, input, metadata, actions, notices, attachments, completions }) {
-  return /* @__PURE__ */ u2("div", { className: "compose-box", "data-testid": "compose-box", children: [
+  const root = A2(null);
+  const drag = A2(null);
+  const [height, setHeight] = h2(50);
+  _2(() => {
+    const textarea = root.current?.querySelector("textarea");
+    if (textarea) {
+      textarea.style.height = `${height}px`;
+      textarea.style.flex = "none";
+      textarea.style.boxSizing = "border-box";
+    }
+  });
+  const resize = (value) => {
+    const minimum = parseFloat(getComputedStyle(root.current.querySelector("textarea")).minHeight) || 50;
+    const next = Math.max(minimum, Math.min(Math.max(minimum, window.innerHeight * 0.5), value));
+    const textarea = root.current?.querySelector("textarea");
+    if (textarea) {
+      textarea.style.height = `${next}px`;
+      textarea.style.flex = "none";
+      textarea.style.boxSizing = "border-box";
+    }
+    setHeight(next);
+  };
+  return /* @__PURE__ */ u2("div", { ref: root, className: "compose-box", "data-testid": "compose-box", children: [
+    /* @__PURE__ */ u2(
+      "div",
+      {
+        className: "compose-resize-handle",
+        role: "separator",
+        tabIndex: 0,
+        "aria-label": "Resize message input",
+        "aria-orientation": "horizontal",
+        "aria-valuemin": 50,
+        "aria-valuemax": Math.max(50, Math.floor(window.innerHeight * 0.5)),
+        "aria-valuenow": Math.round(height),
+        onPointerDown: (event) => {
+          event.preventDefault();
+          drag.current = { y: event.clientY, height: root.current?.querySelector("textarea")?.getBoundingClientRect().height ?? height };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        },
+        onPointerMove: (event) => {
+          if (drag.current) resize(drag.current.height + drag.current.y - event.clientY);
+        },
+        onPointerUp: (event) => {
+          drag.current = null;
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        },
+        onPointerCancel: () => {
+          drag.current = null;
+        },
+        onKeyDown: (event) => {
+          if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Home") {
+            event.preventDefault();
+            resize(event.key === "Home" ? 50 : (root.current?.querySelector("textarea")?.getBoundingClientRect().height ?? height) + (event.key === "ArrowUp" ? 10 : -10));
+          }
+        }
+      }
+    ),
     notices,
     attachments,
     /* @__PURE__ */ u2("div", { className: "compose-input-wrapper", children: [

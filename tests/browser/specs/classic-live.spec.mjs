@@ -80,3 +80,15 @@ for(const via of ['button','keyboard']) test(`classic ${via} submission preserve
  await expect(page.locator('.app-shell')).toHaveClass(/workspace-collapsed/);
  await expect(page.locator('#compose-input')).toBeVisible();
  });
+
+test('classic composer resize supports keyboard and pointer without changing draft',async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');await page.goto('/');
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ const input=page.locator('#compose-input'),handle=page.getByRole('separator',{name:'Resize message input'});
+ const baseline=(await input.boundingBox()).height;
+ await input.fill('Keep this draft');await handle.focus();await page.keyboard.press('ArrowUp');
+ await expect(input).toHaveCSS('height',`${baseline+10}px`);await page.keyboard.press('Home');await expect(input).toHaveCSS('height',`${baseline}px`);
+ const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y+box.height/2-40);await page.mouse.up();
+ await expect(input).toHaveCSS('height',`${baseline+40}px`);await expect(input).toHaveValue('Keep this draft');
+});

@@ -528,3 +528,12 @@ updated spacing check to require reserved text space. Tau's longer session title
 needs right-padding on desktop too (scoped adaptation). Classic component/pair/
 a11y batch had 54 passes with 12 outdated spacing failures; corrected spacing+
 a11y matrix passes 24/24. Further refreshed paired review remains needed.
+
+## Working classic resize handle
+
+Refreshed comparison found matching column/footer dimensions; missing classic
+resize handle accounted for remaining 8–10px composer height difference. Added
+pointer capture plus ArrowUp/Down/Home keyboard resize, preserving draft. Uses
+CSS responsive minimum (50px mobile, 70px desktop); textarea flex disabled while
+applying explicit size. Six-target resize checks pass; build/TypeScript pass.
+Final geometry and full regression must be rerun after this functional addition.
