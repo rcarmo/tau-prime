@@ -982,3 +982,12 @@ Fresh full browser suite after category visibility correction: 465 passed,
 3 documented WebKit offline skips, no failures (468 total). Focused Python 42
 passed; diff clean. Prior full Python 1326 remains baseline. Current wheel/PDF
 predate selected-category behavior and need update; visual approval outstanding.
+
+## Installed selected-category Settings evidence (2d5fe68)
+
+Built/installed current wheel with fixed source epoch; 24 Settings modal/layout/
+three-category accessibility runs passed independently of checkout imports.
+Each category captured for both themes/all six targets: 36-page installed
+Settings PDF delivered with wheel/checksum. This build was not double-built in
+this checkpoint, so no new reproducibility comparison claimed. No runtime
+changes; visual approval still outstanding.
