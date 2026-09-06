@@ -821,3 +821,13 @@ native controls now have explicit classic-token styles. No active Codicon,
 chat__, workspace__, tasks-panel or those old settings/session classes remain
 in component sources. Onboarding/layout/session/Search a11y matrix 36 passed;
 build/TypeScript pass. This source cleanup is not visual acceptance.
+
+## Stale harness diagnosis
+
+Latest full run: 434 pass/13 fail/3 skip. Twelve failures were session-create 500s
+before UI interaction. Port 8876 was an older still-running tau-playwright harness
+(started during reference timeout work), silently reused by Playwright. Fresh
+port 8891 Dashboard/session/theme matrix 18 passed; fresh-policy follow-up 2 pass.
+Disabled implicit reuse (debug opt-in TAU_BROWSER_REUSE_SERVER=1); added response
+body to session-create assertions. No production fix inferred from stale-run
+failures. Fresh full suite remains required; stale server left untouched.

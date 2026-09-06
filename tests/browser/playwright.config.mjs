@@ -20,7 +20,8 @@ export default defineConfig({
   webServer: {
     command: 'node ./start-server.mjs',
     url: `${baseURL}/api/health`,
-    reuseExistingServer: !isCI,
+    // Stateful tests require a fresh database; never silently reuse an old harness.
+    reuseExistingServer: process.env.TAU_BROWSER_REUSE_SERVER === '1',
     timeout: 120_000,
   },
   projects: [

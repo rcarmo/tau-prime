@@ -96,3 +96,9 @@ Latest probe: cache verification passes; `page.reload` after `setOffline(true)`
 reports `WebKit encountered an internal error`. This is not an offline-delivery
 sign-off. The cache test also checks the root document and successful, nonempty
 responses for every cached asset. Offline state is restored even when reload fails.
+
+The harness no longer silently reuses a server on the chosen port. Stateful tests
+need a fresh temporary database; an occupied port is an error by default.
+`TAU_BROWSER_REUSE_SERVER=1` is an explicit debugging opt-in only, not suitable
+for reproducible full-suite results. Use another free TAU_BROWSER_PORT rather
+than killing an unidentified service.

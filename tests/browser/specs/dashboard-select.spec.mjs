@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('Dashboard session selection closes modal and releases timeline focus', async ({page,request}, info)=>{
  const id=`dashboard-select-${info.project.name}`;
  const created=await request.post('/api/sessions',{data:{session_id:id,provider_name:'test',model:'model',title:'Dashboard target'}});
- expect(created.status()).toBe(201);
+ expect(created.status(), await created.text()).toBe(201);
  await page.route(/\/dashboard\?/,r=>r.fulfill({contentType:'application/json',body:JSON.stringify({sessions:[{session_id:id,title:'Dashboard target'}],page:1,total_pages:1})}));
  await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
@@ -20,7 +20,7 @@ test('declining Dashboard session switch preserves unsaved plan and modal', asyn
  const current=`dashboard-current-${info.project.name}`, target=`dashboard-other-${info.project.name}`;
  for(const [id,title] of [[current,'Current review'],[target,'Other review']]) {
   const response=await request.post('/api/sessions',{data:{session_id:id,provider_name:'test',model:'model',title}});
-  expect(response.status()).toBe(201);
+  expect(response.status(), await response.text()).toBe(201);
  }
  await page.route(/\/dashboard\?/,r=>r.fulfill({contentType:'application/json',body:JSON.stringify({sessions:[{session_id:target,title:'Other review'}],page:1,total_pages:1})}));
  await page.goto(`/?session_id=${current}`,{waitUntil:'domcontentloaded'});
