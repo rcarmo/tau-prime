@@ -956,3 +956,13 @@ Twelve both-theme/browser/viewport checks pass. Delivered tablet screenshot and
 12-page Tau-Classic-Settings-Dialog.pdf (Tau-only dialog evidence, not paired
 upstream settings contents). Code checkpoint e0022c2. Replaces obsolete sidebar
 Settings evidence; explicit appearance acceptance remains open.
+
+## Installed Settings-dialog artifact (8775ec1)
+
+Two epoch-pinned builds byte-identical, SHA-256
+618baadd32134a88ffc63b3685752df68cfc3f53ce6071846c77a6c20cba8b12
+for tau_prime-42.3.0-py3-none-any.whl. Separate installed audit venv with fresh
+port 8892 passed 90 modal/layout/a11y/onboarding/root/navigation/resize checks.
+Delivered current wheel/checksum; supersedes pre-dialog 0d274e6 artifact.
+Full source regression remains 465 pass/3 skips and Python 1326; visual approval
+not inferred from installation tests.
