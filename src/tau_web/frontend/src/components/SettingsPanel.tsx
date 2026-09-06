@@ -1,9 +1,14 @@
-import { useState } from "preact/hooks";
+import { useLayoutEffect, useState } from "preact/hooks";
 import { ModelControls } from "./ModelControls";
 import { SettingsSummary } from "./SettingsSummary";
 
 export function SettingsPanel({ hidden }: { hidden: boolean }) {
   const [category, setCategory] = useState("auth");
+  useLayoutEffect(() => {
+    const openModel = () => setCategory("model");
+    window.addEventListener("tau:open-model-settings", openModel);
+    return () => window.removeEventListener("tau:open-model-settings", openModel);
+  }, []);
   const categories = [
     { id: "auth", label: "Authentication" },
     { id: "model", label: "Model" },

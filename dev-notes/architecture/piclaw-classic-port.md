@@ -858,3 +858,10 @@ Settings form/API preserved. Six keyboard model-entry checks and 30 a11y/keyboar
 checks pass; build/TypeScript pass. Large-code a11y now awaits finite animations
 before contrast scan (one transient author/time failure exposed timing race).
 This is an explicit settings-navigation adaptation, not upstream popup parity.
+
+## Model-entry category consistency
+
+Composer model action now selects Settings' Model category through a mounted
+Preact listener before focusing input; Authentication no longer stays marked
+active. Listener cleans up on unmount. Six model-entry tests verify category,
+focus and single form anchor; build/TypeScript pass.

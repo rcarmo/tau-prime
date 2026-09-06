@@ -137,5 +137,7 @@ test('classic model hint opens existing model settings with keyboard focus',asyn
  await page.getByRole('button',{name:'Open model settings',exact:true}).focus();await page.keyboard.press('Enter');
  await expect(page.locator('#panel-settings')).toBeVisible();
  await expect(page.locator('#model-input')).toBeFocused();
+ await expect(page.getByRole('link',{name:'Model',exact:true})).toHaveAttribute('aria-current','location');
+ await expect(page.getByRole('link',{name:'Authentication',exact:true})).not.toHaveAttribute('aria-current','location');
  await expect(page.locator('#model-form')).toHaveCount(1);
 });

@@ -1230,6 +1230,11 @@ function SettingsSummary() {
 // src/components/SettingsPanel.tsx
 function SettingsPanel({ hidden }) {
   const [category, setCategory] = h2("auth");
+  _2(() => {
+    const openModel = () => setCategory("model");
+    window.addEventListener("tau:open-model-settings", openModel);
+    return () => window.removeEventListener("tau:open-model-settings", openModel);
+  }, []);
   const categories = [
     { id: "auth", label: "Authentication" },
     { id: "model", label: "Model" },
@@ -4938,6 +4943,7 @@ function TauShell() {
         /* @__PURE__ */ u2(Composer, { session: /* @__PURE__ */ u2(ClassicSessionControl, { open: sidebarOpen, onToggle: () => selectPanel("sessions") }), metadata: /* @__PURE__ */ u2(StatusBar, { onOpenModel: () => {
           selectTab("settings");
           close();
+          window.dispatchEvent(new CustomEvent("tau:open-model-settings"));
           requestAnimationFrame(() => document.getElementById("model-input")?.focus());
         }, dashboardOpen, onToggleDashboard: () => setDashboardOpen((value) => !value) }) })
       ] })
