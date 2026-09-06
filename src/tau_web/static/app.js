@@ -1814,7 +1814,7 @@ function renderControls() {
   ui.composeAttachmentButton.disabled = archived || state.composing || state.uploadingAttachments;
   ui.composeFileInput.disabled = archived || state.composing || state.uploadingAttachments;
   ui.composeSubmit.disabled = archived || state.composing || state.uploadingAttachments;
-  const submitLabel = state.composer.deliveryMode === "run" ? "Run" : "Send";
+  const submitLabel = "Send";
   ui.composeSubmit.setAttribute("aria-label", submitLabel);
   const submitButtonText = ui.composeSubmit.querySelector(".sr-only");
   if (submitButtonText) submitButtonText.textContent = submitLabel;

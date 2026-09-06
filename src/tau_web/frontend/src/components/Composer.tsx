@@ -73,14 +73,14 @@ export function Composer() {
           />
 
           <div className="chat__compose-toolbar" aria-label="Delivery and context">
-            <label className="thinking-badge-wrapper" title="Message delivery">
-              <span className="sr-only">Delivery</span>
-              <select id="compose-delivery-mode" className="settings-panel__select" name="delivery_mode" aria-label="Message delivery">
+            {/* Hidden compatibility anchor for the submission adapter. */}
+            <div hidden>
+              <select id="compose-delivery-mode" name="delivery_mode" aria-label="Message delivery" tabIndex={-1}>
                 <option value="run">Run</option>
                 <option value="follow_up">Follow-up</option>
                 <option value="steer">Steer</option>
               </select>
-            </label>
+            </div>
             <span id="compose-context-readout" className="usage-badge">No session selected. Sending will create one.</span>
           </div>
           <div id="compose-completion-popup" className="command-palette compose-completion-popup" hidden={!completion.open}>
@@ -99,7 +99,7 @@ export function Composer() {
           </div>
         </div>
 
-        <button id="compose-submit" className="chat__send-btn" type="submit" aria-label="Run" title="Send (Enter)">
+        <button id="compose-submit" className="chat__send-btn" type="submit" aria-label="Send" title="Send (Enter)">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
         </button>
       </form>

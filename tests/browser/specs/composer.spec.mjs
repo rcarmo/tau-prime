@@ -22,3 +22,14 @@ test('composer renders staged attachments through Piclaw chip markup', async ({ 
   await chip.getByRole('button', { name: 'Remove attachment notes.txt' }).evaluate((button) => button.click());
   await expect.poll(() => page.evaluate(() => window.__tauRemovedAttachment)).toBe('media-7');
 });
+
+test('composer exposes Send without a visible Run delivery selector', async ({ page }) => {
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready', 'true');
+  const cancel = page.getByRole('button', {name:'Cancel',exact:true});
+  if (await cancel.isVisible()) await cancel.click();
+  await expect(page.locator('#compose-delivery-mode')).toBeHidden();
+  await expect(page.getByRole('combobox', {name:'Message delivery'})).toHaveCount(0);
+  await expect(page.locator('#compose-submit')).toHaveAccessibleName('Send');
+  await expect(page.locator('#compose-delivery-mode')).toHaveValue('run');
+});

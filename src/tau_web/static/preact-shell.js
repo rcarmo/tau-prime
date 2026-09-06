@@ -682,14 +682,11 @@ function Composer() {
           }
         ),
         /* @__PURE__ */ u3("div", { className: "chat__compose-toolbar", "aria-label": "Delivery and context", children: [
-          /* @__PURE__ */ u3("label", { className: "thinking-badge-wrapper", title: "Message delivery", children: [
-            /* @__PURE__ */ u3("span", { className: "sr-only", children: "Delivery" }),
-            /* @__PURE__ */ u3("select", { id: "compose-delivery-mode", className: "settings-panel__select", name: "delivery_mode", "aria-label": "Message delivery", children: [
-              /* @__PURE__ */ u3("option", { value: "run", children: "Run" }),
-              /* @__PURE__ */ u3("option", { value: "follow_up", children: "Follow-up" }),
-              /* @__PURE__ */ u3("option", { value: "steer", children: "Steer" })
-            ] })
-          ] }),
+          /* @__PURE__ */ u3("div", { hidden: true, children: /* @__PURE__ */ u3("select", { id: "compose-delivery-mode", name: "delivery_mode", "aria-label": "Message delivery", tabIndex: -1, children: [
+            /* @__PURE__ */ u3("option", { value: "run", children: "Run" }),
+            /* @__PURE__ */ u3("option", { value: "follow_up", children: "Follow-up" }),
+            /* @__PURE__ */ u3("option", { value: "steer", children: "Steer" })
+          ] }) }),
           /* @__PURE__ */ u3("span", { id: "compose-context-readout", className: "usage-badge", children: "No session selected. Sending will create one." })
         ] }),
         /* @__PURE__ */ u3("div", { id: "compose-completion-popup", className: "command-palette compose-completion-popup", hidden: !completion.open, children: [
@@ -712,7 +709,7 @@ function Composer() {
           )) })
         ] })
       ] }),
-      /* @__PURE__ */ u3("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Run", title: "Send (Enter)", children: /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u3("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
+      /* @__PURE__ */ u3("button", { id: "compose-submit", className: "chat__send-btn", type: "submit", "aria-label": "Send", title: "Send (Enter)", children: /* @__PURE__ */ u3("svg", { viewBox: "0 0 24 24", width: "22", height: "22", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ u3("path", { d: "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" }) }) })
     ] }),
     /* @__PURE__ */ u3("div", { className: "sr-only", children: [
       /* @__PURE__ */ u3("p", { id: "compose-help", children: "Enter sends. Shift+Enter inserts a newline." }),
