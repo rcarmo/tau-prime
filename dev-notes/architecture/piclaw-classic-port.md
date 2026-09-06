@@ -572,3 +572,12 @@ with full Unicode copy payload and retained sanitizer/status feedback. Code copy
 currently has text label rather than upstream SVG; large-code collapse remains
 unported. Markdown safety/copy, populated a11y and paired captures: 30 passed;
 build/TypeScript pass. Existing artifact/review predates this correction.
+
+## Large-code collapse port
+
+Added classic >40 lines / >24KiB code collapse with 16-line CSS preview,
+state-owned expand/collapse and keyboard-focus restoration after sanitized HTML
+rerender. Copy retains full UTF-8 payload while collapsed. Labels use byte count
+rather than upstream compact formatting. Markdown safety/copy + large-code tests
+12 passed; build/TypeScript pass. Threshold behavior and styling derive from
+classic post.ts. Artifact/full regression refresh still required.

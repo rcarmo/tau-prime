@@ -31,3 +31,18 @@ test('agent Markdown renders semantic content without active HTML', async ({ pag
   await expect(page.getByRole('status',{name:'Code clipboard status'})).toHaveText('Code copied');
   await expect(page.locator('#post-user .post-content')).toHaveText('**literal user text**');
 });
+
+test('classic large code collapses, keeps toggle focus and copies complete text',async({page})=>{
+ await page.goto('/');await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});await cancel.waitFor({state:'visible',timeout:2000}).catch(()=>{});if(await cancel.isVisible())await cancel.click();
+ const code=Array.from({length:45},(_,i)=>`line ${i} café`).join('\n')+'\n';
+ await page.evaluate(code=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>window.largeCopied=text}});window.dispatchEvent(new CustomEvent('tau:timeline-render',{detail:{selected:true,items:[{id:'large',role:'assistant',content:'```txt\n'+code+'```'}]}}));},code);
+ const block=page.locator('#post-large .post-code-block');
+ await expect(block).toHaveClass(/post-code-block-collapsed/);
+ const toggle=block.getByRole('button',{name:/Expand code/});await toggle.focus();await page.keyboard.press('Enter');
+ await expect(block).toHaveClass(/post-code-block-expanded/);
+ await expect(block.getByRole('button',{name:'Collapse code'})).toBeFocused();
+ await page.keyboard.press('Enter');await expect(block).not.toHaveClass(/post-code-block-expanded/);
+ await block.getByRole('button',{name:'Copy code',exact:true}).click();
+ expect(await page.evaluate(()=>window.largeCopied)).toBe(code);
+});

@@ -4128,7 +4128,16 @@ var purify = createDOMPurify();
 
 // src/components/MarkdownContent.tsx
 function MarkdownContent({ content }) {
+  const root = A2(null);
+  const restoreFocus = A2(null);
+  _2(() => {
+    if (restoreFocus.current !== null) {
+      root.current?.querySelector(`[data-block-index="${restoreFocus.current}"]`)?.focus();
+      restoreFocus.current = null;
+    }
+  });
   const [copyStatus, setCopyStatus] = h2("");
+  const [expanded, setExpanded] = h2({ content: "", blocks: [] });
   const html2 = T2(() => {
     const clean = purify.sanitize(g2.parse(content, { async: false }), {
       USE_PROFILES: { html: true },
@@ -4137,7 +4146,7 @@ function MarkdownContent({ content }) {
     });
     const template = document.createElement("template");
     template.innerHTML = clean;
-    for (const code of Array.from(template.content.querySelectorAll("pre > code"))) {
+    for (const [index, code] of Array.from(template.content.querySelectorAll("pre > code")).entries()) {
       const pre = code.parentElement;
       const language = Array.from(code.classList).find((c3) => c3.startsWith("language-"))?.slice(9) ?? "";
       code.className = `hljs${language ? ` language-${language}` : ""}`;
@@ -4152,11 +4161,36 @@ function MarkdownContent({ content }) {
       button.textContent = "Copy";
       pre.replaceWith(block);
       block.append(pre, button);
+      const text2 = code.textContent ?? "";
+      const lineCount = text2.replace(/\r\n?/g, "\n").split("\n").length;
+      if (lineCount > 40 || bytes.length > 24 * 1024) {
+        const isExpanded = expanded.content === content && expanded.blocks.includes(index);
+        block.classList.add("post-code-block-collapsed");
+        if (isExpanded) block.classList.add("post-code-block-expanded");
+        block.style.setProperty("--post-code-preview-lines", "16");
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "post-code-expand-btn";
+        toggle.dataset.blockIndex = String(index);
+        toggle.setAttribute("aria-expanded", String(isExpanded));
+        toggle.textContent = isExpanded ? "Collapse code" : `Expand code (${lineCount} lines, ${bytes.length} bytes)`;
+        block.append(toggle);
+      }
     }
     return template.innerHTML;
-  }, [content]);
+  }, [content, expanded]);
   return /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2("div", { className: "tau-markdown", onClick: async (event) => {
+    /* @__PURE__ */ u2("div", { ref: root, className: "tau-markdown", onClick: async (event) => {
+      const toggle = event.target.closest("button.post-code-expand-btn");
+      if (toggle && event.currentTarget.contains(toggle)) {
+        const index = Number(toggle.dataset.blockIndex);
+        if (document.activeElement === toggle) restoreFocus.current = String(index);
+        setExpanded((previous) => {
+          const blocks = previous.content === content ? previous.blocks : [];
+          return { content, blocks: blocks.includes(index) ? blocks.filter((value) => value !== index) : [...blocks, index] };
+        });
+        return;
+      }
       const button = event.target.closest("button.post-code-copy-btn");
       if (!button || !event.currentTarget.contains(button)) return;
       try {
