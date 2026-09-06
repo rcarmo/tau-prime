@@ -20,4 +20,10 @@ for(const colorScheme of ['light','dark']) test(`classic paired ${colorScheme} m
  await page.screenshot({path:`${dir}/${info.project.name}-${colorScheme}.png`});
  const geometry=await page.locator('.container,.timeline,.post,.compose-box,.compose-footer,#compose-input').evaluateAll(els=>els.map(el=>({className:el.className,rect:el.getBoundingClientRect().toJSON()})));
  await writeFile(`${dir}/${info.project.name}-${colorScheme}.json`,JSON.stringify(geometry,null,2));
+ await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+ await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Workspace',exact:true}).click();
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tau:workspace-render',{detail:{path:'/workspace',filePath:null,content:'',entries:[{name:'src',path:'/workspace/src',kind:'directory'},{name:'README.md',path:'/workspace/README.md',kind:'file'}],annotations:[]}})));
+ await expect(page.locator('#workspace-list .workspace-row')).toHaveCount(2);
+ await expect(page.getByRole('treeitem',{name:'README.md',exact:true})).toBeVisible();
+ await page.screenshot({path:`${dir}/${info.project.name}-${colorScheme}-workspace.png`});
 });

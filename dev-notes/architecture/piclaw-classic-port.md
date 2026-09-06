@@ -736,3 +736,11 @@ from visual-style `directory` to classic `dir`; initial attempts caught both
 wrong navigation and wrong node type rather than bypassing them. Twelve captures
 pass with no page errors/unmapped requests. Images alongside chat reference as
 *-workspace.png; paired Tau panel review not yet generated.
+
+## Genuine classic Workspace paired delivery
+
+Tau classic-paired capture now opens Workspace and injects matching src/README.md
+entries while retaining the message-only chat background. Reference/Tau matrix
+24 passed. Review exporter supports classic Workspace inputs (no visual-mode
+paths); delivered 12-pair HTML. Tau navigation/preview/telemetry differences remain
+visible, not hidden to improve agreement. Human visual assessment still pending.
