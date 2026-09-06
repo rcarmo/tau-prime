@@ -352,3 +352,11 @@ labels, retaining Unicode/raw Markdown copying, clipboard rejection/retry,
 keyboard focus restoration and exact full-output/tail assertions. These are
 behavior tests, not deleted visual parity assertions. Six-target matrix 12
 passed; production code unchanged in this checkpoint.
+
+## Classic real-network recovery regression
+
+Migrated connection tests from visual dot classes to classic label visibility:
+live hidden, disconnected/reconnecting visible. Dismiss setup before asserting
+composer visibility (previous status strip existed outside that setup surface).
+Real backend sessions and actual network interruption/recovery plus injected
+state matrix: 12 passed. No production behavior change in this checkpoint.
