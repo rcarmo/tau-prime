@@ -226,3 +226,11 @@ the classic probe; timestamps/identity are not yet normalized for pixel review.
 18 boot/populated checks pass, including textarea bounds and no horizontal page
 overflow. Delivered tablet preview screenshot. Runtime/branch placement and
 secondary panel appearance remain open; these are not acceptance captures.
+
+## Integrated composer submission checks
+
+Added classic-preview tests using real app.js and isolated POST /sessions/id/runs
+responses (no model execution): Send click and Enter preserve exact content;
+Shift+Enter inserts a newline without submission; rejected request retains draft
+and re-enables Send; successful retry clears draft. Delivery selector remains
+hidden. Both methods across six targets pass 12/12. Backend payload unchanged.

@@ -31,3 +31,27 @@ for(const colorScheme of ['light','dark']) test(`classic populated ${colorScheme
  await mkdir('/workspace/tmp/tau-classic-preview',{recursive:true});
  await page.screenshot({path:`/workspace/tmp/tau-classic-preview/${info.project.name}-${colorScheme}.png`});
 });
+
+for(const via of ['button','keyboard']) test(`classic ${via} submission preserves API payload and draft on failure`,async({page})=>{
+ await installSelectedSession(page);await installLiveStream(page,'tau');
+ const submitted=[];let fail=true;
+ await page.route('**/api/sessions/visual-review/runs',route=>{
+  if(route.request().method()!=='POST')return route.fallback();
+  submitted.push(route.request().postDataJSON());
+  return route.fulfill({status:fail?500:201,json:fail?{error:'Fixture rejection'}:{run_id:'classic-run',status:'pending'}});
+ });
+ await page.goto('/?ui=classic',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+ const cancel=page.getByRole('button',{name:'Cancel',exact:true});if(await cancel.isVisible())await cancel.click();
+ const input=page.locator('#compose-input');await input.fill('Review');
+ await input.press('Shift+Enter');await input.press('End');await input.type('the workspace');
+ await expect(input).toHaveValue('Review\nthe workspace');expect(submitted).toHaveLength(0);
+ const send=()=>via==='button'?page.locator('#compose-submit').click():input.press('Enter');
+ await send();await expect.poll(()=>submitted.length).toBe(1);
+ await expect(page.locator('#compose-submit')).toBeEnabled();
+ await expect(input).toHaveValue('Review\nthe workspace');
+ fail=false;await send();await expect.poll(()=>submitted.length).toBe(2);
+ await expect(input).toHaveValue('');
+ expect(submitted).toEqual([{content:'Review\nthe workspace'},{content:'Review\nthe workspace'}]);
+ await expect(page.locator('#compose-delivery-mode')).toBeHidden();
+});
