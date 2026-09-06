@@ -55,7 +55,7 @@ export function Composer() {
             <select id="compose-thinking-select" name="compose_thinking_level" tabIndex={-1} aria-label="Thinking adapter">{adapterOptions.thinking.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select>
           </div>
 
-          <div id="compose-attachment-list" className="chat__attachments" role="region" aria-live="polite" aria-label="Staged attachments">
+          <div id="compose-attachment-list" hidden={!attachments.items.length} className="chat__attachments" role="region" aria-live="polite" aria-label="Staged attachments">
             {attachments.items.map((attachment) => <span className="chat__attachment-pill" key={attachment.mediaId}>
               <span className="chat__attachment-name">{attachment.label}</span>
               <button className="chat__attachment-remove" type="button" aria-label={`Remove attachment ${attachment.filename}`} disabled={attachments.busy} onClick={() => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } }))}>✕</button>
@@ -79,6 +79,7 @@ export function Composer() {
             aria-haspopup="listbox"
             placeholder="Type a message..."
           />
+
           <div id="compose-completion-popup" className="command-palette compose-completion-popup" hidden={!completion.open}>
             <p id="compose-completion-status" className="command-palette__step-hint" aria-live="polite">{completion.open ? `${completion.items.length} completion${completion.items.length === 1 ? "" : "s"} available.` : ""}</p>
             <ul id="compose-completion-listbox" className="command-palette__results" role="listbox" aria-label="Composer completions">

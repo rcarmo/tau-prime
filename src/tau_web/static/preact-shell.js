@@ -660,7 +660,7 @@ function Composer() {
           /* @__PURE__ */ u3("select", { id: "compose-model-select", name: "model", tabIndex: -1, "aria-label": "Model adapter", children: adapterOptions.models.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) }),
           /* @__PURE__ */ u3("select", { id: "compose-thinking-select", name: "compose_thinking_level", tabIndex: -1, "aria-label": "Thinking adapter", children: adapterOptions.thinking.map((item) => /* @__PURE__ */ u3("option", { value: item.value, children: item.label }, item.value)) })
         ] }),
-        /* @__PURE__ */ u3("div", { id: "compose-attachment-list", className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u3("span", { className: "chat__attachment-pill", children: [
+        /* @__PURE__ */ u3("div", { id: "compose-attachment-list", hidden: !attachments.items.length, className: "chat__attachments", role: "region", "aria-live": "polite", "aria-label": "Staged attachments", children: attachments.items.map((attachment) => /* @__PURE__ */ u3("span", { className: "chat__attachment-pill", children: [
           /* @__PURE__ */ u3("span", { className: "chat__attachment-name", children: attachment.label }),
           /* @__PURE__ */ u3("button", { className: "chat__attachment-remove", type: "button", "aria-label": `Remove attachment ${attachment.filename}`, disabled: attachments.busy, onClick: () => window.dispatchEvent(new CustomEvent("tau:attachment-remove", { detail: { mediaId: attachment.mediaId } })), children: "\u2715" })
         ] }, attachment.mediaId)) }),
@@ -4214,9 +4214,9 @@ function Timeline() {
   const empty2 = !timeline.selected ? "Select or create a session to load the timeline." : "No persisted messages yet.";
   return /* @__PURE__ */ u3(b, { children: [
     /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "timeline_before" }),
-    /* @__PURE__ */ u3("div", { id: "timeline-main", className: "message-list", tabIndex: -1, children: [
-      /* @__PURE__ */ u3("div", { id: "timeline-meta", className: "message-list__empty", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
-      /* @__PURE__ */ u3("div", { id: "timeline-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u3("div", { className: "message-list__empty", children: /* @__PURE__ */ u3("p", { children: empty2 }) }) : visibleItems.map((item, index) => /* @__PURE__ */ u3(MessageItem, { item, resultByCall }, item.id ?? index)) })
+    /* @__PURE__ */ u3("div", { id: "timeline-main", className: "chat__messages", tabIndex: -1, children: [
+      /* @__PURE__ */ u3("div", { id: "timeline-meta", className: "sr-only", "aria-live": "polite", children: "Load a session to inspect persisted messages." }),
+      /* @__PURE__ */ u3("div", { id: "timeline-list", className: "message-list", "aria-live": "polite", tabIndex: 0, children: visibleItems.length === 0 ? /* @__PURE__ */ u3("div", { className: "message-list__empty", children: /* @__PURE__ */ u3("p", { children: empty2 }) }) : [...visibleItems].reverse().map((item, index) => /* @__PURE__ */ u3(MessageItem, { item, resultByCall }, item.id ?? index)) })
     ] }),
     /* @__PURE__ */ u3("div", { className: "extension-slot", "data-extension-slot": "timeline_after" })
   ] });
@@ -4233,12 +4233,9 @@ function SessionRuntime() {
       /* @__PURE__ */ u3("span", { id: "agent-status-indicator", className: "agent-status-panel__status-dot", "aria-hidden": "true" }),
       /* @__PURE__ */ u3("span", { id: "agent-status-text", className: "agent-status-panel__status-text", children: "No session selected" })
     ] }),
-    /* @__PURE__ */ u3("section", { className: "agent-status-panel__section", children: [
+    /* @__PURE__ */ u3("section", { className: "agent-status-panel__section", hidden: !branches.length, children: [
       /* @__PURE__ */ u3("div", { className: "agent-status-panel__title", children: "Session branch" }),
-      /* @__PURE__ */ u3("div", { id: "branch-list", className: "agent-status-panel__tools", children: [
-        branches.map((branch) => /* @__PURE__ */ u3("button", { type: "button", className: "branch-button", "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })),
-        !branches.length && /* @__PURE__ */ u3("span", { className: "muted-text", children: "No persisted branches yet." })
-      ] })
+      /* @__PURE__ */ u3("div", { id: "branch-list", className: "agent-status-panel__tools", children: branches.map((branch) => /* @__PURE__ */ u3("button", { type: "button", className: "branch-button settings-panel__provider-btn", "data-active": String(branch.active), onClick: () => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } })), children: branch.label })) })
     ] })
   ] });
 }
@@ -4780,7 +4777,7 @@ function TauShell() {
       /* @__PURE__ */ u3(ActivityBar, { activePanel: activeTab, onPanelChange: selectPanel, onDashboard: () => setDashboardOpen(true) }),
       /* @__PURE__ */ u3("main", { className: "app-layout__main", children: [
         /* @__PURE__ */ u3("div", { className: "app-layout__content-area", children: [
-          /* @__PURE__ */ u3("div", { className: "app-layout__sidebar-wrapper", hidden: settingsOpen, style: { width: sidebarOpen ? "300px" : "0" }, children: /* @__PURE__ */ u3(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close, sessionFilter, onSelectSessionFilter: selectSessionFilter }) }),
+          /* @__PURE__ */ u3("div", { className: "app-layout__sidebar-wrapper", hidden: settingsOpen, style: { width: sidebarOpen ? "250px" : "0" }, children: /* @__PURE__ */ u3(SidePanel, { activeTab, onSelectTab: selectTab, onClose: close, sessionFilter, onSelectSessionFilter: selectSessionFilter }) }),
           /* @__PURE__ */ u3("button", { id: "drawer-backdrop", className: "app-layout__sidebar-backdrop", type: "button", "aria-label": "Close sidebar", hidden: !sidebarOpen, onClick: close }),
           sidebarOpen && /* @__PURE__ */ u3("div", { className: "app-layout__resize-handle", role: "separator", "aria-orientation": "vertical", "aria-label": "Resize sidebar" }),
           /* @__PURE__ */ u3("div", { className: "app-layout__panel", children: [

@@ -51,7 +51,7 @@ function TauShell() {
         <ActivityBar activePanel={activeTab} onPanelChange={selectPanel} onDashboard={() => setDashboardOpen(true)} />
         <main className="app-layout__main">
           <div className="app-layout__content-area">
-            <div className="app-layout__sidebar-wrapper" hidden={settingsOpen} style={{ width: sidebarOpen ? "300px" : "0" }}>
+            <div className="app-layout__sidebar-wrapper" hidden={settingsOpen} style={{ width: sidebarOpen ? "250px" : "0" }}>
               <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={close} sessionFilter={sessionFilter} onSelectSessionFilter={selectSessionFilter} />
             </div>
             <button id="drawer-backdrop" className="app-layout__sidebar-backdrop" type="button" aria-label="Close sidebar" hidden={!sidebarOpen} onClick={close} />

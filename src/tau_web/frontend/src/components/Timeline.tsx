@@ -141,12 +141,12 @@ export function Timeline() {
   return (
     <Fragment>
       <div className="extension-slot" data-extension-slot="timeline_before" />
-      <div id="timeline-main" className="message-list" tabIndex={-1}>
-        <div id="timeline-meta" className="message-list__empty" aria-live="polite">Load a session to inspect persisted messages.</div>
-        <div id="timeline-list" aria-live="polite" tabIndex={0}>
+      <div id="timeline-main" className="chat__messages" tabIndex={-1}>
+        <div id="timeline-meta" className="sr-only" aria-live="polite">Load a session to inspect persisted messages.</div>
+        <div id="timeline-list" className="message-list" aria-live="polite" tabIndex={0}>
           {visibleItems.length === 0
             ? <div className="message-list__empty"><p>{empty}</p></div>
-            : visibleItems.map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} />)}
+            : [...visibleItems].reverse().map((item, index) => <MessageItem key={item.id ?? index} item={item} resultByCall={resultByCall} />)}
         </div>
       </div>
       <div className="extension-slot" data-extension-slot="timeline_after" />
@@ -168,11 +168,10 @@ export function SessionRuntime() {
         <span id="agent-status-indicator" className="agent-status-panel__status-dot" aria-hidden="true" />
         <span id="agent-status-text" className="agent-status-panel__status-text">No session selected</span>
       </div>
-      <section className="agent-status-panel__section">
+      <section className="agent-status-panel__section" hidden={!branches.length}>
         <div className="agent-status-panel__title">Session branch</div>
         <div id="branch-list" className="agent-status-panel__tools">
-          {branches.map((branch) => <button type="button" className="branch-button" data-active={String(branch.active)} onClick={() => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } }))}>{branch.label}</button>)}
-          {!branches.length && <span className="muted-text">No persisted branches yet.</span>}
+          {branches.map((branch) => <button type="button" className="branch-button settings-panel__provider-btn" data-active={String(branch.active)} onClick={() => window.dispatchEvent(new CustomEvent("tau:branch-select", { detail: { leafId: branch.leafId } }))}>{branch.label}</button>)}
         </div>
       </section>
     </div>

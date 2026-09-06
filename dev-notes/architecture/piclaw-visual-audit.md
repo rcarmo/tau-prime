@@ -160,6 +160,46 @@ Found missing offline Preact bundle/font cache entries; added preact-shell.js an
 
 Verified Markdown code-copy preserves full UTF-8 content (café, Japanese and emoji) through generated base64 data and clipboard handler; six-target security/render/copy checks pass. Full Python suite rerun: 1327 passed. Build, TypeScript and diff checks pass. Current batch remains a partial visual-port checkpoint; no complete paired-shell or optional-plugin sign-off.
 
+## Populated full Tau captures
+
+Added populated-layout.spec.mjs: fixed user/agent Markdown/tool result fixture, expanded tool, chat and settings captures in both themes for all six engine/viewports (24 PNGs). 12 capture tests pass; archive and desktop preview attached. These are explicitly the Tau side only, not a paired full-App approval. Runtime/status metadata still comes from test server, so additional stubbing is required for pixel-deterministic whole-shell comparisons.
+
+## Actual full Piclaw bundle reference
+
+Loaded unmodified installed app.bundle.js/CSS directly under an isolated routed origin. Correct oobe response enables actual ChatPanel/MessageList; fixed user post/time and valid static system metrics supplied. All six engine/viewports render without page errors and produce screenshots/request inventories, attached. This removes the assumption that full-reference capture needs user-supplied images. Remaining work: fill all requested endpoint contracts (unknown routes still return empty objects), match complete Tau fixture, avatar handling and deferred vendor libraries, then compare full geometry/screenshots. Not yet approved parity.
+
+## Full-shell geometry finding
+
+Full reference now explicitly maps all observed initial endpoints and fails on unexpected requests instead of silently returning {}. Six targets pass. Desktop shell measurements found Tau's activity/tab top at 19.5px vs Piclaw 0: unstyled skip link occupied a row. Fixed it as a fixed-position keyboard-revealed accessibility link, restoring top=0; populated capture assertions now guard this. Both-theme populated/accessibility checks pass 24/24. Reference default sidebar is open at 250px versus Tau collapsed; composer height differs (106.5 vs 116px in initial measurement); align fixture state and investigate rather than masking differences.
+
+## Composer measurement
+
+Measured actual Piclaw and Tau composer children. Textarea is identical at 83.5px; Tau container had extra 9.5px. Empty attachment region padding accounted for 4px; now hidden when empty while anchor stays mounted. Composer reduced 116→112px; reference is 106.5px. Remaining 5.5px baseline/child-layout discrepancy not yet fixed. Moving completion popup before textarea did not change it and was reverted. Composer/keyboard 12/12 and build/TypeScript pass. Toolbar content differs intentionally by current Tau controls; full parity not asserted.
+
+## Composer gap resolved
+
+Child-removal experiment ruled out hidden controls as remaining 5.5px source; focus did not change it. Narrow block-flow rule on Tau textarea removes inline baseline gap without fixing height. Desktop composer now measures 106.5px, equal to actual Piclaw reference, with identical 83.5px textarea. Temporary diagnostic mutations removed. Populated captures/composer/keyboard matrix passes 24/24. This rule is a documented layout adaptation; toolbar contents/width still differ.
+
+## Aligned collapsed-sidebar shell geometry
+
+Reference fixture now sets genuine piclaw-sidebar-collapsed preference to match Tau resting state. Tau open sidebar width changed 300→250px (upstream default). Full-reference/populated/responsive tests pass 24/24. Measured activity/tab/composer/status geometry agrees exactly on tablet/desktop across engines; phone composer y differs +0.5px (same width/height), other measured boxes match. JSON attached. This is shell-box agreement only: visible toolbar/session controls and message content are not yet equivalent, so no pixel-parity claim.
+
+## Shared full-shell message data
+
+Introduced fixtures/visual-state.mjs supplying identical user text, agent Markdown and read-tool result to both capture adapters. Actual Piclaw app now gets pinned Marked module via its expected global and real bundled fallback avatar image (avoids repeated failing image fallback). All six actual-app captures pass; Tau both-theme captures pass 12/12. Shared-content archive attached. Found deliberate remaining differences: Piclaw sorts/visually reverses messages vs Tau chronology, Piclaw avatar vs Tau glyph, action bar and runtime/status contents. These are not normalized away; inspect and decide component mapping next. Full screenshots are not yet pixel equivalent.
+
+## Timeline flex ownership correction
+
+Earlier 'message ordering' difference was incomplete diagnosis: Piclaw reverses DOM children inside column-reverse, preserving chronological visual order. Tau's extra list wrapper prevented its messages being direct flex children, losing 10px gaps and bottom anchoring. Moved message-list class onto timeline-list, reversed the rendered child array to match upstream, retained the focus container as chat__messages and moved duplicated metadata to sr-only. New six-target test verifies direct items, column-reverse, 10px gap and chronological top-to-bottom placement; Markdown security tests use role classes rather than DOM first/last. Combined 12/12 pass; existing timeline/accessibility 18/18 passed in preceding run; TypeScript/build pass. DOM reading order now follows upstream reverse pattern; screen-reader implications remain for review.
+
+## Empty branch section cleanup
+
+Tau's persistent empty 'Session branch / No persisted branches yet' section consumed timeline space with no actionable content. It is now hidden when branch list is empty, while branch-list anchor stays mounted. Real branch buttons use existing standard button primitive and still emit tau:branch-select. Six branch behavior plus twelve both-theme accessibility checks pass 18/18; build/TypeScript pass. Nonempty branch placement remains a Tau-specific interaction rather than an upstream parity claim.
+
+## Combined checkpoint results
+
+Combined browser suite now 219 passed / 3 explicitly skipped (WebKit offline navigation), no failures. Python full run 1326 passed / 1 stale 300px sidebar source assertion; updated to verified 250px mapping and focused frontend/packaging rerun 43/43 passes. TypeScript/diff checks pass. Full Python rerun after that assertion-only correction not yet performed; do not conflate prior full pass with current result.
+
 ## Remaining audit and fixes
 
 1. Font notices: added upstream JetBrains Mono OFL, Fira Code OFL and Nerd Fonts combined licensing in `static/FONT-LICENSES.md`; Fira Code embedded copyright/license records inspected. Wheel-byte test includes this notice (7/7 packaging tests pass). Codicons attribution and upstream CC BY 4.0 notice are also now included; recheck the complete asset manifest before final delivery.

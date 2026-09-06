@@ -130,3 +130,10 @@ body[data-nav-open="true"] .panel-nav { transform: translateX(0); }
 .dark .app-layout__status-bar .sys-stats-bar__compact,
 .dark .app-layout__status-bar .model-badge__empty { color: var(--text-muted); }
 .dark .app-layout__status-bar .model-badge__provider { opacity: 1; }
+
+/* Accessibility-only landmark link: visible on focus, never an extra shell row. */
+.skip-link { position: fixed; top: 0; left: 0; transform: translateY(-100%); z-index: 10000; }
+.skip-link:focus { transform: none; background: var(--bg); color: var(--text); padding: 8px 12px; }
+/* Tau's form wrapper retains an inline baseline gap below the textarea.
+ * Block flow preserves its intrinsic height without adding a phantom line. */
+.chat__compose-container > #compose-input { display: block; }
