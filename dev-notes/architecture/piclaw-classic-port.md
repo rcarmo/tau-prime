@@ -162,3 +162,11 @@ slot; SystemStats must move to a secondary surface at cutover, not disappear.
 Classic CSS overrides display on the connection class, so hidden state lives on
 an unstyled wrapper. Classic/status matrix 30 passed; build/TypeScript pass.
 Live shell still unchanged.
+
+## Classic session trigger
+
+Added ClassicSessionControl using classic trigger/pill/label/chevron hierarchy,
+retaining status-session adapter ID and expanded/controls semantics. Composer
+fixture verifies label mutation and navigation callback. Classic matrix 24
+passed; TypeScript passes. This is still staged; it does not itself implement
+the session navigation surface or replace the live shell.
