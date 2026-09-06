@@ -884,3 +884,11 @@ startup wait/live transport. Wait for final timeline focus before shortcuts,
 use durable shell-ready + isolated SSE for Dashboard injection. Same installed
 wheel targeted rerun 12 passed. No production changes; complete installed rerun
 still required before calling package validation complete.
+
+## Full installed classic validation complete (0d274e6 artifact)
+
+Same reproducible wheel, fresh server, full browser rerun with b98aec7 fixture
+readiness corrections: 459 passed / 3 documented WebKit offline skips, no
+failures. Delivered exact wheel and SHA256SUMS. Production bytes unchanged since
+0d274e6; fixture-only commits do not invalidate this installed result. This is
+package/behavior validation, not visual approval of remaining semantic deviations.
