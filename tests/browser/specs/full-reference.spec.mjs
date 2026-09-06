@@ -56,7 +56,14 @@ test(`capture actual Piclaw ${colorScheme} application bundle with isolated back
   const geometry = await page.locator('.activity-bar, .app-layout__sidebar-wrapper, .tab-bar, .chat__compose, .chat__compose-container, .chat__input, .chat__toolbar, .chat__send-btn, .app-layout__status-bar').evaluateAll(elements => elements.map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {fontSize:s.fontSize,fontFamily:s.fontFamily,verticalAlign:s.verticalAlign,whiteSpace:s.whiteSpace,padding:s.padding,margin:s.margin,display:s.display,gap:s.gap,lineHeight:s.lineHeight,className:el.className,x:r.x,y:r.y,width:r.width,height:r.height};}));
   await mkdir('/workspace/tmp/piclaw-full-reference',{recursive:true});
   await page.screenshot({path:`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}.png`});
-  await writeFile(`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}.json`,JSON.stringify({requests:[...new Set(requests)],errors,unexpected,geometry},null,2));
+  const renderingCapabilities = await page.evaluate(() => ({
+    marked: typeof window.marked !== 'undefined',
+    cmHighlight: typeof window.cmHighlight !== 'undefined',
+    katex: typeof window.katex !== 'undefined',
+    mermaid: typeof window.mermaid !== 'undefined',
+    highlightedCodeSpans: document.querySelectorAll('pre code span').length,
+  }));
+  await writeFile(`/workspace/tmp/piclaw-full-reference/${info.project.name}-${colorScheme}.json`,JSON.stringify({requests:[...new Set(requests)],errors,unexpected,geometry,renderingCapabilities},null,2));
   expect(errors).toEqual([]);
   expect(unexpected).toEqual([]);
 });

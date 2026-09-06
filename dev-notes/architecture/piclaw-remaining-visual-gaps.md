@@ -31,3 +31,15 @@ This is the bounded follow-up list after the source/CSS/component corrections. F
 ## Fixture correction from this review
 
 The synthetic selected session lacked runs/queue responses. Added empty runs/queue fixtures and a no-queue-error assertion, avoiding unrelated backend errors in the visual sample. Populated capture matrix passes 12/12 after correction.
+
+## Rich-rendering scope evidence (30cdb61 follow-up)
+
+The pinned visual index loads Marked and the app bundle; it has a CodeMirror
+import map but does not initialize `window.cmHighlight`. The highlighting
+utility reads that optional global and otherwise escapes plain code. Reference
+capture metadata now records renderer capabilities: across all 12 targets,
+Marked is present, cmHighlight/KaTeX/Mermaid are absent and code token spans are
+zero. This describes the isolated pinned bundle fixture, not every Piclaw runtime
+or lazy-loaded feature. Therefore existing core-Markdown comparisons must not be
+advertised as syntax-highlighting/math/diagram parity. Adding those capabilities
+to Tau remains an explicit scope decision, not justified by this plain-code sample.

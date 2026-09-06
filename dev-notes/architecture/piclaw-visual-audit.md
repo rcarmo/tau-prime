@@ -396,3 +396,11 @@ Tau asserts Live + connected dot. Piclaw intentionally hides its connection
 indicator when connected (App.tsx), whereas Tau retains the Live indicator;
 this is now a documented UI difference rather than an accidental EOF race.
 Real backend SSE recovery remains covered independently, not by this mock.
+
+## Renderer capability inventory
+
+Added runtime capability metadata to genuine-bundle captures (12/12 pass).
+The fixture has Marked but no cmHighlight, KaTeX or Mermaid globals; the sample
+has zero token spans. Inspected the pinned visual index script list and
+code-highlighting fallback. No new renderer dependency added speculatively.
+See remaining-gap inventory for the limits of this evidence.
