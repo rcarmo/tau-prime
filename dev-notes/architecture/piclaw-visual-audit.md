@@ -404,3 +404,12 @@ The fixture has Marked but no cmHighlight, KaTeX or Mermaid globals; the sample
 has zero token spans. Inspected the pinned visual index script list and
 code-highlighting fallback. No new renderer dependency added speculatively.
 See remaining-gap inventory for the limits of this evidence.
+
+## Labeled paired review delivery
+
+`node tests/browser/build-visual-review.mjs` generates a self-contained HTML
+review from existing capture directories, with 12 labeled pairs / 24 embedded
+images and explicit limitations. Delivered `tau-piclaw-paired-review.html` for
+human assessment. This is not a fresh capture or an approval. Generator output
+structure verified (12 sections, 24 images); diff checks clean. Current inputs
+are connected-state captures from the 30cdb61/8c3977c fixture checkpoints.
