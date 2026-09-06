@@ -455,3 +455,11 @@ cache assertions to require root document and all successful/nonempty asset
 responses; default six-target service-worker run: 9 passed, 3 existing skips.
 No unsupported claim that this proves browser-engine fault or fixes offline
 navigation. Production service worker unchanged; repro command in browser README.
+
+## Search markup verification
+
+Exact source reread confirms the snippet already uses upstream's span (no
+paragraph margin); no production fix was necessary. Added regression assertion
+for tag and zero vertical margins, six targets pass. Preserved result metadata,
+article semantics and Open session control. Earlier tentative paragraph-margin
+diagnosis was incorrect and no edit applied to the component.

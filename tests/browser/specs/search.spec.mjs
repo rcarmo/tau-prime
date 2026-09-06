@@ -15,5 +15,7 @@ test('search results render through Piclaw search cards', async ({ page }) => {
   await expect(result).toHaveCount(1);
   await expect(result.locator('.search-panel__item-type')).toHaveText('message · entry-1');
   await expect(result.locator('.search-panel__item-text')).toHaveText('Matching content');
+  const snippet = result.locator('.search-panel__item-text');
+  expect(await snippet.evaluate(el => ({tag:el.tagName,top:getComputedStyle(el).marginTop,bottom:getComputedStyle(el).marginBottom}))).toEqual({tag:'SPAN',top:'0px',bottom:'0px'});
   await expect(result.getByRole('button', { name: 'Open session' })).toBeVisible();
 });
