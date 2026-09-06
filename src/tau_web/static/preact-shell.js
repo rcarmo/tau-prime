@@ -1190,6 +1190,7 @@ function SettingsPanel({ hidden }) {
         /* @__PURE__ */ u2("h2", { className: "settings-panel__section-title", children: "Authentication" }),
         /* @__PURE__ */ u2("button", { className: "settings-panel__provider-btn settings-provider-setup", type: "button", onClick: () => {
           window.dispatchEvent(new CustomEvent("tau:switch-tab", { detail: { tab: "workspace" } }));
+          window.dispatchEvent(new CustomEvent("tau:close-drawers"));
           document.querySelector(".provider-setup-trigger")?.click();
         }, children: "Provider setup" }),
         /* @__PURE__ */ u2("form", { id: "auth-form", children: [

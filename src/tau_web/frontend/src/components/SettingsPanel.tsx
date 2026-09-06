@@ -26,6 +26,7 @@ export function SettingsPanel({ hidden }: { hidden: boolean }) {
               <h2 className="settings-panel__section-title">Authentication</h2>
               <button className="settings-panel__provider-btn settings-provider-setup" type="button" onClick={() => {
                 window.dispatchEvent(new CustomEvent("tau:switch-tab", { detail: { tab: "workspace" } }));
+                window.dispatchEvent(new CustomEvent("tau:close-drawers"));
                 document.querySelector<HTMLButtonElement>(".provider-setup-trigger")?.click();
               }}>Provider setup</button>
               <form id="auth-form">

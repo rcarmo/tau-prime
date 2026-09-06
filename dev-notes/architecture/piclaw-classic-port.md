@@ -405,3 +405,11 @@ new genuine classic paired visual evidence still pending (not replaced by self
 baselines). Next capped full triage: 40 passed, 8 failed, 1 interrupted, 341 not
 run. Migrated Plan/conflict and Workspace/Plan accessibility navigation, retaining
 all state/contrast/bounds assertions: 18 passed. No production changes.
+
+## Setup reopening overlay fix
+
+Migrated onboarding layout spec to classic container, adding unsent draft
+preservation. Exposed mobile/tablet sidebar intercepting wizard Cancel after
+reopening setup from Settings. Settings now dispatches tau:close-drawers before
+opening wizard; no forced clicks. Setup + full classic-live matrix 42 passed;
+build/TypeScript pass. Composer remains mounted and retains draft.
