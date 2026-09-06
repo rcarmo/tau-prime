@@ -10,7 +10,7 @@ const TITLES: Record<SidebarTab, string> = {
   sessions: "Sessions", workspace: "Workspace", search: "Search", plan: "Plan", settings: "Settings",
 };
 
-const LegacyTabAnchor = ({ name, selected, onSelect }: {
+const PanelNavigationButton = ({ name, selected, onSelect }: {
   name: Exclude<SidebarTab, "sessions">;
   selected: boolean;
   onSelect: (tab: SidebarTab) => void;
@@ -18,8 +18,7 @@ const LegacyTabAnchor = ({ name, selected, onSelect }: {
   <button id={`tab-${name}`} type="button" aria-controls={`panel-${name}`} aria-pressed={selected} onClick={() => onSelect(name)}>{TITLES[name]}</button>
 );
 
-export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }: {
-  classic?: boolean;
+export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter }: {
   activeTab: SidebarTab;
   onSelectTab: (tab: SidebarTab) => void;
   onClose: () => void;
@@ -27,16 +26,16 @@ export function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSe
   onSelectSessionFilter: (filter: SessionFilter) => void;
 }) {
   return (
-    <Sidebar classic={classic} id="side-panel" title={TITLES[activeTab]} label={`${TITLES[activeTab]} sidebar`} actions={<>
-        <button id="close-nav-drawer" className={classic ? "icon-btn" : "sidebar__close mobile-only"} type="button" aria-label="Close sessions drawer" hidden={activeTab !== "sessions"} onClick={onClose}>✕</button>
-        <button id="close-panel-drawer" className={classic ? "icon-btn" : "sidebar__close mobile-only"} type="button" aria-label="Close workspace drawer" hidden={activeTab === "sessions"} onClick={onClose}>✕</button>
+    <Sidebar id="side-panel" title={TITLES[activeTab]} label={`${TITLES[activeTab]} sidebar`} actions={<>
+        <button id="close-nav-drawer" className="icon-btn" type="button" aria-label="Close sessions drawer" hidden={activeTab !== "sessions"} onClick={onClose}>✕</button>
+        <button id="close-panel-drawer" className="icon-btn" type="button" aria-label="Close workspace drawer" hidden={activeTab === "sessions"} onClick={onClose}>✕</button>
       </>}>
-        <div hidden={!classic} role={classic ? "group" : undefined} aria-label={classic ? "Navigation" : undefined}>
-          {classic && <button type="button" aria-pressed={activeTab === "sessions"} onClick={() => onSelectTab("sessions")}>Sessions</button>}
-          <LegacyTabAnchor name="workspace" selected={activeTab === "workspace"} onSelect={onSelectTab} />
-          <LegacyTabAnchor name="search" selected={activeTab === "search"} onSelect={onSelectTab} />
-          <LegacyTabAnchor name="plan" selected={activeTab === "plan"} onSelect={onSelectTab} />
-          <LegacyTabAnchor name="settings" selected={activeTab === "settings"} onSelect={onSelectTab} />
+        <div role="group" aria-label="Navigation">
+          <button type="button" aria-pressed={activeTab === "sessions"} onClick={() => onSelectTab("sessions")}>Sessions</button>
+          <PanelNavigationButton name="workspace" selected={activeTab === "workspace"} onSelect={onSelectTab} />
+          <PanelNavigationButton name="search" selected={activeTab === "search"} onSelect={onSelectTab} />
+          <PanelNavigationButton name="plan" selected={activeTab === "plan"} onSelect={onSelectTab} />
+          <PanelNavigationButton name="settings" selected={activeTab === "settings"} onSelect={onSelectTab} />
         </div>
 
         <section id="panel-sessions" className="sessions-panel" aria-label="Session navigation" hidden={activeTab !== "sessions"}>

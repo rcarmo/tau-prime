@@ -48,7 +48,7 @@ function TauShell() {
 
   return <Fragment>
     <ClassicChatFrame workspaceOpen={sidebarOpen || settingsOpen} sidebar={<>
-      <SidePanel classic activeTab={activeTab} onSelectTab={selectTab} onClose={() => { close(); if(settingsOpen) selectTab("sessions"); }} sessionFilter={sessionFilter} onSelectSessionFilter={selectSessionFilter} />
+      <SidePanel activeTab={activeTab} onSelectTab={selectTab} onClose={() => { close(); if(settingsOpen) selectTab("sessions"); }} sessionFilter={sessionFilter} onSelectSessionFilter={selectSessionFilter} />
       <SettingsPanel hidden={!settingsOpen} />
       <SystemStats enabled={metersEnabled} collapsed={metersCollapsed} onToggleEnabled={toggleMetersEnabled} onToggleCollapsed={toggleMetersCollapsed} />
     </>}>

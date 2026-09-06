@@ -312,3 +312,11 @@ CopyButton, updated Timeline callers. Classic clipboard feedback now uses
 is-success/is-error state classes. Added message copy failure then retry checks
 with exact copied Markdown; existing collapse-focus checks retained. Classic
 components/populated accessibility: 42 passed; build/TypeScript pass.
+
+## Classic-only sidebar wrapper
+
+Removed Sidebar/SidePanel visual branches and mode props; navigation controls
+are always available in classic secondary panel. Renamed legacy tab helper to
+PanelNavigationButton. Removed obsolete visual Sidebar parity spec; classic
+navigation/closure and accessibility coverage retained. Classic suite 78 passed;
+frontend/packaging 42 passed; build/TypeScript pass.

@@ -1041,20 +1041,13 @@ function WorkspacePanel({ hidden }) {
 }
 
 // src/components/Sidebar.tsx
-function Sidebar({ title, children, id: id2, label, actions, classic = false }) {
-  if (classic) return /* @__PURE__ */ u2("section", { id: id2, className: "tau-classic-panel", "aria-label": label, children: [
+function Sidebar({ title, children, id: id2, label, actions }) {
+  return /* @__PURE__ */ u2("section", { id: id2, className: "tau-classic-panel", "aria-label": label, children: [
     /* @__PURE__ */ u2("header", { className: "workspace-header", children: [
       /* @__PURE__ */ u2("div", { className: "workspace-header-left", children: title }),
       /* @__PURE__ */ u2("div", { className: "workspace-header-actions", children: actions })
     ] }),
     /* @__PURE__ */ u2("div", { className: "tau-classic-panel-content", children })
-  ] });
-  return /* @__PURE__ */ u2("aside", { id: id2, className: "sidebar", "aria-label": label, children: [
-    /* @__PURE__ */ u2("header", { className: "sidebar__header", children: [
-      /* @__PURE__ */ u2("span", { className: "sidebar__title", children: title.toUpperCase() }),
-      actions
-    ] }),
-    /* @__PURE__ */ u2("div", { className: "sidebar__content", children })
   ] });
 }
 
@@ -1066,18 +1059,18 @@ var TITLES = {
   plan: "Plan",
   settings: "Settings"
 };
-var LegacyTabAnchor = ({ name, selected, onSelect }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-pressed": selected, onClick: () => onSelect(name), children: TITLES[name] });
-function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter, classic = false }) {
-  return /* @__PURE__ */ u2(Sidebar, { classic, id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u2(b, { children: [
-    /* @__PURE__ */ u2("button", { id: "close-nav-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
-    /* @__PURE__ */ u2("button", { id: "close-panel-drawer", className: classic ? "icon-btn" : "sidebar__close mobile-only", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
+var PanelNavigationButton = ({ name, selected, onSelect }) => /* @__PURE__ */ u2("button", { id: `tab-${name}`, type: "button", "aria-controls": `panel-${name}`, "aria-pressed": selected, onClick: () => onSelect(name), children: TITLES[name] });
+function SidePanel({ activeTab, onSelectTab, onClose, sessionFilter, onSelectSessionFilter }) {
+  return /* @__PURE__ */ u2(Sidebar, { id: "side-panel", title: TITLES[activeTab], label: `${TITLES[activeTab]} sidebar`, actions: /* @__PURE__ */ u2(b, { children: [
+    /* @__PURE__ */ u2("button", { id: "close-nav-drawer", className: "icon-btn", type: "button", "aria-label": "Close sessions drawer", hidden: activeTab !== "sessions", onClick: onClose, children: "\u2715" }),
+    /* @__PURE__ */ u2("button", { id: "close-panel-drawer", className: "icon-btn", type: "button", "aria-label": "Close workspace drawer", hidden: activeTab === "sessions", onClick: onClose, children: "\u2715" })
   ] }), children: [
-    /* @__PURE__ */ u2("div", { hidden: !classic, role: classic ? "group" : void 0, "aria-label": classic ? "Navigation" : void 0, children: [
-      classic && /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": activeTab === "sessions", onClick: () => onSelectTab("sessions"), children: "Sessions" }),
-      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab }),
-      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "search", selected: activeTab === "search", onSelect: onSelectTab }),
-      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab }),
-      /* @__PURE__ */ u2(LegacyTabAnchor, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab })
+    /* @__PURE__ */ u2("div", { role: "group", "aria-label": "Navigation", children: [
+      /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": activeTab === "sessions", onClick: () => onSelectTab("sessions"), children: "Sessions" }),
+      /* @__PURE__ */ u2(PanelNavigationButton, { name: "workspace", selected: activeTab === "workspace", onSelect: onSelectTab }),
+      /* @__PURE__ */ u2(PanelNavigationButton, { name: "search", selected: activeTab === "search", onSelect: onSelectTab }),
+      /* @__PURE__ */ u2(PanelNavigationButton, { name: "plan", selected: activeTab === "plan", onSelect: onSelectTab }),
+      /* @__PURE__ */ u2(PanelNavigationButton, { name: "settings", selected: activeTab === "settings", onSelect: onSelectTab })
     ] }),
     /* @__PURE__ */ u2("section", { id: "panel-sessions", className: "sessions-panel", "aria-label": "Session navigation", hidden: activeTab !== "sessions", children: [
       /* @__PURE__ */ u2("div", { className: "sessions-panel__toolbar", role: "group", "aria-label": "Session actions", children: [
@@ -4833,7 +4826,7 @@ function TauShell() {
   };
   return /* @__PURE__ */ u2(b, { children: [
     /* @__PURE__ */ u2(ClassicChatFrame, { workspaceOpen: sidebarOpen || settingsOpen, sidebar: /* @__PURE__ */ u2(b, { children: [
-      /* @__PURE__ */ u2(SidePanel, { classic: true, activeTab, onSelectTab: selectTab, onClose: () => {
+      /* @__PURE__ */ u2(SidePanel, { activeTab, onSelectTab: selectTab, onClose: () => {
         close();
         if (settingsOpen) selectTab("sessions");
       }, sessionFilter, onSelectSessionFilter: selectSessionFilter }),
