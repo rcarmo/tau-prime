@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {mkdir} from 'node:fs/promises';
 
 for(const colorScheme of ['light','dark']) {
-  test(`${colorScheme} settings has no serious accessibility violations`, async ({page})=>{
+  test(`${colorScheme} settings has no serious accessibility violations`, async ({page},info)=>{
     await page.emulateMedia({colorScheme});
     await page.goto('/',{waitUntil:'domcontentloaded'});
     await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
@@ -16,5 +17,7 @@ for(const colorScheme of ['light','dark']) {
     const results=await new AxeBuilder({page}).include('.settings-dialog-overlay').analyze();
     const failures=results.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}));
     expect(failures).toEqual([]);
+    await mkdir('/workspace/tmp/tau-classic-settings-dialog',{recursive:true});
+    await page.screenshot({path:`/workspace/tmp/tau-classic-settings-dialog/${info.project.name}-${colorScheme}.png`});
   });
 }

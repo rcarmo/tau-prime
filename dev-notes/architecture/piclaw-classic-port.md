@@ -948,3 +948,11 @@ skips (468 total), no failures. Complete Python: 1326 passed; diff clean.
 Includes modal Settings with mounted forms, focus/inert lifecycle and settled
 whole-overlay a11y checks. Previous installed artifact and visual handoff predate
 the dialog; both require refresh. No explicit visual approval recorded.
+
+## Settings dialog evidence refresh
+
+Settings accessibility matrix now saves settled full-viewport dialog captures.
+Twelve both-theme/browser/viewport checks pass. Delivered tablet screenshot and
+12-page Tau-Classic-Settings-Dialog.pdf (Tau-only dialog evidence, not paired
+upstream settings contents). Code checkpoint e0022c2. Replaces obsolete sidebar
+Settings evidence; explicit appearance acceptance remains open.
