@@ -87,3 +87,13 @@ Both referenced Fira Code fonts are byte-identical to already bundled/noticed
 files. Added wheel-byte/font-reference checks and route coverage: focused
 frontend/packaging 46 passed. The main page does NOT load this CSS yet: classic
 components must replace visual markup before stylesheet cutover.
+
+## Classic frame component
+
+Added ClassicChatFrame with upstream app-shell/workspace-sidebar/container
+hierarchy and slotted Tau content. Sidebar becomes inert when collapsed.
+Not connected to live TauShell until child markup conversion is ready.
+Isolated both-theme six-target checks pass 12/12 using classic CSS only:
+centered bounded column, viewport height (0.02px WebKit rounding tolerance),
+no visual activity/tab/status wrappers, and visible composer placeholder.
+TypeScript passes. This checks frame structure, not whole-UI parity.
