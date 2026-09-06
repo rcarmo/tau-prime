@@ -719,3 +719,11 @@ preserves them, only newer revision sets conflict. Forced reload still replaces.
 Direct production-function regression plus Dashboard accept/decline: 18 passed.
 This is a real draft-loss correction, not test-only SSE suppression. Full rerun
 and artifact refresh pending.
+
+## Secondary conversion + draft protection full checkpoint (45bd4ef)
+
+Complete browser: 441 passed, 3 documented WebKit offline skips (444 total),
+no failures. Complete Python: 1326 passed; diff clean. Includes queue/session/
+workspace/telemetry conversion and same-revision draft protection. Latest
+installed artifact remains 58e98bf and predates these changes; refresh needed.
+Paired secondary-panel assessment and explicit visual approval remain open.
