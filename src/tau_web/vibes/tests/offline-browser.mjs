@@ -6,9 +6,10 @@ await requireFreePorts(8893);
 const requests=[];
 const worker=await readFile(new URL('../static/offline-sw.js',import.meta.url),'utf8');
 const manifest=JSON.parse(worker.match(/const SHELL = (.*);/)[1]);
+let nextVersion=false;
 const server=createServer(async(req,res)=>{
  requests.push({url:req.url,cookie:req.headers.cookie||'',authorization:req.headers.authorization||''});
- if(req.url==='/sw.js'){res.writeHead(200,{'Content-Type':'text/javascript','Service-Worker-Allowed':'/'});res.end(worker);return;}
+ if(req.url==='/sw.js'){res.writeHead(200,{'Content-Type':'text/javascript','Service-Worker-Allowed':'/'});res.end(nextVersion?worker.replace(manifest.version,manifest.version+'-next'):worker);return;}
  if(req.url==='/'){res.writeHead(200,{'Content-Type':'text/html'});res.end('<!doctype html><title>Public offline fixture</title><p>Public shell</p>');return;}
  if(manifest.assets.includes(req.url)){
   const path=req.url.split('?')[0];
@@ -46,5 +47,19 @@ try{
  await page.goto('http://127.0.0.1:8893/?session=private');
  await expect(page.getByText('Public shell',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>fetch('/api/private').then(()=>true,()=>false))).toBe(false);
- console.log('PASS browser credential-free precache and public-shell-only offline fallback (isolated document, not app bootstrap)');
+ await context.setOffline(false);
+ nextVersion=true;
+ await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration();await registration.update();});
+ await expect.poll(()=>page.evaluate(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting)).toBe(true);
+ expect(await page.evaluate(()=>caches.keys())).toContain(`tau-vibes-shell-${manifest.version}`);
+ // No skipWaiting: the old controlled page remains usable until it closes.
+ await expect(page.getByText('Public shell',{exact:true})).toBeVisible();
+ await page.close();
+ const upgraded=await context.newPage();
+ await upgraded.goto('http://127.0.0.1:8893/');
+ await expect.poll(()=>upgraded.evaluate(()=>caches.keys())).not.toContain(`tau-vibes-shell-${manifest.version}`);
+ const upgradedCaches=await upgraded.evaluate(()=>caches.keys());
+ expect(upgradedCaches).toContain(`tau-vibes-shell-${manifest.version}-next`);
+ expect(upgradedCaches).toContain('unrelated-cache');
+ console.log('PASS credential-free precache, offline fallback and waiting-worker upgrade (isolated document, not app bootstrap)');
 }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}

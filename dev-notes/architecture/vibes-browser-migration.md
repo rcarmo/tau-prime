@@ -470,3 +470,10 @@ unrelated caches, installs generated worker, verifies only old owned caches are
 removed and unrelated sentinel contents survive. Credential-free precache and
 offline fallback assertions remain passing. 59 unit tests/lint pass. This is
 cache migration on first activation, not waiting-worker/version upgrade coverage.
+
+Waiting-worker upgrade verified in Chromium: serve next generated version,
+registration.update reaches waiting while old controlled page stays open; close
+page, reopen and verify old owned cache removed/new cache active, unrelated cache
+retained. Offline/credential exclusions still pass. 59 unit tests/lint pass.
+Still isolated static fixture index, not full application bootstrap; production
+registration remains disabled pending that gate.
