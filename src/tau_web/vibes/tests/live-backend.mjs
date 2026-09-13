@@ -120,6 +120,17 @@ try {
  await expect(page.getByRole('button',{name:'Archive Live backend session',exact:true})).toBeVisible();
  const restored=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
  expect(restored.archived_at).toBe(null);
+ const onboarding=await (await authFetch('http://127.0.0.1:8893/api/onboarding')).json();
+ expect(onboarding.default_provider).toBeTruthy();expect(onboarding.default_model).toBeTruthy();
+ await page.getByRole('button',{name:'New root session…',exact:true}).click();
+ const newDialog=page.getByRole('dialog',{name:'New session',exact:true});
+ await newDialog.getByLabel('Session name',{exact:true}).fill('Created through imported dialog');
+ await newDialog.getByRole('button',{name:'Create',exact:true}).click();
+ await expect(newDialog).toHaveCount(0);
+ await expect(page.getByText('@Created through imported dialog',{exact:true})).toBeVisible();
+ const newId=new URL(page.url()).searchParams.get('session');
+ const created=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${newId}`)).json();
+ expect(created.provider_name).toBe(onboarding.default_provider);expect(created.model).toBe(onboarding.default_model);
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');
 }finally{await browser?.close();await stopChild(proxy);await stopChild(backend);}

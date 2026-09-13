@@ -387,3 +387,8 @@ Real command browser checkpoint: authenticated Chromium/WebKit submit /thinking
 medium through composer, verify saved policy and cleared text, reject invalid
 level with visible error/preserved draft, and assert zero agent runs created.
 Existing model/Plan/media/archive checks remain green. No production code changed.
+
+Real session-create UI checkpoint: authenticated Chromium/WebKit open New root
+session dialog, submit a name, verify selected new URL/label and backend provider/
+model equal saved onboarding defaults. No provider execution or credential
+availability inferred. Existing Plan/media/archive/model workflows remain green.
