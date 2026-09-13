@@ -257,3 +257,9 @@ mounted form/error state. Chromium/WebKit verify cancelled Cancel/Escape after
 failed provider save preserves model/error/focus, then normal save succeeds.
 56 unit tests/lint/build pass. Credentials stay in component memory only; no new
 browser persistence. Confirmed discard/backdrop browser cases remain to verify.
+
+Provider discard completion: Chromium/WebKit verify a dispatched backdrop pointer
+event with declined confirmation retains edit; confirmed Cancel closes and
+restores trigger focus; reopen drops discarded edit and clean Cancel closes
+without confirmation. Backdrop event is synthetic (not touch hit-testing).
+56 unit tests/lint pass. No production changes.
