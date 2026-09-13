@@ -21,19 +21,36 @@ until mapped or explicitly recorded as a remaining regression.
   cannot substitute for old unexercised interactions or visual review.
 - Service-worker retirement: `worker-upgrade.mjs`; NOT offline caching parity.
 
-## Behavioral coverage not yet replaced (release gaps)
+## Remaining parity checklist (reconciled at 1da1a0d)
 
-- Existing branch selection/context controls (`branches.spec.mjs`). Imported
-  New branch currently rejects; this is a real missing Tau feature.
-- Dashboard/metrics/runtime surfaces and unsaved-plan selection confirmation.
-- Full keyboard shortcuts/completion/focus traversal (`keyboard.spec.mjs`),
-  including behavior beyond the currently supported /thinking command.
-- Long-code copy/collapse edge cases, clipboard failures, scrolling/resizing,
-  rich Markdown and search selection navigation/draft interactions.
-- Real run streaming/tool lifecycle, approval Allow and recovery after disconnect.
-- Offline reload support: retirement intentionally does not implement it.
-- Full extension slots/SDK initialization in replacement shell (static assets
-  remain served, but availability is not integration).
+Completed migrations (not full legacy-suite equivalence): existing branch-leaf
+selection, Dashboard/metrics, unsaved-Plan selection confirmation, extension
+slots/SDK/actions/refresh, Allow/Deny conflict/retry, code copy/collapse/UTF-8
+thresholds/content reset, and search draft preservation. Evidence below records
+which journeys are real Tau and which use fixtures.
+
+Remaining bounded work:
+- [ ] Rich Markdown semantic rendering and active-content rejection through the
+  replacement timeline (`markdown.spec.mjs`); literal user-message behavior.
+- [ ] Keyboard completion and focus traversal beyond guarded Ctrl/Cmd+K/N;
+  composer resizing and timeline scrolling (`keyboard`, `composer`, `timeline`).
+- [ ] Search source-session navigation, including unsaved draft interaction
+  (`search.spec.mjs`); result-link presence alone is not navigation coverage.
+- [ ] Settings surface audit against `settings-*`, `model-settings` and onboarding
+  specs: distinguish deliberately unsupported preferences from missing Tau UI.
+- [ ] Live provider run, streamed tool lifecycle/approval, disconnect/recovery
+  and subsequent persisted timeline. Requires provider credentials.
+- [ ] Decide offline reload requirement: worker retirement is implemented but
+  does not preserve the old offline shell behavior (`service-worker.spec.mjs`).
+- [ ] Decide new-branch creation requirement separately from existing leaf
+  selection; the imported new-session branch action is unsupported.
+- [ ] Final paired aesthetic review and requirement audit. Automated matrix
+  results cannot supply human approval.
+
+Legacy visual/DOM-specific assertions (old IDs, exact old component structure)
+are historical references, not compatible executable replacement tests. Preserve
+them until their behavioral intent is mapped or an explicit scope decision is
+recorded. Do not infer comprehensive parity from this grouped audit.
 
 ## Execution
 
