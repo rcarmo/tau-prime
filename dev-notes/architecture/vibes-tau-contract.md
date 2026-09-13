@@ -289,3 +289,9 @@ text-only argument disclosures, results have explicit tool/failure labels.
 Malformed legacy JSON retains readable message text. 32 unit tests, lint/build
 and live backend regression pass. Tool-call/result correlation, full browser
 fixtures, rich result rendering and live tool events remain pending.
+
+Persisted tool browser checkpoint: Chromium desktop/WebKit phone expand a tool-
+only call, show literal HTML-shaped arguments without execution, and render a
+failed tool result plus output. Fixture corrected to distinguish newly added
+GET media listing from POST uploads. 32 unit tests/lint pass. Correlation and
+live tool lifecycle remain separate pending requirements.

@@ -16,7 +16,8 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/media') {
+  if(url.pathname==='/api/media' && route.request().method()==='GET') data={media:[]};
+  else if(url.pathname==='/api/media') {
    uploads++;
    expect(route.request().headers()['x-tau-csrf']).toBe('1');
    expect(route.request().postDataBuffer().toString()).toContain('attachment-fixture.txt');
@@ -57,12 +58,22 @@ try {
   ]};
   else if(url.pathname==='/api/sessions') data={sessions:[session]};
   else if(url.pathname==='/api/sessions/smoke') data=session;
-  else if(url.pathname==='/api/sessions/smoke/timeline') data={timeline:[{message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z'}]};
+  else if(url.pathname==='/api/sessions/smoke/timeline') data={timeline:[
+   {message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z'},
+   {message_id:2,session_id:'smoke',role:'assistant',content:'',created_at:'2026-09-13T19:00:01Z',content_blocks_json:JSON.stringify({tool_calls:[{id:'call-fixture',name:'bash',arguments:{command:'<img src=x onerror="window.toolInjected=true">'}}]})},
+   {message_id:3,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
+  ]};
   else {missing.add(url.pathname);return route.fulfill({status:501,contentType:'application/json',body:JSON.stringify({error:'Not integrated'})});}
   return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
  });
  await page.goto('http://127.0.0.1:8893/?session=smoke');
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ const tool=page.locator('details').filter({has:page.locator('summary',{hasText:'Tool call: bash'})});
+ await tool.locator('summary').click();
+ await expect(tool.locator('pre')).toContainText('<img src=x');
+ expect(await page.evaluate(()=>window.toolInjected)).toBeUndefined();
+ await expect(page.getByText('Tool result: bash (failed)',{exact:true})).toBeVisible();
+ await expect(page.getByText('Fixture command failed safely',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-queue-item')).toHaveCount(2);
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
