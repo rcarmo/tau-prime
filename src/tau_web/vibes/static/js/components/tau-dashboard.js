@@ -2,15 +2,15 @@ import {html,useEffect,useRef,useState} from '../vendor/preact-htm.js';
 import {getTauDashboard} from '../api.js';
 export function TauDashboard({onSelect}){
  const [open,setOpen]=useState(false),[page,setPage]=useState(1),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- const panel=useRef(null);
+ const panel=useRef(null);const selecting=useRef(false);const selectionError=useRef('');
  useEffect(()=>{
   if(!open)return;let disposed=false,loading=false;setData(null);
-  const refresh=async()=>{if(loading)return;loading=true;try{const result=await getTauDashboard(page);if(!disposed){setData(result);setError('');}}catch(e){if(!disposed)setError(e.message);}finally{loading=false;}};
+  const refresh=async()=>{if(loading||selecting.current)return;loading=true;try{const result=await getTauDashboard(page);if(!disposed){setData(result);setError(selectionError.current);}}catch(e){if(!disposed)setError(e.message);}finally{loading=false;}};
   refresh();const timer=setInterval(refresh,3000);return()=>{disposed=true;clearInterval(timer);};
  },[open,page]);
  const select=async id=>{
-  if(busy||!window.confirm('Open this session? Unsaved session drafts will be retained.'))return;
-  setBusy(true);setError('');try{await onSelect(id);if(panel.current)panel.current.open=false;}catch(e){setError(e.message);}finally{setBusy(false);}
+  if(selecting.current||!window.confirm('Open this session? Unsaved session drafts will be retained.'))return;
+  selecting.current=true;selectionError.current='';setBusy(true);setError('');try{await onSelect(id);if(panel.current)panel.current.open=false;}catch(e){selectionError.current=e.message;setError(e.message);}finally{selecting.current=false;setBusy(false);}
  };
  return html`<details ref=${panel} onToggle=${e=>setOpen(e.currentTarget.open)}><summary>Session dashboard</summary><section aria-label="Session dashboard">
  ${error&&html`<div role="alert">${error}</div>`}

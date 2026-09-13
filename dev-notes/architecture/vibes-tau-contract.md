@@ -642,3 +642,9 @@ and return to prior page. Scoped open Dashboard accessibility passes with local
 native-button styling (also applied to branch controls). Bundles rebuilt; failure
 fixture deliberately uses unavailable session. Genuine paginated backend records
 and dashboard visual pairing remain pending.
+
+Dashboard request guard: ref-backed selection gate prevents concurrent switches;
+polling pauses while selecting and successful refresh preserves selection errors
+until next explicit selection. Chromium/WebKit fixture checks hold failure alert
+past a 3.2s poll interval; 46 unit tests/lint/build pass. Full matrix rerun deferred
+until next consolidated checkpoint, not claimed from these two targets.

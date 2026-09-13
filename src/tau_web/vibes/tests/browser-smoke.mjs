@@ -128,6 +128,8 @@ try {
  await expect(dashboard.getByRole('button',{name:'Next page',exact:true})).toBeDisabled();
  page.once('dialog',dialog=>dialog.accept());await dashboard.getByRole('button',{name:'Open Dashboard unavailable',exact:true}).click();
  await expect(dashboard.getByRole('alert')).toBeVisible();await expect(dashboard).toBeVisible();
+ await page.waitForTimeout(3200);
+ await expect(dashboard.getByRole('alert')).toBeVisible();
  await dashboard.getByRole('button',{name:'Previous page',exact:true}).click();
  await expect(dashboard).toContainText('Page 1 of 2');
  await scan('[aria-label="Session dashboard"]');
