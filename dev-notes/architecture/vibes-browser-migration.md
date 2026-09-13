@@ -338,3 +338,9 @@ result points to search-other; actual navigation selects destination URL/timelin
 composer starts empty, and smoke session text remains in its separate stored
 draft. 56 unit tests/lint pass. Fixture-backed navigation, not real Tau search API
 integration evidence. No production change.
+
+3a5942c artifact attempt: two identical wheels and installed expanded 12-case
+matrix/CSP pass. Fixture dark-theme composer scan exposed slash-description
+contrast 3.59:1. Local primary-text override extended to description; complete
+12-case fixture matrix then passes. 56 unit tests/lint/build pass. Final artifact
+must include this CSS correction; pre-correction wheel not delivered as final.

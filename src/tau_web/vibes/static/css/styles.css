@@ -554,4 +554,4 @@ html[data-tint]::after {
 }
 /* Readable Markdown links in both themes; retain a non-color link cue. */
 .post-content a { color: var(--text-primary); text-decoration: underline; }
-.compose-box .slash-name { color: var(--text-primary); }
+.compose-box .slash-name, .compose-box .slash-desc { color: var(--text-primary); }
