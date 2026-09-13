@@ -558,3 +558,12 @@ unrelated content preserved and registration absent. Initial test awaited
 activated state, but self-unregistration can transition past it; final assertions
 poll actual cleanup effects instead. Both pass. Test scope is /static/, not a
 cached production root navigation; actual upgrade routing still pending.
+
+Production route switch checkpoint: / and /index.html now serve imported UI;
+nested /static uses explicit allowlist, manifests mapped, /sw.js serves scoped
+retirement worker. No alternate UI route. Both authenticated Chromium/WebKit
+workflows pass with proxy forwarding ALL responses from actual Tau router.
+18 asset/packaging tests pass. Full Python run: 1318 passed, 13 failed: 12 old
+frontend asset/markup expectations plus bash stdin regression (not dismissed as
+flaky without investigation). Old source cleanup and test migration required;
+this checkpoint is not final acceptance or a green full suite.

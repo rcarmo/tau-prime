@@ -1,170 +1,42 @@
-"""Frontend shell routes for Tau Web."""
-
+"""Production frontend routes: imported Vibes UI with Tau backend adapters."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from importlib.resources import files
-from typing import Final
-
 from aiohttp import web
-
-_FRONTEND_PUBLIC_PATHS: Final[frozenset[str]] = frozenset(
-    {
-        "/",
-        "/index.html",
-        "/manifest.webmanifest",
-        "/sw.js",
-    "/static/piclaw-classic.css",
-    "/static/tau-classic.css",
-        "/static/app.js",
-        "/static/extension-ui.js",
-        "/static/widget-bridge.js",
-        "/static/frontend-sdk.js",
-        "/static/preact-shell.js",
-        "/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
-        "/static/firacode-nerd-font-mono-regular-f4sytzp8.ttf",
-    }
-)
-
-
-@dataclass(frozen=True, slots=True)
-class FrontendAsset:
-    resource_name: str
-    content_type: str
-    charset: str | None
-    cache_control: str
-    service_worker_allowed: str | None = None
-
-
-_ROOT_ASSETS: Final[dict[str, FrontendAsset]] = {
-    "/": FrontendAsset(
-        resource_name="index.html",
-        content_type="text/html",
-        charset="utf-8",
-        cache_control="no-cache",
-    ),
-    "/index.html": FrontendAsset(
-        resource_name="index.html",
-        content_type="text/html",
-        charset="utf-8",
-        cache_control="no-cache",
-    ),
-    "/manifest.webmanifest": FrontendAsset(
-        resource_name="manifest.webmanifest",
-        content_type="application/manifest+json",
-        charset="utf-8",
-        cache_control="no-cache",
-    ),
-    "/sw.js": FrontendAsset(
-        resource_name="sw.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="no-cache",
-        service_worker_allowed="/",
-    ),
-}
-
-_STATIC_ASSETS: Final[dict[str, FrontendAsset]] = {
-    "firacode-nerd-font-mono-bold-v7nf8tpn.ttf": FrontendAsset(
-        resource_name="firacode-nerd-font-mono-bold-v7nf8tpn.ttf",
-        content_type="font/ttf",
-        charset=None,
-        cache_control="public, max-age=31536000, immutable",
-    ),
-    "firacode-nerd-font-mono-regular-f4sytzp8.ttf": FrontendAsset(
-        resource_name="firacode-nerd-font-mono-regular-f4sytzp8.ttf",
-        content_type="font/ttf",
-        charset=None,
-        cache_control="public, max-age=31536000, immutable",
-    ),
-    "tau-classic.css": FrontendAsset(
-        resource_name="tau-classic.css", content_type="text/css", charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "piclaw-classic.css": FrontendAsset(
-        resource_name="piclaw-classic.css",
-        content_type="text/css",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "app.js": FrontendAsset(
-        resource_name="app.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "extension-ui.js": FrontendAsset(
-        resource_name="extension-ui.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "widget-bridge.js": FrontendAsset(
-        resource_name="widget-bridge.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "frontend-sdk.js": FrontendAsset(
-        resource_name="frontend-sdk.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-    "preact-shell.js": FrontendAsset(
-        resource_name="preact-shell.js",
-        content_type="application/javascript",
-        charset="utf-8",
-        cache_control="public, max-age=3600, must-revalidate",
-    ),
-}
+from tau_web.routes.vibes_assets import asset_names, asset_response, index_response
 
 
 def is_frontend_path(path: str) -> bool:
-    return path in _FRONTEND_PUBLIC_PATHS
+    if path in {'/', '/index.html', '/manifest.json', '/manifest.webmanifest', '/sw.js'}:
+        return True
+    return path.startswith('/static/') and path.removeprefix('/static/') in asset_names()
 
 
 async def serve_root(request: web.Request) -> web.Response:
-    return _asset_response(_ROOT_ASSETS[request.path])
+    return index_response()
 
 
 async def serve_static(request: web.Request) -> web.Response:
-    filename = request.match_info["filename"]
-    asset = _STATIC_ASSETS.get(filename)
-    if asset is None:
-        raise web.HTTPNotFound(reason="Unknown frontend asset.")
-    return _asset_response(asset)
+    return asset_response(request.match_info['filename'])
 
 
 async def serve_named_asset(request: web.Request) -> web.Response:
-    asset = _ROOT_ASSETS.get(request.path)
-    if asset is None:
-        raise web.HTTPNotFound(reason="Unknown frontend asset.")
-    return _asset_response(asset)
+    if request.path == '/sw.js':
+        response = asset_response('retire-sw.js')
+        response.headers['Service-Worker-Allowed'] = '/'
+        return response
+    response = asset_response('manifest.json')
+    response.content_type = 'application/manifest+json'
+    return response
 
 
 async def serve_index(request: web.Request) -> web.Response:
-    del request
-    return _asset_response(_ROOT_ASSETS["/index.html"])
-
-
-def _asset_response(asset: FrontendAsset) -> web.Response:
-    resource = files("tau_web").joinpath("static").joinpath(asset.resource_name)
-    data = resource.read_bytes()
-    headers = {"Cache-Control": asset.cache_control}
-    if asset.service_worker_allowed is not None:
-        headers["Service-Worker-Allowed"] = asset.service_worker_allowed
-    return web.Response(
-        body=data,
-        content_type=asset.content_type,
-        charset=asset.charset,
-        headers=headers,
-    )
+    return index_response()
 
 
 def setup_routes(app: web.Application) -> None:
-    app.router.add_get("/", serve_root)
-    app.router.add_get("/index.html", serve_index)
-    app.router.add_get("/manifest.webmanifest", serve_named_asset)
-    app.router.add_get("/sw.js", serve_named_asset)
-    app.router.add_get("/static/{filename}", serve_static)
+    app.router.add_get('/', serve_root)
+    app.router.add_get('/index.html', serve_index)
+    app.router.add_get('/manifest.json', serve_named_asset)
+    app.router.add_get('/manifest.webmanifest', serve_named_asset)
+    app.router.add_get('/sw.js', serve_named_asset)
+    app.router.add_get('/static/{filename:.*}', serve_static)
