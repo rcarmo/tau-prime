@@ -455,3 +455,10 @@ Static undefined-variable gate: enabled no-undef for first-party imported JS
 replaced with session-scoped Tau timeline lookup and stale-session guard. Lint
 now passes with gate enabled; 41 unit tests/build and authenticated live workflows
 pass. Message-reference navigation edge cases still need browser assertions.
+
+Inline attachment implementation checkpoint: persisted original-message attachment
+metadata now feeds TauAttachment. Raster-image previews use authenticated blob
+fetch, no tokens in URLs; downloads use same blob and cleanup revokes on unmount.
+No inline SVG/HTML preview. 42 unit tests, lint/build and live regression pass.
+Actual inline image browser fixture, resource-size limits and preview accessibility
+remain pending; session-media download is separately verified already.

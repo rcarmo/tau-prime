@@ -175,3 +175,9 @@ test('agent display identity uses actual Tau settings without invented capabilit
  const client=createTauClient({fetchImpl:async path=>{expect(path).toBe('/api/settings');return Response.json({agent_name:'Tau configured'});}});
  expect(await client.agentIdentity()).toEqual({agents:[{id:'default',name:'Tau configured'}]});
 });
+test('persisted attachments retain stable media metadata only',async()=>{
+ const {postFromTau}=await import('../static/js/tau-client.js');
+ const attachment={media_id:'media',filename:'picture.png',media_type:'image/png'};
+ const post=postFromTau({content_blocks_json:JSON.stringify({attachments:[attachment,null,{}]})});
+ expect(post.data.tau_attachments).toEqual([attachment]);
+});

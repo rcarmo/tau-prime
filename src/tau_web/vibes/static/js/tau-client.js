@@ -19,6 +19,7 @@ export function postFromTau(record) {
         id: record.message_id, timestamp: record.created_at,
         data: { type: record.role === 'assistant' ? 'agent_response' : record.role,
             content: record.content, session_id: record.session_id,
+            tau_attachments: Array.isArray(message?.attachments) ? message.attachments.filter(item => typeof item?.media_id === 'string' && item.media_id) : [],
             tau_tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
             tau_tool_result: record.role === 'tool' ? { name: message?.name, callId: message?.tool_call_id, ok: message?.ok } : null },
     };
