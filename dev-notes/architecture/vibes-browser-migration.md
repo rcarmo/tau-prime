@@ -371,3 +371,10 @@ Timeline scroll migration: Chromium/WebKit verify overflowing reverse timeline
 accepts negative history scroll, composer focus returns scrollTop to zero/newest
 and draft is unchanged. 56 unit tests/lint pass. Programmatic scroll assertion,
 not touch momentum or full streamed auto-scroll behavior.
+
+Markdown encoded protocol tests: Chromium/WebKit reject entity-obfuscated
+javascript URL; tab-obfuscated source stays non-link text. Initial expectation
+of an anchor for the latter was corrected to assert no actionable link. Delegate
+security review timed out without findings. WebKit new layout twice settled at
+1px scrollTop offset; scroll assertion now permits <=1 CSS pixel (was <1).
+56 unit tests/lint pass; no production changes or exhaustive-security claim.
