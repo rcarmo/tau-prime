@@ -173,3 +173,13 @@ wheel and passes on corrected source in Chromium/WebKit. Save now reads the
 mounted named token input instead of a potentially stale rendered-state closure.
 56 unit tests/lint/build pass. New installed artifact/matrix still required; the
 failed 5c242e6 builds were not delivered as validated artifacts.
+
+## Corrected installed artifact: 87aebdb
+
+Two SOURCE_DATE_EPOCH=1789344000 wheels compare byte-identically. Installed wheel
+(with existing declared [web] dependencies, checkout PYTHONPATH disabled) passes
+all 12 engine/theme/viewport authenticated journeys on the first complete run,
+including deterministic same-turn logout token clearing, Plan/media Axe scopes
+and CSP capture assertions. This closes the reproduced stale-token logout race.
+Artifact/checksums/log: /workspace/tmp/tau-vibes-87aebdb/. Still not provider
+execution, offline parity, comprehensive legacy parity or paired visual approval.
