@@ -207,9 +207,12 @@ try {
  }
  if(token && process.env.TAU_LIVE_LOGIN_UI){
   await page.getByRole('button',{name:'Provider setup',exact:true}).click();
-  await page.getByLabel('Tau bearer token',{exact:true}).fill('');
   page.once('dialog',dialog=>dialog.accept());
-  await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Save token and reload',exact:true}).click()]);
+  await Promise.all([page.waitForEvent('load'),page.getByRole('dialog',{name:'Provider setup',exact:true}).evaluate(form=>{
+   const input=form.querySelector('input[type="password"]');
+   input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));
+   [...form.querySelectorAll('button')].find(button=>button.textContent==='Save token and reload').click();
+  })]);
   try {
    await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
   } catch(error) {

@@ -165,3 +165,11 @@ real Tau production-route authenticated login/workflow journeys passed with
 TAU_VIBES_TEST_CSP=1 (no captured CSP violations). These journeys still do not
 execute a provider. Worktree clean before recording these results. Current JS
 suite is 56 tests (last lint/build and JS run at ff5deb1 implementation).
+
+Logout race reproduced and corrected: refreshed 5c242e6 wheel matrix failed at
+WebKit tablet/dark with tokenPresent=true after attempted clearing/reload.
+A deterministic same-turn input+save regression fails against that installed
+wheel and passes on corrected source in Chromium/WebKit. Save now reads the
+mounted named token input instead of a potentially stale rendered-state closure.
+56 unit tests/lint/build pass. New installed artifact/matrix still required; the
+failed 5c242e6 builds were not delivered as validated artifacts.

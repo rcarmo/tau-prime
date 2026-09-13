@@ -6,7 +6,8 @@ export function TauProviderSetup({onClose}) {
  const saveToken=()=>{
   if(!window.confirm('Save access token and reload? Unsaved Plan edits will be lost.'))return;
   try{
-   if(token.trim())localStorage.setItem('tau.web.authToken',token.trim());else localStorage.removeItem('tau.web.authToken');
+   const currentToken=panel.current.querySelector('[name="tau-access-token"]').value.trim();
+   if(currentToken)localStorage.setItem('tau.web.authToken',currentToken);else localStorage.removeItem('tau.web.authToken');
    window.location.reload();
   }catch(e){setError(e.message||'Unable to save authentication token');}
  };
@@ -43,7 +44,7 @@ export function TauProviderSetup({onClose}) {
  return html`<div class="rename-branch-overlay" onPointerDown=${e=>{if(e.target===e.currentTarget&&!busy)onClose();}}>
  <form ref=${panel} class="rename-branch-panel" role="dialog" aria-modal="true" aria-labelledby="tau-provider-title" onSubmit=${submit} onKeyDown=${keys}>
  <h2 id="tau-provider-title">Provider setup</h2>
- <label>Tau bearer token<input type="password" autocomplete="off" class="rename-branch-input" value=${token} disabled=${busy} onInput=${e=>setToken(e.target.value)}/></label>
+ <label>Tau bearer token<input name="tau-access-token" type="password" autocomplete="off" class="rename-branch-input" value=${token} disabled=${busy} onInput=${e=>setToken(e.target.value)}/></label>
  <button type="button" disabled=${busy} onClick=${saveToken}>Save token and reload</button>
  <p class="rename-branch-help">The Tau access token is stored in this browser. Saving reloads the page; unsaved Plan edits are not preserved across reloads.</p>
  <label>Provider<input class="rename-branch-input" value=${provider} disabled=${busy||loading} onInput=${e=>setProvider(e.target.value)} /></label>
