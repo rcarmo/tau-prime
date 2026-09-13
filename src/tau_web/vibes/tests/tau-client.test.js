@@ -87,3 +87,9 @@ test('run status excludes finished runs; queue preserves FIFO and marks unsuppor
  const item=(await client.queue('one')).items[0];
  expect(item.row_id).toBe(8);expect(item.content).toBe('next');expect(item.tau_readonly).toBe(true);
 });
+test('context maps structural counts without fabricating tokens, cost or occupancy',async()=>{
+ const client=createTauClient({fetchImpl:async()=>Response.json({entry_count:9,message_count:4,compaction_count:1,active_leaf_entry_id:'leaf'})});
+ const context=await client.context('one');
+ expect(context).toEqual({entryCount:9,messageCount:4,compactionCount:1,activeLeafEntryId:'leaf'});
+ expect(context.percent).toBeUndefined();expect(context.tokens).toBeUndefined();
+});

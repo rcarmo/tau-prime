@@ -149,7 +149,7 @@ export async function getAgents() {
  * Get context window usage (tokens, contextWindow, percent).
  */
 export async function getAgentContext(sessionId = 'default') {
-    return request(`/agent/context?session_id=${encodeURIComponent(sessionId)}`);
+    return tau.context(sessionId === 'default' ? null : sessionId);
 }
 
 /**

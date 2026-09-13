@@ -116,3 +116,15 @@ are explicit; status is reloaded after acknowledgement. Chromium desktop/WebKit
 phone verify the control appears, cancellation POST occurs, control disappears
 and composer draft survives. Build/lint and 20 unit tests pass. Browser fixtures
 are not runtime cancellation evidence; real backend integration still required.
+
+Real-backend baseline checkpoint: live-backend.mjs launches the existing isolated
+Tau browser server plus the local Vibes proxy. Real session POST returns 201;
+real SSE snapshot streams through proxy; Chromium loads actual session/model/
+timeline without API route mocks or page errors. Full Python baseline: 1321
+passed. No agent provider run attempted. Rui requested OpenRouter free models;
+this instance has neither configured credentials nor reachable Smith/Flint chat
+transport, so provider execution remains blocked, not passed.
+
+Context reads now use Tau context endpoint and expose only actual structural
+counts/leaf identity: no invented tokens, cost, context occupancy or compaction
+action. 21 unit tests/65 assertions, lint/build and real-backend startup pass.
