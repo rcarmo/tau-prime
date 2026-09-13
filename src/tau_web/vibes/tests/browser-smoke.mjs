@@ -332,6 +332,13 @@ try {
  await page.keyboard.press('Control+n');
  await expect(composer).toBeFocused();
  await expect(page.locator('button[title="Search"]')).toBeVisible();
+ await expect(composer).toHaveValue('Keep rejected draft');
+ await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ await page.keyboard.press('Control+k');
+ await composer.fill('Unsubmitted search query');
+ await composer.press('Escape');
+ await expect(composer).toHaveValue('Keep rejected draft');
+ await expect(composer).toBeFocused();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;

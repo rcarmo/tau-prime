@@ -144,3 +144,9 @@ after adapter disposal. Deferred-response regression verifies newer refresh wins
 stale failure is ignored and disposed action emits no response. 55 unit tests,
 lint/build and Chromium/WebKit smoke pass. Updated runtime requires final wheel
 refresh; 52b4bb1 artifact does not contain this correction.
+
+Search draft migration: Chromium/WebKit verify the original rejected composer
+draft survives search rejection, accepted results and Ctrl+N return to persisted
+timeline. Entering search again, editing an unsent query and escaping restores
+the same draft and focus. 55 unit tests/lint pass; no production change.
+Source-session navigation and broader rich-Markdown parity remain separate.
