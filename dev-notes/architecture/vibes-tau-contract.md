@@ -72,3 +72,10 @@ attachments/commands/thread submission fail explicitly. Sixteen tests/51
 assertions, lint/build pass. Busy detection and submission are separate requests;
 server contention errors must remain visible, not retried automatically. Actual
 composer send/clear browser tests and live SSE still required before release.
+
+Composer browser checkpoint: Chromium desktop and WebKit phone exercise actual
+imported textarea/Enter submission. Accepted Tau run POST clears the draft;
+409 conflict shows its message and preserves rejected draft text. Both report
+zero page errors. These use deterministic route fixtures, not real agent runs.
+Unimplemented endpoint requests remain printed by the smoke harness. Unit suite
+16 passed; lint passed. Smoke supports TAU_SMOKE_ENGINE and TAU_SMOKE_PHONE.
