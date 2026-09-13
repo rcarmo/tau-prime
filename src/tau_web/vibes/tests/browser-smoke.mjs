@@ -426,6 +426,21 @@ try {
  expect(await composer.evaluate(el=>Math.round(el.getBoundingClientRect().height))).toBe(maxHeight);
  await resize.press('Home');await resize.press('ArrowDown');
  await expect(resize).toHaveAttribute('aria-valuenow',String(minHeight));
+ if(process.env.TAU_SMOKE_TOUCH){
+  if(engine!=='chromium')throw new Error('Touch protocol fixture requires Chromium');
+  const cdp=await context.newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true});
+  const bounds=await resize.boundingBox(),x=bounds.x+bounds.width/2,y=bounds.y+bounds.height/2;
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-60}]});
+  await expect(resize).toHaveClass(/dragging/);
+  expect(Number(await resize.getAttribute('aria-valuenow'))).toBeGreaterThan(minHeight);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await expect(resize).not.toHaveClass(/dragging/);
+  await expect(composer).toHaveValue('Keep rejected draft');
+  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});await cdp.detach();
+  await resize.focus();await resize.press('Home');
+ }
  const originalBodyStyle=await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}));
  const resizeBounds=await resize.boundingBox();
  const dragX=resizeBounds.x+resizeBounds.width/2,dragY=resizeBounds.y+resizeBounds.height/2;

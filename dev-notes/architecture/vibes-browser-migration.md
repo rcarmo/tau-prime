@@ -401,3 +401,9 @@ whose save always rejected. Existing leaf selector retained. Real Tau Chromium/
 WebKit journeys verify no New branch button and normal root creation still works;
 56 unit tests/lint/build pass. New-branch requirement remains unresolved, not
 implemented by hiding UI. Current wheel predates this runtime cleanup.
+
+Touch protocol check: TAU_SMOKE_TOUCH=1 uses Chromium CDP touchStart/move/end on
+phone viewport, verifies composer growth, drag cleanup and draft retention.
+Browser protocol events (not JS-dispatched pointer events) pass; 56 unit tests
+and lint pass. This is emulated Chromium touch, not physical-device/WebKit gesture
+or virtual-keyboard acceptance. Optional mode rejects non-Chromium engines.
