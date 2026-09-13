@@ -471,3 +471,10 @@ native attachment-button styling for dark contrast. Snapshot mock now sends one
 snapshot then heartbeats, avoiding artificial repeated timeline reanimations
 during Axe scans. Current full matrix fails at WebKit image decode; investigate
 blob lifecycle vs fixture transport before any production switch.
+
+WebKit inline image resolution: debugging blob content showed application/json
+with fixture error, not PNG. Catch-all Playwright routing intercepted WebKit blob
+URLs and returned API fallback. Non-HTTP URLs now pass through untouched; no
+production preview workaround needed. All 12 image/workflow/whole-page Axe cases
+pass, including naturalWidth=1, blob source and bearer header checks. 42 unit
+tests and strict lint pass. Supersedes unresolved 2445799 finding with evidence.

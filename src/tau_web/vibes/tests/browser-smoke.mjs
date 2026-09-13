@@ -27,6 +27,7 @@ try {
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
+  if (!['http:', 'https:'].includes(url.protocol)) return route.continue();
   if(url.pathname==='/'||url.pathname.startsWith('/static/')) return route.continue();
   if(url.pathname==='/api/media/image-fixture/content') {
    expect(route.request().headers().authorization).toBe('Bearer image-test-token');
