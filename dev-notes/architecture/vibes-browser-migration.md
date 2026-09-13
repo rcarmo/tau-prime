@@ -286,3 +286,9 @@ receiver intentionally ignores submits while loading. Test now awaits enabled
 textarea before beginning separate rejection/duplicate scenario. Three WebKit
 phone/dark Axe runs pass; duplicate events remain same-turn. 56 unit tests/lint
 pass. No production change or timeout increase; not a proven exhaustive flake fix.
+
+Search navigation migration: Chromium/WebKit now click Open source session,
+await real page navigation, assert explicit selected-session URL, persisted
+message and retained composer text draft. Same-session source link exercised;
+cross-session selection and nonpersistent File objects remain distinct cases.
+56 unit tests/lint pass. No production changes.
