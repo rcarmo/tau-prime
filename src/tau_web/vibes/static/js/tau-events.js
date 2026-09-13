@@ -41,7 +41,7 @@ export async function consumeTauEvents(body, onFrame, signal) {
 }
 
 export class TauEventStream {
-    constructor({ onFrame, onStatus = () => {}, getToken = () => '', fetchImpl = fetch, retryMs = 1000 }) {
+    constructor({ onFrame, onStatus = () => {}, getToken = () => '', fetchImpl = (...args) => globalThis.fetch(...args), retryMs = 1000 }) {
         Object.assign(this, { onFrame, onStatus, getToken, fetchImpl, retryMs });
         this.cursor = null;
         this.seenEvents = new Set();

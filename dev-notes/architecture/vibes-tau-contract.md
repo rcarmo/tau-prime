@@ -431,3 +431,13 @@ in-flight connection; connecting state is explicit and aborted retry callbacks
 exit before notifying consumers. Unit test holds handshake pending across ten
 focus requests and confirms one fetch. 41 unit tests, lint/build and real
 authenticated regression pass. Sustained live provider stream gate remains open.
+
+Critical browser transport correction: sustained stream-browser.mjs exposed
+native fetch invoked as this.fetchImpl, producing Illegal invocation in actual
+browsers. Default transport now wraps globalThis.fetch. Previous live snapshot
+checks used separate direct fetch and did NOT prove application stream health;
+unit injected functions also missed this. Chromium/WebKit now consume actual
+chunked authenticated HTTP through proxy: split UTF-8, disconnect, Last-Event-ID
+reconnect and duplicate suppression verified (two connections). 41 unit tests,
+lint/build pass. This fixture server tests transport, not provider execution or
+complete application draft presentation.
