@@ -14,7 +14,7 @@ try {
  const size=process.env.TAU_SMOKE_SIZE || (process.env.TAU_SMOKE_PHONE?'phone':'desktop');
  const viewport={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}}[size];
  const context=await browser.newContext({viewport,colorScheme:process.env.TAU_SMOKE_THEME || 'light'});
- await context.addInitScript(()=>localStorage.setItem('tau.web.authToken','image-test-token'));
+ await context.addInitScript(()=>{try{localStorage.setItem('tau.web.authToken','image-test-token');}catch{}});
  const page=await context.newPage(); const errors=[];const missing=new Set();
  const scan=async(selector)=>{
   if(!process.env.TAU_SMOKE_AXE)return;
@@ -39,7 +39,8 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/extensions/frontend-modules') data={modules:[{extension_id:'fixture',module_id:'mounted',sdk_version:'1.0',integrity:extensionIntegrity,asset_url:'/api/extensions/assets/fixture/module.js'}]};
+  if(url.pathname==='/api/extensions/widgets/fixture/widget/actions/check') data={acknowledged:true};
+  else if(url.pathname==='/api/extensions/frontend-modules') data={modules:[{extension_id:'fixture',module_id:'mounted',sdk_version:'1.0',integrity:extensionIntegrity,asset_url:'/api/extensions/assets/fixture/module.js'}]};
   else if(url.pathname==='/api/extensions/assets/fixture/module.js') {
    expect(route.request().headers().authorization).toBe('Bearer image-test-token');
    return route.fulfill({contentType:'application/javascript',body:extensionSource});
@@ -107,6 +108,13 @@ try {
  await page.goto('http://127.0.0.1:8893/?session=smoke');
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
  await expect(page.locator('[data-extension-slot="compose_above"]')).toContainText('Extension mounted: Tau');
+ await page.evaluate(()=>{
+  const target=document.querySelector('[data-extension-slot="timeline_before"]');
+  window.tauExtensionUI.mountWidget(target,{extension_id:'fixture',id:'widget',title:'Widget bridge fixture',height:120,url:'/fixture'},`<body><script>addEventListener('message',e=>{if(e.data.source==='tau-host')document.body.textContent=JSON.stringify(e.data);});parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'check-1',kind:'action',name:'check',payload:{}},'*');<\/script>`);
+ });
+ await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('"acknowledged":true');
+ await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('"error":null');
+ await page.evaluate(()=>window.tauExtensionUI.removeWidget('fixture:widget'));
  const image=page.getByRole('img',{name:'fixture.png',exact:true});
  await expect(image).toBeVisible();
  await expect.poll(()=>image.evaluate(el=>el.naturalWidth)).toBe(1);

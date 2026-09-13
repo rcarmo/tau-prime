@@ -695,3 +695,11 @@ booleans; fixed bridge success/error calls and expectations. 49 unit tests/lint
 pass; bundles rebuilt. Attempted full iframe fixture did not receive reply yet
 and is preserved at /workspace/tmp/widget-iframe-failing.mjs for diagnosis, not
 counted as passing coverage. End-to-end widget action remains open.
+
+Widget iframe resolution/correction: actual preserved signature is
+respondWidget(frameId, requestId, {result,error}), NOT positional result/error.
+Previous 93e8e29 explanation was incorrect. Bridge now uses options object;
+actual sandboxed iframe action roundtrip verifies acknowledged result and null
+error in Chromium/WebKit. Fixture token init catches opaque-frame localStorage
+SecurityError (test injection only); source/origin validation unchanged. 49 unit
+tests/strict lint pass; built runtime updated. Submit/refresh remain pending.
