@@ -156,3 +156,12 @@ strings <=256 characters before dispatch. Tests reject malformed identities
 without requests and suppress both pending successful/error refresh completions
 after disposal. 56 unit tests/lint/build and Chromium/WebKit smoke pass.
 Runtime change requires refreshed final artifact; earlier wheel remains checkpoint.
+
+## Consolidated runtime checkpoint ff5deb1
+
+Full Python suite: 1313 passed. Full 12-case Chromium/WebKit responsive light/dark
+fixture workflow/Axe matrix passed after widget lifecycle fixes. Both engines'
+real Tau production-route authenticated login/workflow journeys passed with
+TAU_VIBES_TEST_CSP=1 (no captured CSP violations). These journeys still do not
+execute a provider. Worktree clean before recording these results. Current JS
+suite is 56 tests (last lint/build and JS run at ff5deb1 implementation).
