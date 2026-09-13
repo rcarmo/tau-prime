@@ -225,3 +225,10 @@ revision save and confirmed force reload. Loads preserve cached dirty drafts;
 saves markdown through CSRF-protected route and verifies persisted markdown.
 29 unit tests, lint/build pass. Conflict/reload/session-switch browser matrix,
 styling/accessibility and remote plan-update notifications remain pending.
+
+Real Plan conflict checkpoint: Chromium and WebKit against actual Tau server
+save a plan, apply an independent API revision, reject stale browser save with
+409, retain local draft, decline reload without loss, then confirm reload and
+verify remote markdown. Live harness supports TAU_LIVE_ENGINE=webkit. Both also
+verify workspace preview, archive/restore and SSE snapshot. 29 unit tests/lint
+pass. This is real database/revision evidence, not a provider-model execution.
