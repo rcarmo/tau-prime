@@ -442,3 +442,10 @@ queue, and avoids skipWaiting. Unit interception exclusions pass (57 total),
 as do build/lint. Worker is NOT registered/routed yet; no offline parity claim.
 Browser install/offline/upgrade tests must precede activation. Network-first
 navigation/version coexistence remains to review before enabling.
+
+Inactive offline worker positive unit paths: install passes omit/reload options
+for every exact public asset; offline root navigation with a session query falls
+back to cached '/' without storing the query URL. 58 unit tests/lint pass.
+Bun Request reports credentials=include even when constructed with omit here;
+unit uses an option-capture stub, so real-browser credential verification is still
+required. Worker remains unregistered and offline implementation incomplete.
