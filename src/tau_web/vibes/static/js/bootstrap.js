@@ -7,4 +7,9 @@ function showFailure(message) {
     error.textContent=`Unable to start Tau: ${message}`;
     root.replaceChildren(error);
 }
-import('/static/dist/app.js?v=1').catch(error=>showFailure(error.message||String(error)));
+async function start() {
+    await import('/static/extension-ui.js');
+    await import('/static/frontend-sdk.js');
+    await import('/static/dist/app.js?v=1');
+}
+start().catch(error=>showFailure(error.message||String(error)));

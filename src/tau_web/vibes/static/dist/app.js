@@ -2102,7 +2102,8 @@ ${a}
                         <span>${pn?`#${pn}`:`Search: ${Pn}`}</span>
                     </div>
                 `}
-                <${W4t} 
+                <div data-extension-slot="timeline_before"></div>
+                <${W4t}
                     posts=${g}
                     hasMore=${$r}
                     onLoadMore=${vg}
@@ -2127,6 +2128,9 @@ ${a}
                     formatTime=${P8n}
                     formatCount=${C8n}
                 />
+                <div data-extension-slot="timeline_after"></div>
+                <div data-extension-slot="dashboard"></div>
+                <div data-extension-slot="sidebar"></div>
                 <${u4t} onSelect=${te} />
                 <${f4t} />
                 <button type="button" class="compose-queue-btn" onClick=${()=>Rn(!0)}>Provider setup</button>
@@ -2156,6 +2160,7 @@ ${a}
                     onArchive=${async(Oe,xe)=>{await cne(Oe,{archived:xe});let nt=await IT(!0);if(B(nt.sessions),xe&&Oe===x.current){let yt=nt.sessions.find((un)=>!un.archived&&un.id!==Oe);if(yt)await te(yt.id);else{++T.current,x.current=null,y(null),b([]),nr(!1);let un=new URL(window.location.href);un.searchParams.delete("session"),window.history.replaceState(null,"",un),J("No active sessions. Create a session or restore an archived one.")}}}}
                     onPin=${void 0}
                     onDelete=${void 0} />`}
+                <div data-extension-slot="compose_above"></div>
                 <${X4t} key=${m} sessionId=${m}
                     sessionTrigger=${De`<button type="button" ref=${qe}
                         class=${`compose-session-trigger compose-session-trigger-pill${oe?" active":""}`}
@@ -2196,6 +2201,7 @@ ${a}
                     notificationPermission=${v1}
                     onToggleNotifications=${ww}
                 />
+                <div data-extension-slot="compose_below"></div>
                 ${Pe&&De`<${P6e} key=${Pe.id} name=${Pe.name} onClose=${()=>He(null)} onSave=${async(Oe)=>{await cne(Pe.id,{name:Oe}),await Bn()}} />`}
             ${Qt&&De`<${P6e} creating=${!0} parentName=${Bt.current?L.find((Oe)=>Oe.id===Bt.current)?.name||Bt.current:null} onClose=${()=>Nt(!1)} onSave=${async(Oe)=>{if(!Pt.current){let xe=await _3t(Oe,Bt.current);Pt.current=xe.session.id}await Bn(),await te(Pt.current)}} />`}
             ${Me&&De`<${v4t} key=${Me.id} name=${Me.name} onClose=${()=>rt(null)} onDelete=${async()=>{if(!$e.current)await I3t(Me.id),$e.current=!0;if(Me.id===m)await te("default");await Bn()}} />`}
@@ -2205,4 +2211,4 @@ ${a}
         </div>
     `}Q3t(De`<${L8n} />`,document.getElementById("app"));
 
-//# debugId=CDD95F7E92DE3DF864756E2164756E21
+//# debugId=2C589E042320C11A64756E2164756E21

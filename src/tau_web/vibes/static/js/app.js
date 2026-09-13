@@ -2600,7 +2600,8 @@ function App() {
                         <span>${currentHashtag ? `#${currentHashtag}` : `Search: ${searchQuery}`}</span>
                     </div>
                 `}
-                <${Timeline} 
+                <div data-extension-slot="timeline_before"></div>
+                <${Timeline}
                     posts=${posts}
                     hasMore=${hasMore}
                     onLoadMore=${loadMore}
@@ -2625,6 +2626,9 @@ function App() {
                     formatTime=${formatTime}
                     formatCount=${formatCount}
                 />
+                <div data-extension-slot="timeline_after"></div>
+                <div data-extension-slot="dashboard"></div>
+                <div data-extension-slot="sidebar"></div>
                 <${TauDashboard} onSelect=${selectSession} />
                 <${TauMeters} />
                 <button type="button" class="compose-queue-btn" onClick=${()=>setProviderSetupOpen(true)}>Provider setup</button>
@@ -2667,6 +2671,7 @@ function App() {
                     }}
                     onPin=${undefined}
                     onDelete=${undefined} />`}
+                <div data-extension-slot="compose_above"></div>
                 <${ComposeBox} key=${selectedSession} sessionId=${selectedSession}
                     sessionTrigger=${html`<button type="button" ref=${sessionTriggerRef}
                         class=${`compose-session-trigger compose-session-trigger-pill${sessionPickerOpen ? ' active' : ''}`}
@@ -2707,6 +2712,7 @@ function App() {
                     notificationPermission=${notificationPermission}
                     onToggleNotifications=${handleToggleNotifications}
                 />
+                <div data-extension-slot="compose_below"></div>
                 ${renamingSession && html`<${SessionNameDialog} key=${renamingSession.id} name=${renamingSession.name} onClose=${() => setRenamingSession(null)} onSave=${async name => { await updateSession(renamingSession.id, { name }); await refreshSessions(); }} />`}
             ${creatingSession && html`<${SessionNameDialog} creating=${true} parentName=${createParentRef.current ? (sessionOptions.find(item => item.id === createParentRef.current)?.name || createParentRef.current) : null} onClose=${() => setCreatingSession(false)} onSave=${async name => { if (!createdSessionRef.current) { const result = await createSession(name, createParentRef.current); createdSessionRef.current = result.session.id; } await refreshSessions(); await selectSession(createdSessionRef.current); }} />`}
             ${deletingSession && html`<${SessionDeleteDialog} key=${deletingSession.id} name=${deletingSession.name} onClose=${() => setDeletingSession(null)} onDelete=${async () => { if (!deletedSessionRef.current) { await deleteSession(deletingSession.id); deletedSessionRef.current = true; } if (deletingSession.id === selectedSession) await selectSession('default'); await refreshSessions(); }} />`}

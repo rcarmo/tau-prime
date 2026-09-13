@@ -10,6 +10,10 @@ export function createHandler({ backend = 'http://127.0.0.1:8080', fetchImpl = f
     if (!['http:', 'https:'].includes(target.protocol)) throw new Error('Expected an HTTP Tau backend');
     return async request => {
         const url = new URL(request.url);
+        if (process.env.TAU_VIBES_PROXY_ALL !== '1' && ['/static/extension-ui.js', '/static/frontend-sdk.js'].includes(url.pathname)) {
+            const path = resolve(root, '../../static', url.pathname.split('/').pop());
+            return new Response(Bun.file(path), {headers:{'Content-Type':'application/javascript'}});
+        }
         if (url.pathname.startsWith('/api/') || ['/meters', '/dashboard'].includes(url.pathname) || process.env.TAU_VIBES_PROXY_ALL === '1') {
             const upstream = new URL(url.pathname + url.search, target);
             const headers = new Headers(request.headers);

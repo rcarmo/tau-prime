@@ -655,3 +655,10 @@ listing and API-only authenticated request boundary with traversal/origin guards
 47 unit tests/lint/build pass. Actual SDK configure/loadAll, safe submit/navigation
 adapters and slot mounting are still pending; extension integration not restored
 by this transport preparation alone.
+
+Extension host prerequisite: external bootstrap loads preserved renderer/SDK
+before app; six stable slot roots restored in imported shell. Development server
+serves only the two exact preserved support-script names outside imported static
+root; production retains existing allowlist. 47 unit tests/lint/build, real root
+and smoke checks pass. SDK is loaded but not configured/activated yet; sidebar/
+dashboard slots are compatibility placements pending final layout review.
