@@ -826,7 +826,7 @@ function App() {
     const [extensionError,setExtensionError]=useState('');
     useEffect(()=>{
         let disposed=false;
-        const removeWidgetActions=installTauWidgetActions();
+        const removeWidgetActions=installTauWidgetActions({onError:error=>setExtensionError(error.message||'Widget refresh failed')});
         activateTauExtensions({getSessionId:()=>selectedSessionRef.current,navigate:id=>selectSession(id)})
             .then(result=>{if(!disposed&&result?.errors?.length)setExtensionError(result.errors.map(e=>e.message).join('; '));})
             .catch(error=>{if(!disposed)setExtensionError(error.message);});

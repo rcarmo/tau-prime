@@ -703,3 +703,9 @@ actual sandboxed iframe action roundtrip verifies acknowledged result and null
 error in Chromium/WebKit. Fixture token init catches opaque-frame localStorage
 SecurityError (test injection only); source/origin validation unchanged. 49 unit
 tests/strict lint pass; built runtime updated. Submit/refresh remain pending.
+
+Widget refresh checkpoint: fetches authenticated document from validated IDs,
+ignores event URL, bounds accepted document size and ignores stale/disposed
+refresh results. UI surfaces refresh errors. 50 unit tests/lint/build and real
+root regression pass. End-to-end refresh iframe assertion and bounded streaming
+read remain pending; size is checked after text buffering in this implementation.

@@ -53,6 +53,15 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async widgetDocument(extensionId, widgetId) {
+            if (![extensionId, widgetId].every(id => typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id))) throw new Error('Invalid widget identity');
+            const token = getToken();
+            const response = await fetchImpl(`/api/extensions/widgets/${encodeURIComponent(extensionId)}/${encodeURIComponent(widgetId)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Widget refresh failed (${response.status})`);
+            const text = await response.text();
+            if (new TextEncoder().encode(text).byteLength > 2 * 1024 * 1024) throw new Error('Widget document exceeds limit');
+            return text;
+        },
         async frontendModules() {
             return (await request('/extensions/frontend-modules')).modules;
         },
