@@ -24,6 +24,12 @@ def asset_names() -> frozenset[str]:
     return frozenset(json.loads(manifest.read_text(encoding='utf-8')))
 
 
+def index_response() -> web.Response:
+    resource = files('tau_web').joinpath('vibes', 'static', 'index.html')
+    return web.Response(body=resource.read_bytes(), content_type='text/html', charset='utf-8',
+                        headers={'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'})
+
+
 def asset_response(name: str) -> web.Response:
     if name not in asset_names() or any(part in {'.', '..'} for part in name.split('/')):
         raise web.HTTPNotFound(reason='Unknown frontend asset.')

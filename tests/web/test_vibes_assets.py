@@ -29,3 +29,42 @@ def test_public_manifest_matches_runtime_tree():
     expected = {path.relative_to(root).as_posix() for path in root.rglob('*')
                 if path.is_file() and path.suffix in suffixes}
     assert asset_names() == expected
+
+
+@pytest.fixture
+def anyio_backend():
+    return 'asyncio'
+
+
+@pytest.mark.anyio
+async def test_replacement_entrypoint_assets_over_http():
+    import re
+    from aiohttp.test_utils import TestClient, TestServer
+    from tau_web.routes.vibes_assets import index_response
+    app = web.Application()
+
+    async def root(request):
+        return index_response()
+
+    async def static(request):
+        return asset_response(request.match_info['name'])
+
+    async def manifest(request):
+        return asset_response('manifest.json')
+
+    app.router.add_get('/', root)
+    app.router.add_get('/manifest.json', manifest)
+    app.router.add_get('/static/{name:.*}', static)
+    async with TestClient(TestServer(app)) as client:
+        response = await client.get('/')
+        assert response.status == 200
+        html = await response.text()
+        assert '<title>Tau</title>' in html
+        for url in set(re.findall(r'(?:src|href)="([^"]+)"', html)):
+            asset = await client.get(url)
+            assert asset.status == 200, url
+            assert asset.headers['X-Content-Type-Options'] == 'nosniff'
+        for url in ('/static/dist/app.js', '/static/dist/app.css'):
+            assert (await client.get(url)).status == 200
+        assert (await client.get('/static/dist/app.js.map')).status == 404
+        assert (await client.get('/static/build.js')).status == 404

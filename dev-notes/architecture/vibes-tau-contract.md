@@ -539,3 +539,8 @@ Asset drift gate: frontend build now deterministically regenerates sorted public
 runtime manifest. Test compares allowlist exactly with runtime file suffixes;
 source maps/tooling remain excluded. Rebuild leaves tracked bundles/manifest
 unchanged; 17 asset/packaging tests pass. Production switch remains separate.
+
+Asset HTTP prerequisite: isolated aiohttp test serves packaged replacement index,
+manifest and explicit runtime files via helper, follows every index src/href and
+checks success/nosniff plus map/build denial. 18 asset/packaging tests pass. This
+is isolated route validation, not production router activation or new UI delivery.
