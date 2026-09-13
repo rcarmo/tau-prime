@@ -2284,7 +2284,7 @@ function App() {
                 const nextDraft = reduceTauDraft(tauDraftRef.current, {event,data}, selectedSessionRef.current);
                 if(nextDraft !== tauDraftRef.current) {
                     tauDraftRef.current = nextDraft; draftBufferRef.current = nextDraft.text;
-                    setAgentDraft({text:nextDraft.text,totalLines:estimateLineCount(nextDraft.text)});
+                    setAgentDraft({text:nextDraft.text,totalLines:estimatePreviewLines(nextDraft.text)});
                 }
                 if (event === 'tau.snapshot') {
                     refreshSessions().catch(error => setSessionRefreshError(error.message));

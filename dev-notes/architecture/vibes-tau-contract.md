@@ -441,3 +441,11 @@ chunked authenticated HTTP through proxy: split UTF-8, disconnect, Last-Event-ID
 reconnect and duplicate suppression verified (two connections). 41 unit tests,
 lint/build pass. This fixture server tests transport, not provider execution or
 complete application draft presentation.
+
+Application connected-state correction: new real browser assertion requires no
+connection toast and preserves connected state after focus. It caught snapshot
+handler's nonexistent estimateLineCount helper; replaced with existing
+estimatePreviewLines. Earlier workflow successes did not assert app connection
+health. Authenticated Chromium/WebKit now pass explicit connected/focus checks
+alongside previous workflows. 41 unit tests/lint/build pass; provider runs remain
+unverified. Diagnostic instrumentation removed before commit.

@@ -30,6 +30,10 @@ try {
  if(token)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
+ await expect(page.locator('.connection-status')).toHaveCount(0);
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await page.waitForTimeout(250);
+ await expect(page.locator('.connection-status')).toHaveCount(0);
  await expect(page.locator('.compose-box textarea')).toBeVisible();
  const thinking=await page.evaluate(async id=>{
   const api=await import('/static/js/api.js');await api.getSessionModelState(id);
