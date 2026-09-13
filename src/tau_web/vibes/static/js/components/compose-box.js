@@ -252,6 +252,15 @@ export function ComposeBox({
     useEffect(() => {
         composeDrafts.save(sessionId, { text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs });
     }, [content, mediaFiles, fileRefs, folderRefs, messageRefs, sessionId]);
+    useEffect(() => {
+        const warnPendingFiles = event => {
+            if (![...composeDrafts.files.values()].some(files => files.length)) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+        window.addEventListener('beforeunload', warnPendingFiles);
+        return () => window.removeEventListener('beforeunload', warnPendingFiles);
+    }, []);
     const [isDragActive, setIsDragActive] = useState(false);
     const [slashMatches, setSlashMatches] = useState([]);
     const [slashIndex, setSlashIndex] = useState(0);

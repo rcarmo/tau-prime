@@ -417,6 +417,10 @@ try {
  await expect(page).toHaveURL('http://127.0.0.1:8893/?session=smoke');
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
  await expect(composer).toHaveValue('Keep rejected draft');
+ await page.locator('.compose-box input[type="file"]').setInputFiles({name:'pending-navigation.txt',mimeType:'text/plain',buffer:Buffer.from('keep this file')});
+ await expect.poll(()=>page.evaluate(()=>{
+  const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;
+ })).toBe(true);
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
 }finally{await browser?.close();await stopChild(server);}

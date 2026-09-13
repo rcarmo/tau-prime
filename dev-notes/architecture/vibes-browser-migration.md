@@ -292,3 +292,11 @@ await real page navigation, assert explicit selected-session URL, persisted
 message and retained composer text draft. Same-session source link exercised;
 cross-session selection and nonpersistent File objects remain distinct cases.
 56 unit tests/lint pass. No production changes.
+
+Pending-file navigation protection: composer beforeunload handler checks all
+in-memory session file drafts and requests browser confirmation if any exist.
+Text-only drafts remain reloadable without warning. Chromium/WebKit fixture
+uploads a pending file then asserts cancellation of a synthetic beforeunload;
+this verifies handler behavior, not browser-native dialog policy. Initial test
+selected the workspace file input; corrected to composer input. 56 unit tests,
+lint/build and both smoke journeys pass. Runtime requires final wheel refresh.
