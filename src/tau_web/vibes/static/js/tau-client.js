@@ -45,6 +45,25 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async send(id, content, { mode = 'auto', mediaIds = [], intent = null } = {}) {
+            if (!id || id === 'default') throw new Error('Select a Tau session before sending');
+            if (!content?.trim()) throw new Error('Message is empty');
+            if (mediaIds.length) throw new Error('Tau attachment submission is not integrated yet');
+            if (intent || content.trimStart().startsWith('/')) throw new Error('Tau command submission is not integrated yet');
+            if (!['auto', 'steer', 'follow_up', 'queue'].includes(mode)) throw new Error('Unsupported Tau delivery mode');
+            if (mode === 'auto') {
+                const result = await request(`/sessions/${encodeURIComponent(id)}/runs`);
+                mode = result.runs.some(run => ['pending', 'running'].includes(run.status)) ? 'follow_up' : 'run';
+            }
+            if (mode === 'run') {
+                const run = await request(`/sessions/${encodeURIComponent(id)}/runs`, { method: 'POST', body: { content } });
+                return { accepted: true, run_id: run.run_id };
+            }
+            const item = await request(`/sessions/${encodeURIComponent(id)}/queue`, {
+                method: 'POST', body: { content, kind: mode === 'steer' ? 'steer' : 'follow_up' },
+            });
+            return { accepted: true, queued: true, queue_id: item.queue_id };
+        },
         async timeline(id, limit = 10, before = null) {
             if (!id || id === 'default') throw new Error('Select a real Tau session before loading messages');
             if (!Number.isInteger(limit) || limit < 1) throw new Error('Invalid timeline page size');

@@ -64,3 +64,11 @@ real session label, persisted text and model label render. Null-session polling
 is gated. Fourteen unit tests, build/lint and browser smoke pass. The smoke
 explicitly reports nine unimplemented endpoint families, with 501 fixture
 responses: not a full passing workflow or live backend/SSE validation.
+
+Text submit checkpoint: imported sendAgentMessage now uses Tau durable runs when
+idle and FIFO follow-up queue when a run is active; explicit steer is queued as
+steer. HTTP rejection throws before the composer success/clear path. Unsupported
+attachments/commands/thread submission fail explicitly. Sixteen tests/51
+assertions, lint/build pass. Busy detection and submission are separate requests;
+server contention errors must remain visible, not retried automatically. Actual
+composer send/clear browser tests and live SSE still required before release.

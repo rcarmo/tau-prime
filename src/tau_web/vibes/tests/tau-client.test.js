@@ -60,3 +60,22 @@ test('timeline rejects nonadvancing cursors', async()=> {
     const client=createTauClient({fetchImpl:async()=>Response.json({timeline:[{message_id:0}]})});
     await expect(client.timeline('one')).rejects.toThrow('cursor');
 });
+test('idle auto submission creates a durable run; busy submission queues follow-up', async()=> {
+    for (const busy of [false,true]) {
+        const calls=[];
+        const client=createTauClient({fetchImpl:async(path,options)=> {
+            calls.push({path,...options});
+            return Response.json(options.method==='GET' ? {runs:busy?[{status:'running'}]:[]} : {run_id:'run',queue_id:7});
+        }});
+        const result=await client.send('one','hello');
+        expect(result.accepted).toBe(true);
+        expect(calls[1].path).toBe(`/api/sessions/one/${busy?'queue':'runs'}`);
+        expect(JSON.parse(calls[1].body)).toEqual(busy?{content:'hello',kind:'follow_up'}:{content:'hello'});
+    }
+});
+test('unsupported attachments and commands fail before transport; rejection is not acceptance', async()=> {
+    const client=createTauClient({fetchImpl:async()=>Response.json({error:'rejected'},{status:409})});
+    await expect(client.send('one','hello',{mediaIds:[1]})).rejects.toThrow('attachment');
+    await expect(client.send('one','/compact')).rejects.toThrow('command');
+    await expect(client.send('one','hello',{mode:'steer'})).rejects.toThrow('rejected');
+});
