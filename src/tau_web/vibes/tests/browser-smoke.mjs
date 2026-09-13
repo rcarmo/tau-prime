@@ -120,6 +120,11 @@ try {
  await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('"error":null');
  await page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body').evaluate(()=>parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'refresh-1',kind:'refresh'},'*'));
  await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('Refreshed widget document');
+ await page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body').evaluate(()=>parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'prefill-1',kind:'submit',mode:'prefill',text:'Widget prefilled draft'},'*'));
+ await expect(page.locator('.compose-box textarea')).toHaveValue('Widget prefilled draft');
+ await page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body').evaluate(()=>parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'submit-1',kind:'submit',mode:'submit',text:'Widget submitted message'},'*'));
+ await expect(page.locator('.compose-box textarea')).toHaveValue('');
+ expect(submitted).toEqual([{content:'Widget submitted message'}]);submitted.length=0;
  await page.evaluate(()=>window.tauExtensionUI.removeWidget('fixture:widget'));
  const image=page.getByRole('img',{name:'fixture.png',exact:true});
  await expect(image).toBeVisible();

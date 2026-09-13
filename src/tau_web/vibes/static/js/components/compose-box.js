@@ -608,9 +608,11 @@ export function ComposeBox({
         finally { setLoading(false); }
     };
 
-    const handleSubmit = async (mode = 'auto') => {
+    const handleSubmit = async (mode = 'auto', overrideText = null) => {
+        if (loading) return;
+        const submittedText = overrideText ?? content;
         cancelSpeech();
-        if (!content.trim() && mediaFiles.length === 0 && fileRefs.length === 0 && folderRefs.length === 0 && messageRefs.length === 0) return;
+        if (!submittedText.trim() && mediaFiles.length === 0 && fileRefs.length === 0 && folderRefs.length === 0 && messageRefs.length === 0) return;
 
         setLoading(true);
         setSubmitError('');
@@ -636,7 +638,7 @@ export function ComposeBox({
 
             if (uploadController.current.signal.aborted) throw new DOMException('Upload cancelled', 'AbortError');
             setUploadProgress(null);
-            const baseContent = content.trim();
+            const baseContent = submittedText.trim();
             const fileBlock = fileRefs.length
                 ? `Files:\n${fileRefs.map((path) => `- ${path}`).join('\n')}`
                 : '';
@@ -692,6 +694,18 @@ export function ComposeBox({
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const receive = event => {
+            const detail = event.detail;
+            if (loading || searchMode || !detail || typeof detail.text !== 'string' || detail.text.length > 16384 || !['prefill', 'submit'].includes(detail.mode)) return;
+            setContent(detail.text);
+            textareaRef.current?.focus();
+            if (detail.mode === 'submit') void handleSubmit('auto', detail.text);
+        };
+        document.addEventListener('tau:widget-submit', receive);
+        return () => document.removeEventListener('tau:widget-submit', receive);
+    }, [loading, searchMode, sessionId, content, mediaFiles, fileRefs, folderRefs, messageRefs]);
 
     const handleKeyDown = (e) => {
         if (shouldStartSpeechPushToTalk(e, content, { searchMode, available: speechAvailable && !loading, active: !!speechRef.current })) {

@@ -720,3 +720,11 @@ Widget streaming bound: shared bounded reader now enforces 2 MiB widget-document
 limit during receipt, not after text buffering; declared/streamed excess cancels
 body. Existing 32 MiB media behavior unchanged. 51 unit tests/lint/build and
 Chromium widget action/refresh workflow pass. No provider/visual completion claim.
+
+Widget prefill/submit checkpoint: validated renderer event updates mounted
+composer state and submits via normal media/run/error path using explicit text
+override, not textarea mutation. Ignored while loading/search. Actual sandboxed
+iframe prefill/submit tested in Chromium/WebKit, exact payload/clear confirmed.
+51 unit tests/lint/build pass. Rejected widget submit retains override text through
+normal path but still needs explicit fixture assertion; concurrent event guard
+beyond rendered loading state remains to review.
