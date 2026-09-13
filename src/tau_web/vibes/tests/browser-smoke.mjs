@@ -24,7 +24,7 @@ try {
  };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
  const codeBoundaries=[['x\n'.repeat(39),false],['x\n'.repeat(40),true],['x'.repeat(24575)+'\n',false],['x'.repeat(24576)+'\n',true],['日'.repeat(8192)+'\n',true]];
- const codeFixture=Array.from({length:65},(_,i)=>`line ${i}: café 日本語`).join('\n');
+ let codeFixture=Array.from({length:65},(_,i)=>`line ${i}: café 日本語`).join('\n');
  await context.addInitScript(()=>{window.copiedCode=null;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedCode=text;}}});});
  const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); for(const [label,action] of [['Extension submit',()=>api.submit({text:'Extension message',mode:'run'})],['Extension navigate',()=>api.navigate('smoke')]]) { const button=document.createElement('button'); button.textContent=label; button.className='compose-queue-btn'; button.onclick=async()=>{try{await action();text.textContent=label+' accepted';}catch(error){text.textContent=error.message;}};container.append(button); } }); }`;
  const extensionIntegrity='sha256-'+createHash('sha256').update(extensionSource).digest('base64');
@@ -240,10 +240,18 @@ try {
  await approvals.getByRole('button',{name:'Deny bash',exact:true}).click();
  await expect(approvals.getByRole('button',{name:'Deny bash',exact:true})).toHaveCount(0);
  expect(decisions).toEqual([{decision:'deny'},{decision:'deny'}]);
+ await codeToggle.click();
+ await expect(codeToggle).toHaveAttribute('aria-expanded','true');
+ codeFixture='日'.repeat(8192);
  await composer.fill('Accepted browser message');
  await composer.press('Enter');
  await expect(composer).toHaveValue('');
  expect(submitted).toEqual([{content:'Accepted browser message'}]);
+ await expect.poll(()=>codePost.locator('pre code').textContent()).toBe(codeFixture+'\n');
+ await expect(codeToggle).toHaveAttribute('aria-expanded','false');
+ await expect(codeToggle).toContainText('24577 bytes');
+ await expect(codePost.locator('.post-code-block')).toHaveCount(1);
+ await expect(codePost.locator('.post-code-copy-btn')).toHaveCount(1);
  rejectSend=true;
  await composer.fill('Keep rejected draft');
  await composer.press('Enter');

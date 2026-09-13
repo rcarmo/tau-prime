@@ -68,3 +68,9 @@ Collapse boundary browser fixtures now verify 39/40 newline-terminated lines,
 24576/24577-byte code, and 8192 Japanese characters plus newline (24577 UTF-8
 bytes). Exact rendered contents retained; Chromium desktop/WebKit phone pass,
 as do 51 unit tests and lint. Content-replacement expansion reset still pending.
+
+Content replacement reset verified: expand post 4, change same-ID fixture text,
+then refresh through accepted composer send. Chromium/WebKit assert new Unicode
+contents, collapsed state, updated byte label and single wrapper/copy control.
+51 unit tests/lint pass. Code collapse lifecycle coverage now includes initial
+state, thresholds, keyboard focus, complete copy, and same-ID replacement reset.
