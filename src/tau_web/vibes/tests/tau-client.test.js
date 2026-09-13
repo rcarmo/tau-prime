@@ -181,3 +181,14 @@ test('persisted attachments retain stable media metadata only',async()=>{
  const post=postFromTau({content_blocks_json:JSON.stringify({attachments:[attachment,null,{}]})});
  expect(post.data.tau_attachments).toEqual([attachment]);
 });
+test('media buffering rejects oversized declared and streamed bodies',async()=>{
+ for(const declared of [true,false]){
+  let cancelled=false;
+  const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({start(c){if(!declared)c.enqueue(new Uint8Array(32*1024*1024+1));},cancel(){cancelled=true;}}),{headers:declared?{'Content-Length':String(32*1024*1024+1)}:{}})});
+  await expect(client.mediaBlob('large')).rejects.toThrow('32 MiB');expect(cancelled).toBe(true);
+ }
+});
+test('bounded media reader preserves bytes and content type',async()=>{
+ const client=createTauClient({fetchImpl:async()=>new Response('café',{headers:{'Content-Type':'text/plain'}})});
+ const blob=await client.mediaBlob('small');expect(blob.type).toStartWith('text/plain');expect(await blob.text()).toBe('café');
+});

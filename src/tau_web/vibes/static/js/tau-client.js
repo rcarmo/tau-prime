@@ -66,7 +66,22 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             if (token) headers.Authorization = `Bearer ${token}`;
             const response = await fetchImpl(`/api/media/${encodeURIComponent(id)}/content`, { headers, credentials: 'same-origin' });
             if (!response.ok) throw new Error(`Tau download failed (${response.status})`);
-            return response.blob();
+            const limit = 32 * 1024 * 1024;
+            if (Number(response.headers.get('Content-Length')) > limit) {
+                await response.body?.cancel();
+                throw new Error('Media exceeds the 32 MiB browser download limit');
+            }
+            if (!response.body) throw new Error('Tau media response has no body');
+            const reader = response.body.getReader(); const chunks = []; let size = 0;
+            try {
+                while (true) {
+                    const { value, done } = await reader.read(); if (done) break;
+                    size += value.byteLength;
+                    if (size > limit) throw new Error('Media exceeds the 32 MiB browser download limit');
+                    chunks.push(value);
+                }
+                return new Blob(chunks, { type: response.headers.get('Content-Type') || 'application/octet-stream' });
+            } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
         },
         async upload(file, { sessionId, signal } = {}) {
             if (!sessionId || sessionId === 'default') throw new Error('Select a session before uploading');

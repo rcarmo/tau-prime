@@ -478,3 +478,9 @@ URLs and returned API fallback. Non-HTTP URLs now pass through untouched; no
 production preview workaround needed. All 12 image/workflow/whole-page Axe cases
 pass, including naturalWidth=1, blob source and bearer header checks. 42 unit
 tests and strict lint pass. Supersedes unresolved 2445799 finding with evidence.
+
+Media memory bound: authenticated blob reader enforces 32 MiB on declared length
+and actual streamed bytes, cancelling oversized bodies and preserving content
+type/bytes for valid downloads. This is a deliberate browser safety limit, not a
+backend quota change; larger media errors visibly instead of unbounded buffering.
+44 unit tests/lint/build and authenticated real download regression pass.
