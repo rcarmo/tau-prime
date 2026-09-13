@@ -319,3 +319,10 @@ contrast via local CSS. Wait for finite animations before contrast scans.
 All cases pass no serious/critical violations in exercised states; collapsed
 Plan/media interiors and runtime loading/error states are not covered by this
 claim. No vendor CSS changed; visual paired review still pending.
+
+Thinking policy checkpoint: imported catalogue lists Tau's six configurable
+policy values (not per-model reasoning discovery); mutation uses /thinking with
+loaded expected_updated_at. 33 unit tests/lint/build pass. Both authenticated
+real browser API checks change policy to high successfully. Initial live run hit
+an orphaned dev server (404); removed that stale process and reran successfully.
+Harness port collision/cleanup hardening and picker UI interaction remain pending.

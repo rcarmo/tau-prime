@@ -217,11 +217,22 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
                 available: true, source: catalogue.source,
                 models: [...models.values()],
                 current_model: { provider: session.provider_name, id: session.model },
-                // Tau does not advertise per-model reasoning capabilities.
-                thinking_levels: [],
+                // Configurable Tau policy values, not discovered model capabilities.
+                thinking_levels: ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'],
             };
         },
-        async changeModel(id, { provider, model_id: model }) {
+        async changeModel(id, changes) {
+            const { provider, model_id: model } = changes;
+            if (Object.hasOwn(changes, 'thinking_level')) {
+                const level = changes.thinking_level;
+                if (level !== null && !['off', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(level)) throw new Error('Invalid Tau thinking level');
+                if (!revisions.has(id)) throw new Error('Load model state before changing it');
+                const session = await request(`/sessions/${encodeURIComponent(id)}/thinking`, {
+                    method: 'PATCH', body: { thinking_level: level, expected_updated_at: revisions.get(id) },
+                });
+                revisions.set(id, session.updated_at);
+                return { available: true, model: { provider: session.provider_name, id: session.model, name: session.model }, thinking_level: session.thinking_level };
+            }
             if (!provider || !model) throw new Error('A provider and model are required');
             if (!revisions.has(id)) throw new Error('Load model state before changing it');
             const session = await request(`/sessions/${encodeURIComponent(id)}/model`, {

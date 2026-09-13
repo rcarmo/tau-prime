@@ -26,6 +26,11 @@ try {
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-box textarea')).toBeVisible();
+ const thinking=await page.evaluate(async id=>{
+  const api=await import('/static/js/api.js');await api.getSessionModelState(id);
+  return api.changeSessionModel(id,{thinking_level:'high'});
+ },session.session_id);
+ expect(thinking.thinking_level).toBe('high');
  const mediaCheck=await page.evaluate(async sessionId=>{
   const {uploadMedia}=await import('/static/js/api.js');
   const content='Real media fixture: café 日本語';

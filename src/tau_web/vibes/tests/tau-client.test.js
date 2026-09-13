@@ -28,7 +28,7 @@ test('catalogue deduplicates observed pairs and retains current model without in
     const result=await client.models('one');
     expect(result.models).toEqual([{id:'model',provider:'provider',name:'model'}]);
     expect(result.source).toBe('sessions');
-    expect(result.thinking_levels).toEqual([]);
+    expect(result.thinking_levels).toEqual(['off','minimal','low','medium','high','xhigh']);
 });
 test('model change uses displayed revision and propagates conflict without retry', async () => {
     const calls=[];
@@ -164,4 +164,10 @@ test('persisted tool metadata survives projection and malformed payload keeps te
  expect(post.data.tau_tool_calls[0].name).toBe('bash');
  expect(postFromTau({role:'tool',content:'failure',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call',ok:false})}).data.tau_tool_result.ok).toBe(false);
  expect(postFromTau({content:'readable',content_blocks_json:'broken'}).data.content).toBe('readable');
+});
+test('thinking policy uses dedicated endpoint and loaded revision without asserting reasoning support',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({...session,updated_at:'r1',thinking_level:'high'});}});
+ await client.modelState('one');const state=await client.changeModel('one',{thinking_level:'high'});
+ expect(calls[1].path).toBe('/api/sessions/one/thinking');expect(JSON.parse(calls[1].body)).toEqual({thinking_level:'high',expected_updated_at:'r1'});
+ expect(state.model.reasoning).toBeUndefined();expect(state.thinking_level).toBe('high');
 });
