@@ -322,3 +322,8 @@ active-descendant relationships added. Expanded composer Axe scope exposed
 2.5:1 command-name contrast; local primary-text override fixes it without vendor
 CSS edits. Chromium/WebKit verify relationships and completion with Axe enabled;
 56 unit tests/lint/build pass. No screen-reader usability claim from Axe alone.
+
+Viewport resize migration: Chromium/WebKit expand composer to maximum, shrink
+viewport height to 500px, assert actual height and aria-valuenow/max clamp to
+250px, preserve draft, then restore original viewport and bounds. 56 unit tests
+and lint pass. This is viewport resize, not mobile virtual-keyboard emulation.

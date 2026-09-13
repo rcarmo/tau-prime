@@ -428,6 +428,14 @@ try {
  await expect(resize).not.toHaveClass(/dragging/);
  expect(await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}))).toEqual(originalBodyStyle);
  await expect(composer).toHaveValue('Keep rejected draft');
+ await resize.focus();await resize.press('End');
+ await page.setViewportSize({width:viewport.width,height:500});
+ await expect(resize).toHaveAttribute('aria-valuemax','250');
+ await expect(resize).toHaveAttribute('aria-valuenow','250');
+ expect(await composer.evaluate(el=>Math.round(el.getBoundingClientRect().height))).toBe(250);
+ await expect(composer).toHaveValue('Keep rejected draft');
+ await page.setViewportSize(viewport);
+ await expect(resize).toHaveAttribute('aria-valuemax',String(maxHeight));
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.keyboard.press('Control+k');
  await composer.fill('Matched');await composer.press('Enter');
