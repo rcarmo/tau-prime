@@ -648,3 +648,10 @@ polling pauses while selecting and successful refresh preserves selection errors
 until next explicit selection. Chromium/WebKit fixture checks hold failure alert
 past a 3.2s poll interval; 46 unit tests/lint/build pass. Full matrix rerun deferred
 until next consolidated checkpoint, not claimed from these two targets.
+
+Extension boundary inventory: SDK requires fetchAsset/request/submit/navigate and
+six slot roots; preserving JS routes alone did not initialize these. Added module
+listing and API-only authenticated request boundary with traversal/origin guards.
+47 unit tests/lint/build pass. Actual SDK configure/loadAll, safe submit/navigation
+adapters and slot mounting are still pending; extension integration not restored
+by this transport preparation alone.

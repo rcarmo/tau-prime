@@ -53,6 +53,15 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async frontendModules() {
+            return (await request('/extensions/frontend-modules')).modules;
+        },
+        async extensionRequest(path, options = {}) {
+            if (typeof path !== 'string' || !path.startsWith('/api/') || path.includes('\\') || path.includes('#')) throw new Error('Invalid extension API path');
+            const url = new URL(path, 'http://tau.invalid');
+            if (url.origin !== 'http://tau.invalid' || !url.pathname.startsWith('/api/')) throw new Error('Invalid extension API path');
+            return request(url.pathname.slice(4) + url.search, options);
+        },
         async dashboard(page = 1) {
             const token = getToken();
             const response = await fetchImpl(`/dashboard?page=${page}&page_size=8`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin' });

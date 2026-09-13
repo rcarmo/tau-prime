@@ -197,3 +197,9 @@ test('branch selection submits explicit leaf rather than creating a child sessio
  await client.selectBranch('one','leaf');expect(calls[0].path).toBe('/api/sessions/one/branches/select');expect(JSON.parse(calls[0].body)).toEqual({leaf_entry_id:'leaf'});
  await expect(client.selectBranch('one','')).rejects.toThrow('valid conversation leaf');
 });
+test('extension requests stay inside Tau API and retain authentication',async()=>{
+ const calls=[];const client=createTauClient({getToken:()=> 'fixture',fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({modules:[]});}});
+ expect(await client.frontendModules()).toEqual([]);
+ await client.extensionRequest('/api/settings');expect(calls[1].path).toBe('/api/settings');expect(calls[1].headers.Authorization).toBe('Bearer fixture');
+ for(const path of ['https://outside/api/x','//outside/api/x','/api/../outside','/outside'])await expect(client.extensionRequest(path)).rejects.toThrow('Invalid');
+});
