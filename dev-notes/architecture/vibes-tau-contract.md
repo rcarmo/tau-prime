@@ -709,3 +709,9 @@ ignores event URL, bounds accepted document size and ignores stale/disposed
 refresh results. UI surfaces refresh errors. 50 unit tests/lint/build and real
 root regression pass. End-to-end refresh iframe assertion and bounded streaming
 read remain pending; size is checked after text buffering in this implementation.
+
+Widget refresh iframe checkpoint: Chromium desktop/WebKit phone send refresh
+from actual opaque-origin iframe, assert authenticated identity-derived document
+fetch and updated frame text, then remove frame. Action roundtrip remains green.
+50 unit tests/lint pass. Widget prefill/submit and document streaming bound remain
+pending; test does not weaken iframe sandbox/origin checks.

@@ -39,6 +39,10 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
+  if(url.pathname==='/api/extensions/widgets/fixture/widget') {
+   expect(route.request().headers().authorization).toBe('Bearer image-test-token');
+   return route.fulfill({contentType:'text/html',body:'<!doctype html><p>Refreshed widget document</p>'});
+  }
   if(url.pathname==='/api/extensions/widgets/fixture/widget/actions/check') data={acknowledged:true};
   else if(url.pathname==='/api/extensions/frontend-modules') data={modules:[{extension_id:'fixture',module_id:'mounted',sdk_version:'1.0',integrity:extensionIntegrity,asset_url:'/api/extensions/assets/fixture/module.js'}]};
   else if(url.pathname==='/api/extensions/assets/fixture/module.js') {
@@ -114,6 +118,8 @@ try {
  });
  await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('"acknowledged":true');
  await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('"error":null');
+ await page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body').evaluate(()=>parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'refresh-1',kind:'refresh'},'*'));
+ await expect(page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body')).toContainText('Refreshed widget document');
  await page.evaluate(()=>window.tauExtensionUI.removeWidget('fixture:widget'));
  const image=page.getByRole('img',{name:'fixture.png',exact:true});
  await expect(image).toBeVisible();
