@@ -88,3 +88,13 @@ state, thresholds, keyboard focus, complete copy, and same-ID replacement reset.
 These are source-tree production-route tests, not a refreshed installed wheel.
 Paired visual review, provider execution, final artifact and remaining legacy
 behavioral gaps remain separate gates.
+
+## Installed artifact refresh: 52b4bb1
+
+Two wheels built with SOURCE_DATE_EPOCH=1789344000 compare byte-identically.
+Fresh venv wheel install with the declared [web] extra passes Chromium/WebKit
+production-route authenticated login-UI journeys via TAU_BROWSER_BIN, which
+removes checkout PYTHONPATH. Initial attempts without dependencies/web extra
+failed startup; corrected by installing the declared extra, not source imports.
+Artifact and checksums: /workspace/tmp/tau-vibes-52b4bb1/{a,SHA256SUMS}.
+This refresh does not establish live-provider execution or paired visual approval.
