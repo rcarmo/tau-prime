@@ -15,3 +15,20 @@ test('widget refresh uses identity and ignores event URL',async()=>{
  target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail:{frame_id:'ext:widget',extension_id:'ext',widget_id:'widget',url:'https://untrusted.invalid'}}));await Bun.sleep(0);
  expect(calls).toEqual([['ext','widget']]);expect(updates).toEqual([['ext:widget','<p>Updated</p>']]);dispose();
 });
+test('new refresh suppresses earlier failure and disposal suppresses pending action reply',async()=>{
+ const target=new EventTarget(),pending=[],updates=[],errors=[],replies=[];
+ let finishAction;
+ const dispose=installTauWidgetActions({target,renderer:{refreshWidget:(...args)=>updates.push(args),respondWidget:(...args)=>replies.push(args)},onError:error=>errors.push(error),client:{
+  widgetDocument:()=>new Promise((resolve,reject)=>pending.push({resolve,reject})),
+  extensionRequest:()=>new Promise(resolve=>{finishAction=resolve;}),
+ }});
+ const detail={frame_id:'frame',extension_id:'ext',widget_id:'widget',request_id:'request',name:'click'};
+ target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail}));
+ target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail}));
+ pending[1].resolve('new document');await Bun.sleep(0);
+ pending[0].reject(new Error('stale failure'));await Bun.sleep(0);
+ expect(updates).toEqual([['frame','new document']]);expect(errors).toEqual([]);
+ target.dispatchEvent(new CustomEvent('tau:widget-action',{detail}));
+ dispose();finishAction({ok:true});await Bun.sleep(0);
+ expect(replies).toEqual([]);
+});

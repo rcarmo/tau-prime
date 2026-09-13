@@ -137,3 +137,10 @@ exact 2 MiB Unicode document survives split multibyte chunks; truncated stream
 propagates failure rather than returning partial document. Existing streamed
 oversize cancellation remains covered. 54 unit tests/166 assertions and lint pass.
 No production changes; tests exercise Tau client streams, not browser rendering.
+
+Widget lifecycle correction: superseded refresh failures now use the same
+per-frame generation check as successes; action completions/errors are suppressed
+after adapter disposal. Deferred-response regression verifies newer refresh wins,
+stale failure is ignored and disposed action emits no response. 55 unit tests,
+lint/build and Chromium/WebKit smoke pass. Updated runtime requires final wheel
+refresh; 52b4bb1 artifact does not contain this correction.
