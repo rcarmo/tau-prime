@@ -114,6 +114,7 @@ try {
    {message_id:2,session_id:'smoke',role:'assistant',content:'',created_at:'2026-09-13T19:00:01Z',content_blocks_json:JSON.stringify({tool_calls:[{id:'call-fixture',name:'bash',arguments:{command:'<img src=x onerror="window.toolInjected=true">'}}]})},
    {message_id:3,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
    {message_id:4,session_id:'smoke',role:'assistant',content:'```text\n'+codeFixture+'\n```',created_at:'2026-09-13T19:00:03Z'},
+   {message_id:5,session_id:'smoke',role:'assistant',content:'# Review\n\n**Ready** and `inline code`.\n\n- First\n- Second\n\n[Unsafe](javascript:alert(1)) <img src="x" onerror="window.markdownInjected=true"><script>window.markdownInjected=true</script>',created_at:'2026-09-13T19:00:04Z'},
    ...codeBoundaries.map(([text],i)=>({message_id:10+i,session_id:'smoke',role:'assistant',content:'```text\n'+text+'```',created_at:'2026-09-13T19:00:04Z'})),
   ]};
   else {missing.add(url.pathname);return route.fulfill({status:501,contentType:'application/json',body:JSON.stringify({error:'Not integrated'})});}
@@ -173,6 +174,13 @@ try {
   expect(await block.locator('code').textContent()).toBe(text);
  }
  await expect(page.locator('#post-14 .tau-code-toggle')).toContainText('24577 bytes');
+ const markdownPost=page.locator('#post-5 .post-content');
+ await expect(markdownPost.locator('h1')).toHaveText('Review');
+ await expect(markdownPost.locator('strong')).toHaveText('Ready');
+ await expect(markdownPost.locator('li')).toHaveCount(2);
+ await expect(markdownPost.locator('code')).toHaveText('inline code');
+ await expect(markdownPost.locator('script, [onerror], a[href^="javascript:"]')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.markdownInjected)).toBeUndefined();
  const codePost=page.locator('#post-4');
  const codeBlock=codePost.locator('.post-code-block');
  const codeToggle=codeBlock.locator('.tau-code-toggle');

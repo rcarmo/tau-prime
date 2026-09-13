@@ -333,6 +333,21 @@ function decodeTextEntities(html) {
 /**
  * Render markdown and then linkify hashtags
  */
+function removeUnsafeMarkdownUrls(markup) {
+    const template = document.createElement('template');
+    template.innerHTML = markup;
+    for (const element of template.content.querySelectorAll('[href], [src]')) {
+        for (const attribute of ['href', 'src']) {
+            if (!element.hasAttribute(attribute)) continue;
+            try {
+                const url = new URL(element.getAttribute(attribute), location.href);
+                if (!['http:', 'https:', 'mailto:'].includes(url.protocol)) element.removeAttribute(attribute);
+            } catch { element.removeAttribute(attribute); }
+        }
+    }
+    return template.innerHTML;
+}
+
 function renderMarkdown(text, onHashtagClick) {
     if (!text) return '';
 
@@ -348,7 +363,7 @@ function renderMarkdown(text, onHashtagClick) {
     const safeHtml = restoreAllowedHtmlTags(escaped);
 
     // Render markdown to HTML (preserve escaped HTML)
-    let html_content = marked.parse(safeHtml, { headerIds: false, mangle: false });
+    let html_content = removeUnsafeMarkdownUrls(marked.parse(safeHtml, { headerIds: false, mangle: false }));
 
     html_content = decodeCodeEntities(html_content);
     html_content = decodeTextEntities(html_content);
@@ -415,7 +430,7 @@ function renderThinkingMarkdown(text) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
     const safeHtml = restoreAllowedHtmlTags(escaped);
-    let html_content = marked.parse(safeHtml);
+    let html_content = removeUnsafeMarkdownUrls(marked.parse(safeHtml));
     html_content = decodeCodeEntities(html_content);
     html_content = decodeTextEntities(html_content);
     return html_content;

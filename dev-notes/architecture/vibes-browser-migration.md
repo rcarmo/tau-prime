@@ -200,3 +200,11 @@ including deterministic same-turn logout token clearing, Plan/media Axe scopes
 and CSP capture assertions. This closes the reproduced stale-token logout race.
 Artifact/checksums/log: /workspace/tmp/tau-vibes-87aebdb/. Still not provider
 execution, offline parity, comprehensive legacy parity or paired visual approval.
+
+Markdown safety migration found Markdown-generated javascript: links surviving
+raw-HTML escaping. Normal/thinking Markdown now removes href/src protocols other
+than HTTP(S)/mailto after parsing. Chromium/WebKit verify semantic headings,
+emphasis, lists, inline code and absence of scripts/event handlers/javascript
+links in the fixture; 56 unit tests/lint/build pass. Literal-user test remains
+pending (initial fixture exceeded the ten-post initial page and was removed).
+Final wheel must be refreshed for this runtime safety correction.
