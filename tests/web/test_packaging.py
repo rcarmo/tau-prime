@@ -128,3 +128,12 @@ def test_imported_runtime_bundle_is_available_without_bun():
     for name in ('app.js', 'app.css'):
         path = files['tau_web/vibes/static/dist/' + name]
         assert path.stat().st_size > 1000
+
+
+def test_offline_worker_runtime_and_build_inputs_are_packaged() -> None:
+    package_paths = {relative for _, relative in build_backend._package_files()}
+    assert 'tau_web/vibes/static/offline-sw.js' in package_paths
+    assert 'tau_web/vibes/offline-worker.js' not in package_paths
+    source_paths = {path.relative_to(build_backend.ROOT).as_posix() for path in build_backend._source_files()}
+    assert 'src/tau_web/vibes/offline-worker.js' in source_paths
+    assert 'src/tau_web/vibes/build.js' in source_paths

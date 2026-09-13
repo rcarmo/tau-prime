@@ -491,3 +491,9 @@ asset fetch/cache write fails and installation rejects. Regression verifies one
 successful entry then failed asset removes only owned current cache. 60 unit
 tests/lint/build and Chromium full-app offline/upgrade harness pass. Worker still
 inactive in production; no offline acceptance completion claim.
+
+Offline packaging regression: generated worker included in wheel; worker template
+and build.js retained in source distribution inputs, template excluded from
+runtime package. Packaging/build backend suite 13 pass. Initial assertion treated
+archive-name strings as Paths; corrected test, no packaging implementation change.
+Production offline registration still disabled.
