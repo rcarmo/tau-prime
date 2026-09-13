@@ -13,7 +13,12 @@ export function TauProviderSetup({onClose}) {
  };
  const [credential,setCredential]=useState('');const [error,setError]=useState('');
  const [loading,setLoading]=useState(true);const [busy,setBusy]=useState(false);
- const panel=useRef(null);const pending=useRef(false);
+ const panel=useRef(null);const pending=useRef(false);const dirty=useRef(false);
+ const requestClose=()=>{
+  if(pending.current)return;
+  if(dirty.current&&!window.confirm('Discard unsaved provider and token edits?'))return;
+  onClose();
+ };
  useEffect(()=>{
   let disposed=false;const previous=document.activeElement;
   const isolated=[];
@@ -35,14 +40,14 @@ export function TauProviderSetup({onClose}) {
   catch(e){setError(e.message);pending.current=false;setBusy(false);}
  };
  const keys=event=>{
-  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(!busy)onClose();}
+  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(!busy)requestClose();}
   if(event.key!=='Tab')return;
   const items=[...panel.current.querySelectorAll('input:not(:disabled),button:not(:disabled)')];
   if(event.shiftKey&&document.activeElement===items[0]){event.preventDefault();items.at(-1)?.focus();}
   if(!event.shiftKey&&document.activeElement===items.at(-1)){event.preventDefault();items[0]?.focus();}
  };
- return html`<div class="rename-branch-overlay" onPointerDown=${e=>{if(e.target===e.currentTarget&&!busy)onClose();}}>
- <form ref=${panel} class="rename-branch-panel" role="dialog" aria-modal="true" aria-labelledby="tau-provider-title" onSubmit=${submit} onKeyDown=${keys}>
+ return html`<div class="rename-branch-overlay" onPointerDown=${e=>{if(e.target===e.currentTarget&&!busy)requestClose();}}>
+ <form ref=${panel} class="rename-branch-panel" role="dialog" aria-modal="true" aria-labelledby="tau-provider-title" onSubmit=${submit} onKeyDown=${keys} onInput=${()=>{dirty.current=true;}}>
  <h2 id="tau-provider-title">Provider setup</h2>
  <label>Tau bearer token<input name="tau-access-token" type="password" autocomplete="off" class="rename-branch-input" value=${token} disabled=${busy} onInput=${e=>setToken(e.target.value)}/></label>
  <button type="button" disabled=${busy} onClick=${saveToken}>Save token and reload</button>
@@ -52,6 +57,6 @@ export function TauProviderSetup({onClose}) {
  <label>Credential (leave blank to retain)<input type="password" autocomplete="off" class="rename-branch-input" value=${credential} disabled=${busy||loading} onInput=${e=>setCredential(e.target.value)} /></label>
  <p class="rename-branch-help">Uses Tau's provider configuration. Credentials are sent only to Tau and are not stored in browser storage.</p>
  ${error&&html`<div role="alert">${error}</div>`}
- <div class="rename-branch-actions"><button type="submit" disabled=${loading||busy||!provider.trim()||!model.trim()}>${busy?'Saving…':'Save provider'}</button><button type="button" disabled=${busy} onClick=${onClose}>Cancel</button></div>
+ <div class="rename-branch-actions"><button type="submit" disabled=${loading||busy||!provider.trim()||!model.trim()}>${busy?'Saving…':'Save provider'}</button><button type="button" disabled=${busy} onClick=${requestClose}>Cancel</button></div>
  </form></div>`;
 }

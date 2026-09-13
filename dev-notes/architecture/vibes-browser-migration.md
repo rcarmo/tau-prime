@@ -250,3 +250,10 @@ Vibes-owned surfaces, not a recreation of the old category DOM.
   remain unused by exposed controls; do not claim server preference support.
 - Existing installed Axe scopes cover Plan/media, not all runtime/model surfaces;
   fixture provider-modal scans do not substitute for that remaining audit.
+
+Provider close draft protection: Cancel/Escape/backdrop now require explicit
+confirmation after any input edit; pending saves cannot dismiss. Declining keeps
+mounted form/error state. Chromium/WebKit verify cancelled Cancel/Escape after
+failed provider save preserves model/error/focus, then normal save succeeds.
+56 unit tests/lint/build pass. Credentials stay in component memory only; no new
+browser persistence. Confirmed discard/backdrop browser cases remain to verify.

@@ -328,6 +328,14 @@ try {
  await expect(setup.getByRole('alert')).toHaveText('Fixture provider rejection');
  await expect(setup.getByLabel('Model',{exact:true})).toHaveValue('updated-model');
  await expect(setup.getByLabel('Model',{exact:true})).toBeEnabled();
+ page.once('dialog',dialog=>dialog.dismiss());
+ await setup.getByRole('button',{name:'Cancel',exact:true}).click();
+ await expect(setup.getByLabel('Model',{exact:true})).toHaveValue('updated-model');
+ await expect(setup.getByRole('alert')).toHaveText('Fixture provider rejection');
+ page.once('dialog',dialog=>dialog.dismiss());
+ await setup.getByLabel('Model',{exact:true}).press('Escape');
+ await expect(setup.getByLabel('Model',{exact:true})).toBeFocused();
+ await expect(setup.getByLabel('Model',{exact:true})).toHaveValue('updated-model');
  rejectSetup=false;
  await setup.getByRole('button',{name:'Save provider',exact:true}).click();
  await expect(setup).toHaveCount(0);
