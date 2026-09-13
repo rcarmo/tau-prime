@@ -216,7 +216,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             if (mediaIds.some(id => typeof id !== 'string' || !id || /[\r\n\[\]]/.test(id))) throw new Error('Invalid Tau attachment reference');
             if (mediaIds.length) content += '\n\nAttachments (uploaded separately; references only, not inline media):\n' + mediaIds.map(id => `- [media:${id}]`).join('\n');
             if (intent || content.trimStart().startsWith('/')) throw new Error('Tau command submission is not integrated yet');
-            if (!['auto', 'steer', 'follow_up', 'queue'].includes(mode)) throw new Error('Unsupported Tau delivery mode');
+            if (!['auto', 'run', 'steer', 'follow_up', 'queue'].includes(mode)) throw new Error('Unsupported Tau delivery mode');
             if (mode === 'auto') {
                 const result = await request(`/sessions/${encodeURIComponent(id)}/runs`);
                 mode = result.runs.some(run => ['pending', 'running'].includes(run.status)) ? 'follow_up' : 'run';

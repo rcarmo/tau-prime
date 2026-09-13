@@ -1,3 +1,4 @@
+import { activateTauExtensions } from './tau-extensions.js';
 import { TauDashboard } from './components/tau-dashboard.js';
 import { TauMeters } from './components/tau-meters.js';
 import { TauBranches } from './components/tau-branches.js';
@@ -821,6 +822,14 @@ function App() {
         });
         return () => { disposed = true; };
     }, []);
+    const [extensionError,setExtensionError]=useState('');
+    useEffect(()=>{
+        let disposed=false;
+        activateTauExtensions({getSessionId:()=>selectedSessionRef.current,navigate:id=>selectSession(id)})
+            .then(result=>{if(!disposed&&result?.errors?.length)setExtensionError(result.errors.map(e=>e.message).join('; '));})
+            .catch(error=>{if(!disposed)setExtensionError(error.message);});
+        return()=>{disposed=true;window.tauFrontendSDK?.disposeAll();};
+    },[]);
     const [agentPlan, setAgentPlan] = useState('');
     const [agentThought, setAgentThought] = useState({ text: '', totalLines: 0 });
     const [pendingRequest, setPendingRequest] = useState(null);
@@ -2600,6 +2609,7 @@ function App() {
                         <span>${currentHashtag ? `#${currentHashtag}` : `Search: ${searchQuery}`}</span>
                     </div>
                 `}
+                ${extensionError && html`<div role="alert">Extension loading: ${extensionError}</div>`}
                 <div data-extension-slot="timeline_before"></div>
                 <${Timeline}
                     posts=${posts}

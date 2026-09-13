@@ -662,3 +662,11 @@ serves only the two exact preserved support-script names outside imported static
 root; production retains existing allowlist. 47 unit tests/lint/build, real root
 and smoke checks pass. SDK is loaded but not configured/activated yet; sidebar/
 dashboard slots are compatibility placements pending final layout review.
+
+SDK activation checkpoint: imported app discovers enabled modules and configures
+preserved integrity-checking SDK with authenticated asset/API and validated
+submit/navigation adapters. Failures visible; disposeAll on unmount. Explicit
+run mode restored in send adapter for SDK contract. 48 unit tests/lint/build and
+real production-router regression pass. Nonempty enabled-module/browser slots
+and action event integration remain pending; empty registry is not extension
+feature completion.

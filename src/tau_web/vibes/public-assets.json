@@ -97,6 +97,7 @@
   "js/tau-client.js",
   "js/tau-draft.js",
   "js/tau-events.js",
+  "js/tau-extensions.js",
   "js/tau-session-selection.js",
   "js/vendor/beautiful-mermaid.js",
   "js/vendor/codemirror.js",
