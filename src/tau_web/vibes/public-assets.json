@@ -99,6 +99,7 @@
   "js/tau-events.js",
   "js/tau-extensions.js",
   "js/tau-session-selection.js",
+  "js/tau-widget-actions.js",
   "js/vendor/beautiful-mermaid.js",
   "js/vendor/codemirror.js",
   "js/vendor/katex.min.js",

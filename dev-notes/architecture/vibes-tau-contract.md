@@ -682,3 +682,9 @@ run content through SDK to selected session and navigate to a verified session;
 Chromium/WebKit assert acceptance and composer draft preservation. No SDK mocks.
 48 unit tests/lint pass. General view-action event bridge and deployed nonfixture
 extension registry remain separate gaps.
+
+Widget action bridge checkpoint: validated frame/extension/widget/request/action
+IDs route through authenticated API boundary and return correlated renderer
+success/error; listener removed on disposal. 49 unit tests/lint/build and real
+root regression pass. Embedded iframe message validation remains in preserved
+renderer; end-to-end iframe action and widget submit/refresh paths still pending.

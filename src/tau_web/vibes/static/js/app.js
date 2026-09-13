@@ -1,3 +1,4 @@
+import { installTauWidgetActions } from './tau-widget-actions.js';
 import { activateTauExtensions } from './tau-extensions.js';
 import { TauDashboard } from './components/tau-dashboard.js';
 import { TauMeters } from './components/tau-meters.js';
@@ -825,10 +826,11 @@ function App() {
     const [extensionError,setExtensionError]=useState('');
     useEffect(()=>{
         let disposed=false;
+        const removeWidgetActions=installTauWidgetActions();
         activateTauExtensions({getSessionId:()=>selectedSessionRef.current,navigate:id=>selectSession(id)})
             .then(result=>{if(!disposed&&result?.errors?.length)setExtensionError(result.errors.map(e=>e.message).join('; '));})
             .catch(error=>{if(!disposed)setExtensionError(error.message);});
-        return()=>{disposed=true;window.tauFrontendSDK?.disposeAll();};
+        return()=>{disposed=true;removeWidgetActions();window.tauFrontendSDK?.disposeAll();};
     },[]);
     const [agentPlan, setAgentPlan] = useState('');
     const [agentThought, setAgentThought] = useState({ text: '', totalLines: 0 });
