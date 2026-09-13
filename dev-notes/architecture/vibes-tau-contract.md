@@ -742,3 +742,8 @@ uses existing button class. Matrix now 12/12 pass including image/widget/extensi
 and restored Dashboard/branch/runtime paths. No provider execution, offline or
 paired-visual acceptance inferred. Production source removed; old browser suite
 migration ledger continues to track uncovered behavior.
+
+Keyboard restoration checkpoint: Ctrl/Cmd+K enters search and focuses composer;
+Ctrl/Cmd+N returns to timeline/composer. Guards ignore modal/repeat/composition/
+modified combinations. Chromium desktop/WebKit phone verify search/return focus;
+51 unit tests/lint/build pass. Broader keyboard/modal exclusion cases pending.

@@ -42,3 +42,11 @@ Current replacement entrypoints live under `src/tau_web/vibes`:
 Use `TAU_VIBES_PROXY_ALL=1 TAU_LIVE_AUTH=1` for real production routing.
 Old `tests/browser` command/config remains historical until migration completes;
 do not relabel the small replacement matrix as all old tests passing.
+
+## Updated restoration evidence
+
+Branch leaf selection, Dashboard/metrics and extension SDK slots/actions have now
+been restored with targeted real/fixture browser evidence (see chronological
+contract log). Earlier gap bullets describe initial audit, not current absence.
+Ctrl/Cmd+K search and Ctrl/Cmd+N composer focus restored; two-browser checks pass.
+Full shortcut, modal exclusions and completion edge-case matrix still pending.

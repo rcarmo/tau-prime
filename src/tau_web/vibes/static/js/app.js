@@ -1779,7 +1779,19 @@ function App() {
         loadPosts();
     }, [loadPosts]);
 
-    const navigateToSearchResult = useCallback(() => {}, []);
+    useEffect(() => {
+        const shortcut = event => {
+            if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey)) return;
+            if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
+            const key = event.key.toLowerCase();
+            if (!['k', 'n'].includes(key)) return;
+            event.preventDefault();
+            if (key === 'k') enterSearchMode(); else exitSearchMode();
+            requestAnimationFrame(() => document.querySelector('.compose-box textarea')?.focus());
+        };
+        window.addEventListener('keydown', shortcut);
+        return () => window.removeEventListener('keydown', shortcut);
+    }, [enterSearchMode, exitSearchMode]);
 
     const animateAndRemovePosts = useCallback((ids) => {
         if (!ids?.length) return;

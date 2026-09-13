@@ -244,7 +244,8 @@ try {
  await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
  expect(configured).toEqual({provider:'test',model:'updated-model'});
  await expect(composer).toHaveValue('Keep rejected draft');
- await page.locator('button[title="Search"]').click();
+ await page.keyboard.press('Control+k');
+ await expect(composer).toBeFocused();
  await composer.fill('Matched');
  await composer.press('Enter');
  await expect(page.getByRole('alert')).toContainText('Fixture invalid search');
@@ -255,6 +256,9 @@ try {
  await expect(page.getByRole('link',{name:'Open source session'})).toHaveAttribute('href','?session=smoke');
  await expect(page.getByLabel('Images',{exact:true})).toBeHidden();
  await scan('body');
+ await page.keyboard.press('Control+n');
+ await expect(composer).toBeFocused();
+ await expect(page.locator('button[title="Search"]')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
