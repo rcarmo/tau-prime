@@ -498,3 +498,10 @@ rather than empty session picker; non-auth errors retain explicit picker error.
 Authenticated Chromium/WebKit login-UI test asserts direct modal, no picker,
 then enters token and completes real workflows. 44 unit tests/lint/build pass.
 Invalid-token retry and logout behavior still need final security review.
+
+Invalid-token/logout browser checkpoint: Chromium/WebKit start unauthenticated,
+save wrong token and verify setup reopens, replace with valid token and complete
+workflows, then clear token with confirmed reload. Browser storage is empty and
+unauthenticated /api/sessions returns 401 afterward. Both real tests pass; no
+production edits. Server-side credential invalidation is not implied by local
+logout; token remains valid elsewhere until operator rotation.

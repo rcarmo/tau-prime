@@ -32,6 +32,11 @@ try {
  if(token && process.env.TAU_LIVE_LOGIN_UI){
   await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Close session picker',exact:true})).toHaveCount(0);
+  await page.getByLabel('Tau bearer token',{exact:true}).fill('invalid-fixture-token');
+  page.once('dialog',dialog=>dialog.accept());
+  await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Save token and reload',exact:true}).click()]);
+  await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Tau bearer token',{exact:true})).toHaveValue('invalid-fixture-token');
   await page.getByLabel('Tau bearer token',{exact:true}).fill(token);
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Save token and reload',exact:true}).click();
@@ -162,6 +167,15 @@ try {
    const result=await new AxeBuilder({page}).include(selector).analyze();
    expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
   }
+ }
+ if(token && process.env.TAU_LIVE_LOGIN_UI){
+  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
+  await page.getByLabel('Tau bearer token',{exact:true}).fill('');
+  page.once('dialog',dialog=>dialog.accept());
+  await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Save token and reload',exact:true}).click()]);
+  await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>localStorage.getItem('tau.web.authToken'))).toBe(null);
+  expect(await page.evaluate(async()=> (await fetch('/api/sessions')).status)).toBe(401);
  }
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');
