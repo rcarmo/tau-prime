@@ -511,3 +511,11 @@ external bootstrap imports tracked runtime and reports load failure with textCon
 Viewport no longer prohibits user zoom. 44 unit tests/strict lint and real auth
 workflow pass. Inline style handling and complete production CSP/runtime module
 routing remain pending; this is not a production route switch.
+
+Production-policy probe: integration server opt-in TAU_VIBES_TEST_CSP applies
+Tau's existing script/style/connect/img restrictions without weakening them.
+Real authenticated Chromium/WebKit workflows reported one initial inline loading
+style; moved to local CSS. Both now report zero CSP violations in exercised
+workflows; assertion retained. 44 unit tests/strict lint/build pass. Unexercised
+renderers/widgets may still require separate CSP review; production route switch
+not performed by this checkpoint.

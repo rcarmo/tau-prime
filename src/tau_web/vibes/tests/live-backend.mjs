@@ -26,7 +26,7 @@ try {
  const timeout=setTimeout(()=>controller.abort(),5000);
  try {while(!text.includes('\n\n')){const {value,done}=await reader.read();if(done)break;text+=new TextDecoder().decode(value);}expect(text).toContain('event: tau.snapshot');}
  finally{clearTimeout(timeout);controller.abort();await reader.cancel().catch(()=>{});}
- browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const context=await browser.newContext({colorScheme:process.env.TAU_LIVE_THEME||'light'});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const context=await browser.newContext({colorScheme:process.env.TAU_LIVE_THEME||'light'});await context.addInitScript(()=>{window.cspViolations=[];document.addEventListener('securitypolicyviolation',event=>window.cspViolations.push({directive:event.effectiveDirective,blocked:event.blockedURI}));});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  if(token && !process.env.TAU_LIVE_LOGIN_UI)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  if(token && process.env.TAU_LIVE_LOGIN_UI){
@@ -177,6 +177,7 @@ try {
   expect(await page.evaluate(()=>localStorage.getItem('tau.web.authToken'))).toBe(null);
   expect(await page.evaluate(async()=> (await fetch('/api/sessions')).status)).toBe(401);
  }
+ if(process.env.TAU_VIBES_TEST_CSP)expect(await page.evaluate(()=>window.cspViolations)).toEqual([]);
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');
 }finally{await browser?.close();await stopChild(proxy);await stopChild(backend);}

@@ -37,7 +37,7 @@ export function createHandler({ backend = 'http://127.0.0.1:8080', fetchImpl = f
             const path = await realpath(resolve(root, decodeURIComponent(relative)));
             if (!path.startsWith(root + sep) || !allowed.has(extname(path))) return new Response('Not found', {status:404});
             const file = Bun.file(path);
-            return new Response(request.method === 'HEAD' ? null : file, {headers:{'Content-Type':file.type, 'Cache-Control':'no-store'}});
+            return new Response(request.method === 'HEAD' ? null : file, {headers:{'Content-Type':file.type, 'Cache-Control':'no-store', ...(process.env.TAU_VIBES_TEST_CSP ? {'Content-Security-Policy': "default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; script-src 'self' blob:; style-src 'self'; worker-src 'self'"} : {})}});
         } catch {
             return new Response('Not found', {status:404});
         }
