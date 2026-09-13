@@ -635,3 +635,10 @@ session summaries, decline selection and retain open Dashboard/current URL,
 accept selection and await close, switch back and recover composer plus unsaved
 Plan drafts. Both production-router workflows pass. Pagination, failure retention
 and broad Dashboard accessibility remain pending. No production code changed.
+
+Dashboard matrix checkpoint: all 12 workflow/Axe cases verify page navigation,
+last-page next disabled, failed session selection keeps Dashboard open with error,
+and return to prior page. Scoped open Dashboard accessibility passes with local
+native-button styling (also applied to branch controls). Bundles rebuilt; failure
+fixture deliberately uses unavailable session. Genuine paginated backend records
+and dashboard visual pairing remain pending.

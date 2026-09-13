@@ -542,3 +542,7 @@ html[data-tint]::after {
 }
 .tau-loading { padding: 20px; text-align: center; }
 [aria-labelledby="tau-provider-title"] .rename-branch-help { color: var(--text-primary); }
+[aria-label="Session dashboard"] button, [aria-label="Conversation branches"] button {
+    color: var(--text-primary); background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
+}

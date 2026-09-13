@@ -36,7 +36,11 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/meters') data={cpu_percent:12.5,ram_percent:44,swap_percent:null,process_rss_bytes:104857600};
+  if(url.pathname==='/dashboard') {
+   const pageNumber=Number(url.searchParams.get('page')||1);
+   data={page:pageNumber,total_pages:2,total_sessions:9,active_sessions:0,sessions:[{session_id:pageNumber===1?'smoke':'unavailable',title:pageNumber===1?'Dashboard first':'Dashboard unavailable',activity:'idle',model:'test/fixture',queue_count:0,summary:'Fixture summary',preview_text:''}]};
+  }
+  else if(url.pathname==='/meters') data={cpu_percent:12.5,ram_percent:44,swap_percent:null,process_rss_bytes:104857600};
   else if(url.pathname==='/api/media' && route.request().method()==='GET') data={media:[]};
   else if(url.pathname==='/api/media') {
    uploads++;
@@ -116,6 +120,18 @@ try {
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
  const composer=page.locator('.compose-box textarea');
+ await page.locator('summary').filter({hasText:'Session dashboard'}).click();
+ const dashboard=page.getByRole('region',{name:'Session dashboard'});
+ await expect(dashboard).toContainText('Page 1 of 2');
+ await dashboard.getByRole('button',{name:'Next page',exact:true}).click();
+ await expect(dashboard).toContainText('Page 2 of 2');
+ await expect(dashboard.getByRole('button',{name:'Next page',exact:true})).toBeDisabled();
+ page.once('dialog',dialog=>dialog.accept());await dashboard.getByRole('button',{name:'Open Dashboard unavailable',exact:true}).click();
+ await expect(dashboard.getByRole('alert')).toBeVisible();await expect(dashboard).toBeVisible();
+ await dashboard.getByRole('button',{name:'Previous page',exact:true}).click();
+ await expect(dashboard).toContainText('Page 1 of 2');
+ await scan('[aria-label="Session dashboard"]');
+ await page.locator('summary').filter({hasText:'Session dashboard'}).click();
  await composer.fill('Branch switch keeps draft');
  await page.locator('summary').filter({hasText:'Conversation branches'}).click();
  const branch=page.getByRole('button',{name:'Leaf leaf-b · depth 2',exact:true});
