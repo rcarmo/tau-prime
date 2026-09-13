@@ -407,3 +407,30 @@ phone viewport, verifies composer growth, drag cleanup and draft retention.
 Browser protocol events (not JS-dispatched pointer events) pass; 56 unit tests
 and lint pass. This is emulated Chromium touch, not physical-device/WebKit gesture
 or virtual-keyboard acceptance. Optional mode rejects non-Chromium engines.
+
+## Offline parity implementation boundary (97555f0 audit)
+
+Legacy service-worker.spec.mjs requires shell reload without network, excludes
+API entries, and historically skips WebKit offline navigation except opt-in.
+It does not establish offline conversations or offline mutation support.
+Current replacement serves a retirement worker at /sw.js and does not register
+a caching worker from bootstrap. Offline reload parity is genuinely absent.
+
+Bounded implementation still required:
+1. Build-versioned public shell cache: static index plus bootstrap, bundle/CSS,
+   independent extension SDK/renderer and required static dependencies. Generate
+   asset list/version from build inputs, rather than fixed ?v=1 alone.
+2. Never cache API requests/responses, bearer-bearing requests, uploaded media,
+   widget documents, provider data or externally fetched resources. Do not cache
+   arbitrary navigations with session query strings as separate private pages.
+3. Network-first navigation with static index fallback; exact allowlisted assets
+   only. Avoid mixing old bootstrap/bundle versions during activation.
+4. Remove only owned obsolete shell caches, preserve unrelated origin caches,
+   and verify new-worker upgrade from retirement-worker installation.
+5. Offline UI must report unavailable backend, preserve local text drafts and
+   never claim sends/approvals succeeded. No queued replay of offline mutations.
+6. Real-browser tests: online install, offline reload, reconnect, cache inventory
+   excluding APIs/media, and version upgrade. Report WebKit engine limitations
+   explicitly instead of converting a skipped case into a pass.
+
+No caching implementation made in this audit; requirement remains pending.
