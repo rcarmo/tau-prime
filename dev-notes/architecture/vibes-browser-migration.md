@@ -30,14 +30,16 @@ thresholds/content reset, and search draft preservation. Evidence below records
 which journeys are real Tau and which use fixtures.
 
 Remaining bounded work:
-- [ ] Rich Markdown semantic rendering and active-content rejection through the
-  replacement timeline (`markdown.spec.mjs`); literal user-message behavior.
+- [x] Rich Markdown semantic rendering, unsafe protocol/active-content fixture
+  rejection and literal user messages migrated (9feed70–8f83301); not exhaustive sanitizer audit.
 - [ ] Keyboard completion and focus traversal beyond guarded Ctrl/Cmd+K/N;
-  composer resizing and timeline scrolling (`keyboard`, `composer`, `timeline`).
-- [ ] Search source-session navigation, including unsaved draft interaction
-  (`search.spec.mjs`); result-link presence alone is not navigation coverage.
-- [ ] Settings surface audit against `settings-*`, `model-settings` and onboarding
-  specs: distinguish deliberately unsupported preferences from missing Tau UI.
+  timeline scrolling and touch/viewport resize (`keyboard`, `composer`, `timeline`).
+  Keyboard/mouse composer resizing and release cleanup now covered.
+- [ ] Cross-session search source navigation remains; same-session real link
+  navigation preserves text drafts. Pending-file unload warning/clear covered.
+- [x] Settings surfaces mapped; unsupported instance pins documented, provider
+  discard confirmation added, expanded installed Axe scopes pass. Final artifact
+  rerun must include newer runtime changes.
 - [ ] Live provider run, streamed tool lifecycle/approval, disconnect/recovery
   and subsequent persisted timeline. Requires provider credentials.
 - [ ] Decide offline reload requirement: worker retirement is implemented but
@@ -304,3 +306,8 @@ lint/build and both smoke journeys pass. Runtime requires final wheel refresh.
 Pending-file warning cleanup: Chromium/WebKit remove the attachment via its UI
 button, verify synthetic beforeunload is no longer cancelled and text draft is
 unchanged. 56 unit tests/lint pass. No production changes.
+
+Consolidated c656c22 source checkpoint: full Python 1313 pass; 56 JS tests and
+strict lint pass; complete 12-case workflow/Axe matrix passes first run after
+Markdown contrast, provider discard and pending-file warning changes. Worktree
+clean before evidence update. Latest runtime not yet in attached checkpoint.
