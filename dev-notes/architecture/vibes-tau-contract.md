@@ -747,3 +747,8 @@ Keyboard restoration checkpoint: Ctrl/Cmd+K enters search and focuses composer;
 Ctrl/Cmd+N returns to timeline/composer. Guards ignore modal/repeat/composition/
 modified combinations. Chromium desktop/WebKit phone verify search/return focus;
 51 unit tests/lint/build pass. Broader keyboard/modal exclusion cases pending.
+
+Shortcut exclusion browser checkpoint: Chromium/WebKit keep provider-modal field
+focus for Ctrl+K and Meta+N, ignore repeated Ctrl+K outside modal, then handle
+normal search/composer shortcuts. Existing workflow checks remain passing;
+51 unit tests and strict lint pass. No production code changes.

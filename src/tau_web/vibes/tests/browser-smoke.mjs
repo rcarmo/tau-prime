@@ -231,6 +231,10 @@ try {
  const setup=page.getByRole('dialog',{name:'Provider setup'});
  await expect(setup.getByLabel('Provider',{exact:true})).toHaveValue('test');
  await setup.getByLabel('Model',{exact:true}).fill('updated-model');
+ await page.keyboard.press('Control+k');
+ await expect(setup.getByLabel('Model',{exact:true})).toBeFocused();
+ await page.keyboard.press('Meta+n');
+ await expect(setup.getByLabel('Model',{exact:true})).toBeFocused();
  await scan('[aria-labelledby="tau-provider-title"]');
  expect(await composer.evaluate(el=>!!el.closest('[inert]'))).toBe(true);
  await setup.getByRole('button',{name:'Save provider',exact:true}).click();
@@ -244,6 +248,9 @@ try {
  await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
  expect(configured).toEqual({provider:'test',model:'updated-model'});
  await expect(composer).toHaveValue('Keep rejected draft');
+ await page.getByRole('button',{name:'Provider setup',exact:true}).focus();
+ await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent('keydown',{key:'k',ctrlKey:true,repeat:true,bubbles:true,cancelable:true})));
+ await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
  await page.keyboard.press('Control+k');
  await expect(composer).toBeFocused();
  await composer.fill('Matched');
