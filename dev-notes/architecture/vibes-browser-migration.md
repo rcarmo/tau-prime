@@ -394,3 +394,10 @@ keyboard/mouse/viewport resize now have replacement checks. Existing real Tau
 workspace/Plan/session/model/media/runtime workflows are covered by installed
 matrix; they should not remain marked pending solely because provider runs are.
 Independent review attempts timed out; no external audit completion claimed.
+
+Branch capability cleanup: Tau exposes branches GET/select POST, not imported
+empty-child-session creation. Removed onCreateBranch wiring that exposed a form
+whose save always rejected. Existing leaf selector retained. Real Tau Chromium/
+WebKit journeys verify no New branch button and normal root creation still works;
+56 unit tests/lint/build pass. New-branch requirement remains unresolved, not
+implemented by hiding UI. Current wheel predates this runtime cleanup.

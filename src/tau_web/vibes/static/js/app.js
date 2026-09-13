@@ -2692,7 +2692,6 @@ function App() {
                 />
                 ${sessionPickerOpen && html`<${SessionPicker} sessions=${sessionOptions} refreshError=${sessionRefreshError} currentId=${selectedSession} onSelect=${async id => { if (sessionOptions.find(item => item.id === id)?.archived) { await updateSession(id, { archived: false }); await refreshSessions(); } await selectSession(id); }} onClose=${closeSessionPicker}
                     onCreate=${() => { createdSessionRef.current = null; createParentRef.current = null; setCreatingSession(true); }}
-                    onCreateBranch=${() => { createdSessionRef.current = null; createParentRef.current = selectedSession; setCreatingSession(true); }}
                     onRename=${id => setRenamingSession(sessionOptions.find(item => item.id === id))}
                     onArchive=${async (id, archived) => {
                         await updateSession(id, { archived });

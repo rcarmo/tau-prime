@@ -174,6 +174,7 @@ try {
  expect(restored.archived_at).toBe(null);
  const onboarding=await (await authFetch('http://127.0.0.1:8893/api/onboarding')).json();
  expect(onboarding.default_provider).toBeTruthy();expect(onboarding.default_model).toBeTruthy();
+ await expect(page.getByRole('button',{name:'New branch',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'New root session…',exact:true}).click();
  const newDialog=page.getByRole('dialog',{name:'New session',exact:true});
  await newDialog.getByLabel('Session name',{exact:true}).fill('Created through imported dialog');
