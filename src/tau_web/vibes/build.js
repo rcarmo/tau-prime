@@ -8,8 +8,8 @@
  * Usage:  bun run build.js
  */
 
-import { resolve, dirname } from "path";
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { resolve, dirname, relative } from "path";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -71,4 +71,16 @@ writeFileSync(cssOut, minified, "utf-8");
 const cssKb = (Buffer.byteLength(minified) / 1024).toFixed(1);
 console.log(`  dist/app.css  ${cssKb} KB`);
 
+const publicAssets = [];
+function collectAssets(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) collectAssets(path);
+    else if (/\.(js|mjs|css|png|svg|ttf|woff2|json)$/.test(entry.name)) {
+      publicAssets.push(relative(staticDir, path).replaceAll('\\', '/'));
+    }
+  }
+}
+collectAssets(staticDir);
+writeFileSync(resolve(__dirname, 'public-assets.json'), JSON.stringify(publicAssets.sort(), null, 2) + '\n');
 console.log(`\nBuild complete.`);

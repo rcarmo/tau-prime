@@ -20,3 +20,12 @@ def test_public_manifest_contains_runtime_not_tooling():
 def test_unlisted_and_traversal_assets_rejected(name):
     with pytest.raises(web.HTTPNotFound):
         asset_response(name)
+
+
+def test_public_manifest_matches_runtime_tree():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2] / 'src/tau_web/vibes/static'
+    suffixes = {'.js', '.mjs', '.css', '.png', '.svg', '.ttf', '.woff2', '.json'}
+    expected = {path.relative_to(root).as_posix() for path in root.rglob('*')
+                if path.is_file() and path.suffix in suffixes}
+    assert asset_names() == expected
