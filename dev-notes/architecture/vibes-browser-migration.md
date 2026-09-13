@@ -434,3 +434,11 @@ Bounded implementation still required:
    explicitly instead of converting a skipped case into a pass.
 
 No caching implementation made in this audit; requirement remains pending.
+
+Offline worker groundwork: build generates offline-sw.js with content-derived
+version and exact public shell/font manifest. Worker omits credentials during
+precache, ignores API/unknown/auth-bearing requests, has no offline mutation
+queue, and avoids skipWaiting. Unit interception exclusions pass (57 total),
+as do build/lint. Worker is NOT registered/routed yet; no offline parity claim.
+Browser install/offline/upgrade tests must precede activation. Network-first
+navigation/version coexistence remains to review before enabling.

@@ -11,6 +11,7 @@
 import { resolve, dirname, relative } from "path";
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
 import { fileURLToPath } from "url";
+import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const staticDir = resolve(__dirname, "static");
@@ -82,5 +83,17 @@ function collectAssets(directory) {
   }
 }
 collectAssets(staticDir);
+const shellAssets = ['/', '/static/js/bootstrap.js', '/static/dist/app.js?v=1', '/static/dist/app.css?v=1', '/static/extension-ui.js', '/static/frontend-sdk.js', '/static/widget-bridge.js'];
+for (const asset of publicAssets) if (asset.endsWith('.woff2') || asset.startsWith('common/fonts/')) shellAssets.push(`/static/${asset}`);
+const digest = createHash('sha256');
+for (const path of shellAssets) {
+    const name = path.split('?')[0];
+    const source = name === '/' ? resolve(staticDir, 'index.html') : ['/static/extension-ui.js','/static/frontend-sdk.js','/static/widget-bridge.js'].includes(name) ? resolve(__dirname, '../static', name.slice(8)) : resolve(staticDir, name.slice(8));
+    digest.update(path); digest.update(readFileSync(source));
+}
+const workerTemplate = readFileSync(resolve(__dirname, 'offline-worker.js'), 'utf8');
+digest.update(workerTemplate);
+writeFileSync(resolve(staticDir, 'offline-sw.js'), workerTemplate.replace('__TAU_SHELL__', JSON.stringify({version:digest.digest('hex').slice(0,20),assets:shellAssets})));
+if (!publicAssets.includes('offline-sw.js')) publicAssets.push('offline-sw.js');
 writeFileSync(resolve(__dirname, 'public-assets.json'), JSON.stringify(publicAssets.sort(), null, 2) + '\n');
 console.log(`\nBuild complete.`);

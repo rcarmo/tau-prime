@@ -105,5 +105,6 @@
   "js/vendor/katex.min.js",
   "js/vendor/preact-htm.js",
   "manifest.json",
+  "offline-sw.js",
   "retire-sw.js"
 ]
