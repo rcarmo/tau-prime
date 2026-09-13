@@ -53,6 +53,12 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async meters() {
+            const token = getToken();
+            const response = await fetchImpl('/meters', { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Tau metrics unavailable (${response.status})`);
+            return response.json();
+        },
         async branches(id) {
             if (!id) return [];
             return (await request(`/sessions/${encodeURIComponent(id)}/branches`)).branches;

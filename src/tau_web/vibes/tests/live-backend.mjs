@@ -47,6 +47,9 @@ try {
  await page.waitForTimeout(250);
  await expect(page.locator('.connection-status')).toHaveCount(0);
  await expect(page.locator('.compose-box textarea')).toBeVisible();
+ await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
+ await expect(page.getByRole('region',{name:'Runtime metrics'})).toContainText('Host CPU');
+ await expect(page.getByRole('region',{name:'Runtime metrics'})).toContainText('Tau process RSS');
  const thinking=await page.evaluate(async id=>{
   const api=await import('/static/js/api.js');await api.getSessionModelState(id);
   return api.changeSessionModel(id,{thinking_level:'high'});

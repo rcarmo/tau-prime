@@ -1,3 +1,4 @@
+import { TauMeters } from './components/tau-meters.js';
 import { TauBranches } from './components/tau-branches.js';
 import { reduceTauDraft } from './tau-draft.js';
 import { TauMedia } from './components/tau-media.js';
@@ -2623,6 +2624,7 @@ function App() {
                     formatTime=${formatTime}
                     formatCount=${formatCount}
                 />
+                <${TauMeters} />
                 <button type="button" class="compose-queue-btn" onClick=${()=>setProviderSetupOpen(true)}>Provider setup</button>
                 ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>setProviderSetupOpen(false)} />`}
                 ${selectedSession && html`<details><summary>Plan</summary><${TauPlan} key=${selectedSession} sessionId=${selectedSession} /></details>`}

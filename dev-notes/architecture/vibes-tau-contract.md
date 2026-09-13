@@ -611,3 +611,9 @@ list and choose another leaf through UI confirmation. Session API confirms activ
 leaf changes; composer draft retained. Both pass production-router workflows.
 No synthetic IDs or provider execution required. Full branch context metadata
 refresh and running-session interaction remain future regression cases.
+
+Runtime metrics restoration checkpoint: collapsible host CPU/RAM/swap and Tau RSS
+reads authenticated /meters only while open, distinguishes unavailable values and
+retains explicit error. Both real production-router browsers open it and verify
+labels/data surface; 46 unit tests/lint/build pass. Historical sparkline series,
+Dashboard detail and responsive/a11y runtime review remain pending.

@@ -82,6 +82,7 @@
   "js/components/tau-attachment.js",
   "js/components/tau-branches.js",
   "js/components/tau-media.js",
+  "js/components/tau-meters.js",
   "js/components/tau-plan.js",
   "js/components/tau-provider-setup.js",
   "js/components/tau-run-control.js",
