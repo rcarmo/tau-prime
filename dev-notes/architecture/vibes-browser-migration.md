@@ -449,3 +449,11 @@ back to cached '/' without storing the query URL. 58 unit tests/lint pass.
 Bun Request reports credentials=include even when constructed with omit here;
 unit uses an option-capture stub, so real-browser credential verification is still
 required. Worker remains unregistered and offline implementation incomplete.
+
+Inactive worker real-browser isolation: tests/offline-browser.mjs serves generated
+worker and actual public assets from local HTTP, with a static fixture index.
+Chromium verifies all precache requests omit cookie/Authorization, API is absent
+from cache, offline session navigation returns public shell and API fetch fails.
+WebKit reaches offline navigation then reports internal browser error (same class
+as historical skip); recorded as failure, not pass. 58 unit tests/lint pass.
+Production worker remains inactive; real app bootstrap/upgrade not yet validated.
