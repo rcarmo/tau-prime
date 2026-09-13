@@ -516,3 +516,6 @@ html[data-tint]::after {
     outline: 2px solid var(--accent-color);
     outline-offset: 2px;
 }
+
+/* Informational connection toast must not intercept composer controls. */
+.connection-status { pointer-events: none; }

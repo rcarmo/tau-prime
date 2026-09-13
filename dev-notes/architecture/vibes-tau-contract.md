@@ -253,3 +253,10 @@ actual session ID, bearer token, CSRF and abort signal. Upload progress is only
 [media:id] references with non-inline disclaimer, preserving existing Tau prompt
 semantics. 31 unit tests, lint/build pass. Real upload/download and composer
 attachment browser tests remain pending; no vision-input claim.
+
+Attachment browser checkpoint: Chromium desktop/WebKit phone choose a file,
+verify multipart CSRF upload, reject first referenced run submission while
+retaining draft/media, then accept retry without duplicate upload. Retry payload
+contains original media ID. Test exposed connection-status toast intercepting
+composer clicks; informational toast now ignores pointer events via local CSS.
+31 unit tests, lint/build pass. Real multipart/media download validation pending.

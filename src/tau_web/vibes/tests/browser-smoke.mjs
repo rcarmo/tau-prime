@@ -7,6 +7,7 @@ try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const page=await browser.newPage({viewport:process.env.TAU_SMOKE_PHONE ? {width:390,height:844} : {width:1440,height:900}}); const errors=[];const missing=new Set();
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
+ let uploads=0;
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
@@ -15,7 +16,13 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/sessions/smoke/approvals') data={approvals:approvalPending?[{approval_id:'approval-fixture',session_id:'smoke',tool_name:'bash',description:'Run fixture command',arguments:{command:'echo fixture'}}]:[]};
+  if(url.pathname==='/api/media') {
+   uploads++;
+   expect(route.request().headers()['x-tau-csrf']).toBe('1');
+   expect(route.request().postDataBuffer().toString()).toContain('attachment-fixture.txt');
+   data={media_id:'uploaded-fixture',filename:'attachment-fixture.txt'};
+  }
+  else if(url.pathname==='/api/sessions/smoke/approvals') data={approvals:approvalPending?[{approval_id:'approval-fixture',session_id:'smoke',tool_name:'bash',description:'Run fixture command',arguments:{command:'echo fixture'}}]:[]};
   else if(url.pathname==='/api/approvals/approval-fixture') {
    decisions.push(route.request().postDataJSON());
    if(rejectApproval)return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture approval conflict'})});
@@ -79,6 +86,19 @@ try {
  await expect(page.getByText('Fixture run conflict',{exact:true})).toBeVisible();
  await expect(composer).toHaveValue('Keep rejected draft');
  expect(submitted[1]).toEqual({content:'Keep rejected draft'});
+ await page.locator('.compose-box input[type="file"]').setInputFiles({name:'attachment-fixture.txt',mimeType:'text/plain',buffer:Buffer.from('fixture bytes')});
+ await composer.press('Enter');
+ await expect.poll(()=>submitted.length).toBe(3);
+ await expect(composer).toBeEnabled();
+ expect(uploads).toBe(1);
+ expect(submitted[2].content).toContain('[media:uploaded-fixture]');
+ await expect(composer).toHaveValue('Keep rejected draft');
+ rejectSend=false;
+ await composer.press('Enter');
+ await expect(composer).toHaveValue('');
+ expect(uploads).toBe(1);
+ expect(submitted[3].content).toContain('[media:uploaded-fixture]');
+ await composer.fill('Keep rejected draft');
  activeRun=true;
  const cancel=page.getByRole('button',{name:'Cancel run',exact:true});
  await expect(cancel).toBeVisible();
