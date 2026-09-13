@@ -49,3 +49,10 @@ fails visibly rather than truncating silently; a reverse-page backend endpoint
 is preferable before large-history performance signoff. Current projection is
 text/role/identity only: tool blocks/media and live SSE remain unimplemented.
 Twelve tests/37 assertions, lint and build pass; not end-to-end acceptance.
+
+Initial selection checkpoint: imported app starts without a synthetic session,
+loads actual active sessions and preserves ?session= selection. Missing explicit
+sessions surface an error rather than selecting another conversation. Timeline
+startup waits for selection. Fourteen tests/42 assertions, lint and build pass.
+Browser lifecycle validation and remaining default-dependent agent/event paths
+are pending; this is not a production-ready startup claim.

@@ -1,3 +1,4 @@
+import { initialTauSession } from './tau-session-selection.js';
 import { SessionDeleteDialog } from './components/session-delete-dialog.js';
 import { SessionNameDialog } from './components/session-name-dialog.js';
 import { SessionPicker } from './components/session-picker.js';
@@ -698,8 +699,8 @@ function App() {
         fetch('/terminal/session').then(r => r.json()).then(s => setTerminalEnabled(!!s.enabled)).catch(() => {});
     }, []);
     const [posts, setPosts] = useState(null);
-    const [selectedSession, setSelectedSession] = useState('default');
-    const selectedSessionRef = useRef('default');
+    const [selectedSession, setSelectedSession] = useState(null);
+    const selectedSessionRef = useRef(null);
     const switchGeneration = useRef(0);
     const searchGeneration = useRef(0);
     const modelGeneration = useRef(0);
@@ -760,6 +761,7 @@ function App() {
         return () => { disposed = true; window.clearInterval(timer); };
     }, [sessionPickerOpen]);
     const selectSession = async (id) => {
+        if (!id) return;
         const generation = ++switchGeneration.current;
         const result = await getSessionTimeline(id);
         if (generation !== switchGeneration.current) return;
@@ -767,6 +769,9 @@ function App() {
         searchGeneration.current++;
         selectedSessionRef.current = id;
         setSelectedSession(id);
+        const sessionUrl = new URL(window.location.href);
+        sessionUrl.searchParams.set('session', id);
+        window.history.replaceState(null, '', sessionUrl);
         setPosts(result.posts);
         setHasMore(result.has_more);
         setFileRefs(draft.fileRefs); setFolderRefs(draft.folderRefs); setMessageRefs(draft.messageRefs);
@@ -787,6 +792,20 @@ function App() {
     const [messageRefs, setMessageRefs] = useState(() => composeDrafts.load('default').messageRefs);
     const [agentStatus, setAgentStatus] = useState(null);
     const [agentDraft, setAgentDraft] = useState({ text: '', totalLines: 0 });
+    useEffect(() => {
+        let disposed = false;
+        const generation = sessionSwitchGeneration.current;
+        getSessions().then(async result => {
+            if (disposed || sessionSwitchGeneration.current !== generation) return;
+            setSessionOptions(result.sessions || []);
+            const id = initialTauSession(result.sessions || [], window.location.search);
+            if (id) await selectSession(id);
+            else { setSessionRefreshError('No Tau sessions available. Provider setup is required.'); setSessionPickerOpen(true); }
+        }).catch(error => {
+            if (!disposed) { setSessionRefreshError(error.message); setSessionPickerOpen(true); }
+        });
+        return () => { disposed = true; };
+    }, []);
     const [agentPlan, setAgentPlan] = useState('');
     const [agentThought, setAgentThought] = useState({ text: '', totalLines: 0 });
     const [pendingRequest, setPendingRequest] = useState(null);
@@ -1573,6 +1592,7 @@ function App() {
     
     // Load timeline or hashtag posts
     const loadPosts = useCallback(async (hashtag = null) => {
+        if (!selectedSessionRef.current) return;
         try {
             if (hashtag) {
                 const result = await getPostsByHashtag(hashtag);
