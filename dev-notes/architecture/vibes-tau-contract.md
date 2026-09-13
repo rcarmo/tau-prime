@@ -484,3 +484,11 @@ and actual streamed bytes, cancelling oversized bodies and preserving content
 type/bytes for valid downloads. This is a deliberate browser safety limit, not a
 backend quota change; larger media errors visibly instead of unbounded buffering.
 44 unit tests/lint/build and authenticated real download regression pass.
+
+Token bootstrap UI checkpoint: provider modal now accepts Tau bearer token,
+stores it in existing browser key only after explicit reload confirmation, and
+warns unsaved Plan edits are lost across reload. Separate from provider credential
+storage. Real Chromium/WebKit start without injected token, dismiss unauthorized
+session picker, save token through UI and complete authenticated workflows. 44
+unit tests/lint/build passed earlier in checkpoint. Token clearing/reload warning
+edge cases and polished unauthenticated landing remain pending.

@@ -27,8 +27,16 @@ try {
  try {while(!text.includes('\n\n')){const {value,done}=await reader.read();if(done)break;text+=new TextDecoder().decode(value);}expect(text).toContain('event: tau.snapshot');}
  finally{clearTimeout(timeout);controller.abort();await reader.cancel().catch(()=>{});}
  browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const context=await browser.newContext({colorScheme:process.env.TAU_LIVE_THEME||'light'});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
- if(token)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
+ if(token && !process.env.TAU_LIVE_LOGIN_UI)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
+ if(token && process.env.TAU_LIVE_LOGIN_UI){
+  // Dismiss failed-session picker if startup authentication has opened it.
+  await page.getByRole('button',{name:'Close session picker',exact:true}).click();
+  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
+  await page.getByLabel('Tau bearer token',{exact:true}).fill(token);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'Save token and reload',exact:true}).click();
+ }
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.connection-status')).toHaveCount(0);
  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));

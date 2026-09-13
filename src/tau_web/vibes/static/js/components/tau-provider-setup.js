@@ -2,6 +2,14 @@ import {html,useEffect,useRef,useState} from '../vendor/preact-htm.js';
 import {getTauOnboarding,configureTauProvider} from '../api.js';
 export function TauProviderSetup({onClose}) {
  const [provider,setProvider]=useState('');const [model,setModel]=useState('');
+ const [token,setToken]=useState(()=>{try{return localStorage.getItem('tau.web.authToken')||'';}catch{return '';}});
+ const saveToken=()=>{
+  if(!window.confirm('Save access token and reload? Unsaved Plan edits will be lost.'))return;
+  try{
+   if(token.trim())localStorage.setItem('tau.web.authToken',token.trim());else localStorage.removeItem('tau.web.authToken');
+   window.location.reload();
+  }catch(e){setError(e.message||'Unable to save authentication token');}
+ };
  const [credential,setCredential]=useState('');const [error,setError]=useState('');
  const [loading,setLoading]=useState(true);const [busy,setBusy]=useState(false);
  const panel=useRef(null);const pending=useRef(false);
@@ -35,6 +43,9 @@ export function TauProviderSetup({onClose}) {
  return html`<div class="rename-branch-overlay" onPointerDown=${e=>{if(e.target===e.currentTarget&&!busy)onClose();}}>
  <form ref=${panel} class="rename-branch-panel" role="dialog" aria-modal="true" aria-labelledby="tau-provider-title" onSubmit=${submit} onKeyDown=${keys}>
  <h2 id="tau-provider-title">Provider setup</h2>
+ <label>Tau bearer token<input type="password" autocomplete="off" class="rename-branch-input" value=${token} disabled=${busy} onInput=${e=>setToken(e.target.value)}/></label>
+ <button type="button" disabled=${busy} onClick=${saveToken}>Save token and reload</button>
+ <p class="rename-branch-help">The Tau access token is stored in this browser. Saving reloads the page; unsaved Plan edits are not preserved across reloads.</p>
  <label>Provider<input class="rename-branch-input" value=${provider} disabled=${busy||loading} onInput=${e=>setProvider(e.target.value)} /></label>
  <label>Model<input class="rename-branch-input" value=${model} disabled=${busy||loading} onInput=${e=>setModel(e.target.value)} /></label>
  <label>Credential (leave blank to retain)<input type="password" autocomplete="off" class="rename-branch-input" value=${credential} disabled=${busy||loading} onInput=${e=>setCredential(e.target.value)} /></label>
