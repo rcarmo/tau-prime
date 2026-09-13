@@ -462,3 +462,12 @@ fetch, no tokens in URLs; downloads use same blob and cleanup revokes on unmount
 No inline SVG/HTML preview. 42 unit tests, lint/build and live regression pass.
 Actual inline image browser fixture, resource-size limits and preview accessibility
 remain pending; session-media download is separately verified already.
+
+Inline image validation INCOMPLETE: new authenticated raster fixture passes
+Chromium checks but WebKit reports naturalWidth=0 despite visible blob image.
+Keep failing assertion; no cross-browser image pass claimed. Tried known-valid
+PNG fixture; forced MIME experiment did not resolve and was reverted. Added
+native attachment-button styling for dark contrast. Snapshot mock now sends one
+snapshot then heartbeats, avoiding artificial repeated timeline reanimations
+during Axe scans. Current full matrix fails at WebKit image decode; investigate
+blob lifecycle vs fixture transport before any production switch.

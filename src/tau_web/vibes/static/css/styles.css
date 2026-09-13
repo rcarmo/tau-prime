@@ -536,3 +536,7 @@ html[data-tint]::after {
     color: var(--text-primary); background: var(--bg-secondary);
     border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
 }
+.tau-attachment button {
+    color: var(--text-primary); background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
+}

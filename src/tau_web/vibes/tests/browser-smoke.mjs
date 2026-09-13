@@ -13,6 +13,7 @@ try {
  const size=process.env.TAU_SMOKE_SIZE || (process.env.TAU_SMOKE_PHONE?'phone':'desktop');
  const viewport={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}}[size];
  const context=await browser.newContext({viewport,colorScheme:process.env.TAU_SMOKE_THEME || 'light'});
+ await context.addInitScript(()=>localStorage.setItem('tau.web.authToken','image-test-token'));
  const page=await context.newPage(); const errors=[];const missing=new Set();
  const scan=async(selector)=>{
   if(!process.env.TAU_SMOKE_AXE)return;
@@ -21,13 +22,17 @@ try {
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
  };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
- let uploads=0;
+ let uploads=0;let snapshots=0;
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
   if(url.pathname==='/'||url.pathname.startsWith('/static/')) return route.continue();
-  if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
+  if(url.pathname==='/api/media/image-fixture/content') {
+   expect(route.request().headers().authorization).toBe('Bearer image-test-token');
+   return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAEDAQAIicLsAAAAAElFTkSuQmCC','base64')});
+  }
+  if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
   if(url.pathname==='/api/media' && route.request().method()==='GET') data={media:[]};
@@ -73,7 +78,7 @@ try {
   else if(url.pathname==='/api/sessions') data={sessions:[session]};
   else if(url.pathname==='/api/sessions/smoke') data=session;
   else if(url.pathname==='/api/sessions/smoke/timeline') data={timeline:[
-   {message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z'},
+   {message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z',content_blocks_json:JSON.stringify({attachments:[{media_id:'image-fixture',filename:'fixture.png',media_type:'image/png'}]})},
    {message_id:2,session_id:'smoke',role:'assistant',content:'',created_at:'2026-09-13T19:00:01Z',content_blocks_json:JSON.stringify({tool_calls:[{id:'call-fixture',name:'bash',arguments:{command:'<img src=x onerror="window.toolInjected=true">'}}]})},
    {message_id:3,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
   ]};
@@ -82,6 +87,10 @@ try {
  });
  await page.goto('http://127.0.0.1:8893/?session=smoke');
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ const image=page.getByRole('img',{name:'fixture.png',exact:true});
+ await expect(image).toBeVisible();
+ await expect.poll(()=>image.evaluate(el=>el.naturalWidth)).toBe(1);
+ await expect(image).toHaveAttribute('src',/^blob:/);
  const tool=page.locator('details').filter({has:page.locator('summary',{hasText:'Tool call: bash'})});
  await tool.locator('summary').click();
  await expect(tool.locator('pre')).toContainText('<img src=x');
