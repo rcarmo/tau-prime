@@ -131,6 +131,19 @@ try {
  const newId=new URL(page.url()).searchParams.get('session');
  const created=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${newId}`)).json();
  expect(created.provider_name).toBe(onboarding.default_provider);expect(created.model).toBe(onboarding.default_model);
+ await expect(composer).toHaveValue('');
+ await composer.fill('New session draft remains local');
+ const planSummary=page.locator('summary').filter({hasText:/^Plan$/});
+ if(!await plan.isVisible())await planSummary.click();
+ await expect(plan).toBeEnabled();await plan.fill('- [ ] Unsaved new-session plan');
+ await page.getByText('@Created through imported dialog',{exact:true}).click();
+ await page.getByRole('option').filter({hasText:'Live backend session'}).click();
+ await expect(composer).toHaveValue('/thinking invalid');
+ await page.getByText('@Live backend session',{exact:true}).click();
+ await page.getByRole('option').filter({hasText:'Created through imported dialog'}).click();
+ await expect(composer).toHaveValue('New session draft remains local');
+ if(!await plan.isVisible())await planSummary.click();
+ await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');
 }finally{await browser?.close();await stopChild(proxy);await stopChild(backend);}

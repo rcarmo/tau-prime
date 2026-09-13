@@ -392,3 +392,9 @@ Real session-create UI checkpoint: authenticated Chromium/WebKit open New root
 session dialog, submit a name, verify selected new URL/label and backend provider/
 model equal saved onboarding defaults. No provider execution or credential
 availability inferred. Existing Plan/media/archive/model workflows remain green.
+
+Session draft isolation checkpoint: real authenticated Chromium/WebKit create a
+second session, verify empty composer rather than leaked first draft, edit new
+composer/Plan, switch back to first session and recover its prior draft, then
+return and recover both new unsaved edits. Both pass. Plan draft persistence is
+in-memory only; page reload durability not claimed. No provider execution needed.
