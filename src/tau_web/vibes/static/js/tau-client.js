@@ -151,6 +151,10 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             const result = await request(`/sessions?include_archived=${includeArchived}`);
             return { sessions: result.sessions.map(sessionFromTau) };
         },
+        async archiveSession(id, archived) {
+            const result = await request(`/sessions/${encodeURIComponent(id)}/${archived ? 'archive' : 'restore'}`, { method: 'POST' });
+            return { session: sessionFromTau(result) };
+        },
         async renameSession(id, name) {
             const result = await request(`/sessions/${encodeURIComponent(id)}`, { method: 'PATCH', body: { title: name } });
             return { session: sessionFromTau(result) };

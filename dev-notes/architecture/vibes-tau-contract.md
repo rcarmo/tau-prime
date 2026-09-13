@@ -149,3 +149,10 @@ control. Chromium desktop/WebKit phone verify background inertness, rejected
 save retains editable values, successful retry, focus return and composer draft
 preservation. 23 unit tests, lint/build pass. Comprehensive accessibility matrix
 and nested/concurrent modal review remain pending.
+
+Archive adapter checkpoint: archived state updates use explicit Tau archive/
+restore POST routes, not DELETE. Archiving selected session chooses another
+actual active session or clears selection/URL if none remain, rather than using
+synthetic default. Unsupported pin/delete callbacks removed. 24 unit tests,
+lint/build and real-backend startup pass. Archive UI edge cases and stale
+selection races still need browser coverage; not marked complete.

@@ -132,6 +132,7 @@ export async function createSession(name, parentId = null) {
 }
 
 export async function updateSession(sessionId, changes) {
+    if (Object.keys(changes).length === 1 && typeof changes.archived === 'boolean') return tau.archiveSession(sessionId, changes.archived);
     if (Object.keys(changes).some(key => key !== 'name')) throw new Error('Unsupported Tau session update');
     return tau.renameSession(sessionId, changes.name);
 }

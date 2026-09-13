@@ -2629,9 +2629,22 @@ function App() {
                     onCreate=${() => { createdSessionRef.current = null; createParentRef.current = null; setCreatingSession(true); }}
                     onCreateBranch=${() => { createdSessionRef.current = null; createParentRef.current = selectedSession; setCreatingSession(true); }}
                     onRename=${id => setRenamingSession(sessionOptions.find(item => item.id === id))}
-                    onArchive=${async (id, archived) => { await updateSession(id, { archived }); if (archived && id === selectedSession) await selectSession('default'); await refreshSessions(); }}
-                    onPin=${async (id, pinned) => { await updateSession(id, { pinned }); await refreshSessions(); }}
-                    onDelete=${id => { deletedSessionRef.current = false; setDeletingSession(sessionOptions.find(item => item.id === id)); }} />`}
+                    onArchive=${async (id, archived) => {
+                        await updateSession(id, { archived });
+                        const result = await getSessions(true); setSessionOptions(result.sessions);
+                        if (archived && id === selectedSessionRef.current) {
+                            const next = result.sessions.find(item => !item.archived && item.id !== id);
+                            if (next) await selectSession(next.id);
+                            else {
+                                ++switchGeneration.current;
+                                selectedSessionRef.current = null; setSelectedSession(null); setPosts([]); setHasMore(false);
+                                const url = new URL(window.location.href); url.searchParams.delete('session'); window.history.replaceState(null, '', url);
+                                setSessionRefreshError('No active sessions. Create a session or restore an archived one.');
+                            }
+                        }
+                    }}
+                    onPin=${undefined}
+                    onDelete=${undefined} />`}
                 <${ComposeBox} key=${selectedSession} sessionId=${selectedSession}
                     sessionTrigger=${html`<button type="button" ref=${sessionTriggerRef}
                         class=${`compose-session-trigger compose-session-trigger-pill${sessionPickerOpen ? ' active' : ''}`}

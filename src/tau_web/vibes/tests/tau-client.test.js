@@ -108,3 +108,9 @@ test('unconfigured onboarding never submits a session',async()=>{
  await expect(client.createSession({name:'new',useConfiguredDefaults:true})).rejects.toThrow('provider setup');
  expect(calls).toEqual(['/api/onboarding']);
 });
+test('archive and restore use explicit POST operations, never DELETE',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({...session,archived_at:path.endsWith('/archive')?'now':null});}});
+ expect((await client.archiveSession('one',true)).session.archived).toBe(true);
+ expect((await client.archiveSession('one',false)).session.archived).toBe(false);
+ expect(calls.map(c=>[c.path,c.method])).toEqual([['/api/sessions/one/archive','POST'],['/api/sessions/one/restore','POST']]);
+});
