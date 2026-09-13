@@ -47,6 +47,10 @@ export class TauEventStream {
         this.seenEvents = new Set();
         this.controller = null;
         this.timer = null;
+        this.connected = false;
+    }
+    reconnectIfNeeded() {
+        if (!this.connected) this.connect();
     }
     connect() {
         this.disconnect();
@@ -62,6 +66,7 @@ export class TauEventStream {
                 const response = await this.fetchImpl('/api/events', { headers, credentials: 'same-origin', signal: controller.signal });
                 if (!response.ok || !response.body || !response.headers.get('Content-Type')?.includes('text/event-stream')) throw new Error(`Tau event stream unavailable (${response.status})`);
                 if (controller.signal.aborted) return;
+                this.connected = true;
                 this.onStatus('connected');
                 await consumeTauEvents(response.body, frame => {
                     if (controller.signal.aborted) return;
@@ -79,6 +84,7 @@ export class TauEventStream {
                 if (!controller.signal.aborted) this.lastError = error;
             }
             if (!controller.signal.aborted) {
+                this.connected = false;
                 this.onStatus('disconnected');
                 this.timer = setTimeout(run, this.retryMs);
             }
@@ -86,6 +92,7 @@ export class TauEventStream {
         void run();
     }
     disconnect() {
+        this.connected = false;
         this.controller?.abort();
         clearTimeout(this.timer);
         this.timer = null;

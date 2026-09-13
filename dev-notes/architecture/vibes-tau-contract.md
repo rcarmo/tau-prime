@@ -413,3 +413,10 @@ are current integration-fixture screenshots, not paired upstream evidence or
 approval. Fixture includes unresolved API responses, open tool metadata and
 approval controls. Visual comparison/gap correction remains a separate gate.
 Both capture workflow runs passed; no production changes.
+
+Transient stream isolation checkpoint: extracted session/run-scoped draft reducer,
+ignoring mismatched run/session deltas and resetting on snapshot/session change.
+Removed duplicate unscoped append path. Inspection also found focus handler called
+missing reconnectIfNeeded; TauEventStream now implements it with connected state.
+38 unit tests, lint/build and authenticated live regression pass. Actual streamed
+draft browser/visibility reconnect assertions remain pending, not inferred here.

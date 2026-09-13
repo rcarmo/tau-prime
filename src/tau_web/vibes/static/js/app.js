@@ -1,3 +1,4 @@
+import { reduceTauDraft } from './tau-draft.js';
 import { TauMedia } from './components/tau-media.js';
 import { TauApprovals } from './components/tau-approvals.js';
 import { TauPlan } from './components/tau-plan.js';
@@ -772,6 +773,7 @@ function App() {
         if (generation !== switchGeneration.current) return;
         const draft = composeDrafts.load(id);
         searchGeneration.current++;
+        tauDraftRef.current = {runId:null,text:''};
         selectedSessionRef.current = id;
         setSelectedSession(id);
         const sessionUrl = new URL(window.location.href);
@@ -865,6 +867,7 @@ function App() {
     const lastSilenceNoticeRef = useRef(0);
     const isAgentRunningRef = useRef(false);
     const draftBufferRef = useRef('');
+    const tauDraftRef = useRef({runId:null,text:''});
     const thoughtBufferRef = useRef('');
     const expandedPanelsRef = useRef({ draft: false, thought: false });
     const pendingRequestRef = useRef(null);
@@ -2278,6 +2281,11 @@ function App() {
             getToken: () => { try { return localStorage.getItem('tau.web.authToken') || ''; } catch { return ''; } },
             onStatus: setConnectionStatus,
             onFrame: ({ event, data }) => {
+                const nextDraft = reduceTauDraft(tauDraftRef.current, {event,data}, selectedSessionRef.current);
+                if(nextDraft !== tauDraftRef.current) {
+                    tauDraftRef.current = nextDraft; draftBufferRef.current = nextDraft.text;
+                    setAgentDraft({text:nextDraft.text,totalLines:estimateLineCount(nextDraft.text)});
+                }
                 if (event === 'tau.snapshot') {
                     refreshSessions().catch(error => setSessionRefreshError(error.message));
                     loadPosts();
@@ -2287,15 +2295,7 @@ function App() {
                 const payload = data.payload || {};
                 if (event === 'tau.agent.message_start' && payload.role === 'assistant') {
                     setCurrentTurnId(data.run_id);
-                    draftBufferRef.current = '';
-                    setAgentDraft({ text: '', totalLines: 0 });
-                } else if (event === 'tau.agent.message_delta' && typeof payload.delta === 'string') {
-                    draftBufferRef.current += payload.delta;
-                    const text = draftBufferRef.current;
-                    setAgentDraft({ text, totalLines: estimateLineCount(text) });
                 } else if (event === 'tau.agent.message_end') {
-                    draftBufferRef.current = '';
-                    setAgentDraft({ text: '', totalLines: 0 });
                     loadPosts();
                 } else if (event === 'tau.agent.error') {
                     setAgentStatus(payload.error || 'Tau agent error');
