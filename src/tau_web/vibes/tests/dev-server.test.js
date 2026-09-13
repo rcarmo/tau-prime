@@ -4,7 +4,7 @@ const handler=createHandler();
 test('development shell serves imported entrypoint', async()=> {
     const result=await handler(new Request('http://localhost/'));
     expect(result.status).toBe(200);
-    expect(await result.text()).toContain('/static/dist/app.js');
+    expect(await result.text()).toContain('/static/js/bootstrap.js');
 });
 test('source and traversal paths are not exposed', async()=> {
     for(const path of ['/package.json','/static/%2e%2e%2fpackage.json','/static/../LICENSE']) {

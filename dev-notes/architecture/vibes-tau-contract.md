@@ -505,3 +505,9 @@ workflows, then clear token with confirmed reload. Browser storage is empty and
 unauthenticated /api/sessions returns 401 afterward. Both real tests pass; no
 production edits. Server-side credential invalidation is not implied by local
 logout; token remains valid elsewhere until operator rotation.
+
+Entrypoint CSP preparation: removed imported inline script/error innerHTML paths;
+external bootstrap imports tracked runtime and reports load failure with textContent.
+Viewport no longer prohibits user zoom. 44 unit tests/strict lint and real auth
+workflow pass. Inline style handling and complete production CSP/runtime module
+routing remain pending; this is not a production route switch.
