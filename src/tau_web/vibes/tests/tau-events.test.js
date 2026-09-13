@@ -49,3 +49,13 @@ test('failed event consumer leaves cursor and dedupe uncommitted',async()=>{
   expect(stream.lastError.message).toBe('consumer failed');expect(stream.cursor).toBe(null);expect(stream.seenEvents.has('failed')).toBe(false);
  }finally{stream.disconnect();}
 });
+test('focus storm does not restart pending connection',async()=>{
+ let calls=0;let release;
+ const stream=new TauEventStream({onFrame:()=>{},fetchImpl:()=>{calls++;return new Promise(resolve=>{release=resolve;});}});
+ try{
+  stream.connect();for(let i=0;i<10;i++)stream.reconnectIfNeeded();expect(calls).toBe(1);
+  release(new Response(new ReadableStream({}),{headers:{'Content-Type':'text/event-stream'}}));
+  for(let i=0;i<100&&!stream.connected;i++)await Bun.sleep(2);
+  expect(stream.connected).toBe(true);expect(stream.connecting).toBe(false);
+ }finally{stream.disconnect();}
+});

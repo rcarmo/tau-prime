@@ -425,3 +425,9 @@ SSE lifecycle unit checkpoint: healthy connection focus leaves transport intact;
 disconnect cancels reader, focus reconnects; throwing event consumer leaves cursor
 and event-ID dedupe uncommitted for replay. 40 unit tests/126 assertions and lint
 pass. These are transport units, not sustained browser/live-provider stream proof.
+
+Pending reconnect race checkpoint: focus storms no longer abort/restart an
+in-flight connection; connecting state is explicit and aborted retry callbacks
+exit before notifying consumers. Unit test holds handshake pending across ten
+focus requests and confirms one fetch. 41 unit tests, lint/build and real
+authenticated regression pass. Sustained live provider stream gate remains open.
