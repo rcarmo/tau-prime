@@ -32,6 +32,7 @@ try {
  const approvalDecision=process.env.TAU_SMOKE_APPROVAL||'deny';
  if(!['allow','deny'].includes(approvalDecision))throw new Error('Invalid TAU_SMOKE_APPROVAL');
  const approvalLabel=approvalDecision==='allow'?'Allow bash':'Deny bash';
+ let searchSession='smoke';
  let rejectImage=process.env.TAU_SMOKE_IMAGE_FAILURE==='1';
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
@@ -47,6 +48,12 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
+  if(url.pathname.startsWith('/api/sessions/search-other')){
+   const other={...session,session_id:'search-other',title:'Search destination'};
+   const suffix=url.pathname.slice('/api/sessions/search-other'.length);
+   const resources={'':other,'/timeline':{timeline:[{message_id:99,session_id:'search-other',role:'assistant',content:'Other session timeline',created_at:'2026-09-13T19:00:00Z'}]},'/runs':{runs:[]},'/queue':{items:[]},'/approvals':{approvals:[]},'/context':{entry_count:1,message_count:1}};
+   if(Object.hasOwn(resources,suffix))return route.fulfill({contentType:'application/json',body:JSON.stringify(resources[suffix])});
+  }
   if(url.pathname==='/api/extensions/widgets/fixture/widget') {
    expect(route.request().headers().authorization).toBe('Bearer image-test-token');
    return route.fulfill({contentType:'text/html',body:'<!doctype html><p>Refreshed widget document</p>'});
@@ -83,7 +90,7 @@ try {
   else if(url.pathname==='/api/sessions/smoke/plan') data={markdown:'',revision:null};
   else if(url.pathname==='/api/search') {
    if(rejectSearch)return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'Fixture invalid search'})});
-   data={results:[{entity_type:'message',entity_id:'1',session_id:'smoke',text:'Matched search fixture'}]};
+   data={results:[{entity_type:'message',entity_id:'1',session_id:searchSession,text:'Matched search fixture'}]};
   }
   else if(url.pathname==='/api/onboarding') {
    if(route.request().method()==='PUT') {
@@ -107,7 +114,7 @@ try {
    {queue_id:11,session_id:'smoke',queue_kind:'follow_up',position:0,content:'First FIFO message'},
    {queue_id:12,session_id:'smoke',queue_kind:'follow_up',position:1,content:'Second FIFO message'},
   ]};
-  else if(url.pathname==='/api/sessions') data={sessions:[session]};
+  else if(url.pathname==='/api/sessions') data={sessions:[session,{...session,session_id:'search-other',title:'Search destination'}]};
   else if(url.pathname==='/api/sessions/smoke') data=session;
   else if(url.pathname==='/api/sessions/smoke/timeline') data={timeline:[
    {message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z',content_blocks_json:JSON.stringify({attachments:[{media_id:'image-fixture',filename:'fixture.png',media_type:'image/png'}]})},
@@ -461,6 +468,14 @@ try {
   const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;
  })).toBe(false);
  await expect(composer).toHaveValue('Keep rejected draft');
+ searchSession='search-other';
+ await page.keyboard.press('Control+k');await composer.fill('Matched');await composer.press('Enter');
+ await expect(page.getByRole('link',{name:'Open source session'})).toHaveAttribute('href','?session=search-other');
+ await Promise.all([page.waitForEvent('load'),page.getByRole('link',{name:'Open source session'}).click()]);
+ await expect(page).toHaveURL('http://127.0.0.1:8893/?session=search-other');
+ await expect(page.getByText('Other session timeline',{exact:true})).toBeVisible();
+ await expect(composer).toHaveValue('');
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('vibes_compose_draft:smoke')).text)).toBe('Keep rejected draft');
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
 }finally{await browser?.close();await stopChild(server);}

@@ -332,3 +332,9 @@ Interrupted resize: Chromium/WebKit start a real mouse drag then dispatch window
 blur, verify dragging state and body cursor/userSelect restore before pointer
 release. Subsequent keyboard/viewport resize succeeds. 56 unit tests/lint pass.
 Blur is synthetic; no OS-level focus-switch or touch-cancel claim.
+
+Cross-session search navigation now covered in Chromium/WebKit: changed fixture
+result points to search-other; actual navigation selects destination URL/timeline,
+composer starts empty, and smoke session text remains in its separate stored
+draft. 56 unit tests/lint pass. Fixture-backed navigation, not real Tau search API
+integration evidence. No production change.
