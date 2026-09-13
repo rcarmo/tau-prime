@@ -81,6 +81,7 @@
   "js/components/tau-approvals.js",
   "js/components/tau-attachment.js",
   "js/components/tau-branches.js",
+  "js/components/tau-dashboard.js",
   "js/components/tau-media.js",
   "js/components/tau-meters.js",
   "js/components/tau-plan.js",

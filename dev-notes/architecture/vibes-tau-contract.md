@@ -623,3 +623,9 @@ RSS conversion and explicit unavailable swap in all 12 workflow/Axe cases.
 Fresh run also caught added provider-token help text contrast on dark tablet;
 local text-primary correction applied. All 12 pass no serious/critical findings
 in exercised scopes. Bundles rebuilt. No claim of complete Dashboard parity.
+
+Dashboard implementation checkpoint: bounded paginated /dashboard display restores
+session/activity/model/queue/summary/preview data with polling only while open.
+Session selection requires confirmation and closes only after awaited selection
+succeeds. 46 unit tests/lint/build and real root regression pass; open dashboard
+browser selection/pagination and responsive accessibility remain pending.

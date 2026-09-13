@@ -53,6 +53,12 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async dashboard(page = 1) {
+            const token = getToken();
+            const response = await fetchImpl(`/dashboard?page=${page}&page_size=8`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Tau dashboard unavailable (${response.status})`);
+            return response.json();
+        },
         async meters() {
             const token = getToken();
             const response = await fetchImpl('/meters', { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin' });
