@@ -80,8 +80,9 @@ async function copyCodeText(text) {
             // Fall through to the textarea fallback.
         }
     }
+    const textarea = document.createElement('textarea');
+    const previousFocus = document.activeElement;
     try {
-        const textarea = document.createElement('textarea');
         textarea.value = text;
         textarea.setAttribute('readonly', '');
         textarea.style.position = 'fixed';
@@ -89,11 +90,12 @@ async function copyCodeText(text) {
         document.body.appendChild(textarea);
         textarea.select();
         textarea.setSelectionRange(0, textarea.value.length);
-        const copied = document.execCommand('copy');
-        document.body.removeChild(textarea);
-        return copied;
+        return document.execCommand('copy');
     } catch {
         return false;
+    } finally {
+        textarea.remove();
+        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     }
 }
 

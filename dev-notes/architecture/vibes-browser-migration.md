@@ -50,3 +50,9 @@ been restored with targeted real/fixture browser evidence (see chronological
 contract log). Earlier gap bullets describe initial audit, not current absence.
 Ctrl/Cmd+K search and Ctrl/Cmd+N composer focus restored; two-browser checks pass.
 Full shortcut, modal exclusions and completion edge-case matrix still pending.
+
+Clipboard failure checkpoint: both Chromium desktop and WebKit phone now force
+primary clipboard rejection and a throwing execCommand fallback, assert truthful
+error state and removal of the temporary textarea, then retry successfully with
+exact Unicode contents. Fallback cleanup runs in finally and restores prior focus.
+Strict lint, 51 unit tests and frontend build pass. Collapse parity remains open.

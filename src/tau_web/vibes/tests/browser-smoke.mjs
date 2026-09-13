@@ -152,6 +152,21 @@ try {
  await codePost.getByRole('button',{name:'Copy code',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>window.copiedCode)).toBe(codeFixture+'\n');
  expect(await codePost.evaluate(el=>el.getBoundingClientRect().width<=innerWidth)).toBe(true);
+ await page.evaluate(()=>{
+  window.savedClipboardWrite=navigator.clipboard.writeText;
+  window.savedExecCommand=document.execCommand;
+  navigator.clipboard.writeText=async()=>{throw new DOMException('Denied','NotAllowedError');};
+  document.execCommand=()=>{throw new Error('Fallback denied');};
+ });
+ const codeCopy=codePost.locator('.post-code-copy-btn');
+ await codeCopy.click();
+ await expect(codeCopy).toHaveAttribute('aria-label','Copy failed');
+ await expect(codeCopy).toHaveAttribute('data-copy-state','error');
+ await expect(page.locator('body > textarea')).toHaveCount(0);
+ await page.evaluate(()=>{navigator.clipboard.writeText=window.savedClipboardWrite;document.execCommand=window.savedExecCommand;window.copiedCode=null;});
+ await codeCopy.click();
+ await expect(codeCopy).toHaveAttribute('aria-label','Copied');
+ await expect.poll(()=>page.evaluate(()=>window.copiedCode)).toBe(codeFixture+'\n');
  await expect(page.locator('.compose-queue-item')).toHaveCount(2);
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
