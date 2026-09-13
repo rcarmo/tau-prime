@@ -35,6 +35,8 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             const payload = await response.json().catch(() => ({}));
             const error = new Error(typeof payload.error === 'string' ? payload.error : `Tau request failed (${response.status})`);
             error.status = response.status;
+            error.code = payload.code;
+            error.currentPlan = payload.plan;
             throw error;
         }
         return response.status === 204 ? null : response.json();
@@ -46,6 +48,17 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async plan(id) {
+            if (!id) throw new Error('Select a session to load its plan');
+            return request(`/sessions/${encodeURIComponent(id)}/plan`);
+        },
+        async savePlan(id, markdown, revision) {
+            if (!id) throw new Error('Select a session to save its plan');
+            if (revision !== null && (!Number.isInteger(revision) || revision < 0)) throw new Error('Invalid plan revision');
+            return request(`/sessions/${encodeURIComponent(id)}/plan`, {
+                method: 'PUT', body: { markdown, expected_revision: revision },
+            });
+        },
         async search(query, limit = 50, offset = 0, filters = {}) {
             if (offset || filters.images || filters.attachments || filters.threadId || filters.scope === 'root') throw new Error('This search filter is not supported by Tau');
             const params = new URLSearchParams({ q: query, limit: String(limit) });

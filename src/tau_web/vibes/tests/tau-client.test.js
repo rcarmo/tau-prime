@@ -135,3 +135,12 @@ test('search keeps entity/session identity without invented post timestamps',asy
  expect(result.results[0].data.entity_id).toBe('42');expect(result.results[0].timestamp).toBe(null);
  await expect(client.search('x',20,0,{images:true})).rejects.toThrow('not supported');
 });
+test('plan save sends caller revision and exposes current plan on conflict without retry',async()=>{
+ const calls=[];const current={revision:3,markdown:'- [ ] remote'};
+ const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({error:'Plan changed',code:'plan_revision_conflict',plan:current},{status:409});}});
+ const draft='- [ ] local';
+ try{await client.savePlan('one',draft,2);throw new Error('unexpected success');}
+ catch(error){expect(error.status).toBe(409);expect(error.code).toBe('plan_revision_conflict');expect(error.currentPlan).toEqual(current);}
+ expect(calls.length).toBe(1);expect(JSON.parse(calls[0].body)).toEqual({markdown:draft,expected_revision:2});
+ expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
+});

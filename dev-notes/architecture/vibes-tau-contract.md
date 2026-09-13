@@ -211,3 +211,10 @@ only empty results/console output; new requests clear prior error and stale
 responses retain generation/session guards. Chromium desktop/WebKit phone test
 400 failure followed by successful retry and alert removal. 28 unit tests,
 lint/build pass. Remaining main integration gates are unchanged.
+
+Plan transport checkpoint: plan read/save methods use Tau markdown and caller-
+supplied expected_revision. Conflict errors retain code/current server plan for
+explicit UI reconciliation; no retry or automatic revision replacement. Unit
+test checks 409 payload, original submitted draft/revision and CSRF. 29 unit
+tests, lint/build pass. Plan editor/state UI still pending; transport does not
+claim mounted draft or conflict UX parity.
