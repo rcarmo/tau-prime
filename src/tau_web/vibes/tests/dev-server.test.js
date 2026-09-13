@@ -24,3 +24,9 @@ test('API proxy preserves authentication, query, status and event stream', async
     expect(response.headers.get('Content-Type')).toBe('text/event-stream');
     expect(await response.text()).toContain('event: test');
 });
+test('proxy rejects foreign mutation origins and translates its own origin',async()=>{
+ let headers;const proxy=createHandler({backend:'http://127.0.0.1:8892',fetchImpl:async(_url,options)=>{headers=options.headers;return Response.json({ok:true});}});
+ expect((await proxy(new Request('http://localhost/api/sessions/one',{method:'DELETE',headers:{Origin:'https://foreign.invalid'}}))).status).toBe(403);
+ await proxy(new Request('http://localhost/api/sessions/one',{method:'DELETE',headers:{Origin:'http://localhost','X-Tau-CSRF':'1'}}));
+ expect(headers.get('Origin')).toBe('http://127.0.0.1:8892');expect(headers.get('X-Tau-CSRF')).toBe('1');
+});

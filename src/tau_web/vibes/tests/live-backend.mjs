@@ -23,6 +23,16 @@ try {
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-box textarea')).toBeVisible();
+ await page.getByText('@Live backend session',{exact:true}).click();
+ await page.getByRole('button',{name:'Archive Live backend session',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Restore Live backend session',exact:true})).toBeVisible();
+ await expect.poll(async()=>new URL(page.url()).searchParams.get('session')).toBe(null);
+ const archived=await (await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
+ expect(archived.archived_at).toBeTruthy();
+ await page.getByRole('button',{name:'Restore Live backend session',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Archive Live backend session',exact:true})).toBeVisible();
+ const restored=await (await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
+ expect(restored.archived_at).toBe(null);
  expect(errors).toEqual([]);
- console.log('PASS real Tau session create/list/model/timeline startup and proxied SSE snapshot; no provider run attempted');
+ console.log('PASS real Tau session create/list/model/timeline startup, archive/restore and proxied SSE snapshot; no provider run attempted');
 }finally{await browser?.close();proxy.kill();backend.kill();}

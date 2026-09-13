@@ -23,6 +23,7 @@ export function postFromTau(record) {
 export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () => '' } = {}) {
     async function request(path, { method = 'GET', body } = {}) {
         const headers = { Accept: 'application/json' };
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) headers['X-Tau-CSRF'] = '1';
         const token = getToken();
         if (token) headers.Authorization = `Bearer ${token}`;
         if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -152,7 +153,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             return { sessions: result.sessions.map(sessionFromTau) };
         },
         async archiveSession(id, archived) {
-            const result = await request(`/sessions/${encodeURIComponent(id)}/${archived ? 'archive' : 'restore'}`, { method: 'POST' });
+            const result = await request(`/sessions/${encodeURIComponent(id)}${archived ? '' : '/restore'}`, { method: archived ? 'DELETE' : 'POST' });
             return { session: sessionFromTau(result) };
         },
         async renameSession(id, name) {

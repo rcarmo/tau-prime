@@ -14,6 +14,11 @@ export function createHandler({ backend = 'http://127.0.0.1:8080', fetchImpl = f
             const upstream = new URL(url.pathname + url.search, target);
             const headers = new Headers(request.headers);
             headers.delete('host');
+            const origin = headers.get('origin');
+            if (origin) {
+                if (origin !== url.origin) return Response.json({error:'Foreign development origin'}, {status:403});
+                headers.set('origin', target.origin);
+            }
             try {
                 return await fetchImpl(upstream, {
                     method: request.method, headers, redirect: 'manual',

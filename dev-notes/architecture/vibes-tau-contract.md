@@ -156,3 +156,12 @@ actual active session or clears selection/URL if none remain, rather than using
 synthetic default. Unsupported pin/delete callbacks removed. 24 unit tests,
 lint/build and real-backend startup pass. Archive UI edge cases and stale
 selection races still need browser coverage; not marked complete.
+
+Correction from real archive browser test: Tau archives via DELETE /api/sessions/
+{id}, not POST /archive. Restore is POST /restore. Earlier contract notes and
+fixture assertions claiming POST archive were wrong and are superseded here.
+Real mutations also exposed missing X-Tau-CSRF and proxy Origin mismatch. Client
+now sends Tau CSRF header; localhost proxy rejects foreign origins and translates
+its own validated origin to backend origin. Real browser archive/restore now
+passes and verifies database-facing API state and selection URL clearing.
+25 unit tests, lint/build pass. This corrects fixture-only blind spots.
