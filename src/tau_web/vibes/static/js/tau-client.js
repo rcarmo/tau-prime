@@ -45,6 +45,25 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async status(id) {
+            if (!id) return { active_turns: [] };
+            const result = await request(`/sessions/${encodeURIComponent(id)}/runs`);
+            return { active_turns: result.runs.filter(run => ['pending', 'running'].includes(run.status)).map(run => ({
+                turn_id: run.run_id, session_id: run.session_id,
+                type: run.status === 'pending' ? 'queued' : 'thinking',
+                started_at: run.started_at || run.created_at,
+            })) };
+        },
+        async queue(id) {
+            if (!id) return { items: [] };
+            const result = await request(`/sessions/${encodeURIComponent(id)}/queue`);
+            return { items: result.queue.map(item => ({
+                row_id: item.queue_id, session_id: item.session_id,
+                mode: item.queue_kind === 'steer' ? 'steer' : 'queued',
+                content: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
+                position: item.position, tau_readonly: true,
+            })) };
+        },
         async send(id, content, { mode = 'auto', mediaIds = [], intent = null } = {}) {
             if (!id || id === 'default') throw new Error('Select a Tau session before sending');
             if (!content?.trim()) throw new Error('Message is empty');

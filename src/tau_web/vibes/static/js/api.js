@@ -156,16 +156,11 @@ export async function getAgentContext(sessionId = 'default') {
  * Get current agent busy state and active turns (for polling on SSE reconnect).
  */
 export async function getAgentStatus(sessionId = 'default') {
-    return request(`/agents/status?session_id=${encodeURIComponent(sessionId)}`);
+    return tau.status(sessionId === 'default' ? null : sessionId);
 }
 
 export async function getAgentQueue(agentId = null, threadId = null, sessionId = null) {
-    const params = new URLSearchParams();
-    if (agentId) params.set('agent_id', agentId);
-    if (threadId != null) params.set('thread_id', String(threadId));
-    if (sessionId !== null) params.set('session_id', sessionId);
-    const query = params.toString();
-    return request(query ? `/agent/queue?${query}` : '/agent/queue');
+    return tau.queue(sessionId);
 }
 
 export async function removeAgentQueueItem(rowId) {

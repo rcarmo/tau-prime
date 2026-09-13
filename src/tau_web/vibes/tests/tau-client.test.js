@@ -79,3 +79,11 @@ test('unsupported attachments and commands fail before transport; rejection is n
     await expect(client.send('one','/compact')).rejects.toThrow('command');
     await expect(client.send('one','hello',{mode:'steer'})).rejects.toThrow('rejected');
 });
+test('run status excludes finished runs; queue preserves FIFO and marks unsupported actions',async()=>{
+ const client=createTauClient({fetchImpl:async path=>Response.json(path.endsWith('/runs')
+ ? {runs:[{run_id:'active',session_id:'one',status:'running'},{run_id:'done',status:'completed'}]}
+ : {queue:[{queue_id:8,session_id:'one',queue_kind:'follow_up',position:0,content:'next'}]})});
+ expect((await client.status('one')).active_turns.map(t=>t.turn_id)).toEqual(['active']);
+ const item=(await client.queue('one')).items[0];
+ expect(item.row_id).toBe(8);expect(item.content).toBe('next');expect(item.tau_readonly).toBe(true);
+});

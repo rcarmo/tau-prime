@@ -95,3 +95,9 @@ closes its stream, so Reconnecting remains expected; this is not live SSE
 acceptance. Run status/cancel, tools/approvals, reset snapshots and stronger
 lifecycle/race tests remain pending. Old Vibes handlers remain until replacement
 coverage permits removal.
+
+Run/queue read checkpoint: imported status and queue functions use Tau routes.
+Only pending/running runs become active turns. Queue projection preserves backend
+order and identity; unsupported reorder/promote/remove controls are hidden for
+Tau items. Twenty unit tests/62 assertions, lint/build pass. Active-status UI,
+queue browser assertions and actual cancellation remain pending.
