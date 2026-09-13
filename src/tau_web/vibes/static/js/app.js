@@ -1,3 +1,4 @@
+import { TauProviderSetup } from './components/tau-provider-setup.js';
 import { TauRunControl } from './components/tau-run-control.js';
 import { TauEventStream } from './tau-events.js';
 import { initialTauSession } from './tau-session-selection.js';
@@ -718,6 +719,7 @@ function App() {
     const [deletingSession, setDeletingSession] = useState(null);
     const deletedSessionRef = useRef(false);
     const [creatingSession, setCreatingSession] = useState(false);
+    const [providerSetupOpen, setProviderSetupOpen] = useState(false);
     const createdSessionRef = useRef(null);
     const createParentRef = useRef(null);
     useEffect(() => {
@@ -2607,6 +2609,8 @@ function App() {
                     formatTime=${formatTime}
                     formatCount=${formatCount}
                 />
+                <button type="button" class="compose-queue-btn" onClick=${()=>setProviderSetupOpen(true)}>Provider setup</button>
+                ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>setProviderSetupOpen(false)} />`}
                 <${TauRunControl} key=${selectedSession} sessionId=${selectedSession} />
                 <${AgentStatus}
                     status=${agentStatus}

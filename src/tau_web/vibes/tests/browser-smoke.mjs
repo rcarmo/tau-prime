@@ -6,7 +6,7 @@ const browser=await ({chromium,webkit}[engine]).launch();
 try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const page=await browser.newPage({viewport:process.env.TAU_SMOKE_PHONE ? {width:390,height:844} : {width:1440,height:900}}); const errors=[];const missing=new Set();
- const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false;
+ const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null;
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
@@ -14,7 +14,11 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/runs/cancel-fixture/cancel') {
+  if(url.pathname==='/api/onboarding') {
+   if(route.request().method()==='PUT') configured=route.request().postDataJSON();
+   data={default_provider:'test',default_model:'fixture'};
+  }
+  else if(url.pathname==='/api/runs/cancel-fixture/cancel') {
    expect(route.request().method()).toBe('POST');
    cancelled=true;activeRun=false;data={accepted:true,run:{status:'cancelled'}};
   }
@@ -57,6 +61,13 @@ try {
  await cancel.click();
  await expect(page.locator('.tau-run-control button')).toHaveCount(0);
  expect(cancelled).toBe(true);
+ await page.getByRole('button',{name:'Provider setup',exact:true}).click();
+ const setup=page.getByRole('dialog',{name:'Provider setup'});
+ await expect(setup.getByLabel('Provider',{exact:true})).toHaveValue('test');
+ await setup.getByLabel('Model',{exact:true}).fill('updated-model');
+ await setup.getByRole('button',{name:'Save provider',exact:true}).click();
+ await expect(setup).toHaveCount(0);
+ expect(configured).toEqual({provider:'test',model:'updated-model'});
  await expect(composer).toHaveValue('Keep rejected draft');
  console.log(JSON.stringify({engine,errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || !(await page.locator('body').innerText()).includes('Tau persisted smoke message') || missing.has('/api/sessions/null')) process.exitCode=1;

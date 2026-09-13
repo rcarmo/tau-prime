@@ -45,6 +45,11 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async onboarding() { return request('/onboarding'); },
+        async configureProvider({ provider, model, credential }) {
+            if (!provider?.trim() || !model?.trim()) throw new Error('Provider and model are required');
+            return request('/onboarding', { method: 'PUT', body: { provider: provider.trim(), model: model.trim(), ...(credential ? { credential } : {}) } });
+        },
         async context(id) {
             if (!id) return null;
             const result = await request(`/sessions/${encodeURIComponent(id)}/context`);

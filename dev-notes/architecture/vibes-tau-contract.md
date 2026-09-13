@@ -135,3 +135,10 @@ Missing configuration rejects before POST and leaves the dialog error path intac
 No inferred catalogue choice or fabricated provider. Branch creation remains
 unsupported and explicit. 23 unit tests/69 assertions, lint/build pass; provider
 setup UI and browser creation workflow still pending.
+
+Provider setup UI checkpoint: imported app can read/save Tau onboarding defaults
+through a focused modal. Optional credential is never placed in browser storage;
+blank credential is omitted so existing credentials remain. Chromium desktop and
+WebKit phone verify prefill, save payload, dismissal and composer draft survival.
+23 existing unit tests, lint/build pass. This modal still needs complete inert-
+background/accessibility and failure-path coverage before production switch.
