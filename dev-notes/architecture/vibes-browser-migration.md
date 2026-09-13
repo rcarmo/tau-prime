@@ -111,3 +111,11 @@ reproduced in full retry, remains an intermittent finding, not explained/fixed.
 Logs retained in /workspace/tmp/tau-vibes-52b4bb1/installed-matrix{,-retry}.log.
 51 unit tests and strict lint pass. Not a whole-page installed Axe audit or
 provider/visual approval; source-tree fixture whole-page scans remain separate.
+
+Logout reliability investigation: five consecutive installed-wheel WebKit
+820x1180/light full authenticated/Axe journeys passed; sixth run with new
+failure-only diagnostic capture also passed. Original intermittent timeout is
+not reproduced or explained. Harness now captures readyState, token presence
+(boolean only), unauthenticated sessions status, dialog identity and bounded
+alerts before teardown on recurrence; no timeout increase or production change.
+51 unit tests/lint pass. Keep finding open rather than treating repetition as fix.

@@ -210,7 +210,19 @@ try {
   await page.getByLabel('Tau bearer token',{exact:true}).fill('');
   page.once('dialog',dialog=>dialog.accept());
   await Promise.all([page.waitForEvent('load'),page.getByRole('button',{name:'Save token and reload',exact:true}).click()]);
-  await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
+  try {
+   await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
+  } catch(error) {
+   // Record bounded, non-secret auth/bootstrap evidence before fixture teardown.
+   console.error('Logout diagnostics',JSON.stringify(await page.evaluate(async()=>({
+    readyState:document.readyState,
+    tokenPresent:!!localStorage.getItem('tau.web.authToken'),
+    sessionStatus:await fetch('/api/sessions').then(r=>r.status).catch(()=>null),
+    dialogs:[...document.querySelectorAll('[role="dialog"]')].map(el=>({label:el.getAttribute('aria-label'),labelledby:el.getAttribute('aria-labelledby')})),
+    alerts:[...document.querySelectorAll('[role="alert"]')].map(el=>el.textContent?.slice(0,300)),
+   }))));
+   throw error;
+  }
   expect(await page.evaluate(()=>localStorage.getItem('tau.web.authToken'))).toBe(null);
   expect(await page.evaluate(async()=> (await fetch('/api/sessions')).status)).toBe(401);
  }
