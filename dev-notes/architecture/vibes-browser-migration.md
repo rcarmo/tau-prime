@@ -485,3 +485,9 @@ asset requests are excluded from precache counting; isolated mode continues to
 assert every precache request is credential-free. Both modes pass plus 59 unit
 tests/lint. No real Tau backend, offline mutation/draft UX or WebKit completion
 claim; production registration remains disabled pending integration decision.
+
+Offline install failure cleanup: partial current-version cache is deleted when
+asset fetch/cache write fails and installation rejects. Regression verifies one
+successful entry then failed asset removes only owned current cache. 60 unit
+tests/lint/build and Chromium full-app offline/upgrade harness pass. Worker still
+inactive in production; no offline acceptance completion claim.

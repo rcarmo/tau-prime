@@ -1,13 +1,18 @@
 // Build replaces this declaration with an exact public-shell manifest.
-const SHELL = {"version":"1a9b593778f47aae5849","assets":["/","/static/js/bootstrap.js","/static/dist/app.js?v=1","/static/dist/app.css?v=1","/static/extension-ui.js","/static/frontend-sdk.js","/static/widget-bridge.js","/static/fonts/KaTeX_Size1-Regular.woff2","/static/fonts/KaTeX_Caligraphic-Bold.woff2","/static/fonts/KaTeX_Size4-Regular.woff2","/static/fonts/KaTeX_SansSerif-Italic.woff2","/static/fonts/KaTeX_Fraktur-Regular.woff2","/static/fonts/KaTeX_AMS-Regular.woff2","/static/fonts/KaTeX_Fraktur-Bold.woff2","/static/fonts/KaTeX_Size2-Regular.woff2","/static/fonts/KaTeX_Math-BoldItalic.woff2","/static/fonts/KaTeX_Caligraphic-Regular.woff2","/static/fonts/KaTeX_Size3-Regular.woff2","/static/fonts/KaTeX_Main-BoldItalic.woff2","/static/fonts/KaTeX_Typewriter-Regular.woff2","/static/fonts/KaTeX_SansSerif-Bold.woff2","/static/fonts/KaTeX_Main-Italic.woff2","/static/fonts/KaTeX_Script-Regular.woff2","/static/fonts/KaTeX_Main-Regular.woff2","/static/fonts/KaTeX_SansSerif-Regular.woff2","/static/fonts/KaTeX_Main-Bold.woff2","/static/fonts/KaTeX_Math-Italic.woff2","/static/common/fonts/vendor/firacode-nerd-font-mono-bold.ttf","/static/common/fonts/vendor/firacode-nerd-font.meta.json","/static/common/fonts/vendor/firacode-nerd-font-mono-regular.ttf"]};
+const SHELL = {"version":"ef3cef214f53c86a39dd","assets":["/","/static/js/bootstrap.js","/static/dist/app.js?v=1","/static/dist/app.css?v=1","/static/extension-ui.js","/static/frontend-sdk.js","/static/widget-bridge.js","/static/fonts/KaTeX_Size1-Regular.woff2","/static/fonts/KaTeX_Caligraphic-Bold.woff2","/static/fonts/KaTeX_Size4-Regular.woff2","/static/fonts/KaTeX_SansSerif-Italic.woff2","/static/fonts/KaTeX_Fraktur-Regular.woff2","/static/fonts/KaTeX_AMS-Regular.woff2","/static/fonts/KaTeX_Fraktur-Bold.woff2","/static/fonts/KaTeX_Size2-Regular.woff2","/static/fonts/KaTeX_Math-BoldItalic.woff2","/static/fonts/KaTeX_Caligraphic-Regular.woff2","/static/fonts/KaTeX_Size3-Regular.woff2","/static/fonts/KaTeX_Main-BoldItalic.woff2","/static/fonts/KaTeX_Typewriter-Regular.woff2","/static/fonts/KaTeX_SansSerif-Bold.woff2","/static/fonts/KaTeX_Main-Italic.woff2","/static/fonts/KaTeX_Script-Regular.woff2","/static/fonts/KaTeX_Main-Regular.woff2","/static/fonts/KaTeX_SansSerif-Regular.woff2","/static/fonts/KaTeX_Main-Bold.woff2","/static/fonts/KaTeX_Math-Italic.woff2","/static/common/fonts/vendor/firacode-nerd-font-mono-bold.ttf","/static/common/fonts/vendor/firacode-nerd-font.meta.json","/static/common/fonts/vendor/firacode-nerd-font-mono-regular.ttf"]};
 const CACHE = `tau-vibes-shell-${SHELL.version}`;
 self.addEventListener('install', event => {
  event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
-  for(const path of SHELL.assets){
-   const response=await fetch(new Request(path,{credentials:'omit',cache:'reload'}));
-   if(!response.ok)throw new Error(`Shell asset unavailable: ${path}`);
-   await cache.put(path,response);
+  try{
+   for(const path of SHELL.assets){
+    const response=await fetch(new Request(path,{credentials:'omit',cache:'reload'}));
+    if(!response.ok)throw new Error(`Shell asset unavailable: ${path}`);
+    await cache.put(path,response);
+   }
+  }catch(error){
+   await caches.delete(CACHE);
+   throw error;
   }
  })());
 });

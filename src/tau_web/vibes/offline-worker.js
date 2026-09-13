@@ -4,10 +4,15 @@ const CACHE = `tau-vibes-shell-${SHELL.version}`;
 self.addEventListener('install', event => {
  event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
-  for(const path of SHELL.assets){
-   const response=await fetch(new Request(path,{credentials:'omit',cache:'reload'}));
-   if(!response.ok)throw new Error(`Shell asset unavailable: ${path}`);
-   await cache.put(path,response);
+  try{
+   for(const path of SHELL.assets){
+    const response=await fetch(new Request(path,{credentials:'omit',cache:'reload'}));
+    if(!response.ok)throw new Error(`Shell asset unavailable: ${path}`);
+    await cache.put(path,response);
+   }
+  }catch(error){
+   await caches.delete(CACHE);
+   throw error;
   }
  })());
 });
