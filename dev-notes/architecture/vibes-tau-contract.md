@@ -551,3 +551,10 @@ Test verifies unrelated caches preserved and no fetch handler. Build refreshes
 asset manifest; 45 JS unit tests/lint and 8 asset tests pass. Not served at /sw.js
 yet; actual cached-client upgrade/browser validation belongs to production switch.
 Offline replacement support is not claimed by retirement.
+
+Native worker retirement checkpoint: Chromium/WebKit seed Tau v12 cache and an
+unrelated cache, register candidate retirement worker, then verify Tau cache gone,
+unrelated content preserved and registration absent. Initial test awaited
+activated state, but self-unregistration can transition past it; final assertions
+poll actual cleanup effects instead. Both pass. Test scope is /static/, not a
+cached production root navigation; actual upgrade routing still pending.
