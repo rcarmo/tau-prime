@@ -275,3 +275,10 @@ content request without token is asserted 401 and bearer request returns exact
 content. Regular browser harness remains unauthenticated unless explicit
 TAU_BROWSER_TEST_AUTH_TOKEN is set. 31 unit tests/lint pass. Authenticated media
 UI link handling still needs implementation; backend auth evidence is not that.
+
+Authenticated media UI checkpoint: session media list offers downloads via bearer
+fetch and temporary blob URL, never tokens in URLs. URLs revoked on timeout or
+unmount. Chromium/WebKit real authenticated browser tests click Download and
+verify filename plus exact saved Unicode content; unauthenticated content still
+asserts 401. 31 unit tests, lint/build pass. Timeline inline-media rendering and
+large-file resource limits remain separate pending work.

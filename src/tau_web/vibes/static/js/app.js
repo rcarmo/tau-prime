@@ -1,3 +1,4 @@
+import { TauMedia } from './components/tau-media.js';
 import { TauApprovals } from './components/tau-approvals.js';
 import { TauPlan } from './components/tau-plan.js';
 import { TauProviderSetup } from './components/tau-provider-setup.js';
@@ -2618,6 +2619,7 @@ function App() {
                 <button type="button" class="compose-queue-btn" onClick=${()=>setProviderSetupOpen(true)}>Provider setup</button>
                 ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>setProviderSetupOpen(false)} />`}
                 ${selectedSession && html`<details><summary>Plan</summary><${TauPlan} key=${selectedSession} sessionId=${selectedSession} /></details>`}
+                ${selectedSession && html`<${TauMedia} key=${selectedSession} sessionId=${selectedSession} />`}
                 ${selectedSession && html`<${TauApprovals} key=${selectedSession} sessionId=${selectedSession} />`}
                 <${TauRunControl} key=${selectedSession} sessionId=${selectedSession} />
                 <${AgentStatus}

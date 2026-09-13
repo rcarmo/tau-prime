@@ -39,6 +39,14 @@ try {
  expect(mediaCheck.filename).toBe('live-media.txt');expect(mediaCheck.status).toBe(200);
  expect(mediaCheck.content).toBe('Real media fixture: café 日本語');
  expect(mediaCheck.id).toBeTruthy();
+ await page.locator('summary').filter({hasText:'Session media'}).click();
+ await page.getByRole('button',{name:'Refresh media',exact:true}).click();
+ const downloadEvent=page.waitForEvent('download');
+ await page.getByRole('button',{name:'Download live-media.txt',exact:true}).click();
+ const downloaded=await downloadEvent;
+ expect(downloaded.suggestedFilename()).toBe('live-media.txt');
+ const {readFile}=await import('node:fs/promises');
+ expect(await readFile(await downloaded.path(),'utf8')).toBe('Real media fixture: café 日本語');
  if(token)expect(mediaCheck.unauthorizedStatus).toBe(401);
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('README.md',{exact:true}).first().click();

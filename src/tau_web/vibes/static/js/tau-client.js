@@ -48,6 +48,17 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async media(id) {
+            if (!id) return [];
+            return (await request(`/media?session_id=${encodeURIComponent(id)}`)).media;
+        },
+        async mediaBlob(id) {
+            const headers = {}; const token = getToken();
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const response = await fetchImpl(`/api/media/${encodeURIComponent(id)}/content`, { headers, credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Tau download failed (${response.status})`);
+            return response.blob();
+        },
         async upload(file, { sessionId, signal } = {}) {
             if (!sessionId || sessionId === 'default') throw new Error('Select a session before uploading');
             const body = new FormData(); body.append('file', file, file.name); body.append('session_id', sessionId);
