@@ -7,6 +7,7 @@ try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const page=await browser.newPage({viewport:process.env.TAU_SMOKE_PHONE ? {width:390,height:844} : {width:1440,height:900}}); const errors=[];const missing=new Set();
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
+ let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
@@ -14,7 +15,14 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/search') {
+  if(url.pathname==='/api/sessions/smoke/approvals') data={approvals:approvalPending?[{approval_id:'approval-fixture',session_id:'smoke',tool_name:'bash',description:'Run fixture command',arguments:{command:'echo fixture'}}]:[]};
+  else if(url.pathname==='/api/approvals/approval-fixture') {
+   decisions.push(route.request().postDataJSON());
+   if(rejectApproval)return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture approval conflict'})});
+   approvalPending=false;data={approval_id:'approval-fixture',decision:'deny'};
+  }
+  else if(url.pathname==='/api/sessions/smoke/plan') data={markdown:'',revision:null};
+  else if(url.pathname==='/api/search') {
    if(rejectSearch)return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'Fixture invalid search'})});
    data={results:[{entity_type:'message',entity_id:'1',session_id:'smoke',text:'Matched search fixture'}]};
   }
@@ -52,6 +60,15 @@ try {
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
  const composer=page.locator('.compose-box textarea');
+ const approvals=page.getByRole('region',{name:'Tool approvals'});
+ await expect(approvals).toContainText('echo fixture');
+ await approvals.getByRole('button',{name:'Deny bash',exact:true}).click();
+ await expect(approvals.getByRole('alert')).toHaveText('Fixture approval conflict');
+ await expect(approvals.getByRole('button',{name:'Deny bash',exact:true})).toBeEnabled();
+ rejectApproval=false;
+ await approvals.getByRole('button',{name:'Deny bash',exact:true}).click();
+ await expect(approvals.getByRole('button',{name:'Deny bash',exact:true})).toHaveCount(0);
+ expect(decisions).toEqual([{decision:'deny'},{decision:'deny'}]);
  await composer.fill('Accepted browser message');
  await composer.press('Enter');
  await expect(composer).toHaveValue('');

@@ -239,3 +239,10 @@ approval ID with CSRF and leaves item visible on failure. Pending guard prevents
 double-click submission. 30 unit tests, lint/build and real startup regression
 pass. Nonempty approval browser fixtures, denial/retry and genuine tool-run
 validation remain pending; no approvals automatically granted.
+
+Approval browser checkpoint: Chromium desktop and WebKit phone render pending
+tool description/arguments, reject first Deny POST with 409, retain enabled
+request and error, then retry Deny and remove only after acknowledgement. Request
+payloads are asserted. Existing composer/setup/search checks remain passing.
+30 unit tests/lint pass. These explicit denials are fixture-only; genuine runtime
+tool approval and allow-path/security review remain open.
