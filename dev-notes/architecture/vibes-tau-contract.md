@@ -398,3 +398,11 @@ second session, verify empty composer rather than leaked first draft, edit new
 composer/Plan, switch back to first session and recover its prior draft, then
 return and recover both new unsaved edits. Both pass. Plan draft persistence is
 in-memory only; page reload durability not claimed. No provider execution needed.
+
+Expanded real accessibility checkpoint: TAU_LIVE_AXE scans open dirty Plan and
+open session-media section after authenticated workflows. Chromium/WebKit ×
+light/dark pass no serious/critical findings in these scopes, with real Plan
+revision/draft checks retained. New session media is empty at scan time; populated
+media buttons/download are behavior-tested earlier, not included in this scan.
+No production changes. Phone/tablet accessibility remains covered only by prior
+fixture scopes, not this desktop live check.

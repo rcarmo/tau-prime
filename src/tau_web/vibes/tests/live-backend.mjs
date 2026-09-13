@@ -1,6 +1,7 @@
 import {requireFreePorts,stopChild,requireRunning} from './server-lifecycle.mjs';
 import {chromium,webkit,expect} from '@playwright/test';
 import {spawn} from 'node:child_process';
+import AxeBuilder from '@axe-core/playwright';
 const token=process.env.TAU_LIVE_AUTH ? 'local-test-only-token' : '';
 const authFetch=(url,options={})=>fetch(url,{...options,headers:{...options.headers,...(token?{Authorization:`Bearer ${token}`}:{})}});
 await requireFreePorts(8893,8894);
@@ -25,7 +26,7 @@ try {
  const timeout=setTimeout(()=>controller.abort(),5000);
  try {while(!text.includes('\n\n')){const {value,done}=await reader.read();if(done)break;text+=new TextDecoder().decode(value);}expect(text).toContain('event: tau.snapshot');}
  finally{clearTimeout(timeout);controller.abort();await reader.cancel().catch(()=>{});}
- browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const context=await browser.newContext({colorScheme:process.env.TAU_LIVE_THEME||'light'});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  if(token)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
@@ -144,6 +145,13 @@ try {
  await expect(composer).toHaveValue('New session draft remains local');
  if(!await plan.isVisible())await planSummary.click();
  await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
+ if(process.env.TAU_LIVE_AXE){
+  for(const selector of ['.tau-plan','[aria-label="Session media"]']){
+   if(!await page.locator(selector).isVisible())await page.locator('summary').filter({hasText:'Session media'}).click();
+   const result=await new AxeBuilder({page}).include(selector).analyze();
+   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
+  }
+ }
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');
 }finally{await browser?.close();await stopChild(proxy);await stopChild(backend);}
