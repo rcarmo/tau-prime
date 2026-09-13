@@ -157,6 +157,8 @@ export async function getAgentContext(sessionId = 'default') {
 /**
  * Get current agent busy state and active turns (for polling on SSE reconnect).
  */
+export const getTauBranches = id => tau.branches(id);
+export const selectTauBranch = (id, leaf) => tau.selectBranch(id, leaf);
 export const getTauMedia = id => tau.media(id);
 export const getTauMediaBlob = id => tau.mediaBlob(id);
 export const getTauApprovals = id => tau.approvals(id);

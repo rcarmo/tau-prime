@@ -593,3 +593,9 @@ workflow tests. Packaging asserts no old frontend/app/preact bundle. Full Python
 1313 pass (count reduced by obsolete assertions), real production-router
 Chromium/WebKit authenticated workflows pass. Old browser spec migration and
 untracked dependency directory cleanup remain separate; Git preserves recovery.
+
+Branch selection restoration checkpoint: explicit Conversation branches disclosure
+uses Tau leaf listing/select endpoint, confirmation and pending/error state;
+accepted switch refreshes selected session through existing path. This is not
+Vibes child-session creation. 46 unit tests/lint/build and real root regression
+pass; nonempty branch fixture and confirmation/draft browser checks pending.

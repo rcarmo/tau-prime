@@ -53,6 +53,14 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async branches(id) {
+            if (!id) return [];
+            return (await request(`/sessions/${encodeURIComponent(id)}/branches`)).branches;
+        },
+        async selectBranch(id, leaf) {
+            if (!id || typeof leaf !== 'string' || !leaf) throw new Error('Select a valid conversation leaf');
+            return request(`/sessions/${encodeURIComponent(id)}/branches/select`, { method: 'POST', body: { leaf_entry_id: leaf } });
+        },
         async agentIdentity() {
             const settings = await request('/settings');
             return { agents: [{ id: 'default', name: settings.agent_name || 'Tau' }] };

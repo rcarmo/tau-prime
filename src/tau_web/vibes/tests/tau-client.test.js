@@ -192,3 +192,8 @@ test('bounded media reader preserves bytes and content type',async()=>{
  const client=createTauClient({fetchImpl:async()=>new Response('café',{headers:{'Content-Type':'text/plain'}})});
  const blob=await client.mediaBlob('small');expect(blob.type).toStartWith('text/plain');expect(await blob.text()).toBe('café');
 });
+test('branch selection submits explicit leaf rather than creating a child session',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({leaf_entry_id:'leaf'});}});
+ await client.selectBranch('one','leaf');expect(calls[0].path).toBe('/api/sessions/one/branches/select');expect(JSON.parse(calls[0].body)).toEqual({leaf_entry_id:'leaf'});
+ await expect(client.selectBranch('one','')).rejects.toThrow('valid conversation leaf');
+});
