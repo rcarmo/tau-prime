@@ -44,6 +44,7 @@ export class TauEventStream {
     constructor({ onFrame, onStatus = () => {}, getToken = () => '', fetchImpl = fetch, retryMs = 1000 }) {
         Object.assign(this, { onFrame, onStatus, getToken, fetchImpl, retryMs });
         this.cursor = null;
+        this.seenEvents = new Set();
         this.controller = null;
         this.timer = null;
     }
@@ -64,7 +65,14 @@ export class TauEventStream {
                 this.onStatus('connected');
                 await consumeTauEvents(response.body, frame => {
                     if (controller.signal.aborted) return;
-                    this.onFrame(frame);
+                    const eventId = frame.data?.event_id;
+                    if (!eventId || !this.seenEvents.has(eventId)) {
+                        this.onFrame(frame);
+                        if (eventId) {
+                            this.seenEvents.add(eventId);
+                            if (this.seenEvents.size > 4096) this.seenEvents.delete(this.seenEvents.values().next().value);
+                        }
+                    }
                     if (frame.id !== null) this.cursor = frame.id;
                 }, controller.signal);
             } catch (error) {

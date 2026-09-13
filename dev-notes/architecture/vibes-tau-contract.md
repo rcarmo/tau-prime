@@ -85,3 +85,13 @@ bearer token, Last-Event-ID reconnect and abortable reader lifecycle. Incrementa
 UTF-8/CRLF/comment decoding and reconnect/disconnect tests pass (18 total tests,
 56 assertions; lint pass). Not connected to app yet: canonical event projection,
 snapshot recovery, deduplication and live-delta presentation remain required.
+
+SSE app checkpoint: production candidate app now instantiates TauEventStream,
+not Vibes SSEClient. Snapshot refreshes sessions/persisted timeline; selected-
+session message start/delta/end updates draft and reloads persisted results.
+Bounded event-id replay suppression retains the latest cursor. Nineteen tests/
+58 assertions, lint/build and Chromium fixture smoke pass. Snapshot fixture
+closes its stream, so Reconnecting remains expected; this is not live SSE
+acceptance. Run status/cancel, tools/approvals, reset snapshots and stronger
+lifecycle/race tests remain pending. Old Vibes handlers remain until replacement
+coverage permits removal.

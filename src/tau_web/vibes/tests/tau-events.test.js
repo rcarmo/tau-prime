@@ -20,3 +20,12 @@ test('reconnect forwards auth and committed cursor; disconnect stops retries',as
  }finally{stream.disconnect();}
  const count=calls.length;await Bun.sleep(20);expect(calls.length).toBe(count);
 });
+test('replayed event ids are delivered once while cursor advances',async()=>{
+ const frames=[];let stream;
+ stream=new TauEventStream({retryMs:10000,onFrame:f=>frames.push(f),fetchImpl:async()=>new Response(
+ 'id: 1\nevent: tau.agent.message_delta\ndata: {"event_id":"same","payload":{"delta":"x"}}\n\nid: 2\nevent: tau.agent.message_delta\ndata: {"event_id":"same","payload":{"delta":"x"}}\n\n',
+ {headers:{'Content-Type':'text/event-stream'}})});
+ try { stream.connect(); for(let i=0;i<100 && stream.cursor!=='2';i++)await Bun.sleep(2);
+ expect(frames.length).toBe(1);expect(stream.cursor).toBe('2');
+ }finally{stream.disconnect();}
+});

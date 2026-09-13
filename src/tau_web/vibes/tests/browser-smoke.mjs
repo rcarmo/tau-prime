@@ -11,6 +11,7 @@ try {
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
   if(url.pathname==='/'||url.pathname.startsWith('/static/')) return route.continue();
+  if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
   if(url.pathname==='/api/sessions/smoke/runs') {

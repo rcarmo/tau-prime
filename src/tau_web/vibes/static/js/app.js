@@ -1,3 +1,4 @@
+import { TauEventStream } from './tau-events.js';
 import { initialTauSession } from './tau-session-selection.js';
 import { SessionDeleteDialog } from './components/session-delete-dialog.js';
 import { SessionNameDialog } from './components/session-name-dialog.js';
@@ -2266,7 +2267,34 @@ function App() {
     useEffect(() => {
         loadPosts();
         
-        const sse = new SSEClient(handleSseEvent, handleConnectionStatusChange);
+        const sse = new TauEventStream({
+            getToken: () => { try { return localStorage.getItem('tau.web.authToken') || ''; } catch { return ''; } },
+            onStatus: setConnectionStatus,
+            onFrame: ({ event, data }) => {
+                if (event === 'tau.snapshot') {
+                    refreshSessions().catch(error => setSessionRefreshError(error.message));
+                    loadPosts();
+                    return;
+                }
+                if (data.session_id !== selectedSessionRef.current) return;
+                const payload = data.payload || {};
+                if (event === 'tau.agent.message_start' && payload.role === 'assistant') {
+                    setCurrentTurnId(data.run_id);
+                    draftBufferRef.current = '';
+                    setAgentDraft({ text: '', totalLines: 0 });
+                } else if (event === 'tau.agent.message_delta' && typeof payload.delta === 'string') {
+                    draftBufferRef.current += payload.delta;
+                    const text = draftBufferRef.current;
+                    setAgentDraft({ text, totalLines: estimateLineCount(text) });
+                } else if (event === 'tau.agent.message_end') {
+                    draftBufferRef.current = '';
+                    setAgentDraft({ text: '', totalLines: 0 });
+                    loadPosts();
+                } else if (event === 'tau.agent.error') {
+                    setAgentStatus(payload.error || 'Tau agent error');
+                }
+            },
+        });
         
         sse.connect();
 
@@ -2288,7 +2316,7 @@ function App() {
             document.removeEventListener('visibilitychange', handleWindowFocus);
             sse.disconnect();
         };
-    }, [loadPosts, handleSseEvent]);
+    }, [loadPosts]);
 
     // Adaptive backstop poller — SSE is the primary event source; this is
     // a safety net only. 15 s when a turn is active, 60 s when idle.
