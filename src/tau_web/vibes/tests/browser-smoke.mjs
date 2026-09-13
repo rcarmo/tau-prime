@@ -374,6 +374,17 @@ try {
  expect(await composer.evaluate(el=>Math.round(el.getBoundingClientRect().height))).toBe(maxHeight);
  await resize.press('Home');await resize.press('ArrowDown');
  await expect(resize).toHaveAttribute('aria-valuenow',String(minHeight));
+ const originalBodyStyle=await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}));
+ const resizeBounds=await resize.boundingBox();
+ const dragX=resizeBounds.x+resizeBounds.width/2,dragY=resizeBounds.y+resizeBounds.height/2;
+ await page.mouse.move(dragX,dragY);await page.mouse.down();
+ await page.mouse.move(dragX,dragY-80,{steps:8});
+ await expect(resize).toHaveClass(/dragging/);
+ expect(Number(await resize.getAttribute('aria-valuenow'))).toBeGreaterThan(minHeight);
+ await page.mouse.up();
+ await expect(resize).not.toHaveClass(/dragging/);
+ expect(await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}))).toEqual(originalBodyStyle);
+ await expect(composer).toHaveValue('Keep rejected draft');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;

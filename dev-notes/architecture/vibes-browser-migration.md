@@ -225,3 +225,8 @@ Composer resize keyboard migration: Chromium desktop/WebKit phone verify Home,
 End and arrow increments clamp at advertised min/max, actual textarea geometry
 matches maximum, separator keeps focus and draft remains intact. 56 unit tests
 and lint pass. Pointer/touch drag cleanup and resize across viewport remain open.
+
+Composer pointer migration: real Playwright mouse drag in Chromium/WebKit grows
+input from minimum, enters/exits dragging state, restores body cursor/userSelect
+on release and preserves draft. 56 unit tests/lint pass. Phone viewport WebKit
+uses a mouse here; this is not a touch-device gesture claim.
