@@ -56,3 +56,10 @@ primary clipboard rejection and a throwing execCommand fallback, assert truthful
 error state and removal of the temporary textarea, then retry successfully with
 exact Unicode contents. Fallback cleanup runs in finally and restores prior focus.
 Strict lint, 51 unit tests and frontend build pass. Collapse parity remains open.
+
+Code collapse restored in the imported renderer enhancement: >40 split lines or
+>24576 UTF-8 bytes starts collapsed; native button toggles aria-expanded without
+replacing focused control. Local CSS bounds the pre, leaving vendor CSS untouched.
+Chromium desktop/WebKit phone verify real overflow, keyboard expand/collapse,
+focus retention and exact full copying while collapsed. Unit 51/lint/build pass.
+Threshold boundary and content-replacement reset fixtures remain to migrate.

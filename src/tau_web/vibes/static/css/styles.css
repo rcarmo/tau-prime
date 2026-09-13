@@ -547,3 +547,8 @@ html[data-tint]::after {
     border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
 }
 .compose-submit-error .compose-inline-status-detail { color: var(--text-primary); }
+.post-code-block-collapsed pre { max-height: 16rem; overflow: auto; }
+.tau-code-toggle {
+    color: var(--text-primary); background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
+}

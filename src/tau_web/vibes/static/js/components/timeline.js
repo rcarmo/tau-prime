@@ -136,6 +136,27 @@ function enhanceCodeBlocks(container) {
         pre.parentNode?.insertBefore(wrapper, pre);
         wrapper.appendChild(pre);
 
+        const text = pre.querySelector('code')?.textContent || '';
+        const lines = text.split('\n').length;
+        const bytes = new TextEncoder().encode(text).byteLength;
+        if (lines > 40 || bytes > 24576) {
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'tau-code-toggle';
+            let expanded = false;
+            const renderToggle = () => {
+                wrapper.classList.toggle('post-code-block-collapsed', !expanded);
+                wrapper.classList.toggle('post-code-block-expanded', expanded);
+                toggle.setAttribute('aria-expanded', String(expanded));
+                toggle.textContent = expanded ? 'Collapse code' : `Expand code (${lines} lines, ${bytes} bytes)`;
+            };
+            const toggleCode = () => { expanded = !expanded; renderToggle(); };
+            toggle.addEventListener('click', toggleCode);
+            cleanups.push(() => toggle.removeEventListener('click', toggleCode));
+            renderToggle();
+            wrapper.appendChild(toggle);
+        }
+
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'post-code-copy-btn';

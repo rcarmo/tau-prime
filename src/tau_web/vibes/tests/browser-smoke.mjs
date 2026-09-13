@@ -149,6 +149,17 @@ try {
  await expect(page.getByText('Tool result: bash (failed)',{exact:true})).toBeVisible();
  await expect(page.getByText('Fixture command failed safely',{exact:true})).toBeVisible();
  const codePost=page.locator('#post-4');
+ const codeBlock=codePost.locator('.post-code-block');
+ const codeToggle=codeBlock.locator('.tau-code-toggle');
+ await expect(codeBlock).toHaveClass(/post-code-block-collapsed/);
+ expect(await codeBlock.locator('pre').evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+ await codeToggle.focus();await page.keyboard.press('Enter');
+ await expect(codeToggle).toHaveAttribute('aria-expanded','true');
+ await expect(codeToggle).toBeFocused();
+ await expect(codeBlock).toHaveClass(/post-code-block-expanded/);
+ await page.keyboard.press('Enter');
+ await expect(codeToggle).toHaveAttribute('aria-expanded','false');
+ await expect(codeToggle).toBeFocused();
  await codePost.getByRole('button',{name:'Copy code',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>window.copiedCode)).toBe(codeFixture+'\n');
  expect(await codePost.evaluate(el=>el.getBoundingClientRect().width<=innerWidth)).toBe(true);
