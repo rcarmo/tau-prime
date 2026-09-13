@@ -74,3 +74,17 @@ then refresh through accepted composer send. Chromium/WebKit assert new Unicode
 contents, collapsed state, updated byte label and single wrapper/copy control.
 51 unit tests/lint pass. Code collapse lifecycle coverage now includes initial
 state, thresholds, keyboard focus, complete copy, and same-ID replacement reset.
+
+## Consolidated refresh at f082c7e
+
+- Full Chromium/WebKit × phone/tablet/desktop × light/dark workflow/Axe matrix:
+  12/12 passed, including code-collapse lifecycle additions.
+- Authenticated browser SSE: both engines pass split UTF-8 delivery, reconnect
+  cursor and replay deduplication. This is transport fixture evidence.
+- Real Tau production-route proxy journeys: both engines pass with bearer auth,
+  then both pass again with login-UI validation enabled. No provider attempted.
+- Service-worker upgrade/retirement test passes; this is not offline support.
+
+These are source-tree production-route tests, not a refreshed installed wheel.
+Paired visual review, provider execution, final artifact and remaining legacy
+behavioral gaps remain separate gates.
