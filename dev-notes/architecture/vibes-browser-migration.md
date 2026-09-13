@@ -279,3 +279,10 @@ WebKit phone/dark missing run-conflict alert timeout, not explained or fixed.
 56 unit tests/lint/build pass. ca45478 artifact not attached because contrast fix
 postdates it; final wheel refresh remains. Logs under tmp/tau-vibes-ca45478 and
 /workspace/tmp/link-contrast-matrix-retry.log.
+
+Widget rejection fixture sequencing: earlier WebKit failure was at second
+submission immediately after prior content clear. Clear precedes onPost/finally;
+receiver intentionally ignores submits while loading. Test now awaits enabled
+textarea before beginning separate rejection/duplicate scenario. Three WebKit
+phone/dark Axe runs pass; duplicate events remain same-turn. 56 unit tests/lint
+pass. No production change or timeout increase; not a proven exhaustive flake fix.

@@ -145,6 +145,8 @@ try {
  await page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body').evaluate(()=>parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'submit-1',kind:'submit',mode:'submit',text:'Widget submitted message'},'*'));
  await expect(page.locator('.compose-box textarea')).toHaveValue('');
  expect(submitted).toEqual([{content:'Widget submitted message'}]);submitted.length=0;
+ // Content clears before asynchronous onPost refresh/finally releases loading.
+ await expect(page.locator('.compose-box textarea')).toBeEnabled();
  rejectSend=true;
  await page.evaluate(()=>{
   const detail={frame_id:'fixture:widget',text:'Rejected widget draft',mode:'submit'};
