@@ -428,6 +428,14 @@ try {
  await expect(resize).not.toHaveClass(/dragging/);
  expect(await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}))).toEqual(originalBodyStyle);
  await expect(composer).toHaveValue('Keep rejected draft');
+ const interruptedBounds=await resize.boundingBox();
+ await page.mouse.move(interruptedBounds.x+interruptedBounds.width/2,interruptedBounds.y+interruptedBounds.height/2);
+ await page.mouse.down();
+ await expect(resize).toHaveClass(/dragging/);
+ await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+ await expect(resize).not.toHaveClass(/dragging/);
+ expect(await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}))).toEqual(originalBodyStyle);
+ await page.mouse.up();
  await resize.focus();await resize.press('End');
  await page.setViewportSize({width:viewport.width,height:500});
  await expect(resize).toHaveAttribute('aria-valuemax','250');

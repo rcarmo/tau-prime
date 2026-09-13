@@ -327,3 +327,8 @@ Viewport resize migration: Chromium/WebKit expand composer to maximum, shrink
 viewport height to 500px, assert actual height and aria-valuenow/max clamp to
 250px, preserve draft, then restore original viewport and bounds. 56 unit tests
 and lint pass. This is viewport resize, not mobile virtual-keyboard emulation.
+
+Interrupted resize: Chromium/WebKit start a real mouse drag then dispatch window
+blur, verify dragging state and body cursor/userSelect restore before pointer
+release. Subsequent keyboard/viewport resize succeeds. 56 unit tests/lint pass.
+Blur is synthetic; no OS-level focus-switch or touch-cancel claim.
