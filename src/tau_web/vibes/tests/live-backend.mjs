@@ -33,6 +33,15 @@ try {
   return api.changeSessionModel(id,{thinking_level:'high'});
  },session.session_id);
  expect(thinking.thinking_level).toBe('high');
+ await page.locator('.compose-model-hint').click();
+ const thinkingSelect=page.getByLabel('Select thinking level',{exact:true});
+ await expect(thinkingSelect).toBeVisible();
+ await thinkingSelect.selectOption('low');
+ await expect.poll(async()=>{
+  const current=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
+  return current.thinking_level;
+ }).toBe('low');
+ await page.getByRole('button',{name:'Close model picker',exact:true}).click();
  const mediaCheck=await page.evaluate(async sessionId=>{
   const {uploadMedia}=await import('/static/js/api.js');
   const content='Real media fixture: café 日本語';

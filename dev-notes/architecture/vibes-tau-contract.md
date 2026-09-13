@@ -334,3 +334,10 @@ collision rejection and awaited exit; smoke and authenticated live checks pass.
 35 unit tests/lint pass. Free-port preflight is not an atomic reservation; owned-
 process checks additionally catch bind failures, and permanent server reuse stays
 disallowed.
+
+Thinking picker browser checkpoint: authenticated Chromium/WebKit open actual
+model picker, choose low via Select thinking level and poll real session API to
+verify persistence, then dismiss picker. Initial test used wrong accessible
+label (Thinking level); corrected to actual Select thinking level. Both pass with
+existing live media/Plan/archive checks. 35 unit tests/lint pass. Full catalogue
+selection and unsupported instance-pin controls still require attention.
