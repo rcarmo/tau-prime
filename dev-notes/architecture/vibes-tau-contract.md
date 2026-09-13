@@ -544,3 +544,10 @@ Asset HTTP prerequisite: isolated aiohttp test serves packaged replacement index
 manifest and explicit runtime files via helper, follows every index src/href and
 checks success/nosniff plus map/build denial. 18 asset/packaging tests pass. This
 is isolated route validation, not production router activation or new UI delivery.
+
+Service-worker transition prerequisite: candidate retire-sw.js removes only
+Tau shell cache names, claims clients then unregisters, with no fetch interception.
+Test verifies unrelated caches preserved and no fetch handler. Build refreshes
+asset manifest; 45 JS unit tests/lint and 8 asset tests pass. Not served at /sw.js
+yet; actual cached-client upgrade/browser validation belongs to production switch.
+Offline replacement support is not claimed by retirement.

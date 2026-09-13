@@ -99,5 +99,6 @@
   "js/vendor/codemirror.js",
   "js/vendor/katex.min.js",
   "js/vendor/preact-htm.js",
-  "manifest.json"
+  "manifest.json",
+  "retire-sw.js"
 ]
