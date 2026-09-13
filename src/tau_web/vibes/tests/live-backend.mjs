@@ -51,6 +51,16 @@ try {
  await page.getByRole('option',{name:'test/second-fixture',exact:true}).click();
  await expect.poll(async()=> (await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json()).model).toBe('second-fixture');
  await expect(composer).toHaveValue('Draft survives model selection');
+ await composer.fill('/thinking medium');
+ await composer.press('Enter');
+ await expect(composer).toHaveValue('');
+ await expect.poll(async()=> (await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json()).thinking_level).toBe('medium');
+ await composer.fill('/thinking invalid');
+ await composer.press('Enter');
+ await expect(page.getByText('Invalid Tau thinking level',{exact:true})).toBeVisible();
+ await expect(composer).toHaveValue('/thinking invalid');
+ const runs=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/runs`)).json();
+ expect(runs.runs).toHaveLength(0);
  await authFetch(`http://127.0.0.1:8893/api/sessions/${secondSession.session_id}`,{method:'DELETE'});
  const mediaCheck=await page.evaluate(async sessionId=>{
   const {uploadMedia}=await import('/static/js/api.js');

@@ -382,3 +382,8 @@ actual revision-checked policy mutation and rejects attached-media misuse.
 Other slash input continues explicit error rather than model execution. 37 unit
 tests/lint/build and authenticated live regression pass. New command dispatcher
 still needs direct composer browser assertion; no claim all Tau CLI commands work.
+
+Real command browser checkpoint: authenticated Chromium/WebKit submit /thinking
+medium through composer, verify saved policy and cleared text, reject invalid
+level with visible error/preserved draft, and assert zero agent runs created.
+Existing model/Plan/media/archive checks remain green. No production code changed.
