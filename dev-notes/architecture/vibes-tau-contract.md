@@ -304,3 +304,10 @@ retry, search failure/retry and document horizontal bounds. New test:browser
 script runs the matrix; test:adapter and test:live expose existing checks.
 This is deterministic fixture behavior, NOT image comparison/a11y/full-live
 provider acceptance. Production replacement and final installed wheel pending.
+
+Scoped accessibility checkpoint: installed Axe dev dependency; optional
+TAU_SMOKE_AXE=1 scans composer and provider dialog during workflow matrix.
+Found/fixed small queue/model label contrast and WebKit dark native provider
+button contrast with local styles, vendor CSS untouched. All 12 cases pass with
+no serious/critical violations in those TWO scopes. Whole app/Plan/media/tools/
+search scans and visual review remain pending; do not generalize scoped results.

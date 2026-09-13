@@ -519,3 +519,10 @@ html[data-tint]::after {
 
 /* Informational connection toast must not intercept composer controls. */
 .connection-status { pointer-events: none; }
+
+/* Tau accessibility adaptation: small queue/model labels need body contrast. */
+.compose-queue-badge, .compose-model-hint { color: var(--text-primary); }
+[aria-labelledby="tau-provider-title"] button {
+    color: var(--text-primary); background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
+}

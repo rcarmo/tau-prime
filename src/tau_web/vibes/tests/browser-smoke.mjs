@@ -1,5 +1,6 @@
 import { chromium, webkit, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
+import AxeBuilder from '@axe-core/playwright';
 const server=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),env:{...process.env,TAU_VIBES_PORT:'8893'},stdio:'ignore'});
 const engine=process.env.TAU_SMOKE_ENGINE || 'chromium';
 const browser=await ({chromium,webkit}[engine]).launch();
@@ -7,7 +8,13 @@ try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const size=process.env.TAU_SMOKE_SIZE || (process.env.TAU_SMOKE_PHONE?'phone':'desktop');
  const viewport={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}}[size];
- const page=await browser.newPage({viewport,colorScheme:process.env.TAU_SMOKE_THEME || 'light'}); const errors=[];const missing=new Set();
+ const context=await browser.newContext({viewport,colorScheme:process.env.TAU_SMOKE_THEME || 'light'});
+ const page=await context.newPage(); const errors=[];const missing=new Set();
+ const scan=async(selector)=>{
+  if(!process.env.TAU_SMOKE_AXE)return;
+  const result=await new AxeBuilder({page}).include(selector).analyze();
+  expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
+ };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
  let uploads=0;
  let approvalPending=true;let rejectApproval=true;const decisions=[];
@@ -79,6 +86,7 @@ try {
  await expect(page.locator('.compose-queue-item')).toHaveCount(2);
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
+ await scan('.compose-box');
  const composer=page.locator('.compose-box textarea');
  const approvals=page.getByRole('region',{name:'Tool approvals'});
  await expect(approvals).toContainText('echo fixture');
@@ -122,6 +130,7 @@ try {
  const setup=page.getByRole('dialog',{name:'Provider setup'});
  await expect(setup.getByLabel('Provider',{exact:true})).toHaveValue('test');
  await setup.getByLabel('Model',{exact:true}).fill('updated-model');
+ await scan('[aria-labelledby="tau-provider-title"]');
  expect(await composer.evaluate(el=>!!el.closest('[inert]'))).toBe(true);
  await setup.getByRole('button',{name:'Save provider',exact:true}).click();
  await expect(setup.getByRole('alert')).toHaveText('Fixture provider rejection');
