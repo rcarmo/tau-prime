@@ -754,7 +754,8 @@ function Post({
                 ${(data.tau_attachments || []).map(attachment => html`<${TauAttachment} key=${attachment.media_id} attachment=${attachment} />`)}
                 ${data.tau_tool_result && html`<div class="post-content">Tool result: ${data.tau_tool_result.name || 'tool'}${data.tau_tool_result.ok === false ? ' (failed)' : ''}</div>`}
                 ${(data.tau_tool_calls || []).map(call => html`<details class="post-content"><summary>Tool call: ${call.name || 'tool'}</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${JSON.stringify(call.arguments, null, 2)}</pre></details>`)}
-                ${shouldRenderContent && html`
+                ${shouldRenderContent && data.type === 'user' && html`<div class="post-content" style="white-space:pre-wrap">${displayContent}</div>`}
+                ${shouldRenderContent && data.type !== 'user' && html`
                     <div
                         ref=${contentRef}
                         class="post-content"

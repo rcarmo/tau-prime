@@ -208,3 +208,10 @@ emphasis, lists, inline code and absence of scripts/event handlers/javascript
 links in the fixture; 56 unit tests/lint/build pass. Literal-user test remains
 pending (initial fixture exceeded the ten-post initial page and was removed).
 Final wheel must be refreshed for this runtime safety correction.
+
+Literal user messages restored as escaped text nodes with preserved whitespace,
+not parsed Markdown. Dedicated Chromium/WebKit fixture asserts literal Markdown
+and HTML-looking text without created strong/img/script elements or execution.
+Fixture uses increasing ID 16 (initial ID 6 after ID 14 was correctly filtered by
+ascending pagination validation). 56 unit tests/lint/build and standard Chromium
+smoke pass. User rendering is now distinct from assistant Markdown.

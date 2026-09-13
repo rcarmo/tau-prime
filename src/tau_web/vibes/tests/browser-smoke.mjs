@@ -116,11 +116,20 @@ try {
    {message_id:4,session_id:'smoke',role:'assistant',content:'```text\n'+codeFixture+'\n```',created_at:'2026-09-13T19:00:03Z'},
    {message_id:5,session_id:'smoke',role:'assistant',content:'# Review\n\n**Ready** and `inline code`.\n\n- First\n- Second\n\n[Unsafe](javascript:alert(1)) <img src="x" onerror="window.markdownInjected=true"><script>window.markdownInjected=true</script>',created_at:'2026-09-13T19:00:04Z'},
    ...codeBoundaries.map(([text],i)=>({message_id:10+i,session_id:'smoke',role:'assistant',content:'```text\n'+text+'```',created_at:'2026-09-13T19:00:04Z'})),
+   ...(process.env.TAU_SMOKE_LITERAL_USER?[{message_id:16,session_id:'smoke',role:'user',content:'**literal user text** <img src=x onerror="window.userInjected=true">',created_at:'2026-09-13T19:00:05Z'}]:[]),
   ]};
   else {missing.add(url.pathname);return route.fulfill({status:501,contentType:'application/json',body:JSON.stringify({error:'Not integrated'})});}
   return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
  });
  await page.goto('http://127.0.0.1:8893/?session=smoke');
+ if(process.env.TAU_SMOKE_LITERAL_USER){
+  const user=page.locator('#post-16 .post-content');
+  await expect(user).toHaveText('**literal user text** <img src=x onerror="window.userInjected=true">');
+  await expect(user.locator('strong,img,script')).toHaveCount(0);
+  expect(await page.evaluate(()=>window.userInjected)).toBeUndefined();
+  console.log('PASS literal user rendering');
+  await browser.close();browser=null;await stopChild(server);process.exit(0);
+ }
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
  await expect(page.locator('[data-extension-slot="compose_above"]')).toContainText('Extension mounted: Tau');
  await page.evaluate(()=>{
