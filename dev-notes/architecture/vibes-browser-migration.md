@@ -63,3 +63,8 @@ replacing focused control. Local CSS bounds the pre, leaving vendor CSS untouche
 Chromium desktop/WebKit phone verify real overflow, keyboard expand/collapse,
 focus retention and exact full copying while collapsed. Unit 51/lint/build pass.
 Threshold boundary and content-replacement reset fixtures remain to migrate.
+
+Collapse boundary browser fixtures now verify 39/40 newline-terminated lines,
+24576/24577-byte code, and 8192 Japanese characters plus newline (24577 UTF-8
+bytes). Exact rendered contents retained; Chromium desktop/WebKit phone pass,
+as do 51 unit tests and lint. Content-replacement expansion reset still pending.

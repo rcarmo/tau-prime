@@ -23,6 +23,7 @@ try {
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
  };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
+ const codeBoundaries=[['x\n'.repeat(39),false],['x\n'.repeat(40),true],['x'.repeat(24575)+'\n',false],['x'.repeat(24576)+'\n',true],['日'.repeat(8192)+'\n',true]];
  const codeFixture=Array.from({length:65},(_,i)=>`line ${i}: café 日本語`).join('\n');
  await context.addInitScript(()=>{window.copiedCode=null;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedCode=text;}}});});
  const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); for(const [label,action] of [['Extension submit',()=>api.submit({text:'Extension message',mode:'run'})],['Extension navigate',()=>api.navigate('smoke')]]) { const button=document.createElement('button'); button.textContent=label; button.className='compose-queue-btn'; button.onclick=async()=>{try{await action();text.textContent=label+' accepted';}catch(error){text.textContent=error.message;}};container.append(button); } }); }`;
@@ -108,6 +109,7 @@ try {
    {message_id:2,session_id:'smoke',role:'assistant',content:'',created_at:'2026-09-13T19:00:01Z',content_blocks_json:JSON.stringify({tool_calls:[{id:'call-fixture',name:'bash',arguments:{command:'<img src=x onerror="window.toolInjected=true">'}}]})},
    {message_id:3,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
    {message_id:4,session_id:'smoke',role:'assistant',content:'```text\n'+codeFixture+'\n```',created_at:'2026-09-13T19:00:03Z'},
+   ...codeBoundaries.map(([text],i)=>({message_id:10+i,session_id:'smoke',role:'assistant',content:'```text\n'+text+'```',created_at:'2026-09-13T19:00:04Z'})),
   ]};
   else {missing.add(url.pathname);return route.fulfill({status:501,contentType:'application/json',body:JSON.stringify({error:'Not integrated'})});}
   return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
@@ -148,6 +150,13 @@ try {
  expect(await page.evaluate(()=>window.toolInjected)).toBeUndefined();
  await expect(page.getByText('Tool result: bash (failed)',{exact:true})).toBeVisible();
  await expect(page.getByText('Fixture command failed safely',{exact:true})).toBeVisible();
+ for (const [i,[text,collapsed]] of codeBoundaries.entries()) {
+  const block=page.locator(`#post-${10+i} .post-code-block`);
+  await expect(block.locator('.tau-code-toggle')).toHaveCount(collapsed?1:0);
+  if(collapsed) await expect(block).toHaveClass(/post-code-block-collapsed/);
+  expect(await block.locator('code').textContent()).toBe(text);
+ }
+ await expect(page.locator('#post-14 .tau-code-toggle')).toContainText('24577 bytes');
  const codePost=page.locator('#post-4');
  const codeBlock=codePost.locator('.post-code-block');
  const codeToggle=codeBlock.locator('.tau-code-toggle');
