@@ -2,7 +2,7 @@
 import { resolve, sep, extname } from 'node:path';
 import { realpath } from 'node:fs/promises';
 
-const root = resolve(import.meta.dir, 'static');
+const root = await realpath(resolve(process.env.TAU_VIBES_STATIC_ROOT || resolve(import.meta.dir, 'static')));
 const allowed = new Set(['.html', '.js', '.css', '.json', '.png', '.svg', '.ico', '.ttf', '.woff', '.woff2']);
 
 export function createHandler({ backend = 'http://127.0.0.1:8080', fetchImpl = fetch } = {}) {

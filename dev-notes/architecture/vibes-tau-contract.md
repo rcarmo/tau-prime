@@ -519,3 +519,11 @@ style; moved to local CSS. Both now report zero CSP violations in exercised
 workflows; assertion retained. 44 unit tests/strict lint/build pass. Unexercised
 renderers/widgets may still require separate CSP review; production route switch
 not performed by this checkpoint.
+
+Installed candidate checkpoint cc41dae: built wheel, installed isolated venv,
+served its packaged Vibes static tree through dev proxy and ran its installed
+Tau executable (no checkout PYTHONPATH). Both authenticated Chromium/WebKit
+workflows pass under existing CSP. Static-root override canonicalized with
+realpath after symlink-prefix mismatch initially returned 404. 44 unit tests/
+lint pass. Production route remains old UI: this verifies candidate assets and
+backend installation, not completed root switch or final distributable artifact.
