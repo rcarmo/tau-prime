@@ -406,3 +406,10 @@ revision/draft checks retained. New session media is empty at scan time; populat
 media buttons/download are behavior-tested earlier, not included in this scan.
 No production changes. Phone/tablet accessibility remains covered only by prior
 fixture scopes, not this desktop live check.
+
+Current visual capture checkpoint: smoke supports optional TAU_CAPTURE_DIR;
+phone/desktop Chromium light populated chat PNGs captured and delivered. These
+are current integration-fixture screenshots, not paired upstream evidence or
+approval. Fixture includes unresolved API responses, open tool metadata and
+approval controls. Visual comparison/gap correction remains a separate gate.
+Both capture workflow runs passed; no production changes.

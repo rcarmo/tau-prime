@@ -1,6 +1,7 @@
 import {requireFreePorts,stopChild,requireRunning} from './server-lifecycle.mjs';
 import { chromium, webkit, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
+import {mkdir} from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 await requireFreePorts(8893);
 const server=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),env:{...process.env,TAU_VIBES_PORT:'8893'},stdio:'ignore'});
@@ -91,6 +92,10 @@ try {
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
  await scan('body');
+ if(process.env.TAU_CAPTURE_DIR){
+  await mkdir(process.env.TAU_CAPTURE_DIR,{recursive:true});
+  await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
+ }
  const composer=page.locator('.compose-box textarea');
  const approvals=page.getByRole('region',{name:'Tool approvals'});
  await expect(approvals).toContainText('echo fixture');
