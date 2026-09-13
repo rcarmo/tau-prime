@@ -3,6 +3,9 @@ import {chromium,webkit,expect} from '@playwright/test';
 import {spawn} from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 const token=process.env.TAU_LIVE_AUTH ? 'local-test-only-token' : '';
+const sizes={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}};
+const viewport=sizes[process.env.TAU_LIVE_SIZE||'desktop'];
+if(!viewport)throw new Error('Unknown TAU_LIVE_SIZE');
 const authFetch=(url,options={})=>fetch(url,{...options,headers:{...options.headers,...(token?{Authorization:`Bearer ${token}`}:{})}});
 await requireFreePorts(8893,8894);
 const backend=spawn('node',['start-server.mjs'],{cwd:new URL('../../../../tests/browser/',import.meta.url),env:{...process.env,TAU_BROWSER_PORT:'8894',TAU_BROWSER_TEST_AUTH_TOKEN:token},stdio:'pipe'});
@@ -26,7 +29,7 @@ try {
  const timeout=setTimeout(()=>controller.abort(),5000);
  try {while(!text.includes('\n\n')){const {value,done}=await reader.read();if(done)break;text+=new TextDecoder().decode(value);}expect(text).toContain('event: tau.snapshot');}
  finally{clearTimeout(timeout);controller.abort();await reader.cancel().catch(()=>{});}
- browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const context=await browser.newContext({colorScheme:process.env.TAU_LIVE_THEME||'light'});await context.addInitScript(()=>{window.cspViolations=[];document.addEventListener('securitypolicyviolation',event=>window.cspViolations.push({directive:event.effectiveDirective,blocked:event.blockedURI}));});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const context=await browser.newContext({viewport,colorScheme:process.env.TAU_LIVE_THEME||'light'});await context.addInitScript(()=>{window.cspViolations=[];document.addEventListener('securitypolicyviolation',event=>window.cspViolations.push({directive:event.effectiveDirective,blocked:event.blockedURI}));});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  if(token && !process.env.TAU_LIVE_LOGIN_UI)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  if(token && process.env.TAU_LIVE_LOGIN_UI){
@@ -117,9 +120,12 @@ try {
  const {readFile}=await import('node:fs/promises');
  expect(await readFile(await downloaded.path(),'utf8')).toBe('Real media fixture: café 日本語');
  if(token)expect(mediaCheck.unauthorizedStatus).toBe(401);
+ const showWorkspace=page.getByRole('button',{name:'Show workspace',exact:true});
+ if(await showWorkspace.isVisible())await showWorkspace.click();
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('README.md',{exact:true}).first().click();
  await expect(page.locator('.workspace-preview-text')).toContainText('Tau Browser Fixture');
+ if(viewport.width<1024)await page.getByRole('button',{name:'Hide workspace',exact:true}).click();
  await page.locator('summary').filter({hasText:'Plan'}).click();
  const plan=page.getByLabel('Plan markdown');
  await expect(plan).toBeEnabled();

@@ -98,3 +98,16 @@ removes checkout PYTHONPATH. Initial attempts without dependencies/web extra
 failed startup; corrected by installing the declared extra, not source imports.
 Artifact and checksums: /workspace/tmp/tau-vibes-52b4bb1/{a,SHA256SUMS}.
 This refresh does not establish live-provider execution or paired visual approval.
+
+## Installed responsive matrix
+
+Added tests/live-matrix.mjs: requires installed TAU_BROWSER_BIN, runs both engines
+at 390x844/820x1180/1440x900 in light/dark, authenticated login/logout and real Tau
+workflows, with existing Plan/Session-media serious/critical Axe scopes enabled.
+Harness now explicitly opens/closes the responsive workspace drawer.
+52b4bb1 wheel: second complete run 12/12 passes. First run passed eight cases but
+WebKit tablet/light timed out awaiting provider modal after logout reload; not
+reproduced in full retry, remains an intermittent finding, not explained/fixed.
+Logs retained in /workspace/tmp/tau-vibes-52b4bb1/installed-matrix{,-retry}.log.
+51 unit tests and strict lint pass. Not a whole-page installed Axe audit or
+provider/visual approval; source-tree fixture whole-page scans remain separate.
