@@ -1,7 +1,9 @@
+import {requireFreePorts,stopChild,requireRunning} from './server-lifecycle.mjs';
 import {chromium,webkit,expect} from '@playwright/test';
 import {spawn} from 'node:child_process';
 const token=process.env.TAU_LIVE_AUTH ? 'local-test-only-token' : '';
 const authFetch=(url,options={})=>fetch(url,{...options,headers:{...options.headers,...(token?{Authorization:`Bearer ${token}`}:{})}});
+await requireFreePorts(8893,8894);
 const backend=spawn('node',['start-server.mjs'],{cwd:new URL('../../../../tests/browser/',import.meta.url),env:{...process.env,TAU_BROWSER_PORT:'8894',TAU_BROWSER_TEST_AUTH_TOKEN:token},stdio:'pipe'});
 let log='';backend.stderr.on('data',d=>log+=d);backend.stdout.on('data',d=>log+=d);
 const proxy=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),env:{...process.env,TAU_VIBES_PORT:'8893',TAU_VIBES_BACKEND:'http://127.0.0.1:8894'},stdio:'ignore'});
@@ -9,7 +11,7 @@ let browser;
 try {
  for(const url of ['http://127.0.0.1:8894/api/health','http://127.0.0.1:8893/']) {
   let ready=false;
-  for(let i=0;i<200;i++){try{if((await authFetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
+  for(let i=0;i<200;i++){requireRunning(backend,proxy);try{if((await authFetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
   if(!ready)throw new Error(`Server unavailable: ${url}\n${log}`);
  }
  const response=await authFetch('http://127.0.0.1:8893/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider_name:'test',model:'fixture',title:'Live backend session'})});
@@ -91,4 +93,4 @@ try {
  expect(restored.archived_at).toBe(null);
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');
-}finally{await browser?.close();proxy.kill();backend.kill();}
+}finally{await browser?.close();await stopChild(proxy);await stopChild(backend);}

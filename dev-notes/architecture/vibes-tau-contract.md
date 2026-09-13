@@ -326,3 +326,11 @@ loaded expected_updated_at. 33 unit tests/lint/build pass. Both authenticated
 real browser API checks change policy to high successfully. Initial live run hit
 an orphaned dev server (404); removed that stale process and reran successfully.
 Harness port collision/cleanup hardening and picker UI interaction remain pending.
+
+Harness ownership checkpoint: smoke/live harnesses reject occupied localhost
+ports, monitor owned process readiness and await graceful child exit with bounded
+kill escalation. Browser launch now falls within cleanup scope. Unit tests cover
+collision rejection and awaited exit; smoke and authenticated live checks pass.
+35 unit tests/lint pass. Free-port preflight is not an atomic reservation; owned-
+process checks additionally catch bind failures, and permanent server reuse stays
+disallowed.

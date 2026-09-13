@@ -1,11 +1,14 @@
+import {requireFreePorts,stopChild,requireRunning} from './server-lifecycle.mjs';
 import { chromium, webkit, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
+await requireFreePorts(8893);
 const server=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),env:{...process.env,TAU_VIBES_PORT:'8893'},stdio:'ignore'});
 const engine=process.env.TAU_SMOKE_ENGINE || 'chromium';
-const browser=await ({chromium,webkit}[engine]).launch();
+let browser;
 try {
- for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
+ browser=await ({chromium,webkit}[engine]).launch();
+ for(let i=0;i<50;i++){requireRunning(server);try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const size=process.env.TAU_SMOKE_SIZE || (process.env.TAU_SMOKE_PHONE?'phone':'desktop');
  const viewport={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}}[size];
  const context=await browser.newContext({viewport,colorScheme:process.env.TAU_SMOKE_THEME || 'light'});
@@ -158,4 +161,4 @@ try {
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
-}finally{await browser.close();server.kill();}
+}finally{await browser?.close();await stopChild(server);}
