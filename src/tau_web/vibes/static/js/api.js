@@ -322,7 +322,7 @@ export async function getMediaInfo(mediaId) {
  * Get workspace tree.
  */
 export async function getWorkspaceTree(path = '', depth = 2, showHidden = false) {
-    return request(`/workspace/tree?path=${encodeURIComponent(path)}&depth=${depth}&show_hidden=${showHidden ? '1' : '0'}`);
+    return tau.workspaceTree(path, depth, showHidden);
 }
 
 /**

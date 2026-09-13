@@ -114,3 +114,12 @@ test('archive uses Tau soft-delete route and restore uses POST',async()=>{
  expect((await client.archiveSession('one',false)).session.archived).toBe(false);
  expect(calls.map(c=>[c.path,c.method])).toEqual([['/api/sessions/one','DELETE'],['/api/sessions/one/restore','POST']]);
 });
+test('workspace tree projects directories with bounded recursion and hidden filtering',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async path=>{
+ calls.push(path);return Response.json({kind:'directory',entries:path==='/api/files?path=' ? [{name:'docs',path:'docs',kind:'directory'},{name:'.secret',path:'.secret',kind:'file'},{name:'link',path:'link',kind:'symlink'}] : [{name:'readme.txt',path:'docs/readme.txt',kind:'file'}]});
+ }});
+ const tree=await client.workspaceTree();
+ expect(tree.root.children.map(n=>n.name)).toEqual(['docs']);
+ expect(tree.root.children[0].children[0].type).toBe('file');
+ expect(calls).toEqual(['/api/files?path=','/api/files?path=docs']);
+});

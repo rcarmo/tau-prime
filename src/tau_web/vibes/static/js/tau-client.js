@@ -46,6 +46,21 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async workspaceTree(path = '', depth = 2, showHidden = false) {
+            const read = async (current, remaining) => {
+                const result = await request(`/files?path=${encodeURIComponent(current)}`);
+                if (result.kind !== 'directory') throw new Error('Expected a Tau directory');
+                const children = [];
+                for (const entry of result.entries) {
+                    if (!showHidden && entry.name.startsWith('.')) continue;
+                    if (!['directory', 'file'].includes(entry.kind)) continue;
+                    if (entry.kind === 'directory' && remaining > 1) children.push(await read(entry.path, remaining - 1));
+                    else children.push({ name: entry.name, path: entry.path, type: entry.kind === 'directory' ? 'dir' : 'file' });
+                }
+                return { name: current.split('/').pop() || 'Workspace', path: current, type: 'dir', children };
+            };
+            return { root: await read(path, Math.max(1, Math.min(3, depth))) };
+        },
         async onboarding() { return request('/onboarding'); },
         async configureProvider({ provider, model, credential }) {
             if (!provider?.trim() || !model?.trim()) throw new Error('Provider and model are required');

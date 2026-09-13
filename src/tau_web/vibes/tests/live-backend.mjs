@@ -23,6 +23,7 @@ try {
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-box textarea')).toBeVisible();
+ await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('@Live backend session',{exact:true}).click();
  await page.getByRole('button',{name:'Archive Live backend session',exact:true}).click();
  await expect(page.getByRole('button',{name:'Restore Live backend session',exact:true})).toBeVisible();

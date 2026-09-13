@@ -165,3 +165,10 @@ now sends Tau CSRF header; localhost proxy rejects foreign origins and translate
 its own validated origin to backend origin. Real browser archive/restore now
 passes and verifies database-facing API state and selection URL clearing.
 25 unit tests, lint/build pass. This corrects fixture-only blind spots.
+
+Workspace tree checkpoint: imported explorer reads real Tau /api/files listings
+through bounded-depth projection, filters hidden names when requested and omits
+symlink/special nodes rather than treating them as writable files. Real-backend
+Chromium confirms seeded README.md appears. 26 unit tests, lint/build and live
+startup/archive checks pass. Preview/edit/upload and workspace visibility writes
+remain unmapped; directory visibility is not editor support.
