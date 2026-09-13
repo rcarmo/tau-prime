@@ -30,7 +30,42 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         }
         return response.status === 204 ? null : response.json();
     }
+    const revisions = new Map();
+    async function loadSession(id) {
+        const session = await request(`/sessions/${encodeURIComponent(id)}`);
+        revisions.set(id, session.updated_at);
+        return session;
+    }
     return {
+        async modelState(id) {
+            const session = await loadSession(id);
+            return { model: `${session.provider_name}/${session.model}`, thinking_level: session.thinking_level };
+        },
+        async models(id) {
+            const [catalogue, session] = await Promise.all([request('/models'), loadSession(id)]);
+            const models = new Map();
+            for (const item of [...catalogue.models, session]) {
+                const model = item.model;
+                const provider = item.provider_name;
+                models.set(JSON.stringify([provider, model]), { id: model, provider, name: model });
+            }
+            return {
+                available: true, source: catalogue.source,
+                models: [...models.values()],
+                current_model: { provider: session.provider_name, id: session.model },
+                // Tau does not advertise per-model reasoning capabilities.
+                thinking_levels: [],
+            };
+        },
+        async changeModel(id, { provider, model_id: model }) {
+            if (!provider || !model) throw new Error('A provider and model are required');
+            if (!revisions.has(id)) throw new Error('Load model state before changing it');
+            const session = await request(`/sessions/${encodeURIComponent(id)}/model`, {
+                method: 'PATCH', body: { provider_name: provider, model, expected_updated_at: revisions.get(id) },
+            });
+            revisions.set(id, session.updated_at);
+            return { model: `${session.provider_name}/${session.model}`, thinking_level: session.thinking_level };
+        },
         async sessions(includeArchived = false) {
             const result = await request(`/sessions?include_archived=${includeArchived}`);
             return { sessions: result.sessions.map(sessionFromTau) };

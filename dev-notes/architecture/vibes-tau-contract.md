@@ -27,3 +27,10 @@ browser workflows remain separate gates. Preserve imported component ownership.
 Checkpoint: four Tau client unit tests pass (eight assertions), lint passes.
 Session list/create/rename transport scaffold is intentionally not connected to
 the app until initial-session and catalogue decisions are implemented together.
+
+Model adapter checkpoint: Tau `/api/models` is an observed-session catalogue,
+not provider discovery. Projection retains the current model, deduplicates pairs
+and omits unsupported pricing/context/reasoning capabilities. Model mutations
+use the loaded session revision; 409 errors propagate without retries. Six
+transport tests (14 assertions), lint and frontend build pass. Still not wired
+to production; reasoning controls and initial selection need integration.
