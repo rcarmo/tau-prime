@@ -752,3 +752,9 @@ Shortcut exclusion browser checkpoint: Chromium/WebKit keep provider-modal field
 focus for Ctrl+K and Meta+N, ignore repeated Ctrl+K outside modal, then handle
 normal search/composer shortcuts. Existing workflow checks remain passing;
 51 unit tests and strict lint pass. No production code changes.
+
+Long-code regression checkpoint: Chromium desktop/WebKit phone render 65-line
+Unicode code block, invoke actual copy button and assert exact full text plus
+trailing newline via controlled clipboard implementation; post width bounded.
+51 unit tests/strict lint pass. Clipboard denial/fallback and collapse boundary
+behavior still need separate migration; this does not claim collapse equivalence.
