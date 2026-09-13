@@ -20,3 +20,12 @@ ESLint passed. Root-relative asset/API paths still target the Vibes contract;
 this tree must not be advertised as a working Tau UI yet. Packaging/route wiring
 and adapter contract mapping are pending. Generated dist is ignored during
 integration; final packaging must explicitly ship the reproducibly built assets.
+
+## Local integration entrypoint
+
+After building, run `TAU_VIBES_BACKEND=http://127.0.0.1:8080 bun dev-server.js`.
+It binds localhost:8893 (override TAU_VIBES_PORT), serves this static tree and
+streams /api requests to Tau without buffering or stripping authentication.
+Other Vibes endpoints are deliberately not faked: unfinished adapters remain
+visible failures. Do not expose this development server publicly. Production
+routing/security headers/authentication continue to be owned by Tau.
