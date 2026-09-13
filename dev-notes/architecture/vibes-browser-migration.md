@@ -230,3 +230,23 @@ Composer pointer migration: real Playwright mouse drag in Chromium/WebKit grows
 input from minimum, enters/exits dragging state, restores body cursor/userSelect
 on release and preserves draft. 56 unit tests/lint pass. Phone viewport WebKit
 uses a mouse here; this is not a touch-device gesture claim.
+
+## Settings audit (681c811 runtime)
+
+Legacy settings-layout/accessibility specs cover Authentication, Model and Runtime
+categories, category navigation, retained mounted forms, overflow and focus.
+Replacement destinations: Provider setup (token/provider/credential), composer
+model/thinking selector, Runtime metrics and Session dashboard. These are separate
+Vibes-owned surfaces, not a recreation of the old category DOM.
+
+- Token reload, failed provider save/input retention and modal focus are covered.
+- Model/thinking revision-safe workflows run against real Tau in both engines.
+- Runtime/dashboard open-only polling and branch selection have fixture coverage.
+- Legacy category IDs/navigation and retained closed-dialog DOM are intentionally
+  not reproduced. Provider modal unmounts on close: unsaved edits on explicit close
+  are not currently retained. This is a concrete remaining draft-policy gap.
+- Instance-wide model-pin sync controls are not exposed: Tau has no matching
+  route, and UI explicitly labels pins browser-local. Legacy exported functions
+  remain unused by exposed controls; do not claim server preference support.
+- Existing installed Axe scopes cover Plan/media, not all runtime/model surfaces;
+  fixture provider-modal scans do not substitute for that remaining audit.
