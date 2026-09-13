@@ -443,6 +443,13 @@ try {
  await expect(resize).not.toHaveClass(/dragging/);
  expect(await page.evaluate(()=>({cursor:document.body.style.cursor,userSelect:document.body.style.userSelect}))).toEqual(originalBodyStyle);
  await page.mouse.up();
+ const timeline=page.locator('.timeline.reverse');
+ expect(await timeline.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+ await timeline.evaluate(el=>{el.scrollTop=-150;});
+ await expect.poll(()=>timeline.evaluate(el=>el.scrollTop)).toBeLessThan(-20);
+ await composer.focus();
+ await expect.poll(()=>timeline.evaluate(el=>Math.abs(el.scrollTop))).toBeLessThan(1);
+ await expect(composer).toHaveValue('Keep rejected draft');
  await resize.focus();await resize.press('End');
  await page.setViewportSize({width:viewport.width,height:500});
  await expect(resize).toHaveAttribute('aria-valuemax','250');

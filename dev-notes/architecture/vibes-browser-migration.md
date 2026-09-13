@@ -366,3 +366,8 @@ picker focus restoration. Both epoch-pinned wheels remain identical; artifact
 includes all runtime changes through 82d1f33 (later commits test/docs only).
 Attached wheel/checksums supersede 87aebdb checkpoint. This closes the observed
 fixture sequencing failure, not live-provider/offline or paired-visual gates.
+
+Timeline scroll migration: Chromium/WebKit verify overflowing reverse timeline
+accepts negative history scroll, composer focus returns scrollTop to zero/newest
+and draft is unchanged. 56 unit tests/lint pass. Programmatic scroll assertion,
+not touch momentum or full streamed auto-scroll behavior.
