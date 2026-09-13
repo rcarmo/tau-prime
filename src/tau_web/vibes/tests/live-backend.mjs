@@ -199,14 +199,22 @@ try {
  if(!await plan.isVisible())await planSummary.click();
  await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
  if(process.env.TAU_LIVE_AXE){
-  for(const selector of ['.tau-plan','[aria-label="Session media"]']){
-   if(!await page.locator(selector).isVisible())await page.locator('summary').filter({hasText:'Session media'}).click();
+  for(const selector of ['.tau-plan','[aria-label="Session media"]','[aria-label="Session dashboard"]','[aria-label="Runtime metrics"]']){
+   const region=page.locator(selector);
+   const details=region.locator('xpath=ancestor::details[1]');
+   if(await details.count() && !(await details.evaluate(el=>el.open)))await details.locator('summary').click();
+   await expect(region).toBeVisible();
    const result=await new AxeBuilder({page}).include(selector).analyze();
    expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
   }
  }
  if(token && process.env.TAU_LIVE_LOGIN_UI){
   await page.getByRole('button',{name:'Provider setup',exact:true}).click();
+  if(process.env.TAU_LIVE_AXE){
+   await expect(page.getByLabel('Model',{exact:true})).toBeEnabled();
+   const result=await new AxeBuilder({page}).include('[aria-labelledby="tau-provider-title"]').analyze();
+   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
+  }
   page.once('dialog',dialog=>dialog.accept());
   await Promise.all([page.waitForEvent('load'),page.getByRole('dialog',{name:'Provider setup',exact:true}).evaluate(form=>{
    const input=form.querySelector('input[type="password"]');

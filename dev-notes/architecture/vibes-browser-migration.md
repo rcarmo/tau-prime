@@ -263,3 +263,10 @@ event with declined confirmation retains edit; confirmed Cancel closes and
 restores trigger focus; reopen drops discarded edit and clean Cancel closes
 without confirmation. Backdrop event is synthetic (not touch hit-testing).
 56 unit tests/lint pass. No production changes.
+
+Expanded installed Axe scopes: Provider setup, Runtime metrics and Session
+dashboard added alongside Plan/media. Installed 87aebdb wheel passes all 12
+engine/theme/viewport journeys with expanded scans and CSP assertions. Scope
+regions are opened explicitly; provider waits for enabled model input. This
+wheel predates Markdown/user rendering and provider-discard changes, so final
+current-runtime artifact audit remains required. 56 unit tests/lint pass.
