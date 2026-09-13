@@ -23,6 +23,17 @@ try {
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-box textarea')).toBeVisible();
+ const mediaCheck=await page.evaluate(async sessionId=>{
+  const {uploadMedia}=await import('/static/js/api.js');
+  const content='Real media fixture: café 日本語';
+  const media=await uploadMedia(new File([content],'live-media.txt',{type:'text/plain'}),{sessionId});
+  const response=await fetch(media.content_url);
+  return {id:media.id,sessionId:media.session_id,filename:media.filename,status:response.status,content:await response.text()};
+ },session.session_id);
+ expect(mediaCheck.sessionId).toBe(session.session_id);
+ expect(mediaCheck.filename).toBe('live-media.txt');expect(mediaCheck.status).toBe(200);
+ expect(mediaCheck.content).toBe('Real media fixture: café 日本語');
+ expect(mediaCheck.id).toBeTruthy();
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('README.md',{exact:true}).first().click();
  await expect(page.locator('.workspace-preview-text')).toContainText('Tau Browser Fixture');

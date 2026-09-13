@@ -260,3 +260,10 @@ retaining draft/media, then accept retry without duplicate upload. Retry payload
 contains original media ID. Test exposed connection-status toast intercepting
 composer clicks; informational toast now ignores pointer events via local CSS.
 31 unit tests, lint/build pass. Real multipart/media download validation pending.
+
+Real media checkpoint: Chromium and WebKit call imported uploadMedia in browser
+against actual Tau /api/media, verify session association/filename/nonempty ID,
+and fetch returned content_url with exact Unicode-byte content roundtrip.
+Existing real plan conflicts/archive/workspace/SSE checks still pass. Harness
+runs without bearer auth, so this is NOT evidence of authenticated download UI
+or unauthorized rejection; those remain pending. 31 unit tests and lint pass.
