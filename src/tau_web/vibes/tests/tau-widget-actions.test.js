@@ -32,3 +32,18 @@ test('new refresh suppresses earlier failure and disposal suppresses pending act
  dispose();finishAction({ok:true});await Bun.sleep(0);
  expect(replies).toEqual([]);
 });
+test('refresh validates identities and ignores pending results after disposal',async()=>{
+ const target=new EventTarget(),pending=[],updates=[],errors=[];
+ const dispose=installTauWidgetActions({target,renderer:{refreshWidget:(...args)=>updates.push(args)},onError:e=>errors.push(e),client:{widgetDocument:()=>new Promise((resolve,reject)=>pending.push({resolve,reject}))}});
+ const detail={frame_id:'frame',extension_id:'ext',widget_id:'widget'};
+ for(const key of Object.keys(detail))for(const value of ['',null,42,'x'.repeat(257)]){
+  target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail:{...detail,[key]:value}}));
+ }
+ expect(pending).toHaveLength(0);
+ target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail}));
+ target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail:{...detail,frame_id:'other'}}));
+ expect(pending).toHaveLength(2);
+ dispose();pending[0].resolve('late document');pending[1].reject(new Error('late error'));await Bun.sleep(0);
+ expect(updates).toEqual([]);expect(errors).toEqual([]);
+ target.dispatchEvent(new CustomEvent('tau:widget-refresh',{detail}));expect(pending).toHaveLength(2);
+});

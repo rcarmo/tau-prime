@@ -10,7 +10,7 @@ export function installTauWidgetActions({target=document,renderer=window.tauExte
  };
  let disposed=false;const refreshes=new Map();
  const refresh=async event=>{
-  const detail=event.detail;if(!detail||typeof detail.frame_id!=='string')return;
+  const detail=event.detail;if(!detail||!['frame_id','extension_id','widget_id'].every(key=>typeof detail[key]==='string'&&detail[key].length>0&&detail[key].length<=256))return;
   const generation=(refreshes.get(detail.frame_id)||0)+1;refreshes.set(detail.frame_id,generation);
   try{
    const text=await client.widgetDocument(detail.extension_id,detail.widget_id);

@@ -150,3 +150,9 @@ draft survives search rejection, accepted results and Ctrl+N return to persisted
 timeline. Entering search again, editing an unsent query and escaping restores
 the same draft and focus. 55 unit tests/lint pass; no production change.
 Source-session navigation and broader rich-Markdown parity remain separate.
+
+Refresh input/disposal hardening: frame/extension/widget IDs must be nonempty
+strings <=256 characters before dispatch. Tests reject malformed identities
+without requests and suppress both pending successful/error refresh completions
+after disposal. 56 unit tests/lint/build and Chromium/WebKit smoke pass.
+Runtime change requires refreshed final artifact; earlier wheel remains checkpoint.
