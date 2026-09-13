@@ -734,3 +734,11 @@ submissions before loading rerender. Widget receiver also ignores concurrent
 prefill while a submission is pending. Chromium/WebKit dispatch two same-turn
 renderer events, assert one rejected request and original override draft retained.
 51 unit tests/lint/build pass. Real iframe submit still covered separately.
+
+Consolidated checkpoint: full Python 1313 pass; JS 51 tests/162 assertions;
+strict lint pass. Full 12-case workflow/Axe matrix exposed submit-error contrast
+and unstyled test-extension buttons: local submit error styling fixed, fixture
+uses existing button class. Matrix now 12/12 pass including image/widget/extension
+and restored Dashboard/branch/runtime paths. No provider execution, offline or
+paired-visual acceptance inferred. Production source removed; old browser suite
+migration ledger continues to track uncovered behavior.
