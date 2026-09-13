@@ -350,3 +350,12 @@ passes 11 cases then WebKit desktop/dark loses 'Draft survives model selection'
 (expected text, actual empty). Three targeted repeats pass. Not explained/fixed;
 do not claim complete installed pass or deliver as final. Logs/builds retained
 under /workspace/tmp/tau-vibes-82d1f33. Further race diagnostics required.
+
+Model-draft intermittent investigation: new pre-selection assertion reproduced
+empty input immediately after fill, before opening/selecting another model. Thus
+prior 'model-selection draft loss' attribution was not established. Picker close
+schedules trigger focus in requestAnimationFrame; harness now waits for restored
+focus before fill, plus verifies draft before mutation and captures bounded
+remount/storage-length diagnostics on later failure. Five installed WebKit
+desktop/dark repeats pass. 56 unit tests/lint pass. No production change or timeout
+increase; complete installed matrix still required.

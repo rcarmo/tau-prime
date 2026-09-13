@@ -69,11 +69,24 @@ try {
  const composer=page.locator('.compose-box textarea');
  // Close before editing a draft, then select another real catalogue entry.
  await page.getByRole('button',{name:'Close model picker',exact:true}).click();
+ await expect(page.locator('.compose-model-hint')).toBeFocused();
  await composer.fill('Draft survives model selection');
+ await expect(composer).toHaveValue('Draft survives model selection');
+ await composer.evaluate(el=>{window.modelDraftInput=el;});
  await page.locator('.compose-model-hint').click();
  await page.getByRole('option',{name:'test/second-fixture',exact:true}).click();
  await expect.poll(async()=> (await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json()).model).toBe('second-fixture');
- await expect(composer).toHaveValue('Draft survives model selection');
+ try { await expect(composer).toHaveValue('Draft survives model selection'); }
+ catch(error){
+  console.error('Model draft diagnostics',JSON.stringify(await page.evaluate(id=>({
+   sameInput:window.modelDraftInput===document.querySelector('.compose-box textarea'),
+   originalConnected:window.modelDraftInput?.isConnected,
+   storedDraftLength:(JSON.parse(localStorage.getItem(`vibes_compose_draft:${encodeURIComponent(id)}`)||'{}').text||'').length,
+   currentLength:document.querySelector('.compose-box textarea')?.value.length,
+   selectedSession:new URL(location.href).searchParams.get('session'),
+  }),session.session_id)));
+  throw error;
+ }
  await composer.fill('/thinking medium');
  await composer.press('Enter');
  await expect(composer).toHaveValue('');
