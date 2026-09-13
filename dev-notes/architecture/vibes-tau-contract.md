@@ -527,3 +527,10 @@ workflows pass under existing CSP. Static-root override canonicalized with
 realpath after symlink-prefix mismatch initially returned 404. 44 unit tests/
 lint pass. Production route remains old UI: this verifies candidate assets and
 backend installation, not completed root switch or final distributable artifact.
+
+Production asset preparation: pinned public-assets.json allowlists imported
+runtime modules/styles/fonts/icons; candidate response helper rejects unlisted
+and traversal names, supplies explicit JS/MJS MIME and nosniff, and uses no-cache
+until asset versioning policy is finalized. Manifest included in wheel. Sixteen
+asset/packaging tests pass. Helper not wired to routes yet; production remains
+unchanged. Manifest must be refreshed when adding runtime assets.

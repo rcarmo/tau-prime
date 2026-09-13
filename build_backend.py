@@ -227,7 +227,7 @@ def _package_files() -> list[tuple[Path, str]]:
             relative = path.relative_to(src)
             if relative.is_relative_to(Path('tau_web/vibes')):
                 imported = relative.relative_to('tau_web/vibes')
-                if imported.parts[0] != 'static' and imported.name not in {'LICENSE', 'UPSTREAM.md', 'source-revision.txt'}:
+                if imported.parts[0] != 'static' and imported.name not in {'LICENSE', 'UPSTREAM.md', 'source-revision.txt', 'public-assets.json'}:
                     continue
                 if path.suffix == '.map':
                     continue
