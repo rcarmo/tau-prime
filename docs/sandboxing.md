@@ -112,7 +112,7 @@ On macOS, this skips the `sandbox-exec` re-exec entirely. Tau then runs with the
 
 That matters for `tau web` as well. Its `/api/files` route remains confined to `WebConfig.cwd`, but that application-level workspace check does not replace Seatbelt and does not restrict other code paths, tools, or subprocesses from modifying files outside that directory once the macOS sandbox is disabled.
 
-This page documents the macOS path. On a-Shell and other non-macOS platforms the Seatbelt bootstrap is skipped; Linux may use Tau's separate bubblewrap sandbox when enabled.
+This page documents the macOS path. On a-Shell and other non-macOS platforms the Seatbelt bootstrap is skipped; Linux uses Tau's separate Landlock sandbox when enabled.
 
 ## Apple API status
 
@@ -138,3 +138,25 @@ git diff --check
 ```
 
 The profile generator and CLI integration are covered on non-macOS test hosts. Actual Seatbelt enforcement still requires a smoke test on macOS; the project does not claim that Linux tests exercise Apple's sandbox runtime.
+
+## Linux: Landlock
+
+Linux uses in-process Landlock filesystem write confinement, not bubblewrap.
+Enable it with `TAU_LINUX_SANDBOX=1` (or `required`). Explicit enablement fails
+closed if Landlock ABI 3 or newer is unavailable (normally Linux 6.2+, with the
+Landlock LSM enabled). `TAU_LINUX_SANDBOX_DEFAULT_ON=1` enables it automatically
+only on supported kernels. `--no-sandbox` and false-like mode values disable it.
+No external sandbox executable or user namespace support is required.
+
+Writes are allowed to the project, Tau state/log directories, temporary directory,
+`/dev`, and directories in `TAU_SANDBOX_WRITABLE_PATHS` (colon-separated).
+Reads, execution and network access are unrestricted. Rename/link and truncation
+are mediated. Restrictions are inherited by future subprocesses and cannot be
+removed. The environment marker is informational, not a security bypass.
+
+This is not namespace, process, network, or device isolation. Already-open file
+descriptors are not revoked; restrictions apply to the calling thread and future
+children, so entry must happen before starting worker threads. Allowing a broad
+writable root (including a broad temporary directory) grants that whole subtree.
+Unlike the former mount-based sandbox, this does not create a separate proc mount
+or provide bubblewrap's parent-death handling.

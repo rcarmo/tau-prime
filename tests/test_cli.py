@@ -1539,7 +1539,7 @@ def test_linux_sandbox_failure_stops_cli(monkeypatch: pytest.MonkeyPatch) -> Non
 
     def fail_sandbox(**kwargs: object) -> None:
         del kwargs
-        raise cli.LinuxSandboxError("bwrap is unavailable")
+        raise cli.LinuxSandboxError("Landlock is unavailable")
 
     monkeypatch.setattr(cli, "enter_linux_sandbox", fail_sandbox)
 

@@ -1,179 +1,60 @@
-from __future__ import annotations
-
+"""Landlock must be exercised in a disposable child, never the pytest process."""
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-
-from tau_coding.linux_sandbox import (
-    LinuxSandboxError,
-    build_linux_bwrap_args,
-    enter_linux_sandbox,
-    extra_writable_paths_from_env,
-    should_enter_linux_sandbox,
-)
-from tau_coding.paths import TauPaths
+from tau_coding import linux_sandbox as sandbox
 
 
-def test_should_enter_linux_sandbox_is_opt_in_by_default(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("TAU_LINUX_SANDBOX", raising=False)
-    monkeypatch.delenv("TAU_LINUX_SANDBOX_DEFAULT_ON", raising=False)
-
-    assert (
-        should_enter_linux_sandbox(
-            disabled=False,
-            platform="linux",
-            bwrap_path="/usr/bin/bwrap",
-        )
-        is False
-    )
+def test_modes(monkeypatch):
+    monkeypatch.delenv('TAU_LINUX_SANDBOX', raising=False)
+    monkeypatch.delenv('TAU_LINUX_SANDBOX_DEFAULT_ON', raising=False)
+    assert not sandbox.should_enter_linux_sandbox(disabled=False)
+    monkeypatch.setenv('TAU_LINUX_SANDBOX', 'required')
+    monkeypatch.setenv('TAU_LINUX_SANDBOXED', '1')
+    assert sandbox.should_enter_linux_sandbox(disabled=False, platform='linux')
+    assert not sandbox.should_enter_linux_sandbox(disabled=True)
+    assert not sandbox.should_enter_linux_sandbox(disabled=False, platform='darwin')
 
 
-def test_should_enter_linux_sandbox_honors_explicit_enable_and_disable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("TAU_LINUX_SANDBOX", "1")
-    assert should_enter_linux_sandbox(disabled=False, platform="linux", bwrap_path=None) is True
-
-    monkeypatch.setenv("TAU_LINUX_SANDBOX", "0")
-    assert (
-        should_enter_linux_sandbox(
-            disabled=False,
-            platform="linux",
-            bwrap_path="/usr/bin/bwrap",
-        )
-        is False
-    )
-
-    monkeypatch.setenv("TAU_LINUX_SANDBOX", "1")
-    assert (
-        should_enter_linux_sandbox(
-            disabled=True,
-            platform="linux",
-            bwrap_path="/usr/bin/bwrap",
-        )
-        is False
-    )
+def test_auto_and_unsupported(monkeypatch, tmp_path):
+    monkeypatch.delenv('TAU_LINUX_SANDBOX', raising=False)
+    monkeypatch.setenv('TAU_LINUX_SANDBOX_DEFAULT_ON', '1')
+    monkeypatch.setattr(sandbox, 'landlock_abi', lambda: 0)
+    assert not sandbox.should_enter_linux_sandbox(disabled=False)
+    with pytest.raises(sandbox.LinuxSandboxError, match='ABI 3'):
+        sandbox.enter_linux_sandbox(project_dir=tmp_path)
+    monkeypatch.setattr(sandbox, 'landlock_abi', lambda: 3)
+    assert sandbox.should_enter_linux_sandbox(disabled=False, platform='linux')
 
 
-def test_should_enter_linux_sandbox_supports_default_on_auto_gate(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("TAU_LINUX_SANDBOX", raising=False)
-    monkeypatch.setenv("TAU_LINUX_SANDBOX_DEFAULT_ON", "1")
-    monkeypatch.setattr("tau_coding.linux_sandbox.shutil.which", lambda _name: None)
-
-    assert should_enter_linux_sandbox(
-        disabled=False,
-        platform="linux",
-        bwrap_path="/usr/bin/bwrap",
-    ) is True
-    assert should_enter_linux_sandbox(disabled=False, platform="linux", bwrap_path=None) is False
+def test_extra_paths():
+    assert sandbox.extra_writable_paths_from_env('/one:/two') == (Path('/one'), Path('/two'))
 
 
-def test_should_enter_linux_sandbox_skips_non_linux_and_existing_sandbox(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("TAU_LINUX_SANDBOX", "1")
-    assert (
-        should_enter_linux_sandbox(
-            disabled=False,
-            platform="darwin",
-            bwrap_path="/usr/bin/bwrap",
-        )
-        is False
-    )
-
-    monkeypatch.setenv("TAU_LINUX_SANDBOXED", "1")
-    assert (
-        should_enter_linux_sandbox(
-            disabled=False,
-            platform="linux",
-            bwrap_path="/usr/bin/bwrap",
-        )
-        is False
-    )
-
-
-def test_extra_writable_paths_from_env_parses_pathsep() -> None:
-    assert extra_writable_paths_from_env(f"/cache{os.pathsep}/var/tmp") == (
-        Path("/cache"),
-        Path("/var/tmp"),
-    )
-    assert extra_writable_paths_from_env("") == ()
-
-
-def test_build_linux_bwrap_args_mounts_readonly_root_and_writable_roots(tmp_path: Path) -> None:
-    project = tmp_path / "project"
-    tau_home = tmp_path / ".tau"
-    logs = tmp_path / "logs"
-    tmp = tmp_path / "tmp"
-    extra = tmp_path / "cache"
-    for path in (project, tau_home, logs, tmp, extra):
-        path.mkdir()
-
-    args = build_linux_bwrap_args(
-        executable=Path("/usr/bin/tau"),
-        argv=["tau", "--version"],
-        project_dir=project,
-        tau_paths=TauPaths(home=tau_home, agents_home=tmp_path / ".agents"),
-        temp_dir=tmp,
-        extra_writable_paths=(extra,),
-    )
-
-    assert args[:4] == ["--die-with-parent", "--ro-bind", "/", "/"]
-    project_bind = ["--bind", str(project.resolve()), str(project.resolve())]
-    assert project_bind in [args[index : index + 3] for index in range(len(args) - 2)]
-    assert "--dev-bind" in args
-    assert "--proc" in args
-    sandbox_marker = ["--setenv", "TAU_LINUX_SANDBOXED", "1"]
-    assert sandbox_marker in [args[index : index + 3] for index in range(len(args) - 2)]
-    assert args[-2:] == ["/usr/bin/tau", "--version"]
-
-
-def test_build_linux_bwrap_args_rejects_missing_project(tmp_path: Path) -> None:
-    with pytest.raises(LinuxSandboxError, match="Project directory does not exist"):
-        build_linux_bwrap_args(
-            executable=Path("/usr/bin/tau"),
-            argv=["tau"],
-            project_dir=tmp_path / "missing",
-            tau_paths=TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents"),
-            temp_dir=tmp_path,
-        )
-
-
-def test_enter_linux_sandbox_reports_missing_bwrap(tmp_path: Path) -> None:
-    project = tmp_path / "project"
-    project.mkdir()
-
-    with pytest.raises(LinuxSandboxError, match="bubblewrap executable is not available"):
-        enter_linux_sandbox(
-            argv=["tau"],
-            project_dir=project,
-            tau_paths=TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents"),
-            bwrap_executable=tmp_path / "missing-bwrap",
-            temp_dir=tmp_path,
-        )
-
-
-def test_enter_linux_sandbox_rejects_missing_extra_writable_path(tmp_path: Path) -> None:
-    project = tmp_path / "project"
-    project.mkdir()
-    bwrap = tmp_path / "bwrap"
-    bwrap.write_text("#!/bin/sh\n", encoding="utf-8")
-    bwrap.chmod(0o755)
-    tau = tmp_path / "tau"
-    tau.write_text("#!/bin/sh\n", encoding="utf-8")
-    tau.chmod(0o755)
-
-    with pytest.raises(LinuxSandboxError, match="Extra writable sandbox path is not a directory"):
-        enter_linux_sandbox(
-            argv=[str(tau)],
-            project_dir=project,
-            tau_paths=TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents"),
-            bwrap_executable=bwrap,
-            temp_dir=tmp_path,
-            extra_writable_paths=(tmp_path / "missing",),
-        )
+def test_kernel_enforcement(tmp_path):
+    if sandbox.landlock_abi() < 3:
+        pytest.skip('Host does not expose Landlock ABI 3')
+    script = r'''
+import os, sys, subprocess
+from pathlib import Path
+from types import SimpleNamespace
+from tau_coding.linux_sandbox import enter_linux_sandbox
+base = Path(sys.argv[1]); project = base/'project'; project.mkdir()
+outside = base/'outside'; outside.write_text('original')
+paths = SimpleNamespace(home=base/'state', logs_dir=base/'logs')
+enter_linux_sandbox(project_dir=project, tau_paths=paths, temp_dir=base/'temp')
+(project/'ok').write_text('ok')
+assert outside.read_text() == 'original'
+for operation in [lambda: outside.write_text('bad'), lambda: outside.unlink(), lambda: os.truncate(outside, 0), lambda: (base/'new').mkdir(), lambda: (project/'ok').rename(base/'escaped')]:
+    try: operation()
+    except PermissionError: pass
+    else: raise AssertionError('write escaped sandbox')
+result = subprocess.run([sys.executable, '-c', 'from pathlib import Path; import sys; Path(sys.argv[1]).write_text("bad")', str(outside)], capture_output=True)
+assert result.returncode != 0
+assert outside.read_text() == 'original'
+'''
+    result = subprocess.run([sys.executable, '-c', script, str(tmp_path)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
