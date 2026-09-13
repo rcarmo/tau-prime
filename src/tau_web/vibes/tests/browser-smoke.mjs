@@ -32,6 +32,7 @@ try {
  const approvalDecision=process.env.TAU_SMOKE_APPROVAL||'deny';
  if(!['allow','deny'].includes(approvalDecision))throw new Error('Invalid TAU_SMOKE_APPROVAL');
  const approvalLabel=approvalDecision==='allow'?'Allow bash':'Deny bash';
+ let rejectImage=process.env.TAU_SMOKE_IMAGE_FAILURE==='1';
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
@@ -40,6 +41,7 @@ try {
   if(url.pathname==='/'||url.pathname.startsWith('/static/')) return route.continue();
   if(url.pathname==='/api/media/image-fixture/content') {
    expect(route.request().headers().authorization).toBe('Bearer image-test-token');
+   if(rejectImage)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Fixture image unavailable'})});
    return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAEDAQAIicLsAAAAAElFTkSuQmCC','base64')});
   }
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
@@ -144,6 +146,17 @@ try {
  expect(submitted).toEqual([{content:'Rejected widget draft'}]);submitted.length=0;rejectSend=false;
  await page.evaluate(()=>window.tauExtensionUI.removeWidget('fixture:widget'));
  const image=page.getByRole('img',{name:'fixture.png',exact:true});
+ if(rejectImage){
+  const attachment=page.locator('#post-1 .tau-attachment');
+  await expect(attachment.getByRole('alert')).toBeVisible();
+  await expect(image).toHaveCount(0);
+  await expect(attachment.getByRole('button',{name:'Download fixture.png',exact:true})).toBeEnabled();
+  rejectImage=false;
+  const downloadEvent=page.waitForEvent('download');
+  await attachment.getByRole('button',{name:'Download fixture.png',exact:true}).click();
+  expect((await downloadEvent).suggestedFilename()).toBe('fixture.png');
+  await expect(attachment.getByRole('alert')).toHaveCount(0);
+ }
  await expect(image).toBeVisible();
  await expect.poll(()=>image.evaluate(el=>el.naturalWidth)).toBe(1);
  await expect(image).toHaveAttribute('src',/^blob:/);

@@ -125,3 +125,9 @@ remains deny). Chromium desktop/WebKit phone pass explicit Allow click, 409 erro
 retry availability, exact allow payload on both attempts and disappearance only
 following accepted decision. This is fixture approval UI evidence, not live tool
 execution. Existing deny matrix remains unchanged. 51 unit tests/lint pass.
+
+Inline media recovery fixture: TAU_SMOKE_IMAGE_FAILURE=1 forces authenticated
+image requests to fail (503) until explicit retry. Chromium/WebKit verify alert,
+no fabricated image, enabled download retry, successful filename, error clearance
+and decoded blob-backed raster preview. 51 unit tests/lint pass. This is fixture
+failure/recovery coverage, not a real-provider media journey.
