@@ -57,7 +57,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
                     if (entry.kind === 'directory' && remaining > 1) children.push(await read(entry.path, remaining - 1));
                     else children.push({ name: entry.name, path: entry.path, type: entry.kind === 'directory' ? 'dir' : 'file' });
                 }
-                return { name: current.split('/').pop() || 'Workspace', path: current, type: 'dir', children };
+                return { name: current.split('/').pop() || 'Workspace', path: current || '.', type: 'dir', children };
             };
             return { root: await read(path, Math.max(1, Math.min(3, depth))) };
         },

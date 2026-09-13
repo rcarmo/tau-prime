@@ -172,3 +172,10 @@ symlink/special nodes rather than treating them as writable files. Real-backend
 Chromium confirms seeded README.md appears. 26 unit tests, lint/build and live
 startup/archive checks pass. Preview/edit/upload and workspace visibility writes
 remain unmapped; directory visibility is not editor support.
+
+Correction to dccf5a4 checkpoint: newly added README visibility assertion initially
+FAILED; shell chaining incorrectly allowed the success note/commit afterward.
+The imported explorer expands '.' by default, while projection supplied an empty
+root path. Root normalized to '.'; rebuilt and reran live-backend check including
+README visibility successfully, followed by 26 unit tests and lint. Earlier
+success claim applies only after this correction, not to dccf5a4 itself.
