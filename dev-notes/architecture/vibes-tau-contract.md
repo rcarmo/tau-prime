@@ -355,3 +355,10 @@ frontend build JS. Scoped Vibes packaging now includes runtime .mjs/licenses/
 provenance and excludes tests/build/dev-server/source maps. Nine packaging tests
 pass. Generated dist still needs a deterministic clean-source build/ship policy;
 this patch alone does not make installed Vibes UI runnable or switch production.
+
+Clean-checkout bundle checkpoint: runtime app.js/app.css now tracked; source maps
+remain ignored. Frozen lockfile install and two consecutive builds produced
+identical JS/CSS hashes. Ten packaging tests confirm bundle presence without Bun.
+This settles shipping policy, not routing: production still uses old frontend
+until remaining compatibility/security/visual gates are met. Future source edits
+must regenerate and commit bundles alongside source.

@@ -138,3 +138,10 @@ def test_imported_vibes_runtime_assets_and_licenses_are_packaged():
     assert root + 'build.js' not in names
     assert not any('node_modules' in name for name in names)
     assert not any(name.startswith(root) and name.endswith('.map') for name in names)
+
+
+def test_imported_runtime_bundle_is_available_without_bun():
+    files = dict((name, path) for path, name in build_backend._package_files())
+    for name in ('app.js', 'app.css'):
+        path = files['tau_web/vibes/static/dist/' + name]
+        assert path.stat().st_size > 1000

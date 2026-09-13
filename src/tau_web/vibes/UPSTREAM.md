@@ -29,3 +29,11 @@ streams /api requests to Tau without buffering or stripping authentication.
 Other Vibes endpoints are deliberately not faked: unfinished adapters remain
 visible failures. Do not expose this development server publicly. Production
 routing/security headers/authentication continue to be owned by Tau.
+
+## Packaged bundle policy (supersedes import-time dist exclusion)
+
+Track `static/dist/app.js` and `app.css` so Python installs need no Bun/network.
+Keep source maps ignored. After every source/CSS change run the frozen-lockfile
+build and commit regenerated bundles. Verify with `bun run build:frontend` then
+`git diff --exit-code -- static/dist/app.js static/dist/app.css` after committing.
+Two consecutive builds at this checkpoint produced identical runtime hashes.
