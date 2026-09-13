@@ -2,6 +2,12 @@
  * API client for Vibes backend
  */
 
+import { createTauClient } from './tau-client.js';
+
+const tau = createTauClient({ getToken: () => {
+    try { return globalThis.localStorage?.getItem('tau.web.authToken') || ''; }
+    catch { return ''; }
+} });
 const API_BASE = '';
 
 /**
@@ -107,19 +113,19 @@ export async function sendAgentMessage(agentId, content, threadId = null, mediaI
  * Get available agents
  */
 export async function getSessionModels(sessionId) {
-    return request(`/sessions/${encodeURIComponent(sessionId)}/models`);
+    return tau.models(sessionId);
 }
 
 export async function changeSessionModel(sessionId, changes) {
-    return request(`/sessions/${encodeURIComponent(sessionId)}/model`, { method: 'POST', body: JSON.stringify(changes) });
+    return tau.changeModel(sessionId, changes);
 }
 
 export async function getSessionModelState(sessionId) {
-    return request(`/sessions/${encodeURIComponent(sessionId)}/model-state`);
+    return tau.modelState(sessionId);
 }
 
 export async function getSessions(includeArchived = false) {
-    return request(`/sessions?include_archived=${includeArchived}`);
+    return tau.sessions(includeArchived);
 }
 
 export async function getSessionTimeline(sessionId, limit = 10, beforeId = null) {
@@ -129,15 +135,18 @@ export async function getSessionTimeline(sessionId, limit = 10, beforeId = null)
 }
 
 export async function createSession(name, parentId = null) {
-    return request('/sessions', { method: 'POST', body: JSON.stringify({ name, parent_id: parentId }) });
+    if (parentId) throw new Error('Tau branching requires a branch point; session creation cannot substitute for it');
+    // Setup must supply actual provider/model choices before enabling this action.
+    return tau.createSession({ name });
 }
 
 export async function updateSession(sessionId, changes) {
-    return request(`/sessions/${encodeURIComponent(sessionId)}`, { method: 'PATCH', body: JSON.stringify(changes) });
+    if (Object.keys(changes).some(key => key !== 'name')) throw new Error('Unsupported Tau session update');
+    return tau.renameSession(sessionId, changes.name);
 }
 
 export async function deleteSession(sessionId) {
-    return request(`/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+    throw new Error('Tau supports session archival, not deletion; use the Archive action');
 }
 
 export async function getAgents() {

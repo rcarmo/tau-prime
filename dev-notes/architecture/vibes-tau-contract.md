@@ -34,3 +34,10 @@ and omits unsupported pricing/context/reasoning capabilities. Model mutations
 use the loaded session revision; 409 errors propagate without retries. Six
 transport tests (14 assertions), lint and frontend build pass. Still not wired
 to production; reasoning controls and initial selection need integration.
+
+API wiring checkpoint: imported api.js now delegates session listing/rename and
+model listing/state/change to Tau transport, reading the existing auth token.
+Creation without provider setup and deletion explicitly fail instead of calling
+wrong Vibes endpoints. These are interim integration errors, not finished UI:
+creation controls need setup, deletion must become Archive, initial default and
+timeline/SSE are still pending. Ten tests/31 assertions, lint and build pass.
