@@ -24,8 +24,18 @@ try{
  const context=await browser.newContext();const page=await context.newPage();
  await context.addCookies([{name:'private-cookie',value:'fixture',url:'http://127.0.0.1:8893'}]);
  await page.goto('http://127.0.0.1:8893/');requests.length=0;
- await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;});
+ await page.evaluate(async()=>{
+  for(const name of ['tau-web-shell-v12','tau-vibes-shell-old','unrelated-cache']){
+   const cache=await caches.open(name);await cache.put('/sentinel',new Response(name));
+  }
+  await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;
+ });
  await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
+ const cacheNames=await page.evaluate(()=>caches.keys());
+ expect(cacheNames).toContain('unrelated-cache');
+ expect(cacheNames).not.toContain('tau-web-shell-v12');
+ expect(cacheNames).not.toContain('tau-vibes-shell-old');
+ expect(await page.evaluate(async()=> (await (await caches.open('unrelated-cache')).match('/sentinel')).text())).toBe('unrelated-cache');
  const precache=requests.filter(request=>manifest.assets.includes(request.url));
  expect(precache.length).toBe(manifest.assets.length);
  expect(precache.every(request=>!request.cookie&&!request.authorization)).toBe(true);

@@ -464,3 +464,9 @@ still waits for old clients to close (no skipWaiting). This supersedes the earli
 network-first proposal. Unit verifies online navigation stays on installed
 version; 59 unit tests/lint/build and Chromium isolated worker journey pass.
 Production remains inactive pending real-app and activation/upgrade tests.
+
+Offline activation cache cleanup: Chromium isolation test seeds old Tau and
+unrelated caches, installs generated worker, verifies only old owned caches are
+removed and unrelated sentinel contents survive. Credential-free precache and
+offline fallback assertions remain passing. 59 unit tests/lint pass. This is
+cache migration on first activation, not waiting-worker/version upgrade coverage.
