@@ -1,6 +1,6 @@
 {
-  "name": "Vibes",
-  "short_name": "Vibes",
+  "name": "Tau",
+  "short_name": "Tau",
   "description": "Slack-like interface for coding agents",
   "start_url": "/",
   "display": "standalone",

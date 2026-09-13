@@ -526,7 +526,7 @@ function useTimestampRefresh(intervalMs = 30000) {
     }, [intervalMs]);
 }
 
-const DEFAULT_AGENT_NAME = 'Vibes';
+const DEFAULT_AGENT_NAME = 'Tau';
 const AGENT_AVATAR_URL = '/static/icon-192.png';
 
 /**
@@ -686,7 +686,7 @@ const dedupePosts = (items) => {
  * Main App component
  */
 function App() {
-    const terminalPopout = new URL(location.href).searchParams.get('terminal') === '1';
+    const terminalPopout = false; // Tau has no terminal backend.
     const [terminalVisible, setTerminalVisible] = useState(terminalPopout);
     const [terminalEnabled, setTerminalEnabled] = useState(false);
     useEffect(() => {
@@ -701,9 +701,7 @@ function App() {
         window.addEventListener('keydown', toggleTerminal);
         return () => window.removeEventListener('keydown', toggleTerminal);
     }, [terminalEnabled, terminalPopout]);
-    useEffect(() => {
-        fetch('/terminal/session').then(r => r.json()).then(s => setTerminalEnabled(!!s.enabled)).catch(() => {});
-    }, []);
+    // Terminal capability remains disabled; do not probe a nonexistent endpoint.
     const [posts, setPosts] = useState(null);
     const [selectedSession, setSelectedSession] = useState(null);
     const selectedSessionRef = useRef(null);
@@ -986,7 +984,7 @@ function App() {
 
     const applyBranding = useCallback((name, avatarUrl, avatarVersion = null) => {
         if (typeof document === 'undefined') return;
-        const title = (name || '').trim() || 'Vibes';
+        const title = (name || '').trim() || 'Tau';
         if (brandingRef.current.title !== title) {
             document.title = title;
             const titleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');

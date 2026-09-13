@@ -362,3 +362,9 @@ identical JS/CSS hashes. Ten packaging tests confirm bundle presence without Bun
 This settles shipping policy, not routing: production still uses old frontend
 until remaining compatibility/security/visual gates are met. Future source edits
 must regenerate and commit bundles alongside source.
+
+Identity/capability checkpoint: default agent/page/app title and manifest name
+now Tau; upstream license/provenance unchanged. Removed nonexistent terminal
+session probe and disabled terminal popout URL mode. Bundles regenerated;
+35 unit tests, lint/build, smoke and authenticated live checks pass. Imported
+icon artwork and residual old agent/command requests remain to be reviewed.
