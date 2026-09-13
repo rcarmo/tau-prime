@@ -629,3 +629,9 @@ session/activity/model/queue/summary/preview data with polling only while open.
 Session selection requires confirmation and closes only after awaited selection
 succeeds. 46 unit tests/lint/build and real root regression pass; open dashboard
 browser selection/pagination and responsive accessibility remain pending.
+
+Real Dashboard selection checkpoint: authenticated Chromium/WebKit open live
+session summaries, decline selection and retain open Dashboard/current URL,
+accept selection and await close, switch back and recover composer plus unsaved
+Plan drafts. Both production-router workflows pass. Pagination, failure retention
+and broad Dashboard accessibility remain pending. No production code changed.

@@ -177,6 +177,21 @@ try {
  await expect(composer).toHaveValue('New session draft remains local');
  if(!await plan.isVisible())await planSummary.click();
  await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
+ const dashboardSummary=page.locator('summary').filter({hasText:'Session dashboard'});
+ await dashboardSummary.click();
+ const dashboard=page.getByRole('region',{name:'Session dashboard'});
+ await expect(dashboard.getByRole('button',{name:'Open Live backend session',exact:true})).toBeVisible();
+ page.once('dialog',dialog=>dialog.dismiss());
+ await dashboard.getByRole('button',{name:'Open Live backend session',exact:true}).click();
+ await expect(dashboard).toBeVisible();expect(new URL(page.url()).searchParams.get('session')).toBe(newId);
+ page.once('dialog',dialog=>dialog.accept());
+ await dashboard.getByRole('button',{name:'Open Live backend session',exact:true}).click();
+ await expect(dashboard).toBeHidden();await expect(composer).toHaveValue('/thinking invalid');
+ await dashboardSummary.click();page.once('dialog',dialog=>dialog.accept());
+ await dashboard.getByRole('button',{name:'Open Created through imported dialog',exact:true}).click();
+ await expect(dashboard).toBeHidden();await expect(composer).toHaveValue('New session draft remains local');
+ if(!await plan.isVisible())await planSummary.click();
+ await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
  if(process.env.TAU_LIVE_AXE){
   for(const selector of ['.tau-plan','[aria-label="Session media"]']){
    if(!await page.locator(selector).isVisible())await page.locator('summary').filter({hasText:'Session media'}).click();
