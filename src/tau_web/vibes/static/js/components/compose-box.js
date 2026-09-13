@@ -1125,9 +1125,7 @@ export function ComposeBox({
                                 <h2>Models settings</h2>
                                 <p>Browser pins: ${modelPins.length ? modelPins.join(', ') : 'None'}</p>
                                 <p>Provider credentials and model defaults are not managed here. Catalogue availability does not verify provider authentication.</p>
-                                <p>Load replaces browser pins. Save replaces instance pins only against the version last loaded.</p>
-                                <button type="button" disabled=${pinSyncBusy} onClick=${() => syncInstancePins(false)}>Load instance pins</button>
-                                <button type="button" disabled=${pinSyncBusy || !instancePinsLoaded} onClick=${() => syncInstancePins(true)}>Save instance pins</button>
+                                <p>Pins are stored in this browser only. Tau does not provide instance-wide pin synchronization.</p>
                                 ${modelSettingsOpen && pinSyncStatus && html`<div role="status">${pinSyncStatus}</div>`}
                                 <button type="button" onClick=${() => { setModelSettingsOpen(false); modelSettingsRef.current?.close(); }}>Close Models settings</button>
                             </dialog>

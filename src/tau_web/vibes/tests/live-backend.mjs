@@ -16,6 +16,8 @@ try {
  }
  const response=await authFetch('http://127.0.0.1:8893/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider_name:'test',model:'fixture',title:'Live backend session'})});
  expect(response.status).toBe(201);const session=await response.json();
+ const secondResponse=await authFetch('http://127.0.0.1:8893/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider_name:'test',model:'second-fixture',title:'Model catalogue fixture'})});
+ expect(secondResponse.status).toBe(201);const secondSession=await secondResponse.json();
  const controller=new AbortController();
  const stream=await authFetch('http://127.0.0.1:8893/api/events',{signal:controller.signal});
  expect(stream.status).toBe(200);
@@ -41,7 +43,15 @@ try {
   const current=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
   return current.thinking_level;
  }).toBe('low');
+ const composer=page.locator('.compose-box textarea');
+ // Close before editing a draft, then select another real catalogue entry.
  await page.getByRole('button',{name:'Close model picker',exact:true}).click();
+ await composer.fill('Draft survives model selection');
+ await page.locator('.compose-model-hint').click();
+ await page.getByRole('option',{name:'test/second-fixture',exact:true}).click();
+ await expect.poll(async()=> (await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json()).model).toBe('second-fixture');
+ await expect(composer).toHaveValue('Draft survives model selection');
+ await authFetch(`http://127.0.0.1:8893/api/sessions/${secondSession.session_id}`,{method:'DELETE'});
  const mediaCheck=await page.evaluate(async sessionId=>{
   const {uploadMedia}=await import('/static/js/api.js');
   const content='Real media fixture: café 日本語';

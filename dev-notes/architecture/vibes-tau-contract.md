@@ -341,3 +341,10 @@ verify persistence, then dismiss picker. Initial test used wrong accessible
 label (Thinking level); corrected to actual Select thinking level. Both pass with
 existing live media/Plan/archive checks. 35 unit tests/lint pass. Full catalogue
 selection and unsupported instance-pin controls still require attention.
+
+Model picker checkpoint: real authenticated Chromium/WebKit seed a second model
+via actual session API, select it through picker, verify saved model and retained
+composer draft. Extra fixture session archived before archive-selection checks.
+Unsupported instance-pin sync buttons removed; browser-local pins retained and
+scope explained. 35 unit tests/lint/build pass. This verifies selection mechanics,
+not execution or provider availability of fixture model names.
