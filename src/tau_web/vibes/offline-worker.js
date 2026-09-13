@@ -26,11 +26,9 @@ self.addEventListener('fetch',event=>{
  if(!navigation&&!asset)return;
  event.respondWith((async()=>{
   const cache=await caches.open(CACHE);
-  if(navigation){
-   try{return await fetch(request);}catch{
-    return (await cache.match('/'))||Response.error();
-   }
-  }
+  // A controlled navigation uses the entry document belonging to this bundle.
+  // A new worker waits for existing clients to close before replacing the cache.
+  if(navigation)return (await cache.match('/'))||fetch(request);
   return (await cache.match(url.pathname+url.search))||fetch(request);
  })());
 });

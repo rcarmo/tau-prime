@@ -457,3 +457,10 @@ from cache, offline session navigation returns public shell and API fetch fails.
 WebKit reaches offline navigation then reports internal browser error (same class
 as historical skip); recorded as failure, not pass. 58 unit tests/lint pass.
 Production worker remains inactive; real app bootstrap/upgrade not yet validated.
+
+Offline version policy correction: controlled root navigations now use cached
+entry document paired with cached bundles, not newer network HTML. New worker
+still waits for old clients to close (no skipWaiting). This supersedes the earlier
+network-first proposal. Unit verifies online navigation stays on installed
+version; 59 unit tests/lint/build and Chromium isolated worker journey pass.
+Production remains inactive pending real-app and activation/upgrade tests.

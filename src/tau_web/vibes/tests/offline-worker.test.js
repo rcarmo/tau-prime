@@ -32,3 +32,13 @@ test('offline installation omits credentials and navigation falls back without c
  expect(await (await response).text()).toBe('public shell');
  expect(entries.has('/?session=private')).toBe(false);
 });
+test('controlled online navigation keeps the installed document version',async()=>{
+ const handlers={};let network=0;
+ vm.runInNewContext(readFileSync(new URL('../static/offline-sw.js',import.meta.url),'utf8'),{
+  self:{location:{origin:'https://tau.test'},addEventListener:(name,fn)=>handlers[name]=fn},URL,
+  caches:{open:async()=>({match:async()=>new Response('installed version')})},
+  fetch:async()=>{network++;return new Response('different network version');},
+ });
+ let response;handlers.fetch({request:{method:'GET',url:'https://tau.test/?session=one',mode:'navigate',headers:new Headers()},respondWith:promise=>{response=promise;}});
+ expect(await (await response).text()).toBe('installed version');expect(network).toBe(0);
+});
