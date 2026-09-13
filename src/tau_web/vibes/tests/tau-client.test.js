@@ -171,3 +171,7 @@ test('thinking policy uses dedicated endpoint and loaded revision without assert
  expect(calls[1].path).toBe('/api/sessions/one/thinking');expect(JSON.parse(calls[1].body)).toEqual({thinking_level:'high',expected_updated_at:'r1'});
  expect(state.model.reasoning).toBeUndefined();expect(state.thinking_level).toBe('high');
 });
+test('agent display identity uses actual Tau settings without invented capabilities',async()=>{
+ const client=createTauClient({fetchImpl:async path=>{expect(path).toBe('/api/settings');return Response.json({agent_name:'Tau configured'});}});
+ expect(await client.agentIdentity()).toEqual({agents:[{id:'default',name:'Tau configured'}]});
+});

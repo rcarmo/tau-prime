@@ -368,3 +368,10 @@ now Tau; upstream license/provenance unchanged. Removed nonexistent terminal
 session probe and disabled terminal popout URL mode. Bundles regenerated;
 35 unit tests, lint/build, smoke and authenticated live checks pass. Imported
 icon artwork and residual old agent/command requests remain to be reviewed.
+
+Background contract cleanup: agent display registry now derives configured name
+from authenticated /api/settings without fabricated capabilities; compatibility
+'default' ID is display-only, not a session. Workspace visibility is explicitly
+browser-local (existing app persistence) and no longer posts nonexistent Vibes
+endpoint. 36 unit tests/lint/build and authenticated live checks pass. Command
+catalogue/execution and remaining old event handlers still need migration.

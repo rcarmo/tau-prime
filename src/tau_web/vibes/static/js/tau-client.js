@@ -52,6 +52,10 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async agentIdentity() {
+            const settings = await request('/settings');
+            return { agents: [{ id: 'default', name: settings.agent_name || 'Tau' }] };
+        },
         async media(id) {
             if (!id) return [];
             return (await request(`/media?session_id=${encodeURIComponent(id)}`)).media;

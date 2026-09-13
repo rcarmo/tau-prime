@@ -136,7 +136,7 @@ export async function deleteSession(sessionId) {
 }
 
 export async function getAgents() {
-    return request('/agents');
+    return tau.agentIdentity();
 }
 
 /**
@@ -379,10 +379,8 @@ export async function moveWorkspaceEntry(path, target) {
  * Toggle workspace visibility state.
  */
 export async function setWorkspaceVisibility(visible, showHidden = false) {
-    return request('/workspace/visibility', {
-        method: 'POST',
-        body: JSON.stringify({ visible: Boolean(visible), show_hidden: Boolean(showHidden) }),
-    });
+    // Tau layout is browser-owned, already persisted by the app. No backend mutation.
+    return { visible: Boolean(visible), show_hidden: Boolean(showHidden) };
 }
 
 /**
