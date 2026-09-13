@@ -1318,8 +1318,12 @@ function App() {
         const existing = document.getElementById('post-' + id);
         if (existing) { highlight(existing); return; }
         try {
-            const result = await api.getThread(id);
-            const msg = result?.thread?.[0];
+            const messageId = Number(id);
+            const session = selectedSessionRef.current;
+            if (!session || !Number.isSafeInteger(messageId) || messageId < 1) return;
+            const result = await getSessionTimeline(session, 1, messageId + 1);
+            if (selectedSessionRef.current !== session) return;
+            const msg = result.posts.find(post => post.id === messageId);
             if (!msg) return;
             setPosts((prev) => {
                 if (!prev) return [msg];

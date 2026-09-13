@@ -449,3 +449,9 @@ estimatePreviewLines. Earlier workflow successes did not assert app connection
 health. Authenticated Chromium/WebKit now pass explicit connected/focus checks
 alongside previous workflows. 41 unit tests/lint/build pass; provider runs remain
 unverified. Diagnostic instrumentation removed before commit.
+
+Static undefined-variable gate: enabled no-undef for first-party imported JS
+(vendor excluded). Found stale api.getThread reference in scroll-to-message;
+replaced with session-scoped Tau timeline lookup and stale-session guard. Lint
+now passes with gate enabled; 41 unit tests/build and authenticated live workflows
+pass. Message-reference navigation edge cases still need browser assertions.
