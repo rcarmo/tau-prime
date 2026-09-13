@@ -584,3 +584,12 @@ thinking commands, session creation/archive, Plan conflicts/drafts, media
 upload/download and workspace preview successfully. Wheel/checksum delivered as
 checkpoint, not final acceptance; obsolete source cleanup, provider execution,
 remaining runtime parity and paired visuals still pending.
+
+Superseded source cleanup: removed tracked old frontend TSX/build tree and old
+chat app/index/CSS/fonts/service-worker bundle. Independent extension renderer,
+SDK and widget bridge remain. Removed ten source-string ownership tests for the
+deleted implementation; replacement behavioral coverage lives in imported
+workflow tests. Packaging asserts no old frontend/app/preact bundle. Full Python
+1313 pass (count reduced by obsolete assertions), real production-router
+Chromium/WebKit authenticated workflows pass. Old browser spec migration and
+untracked dependency directory cleanup remain separate; Git preserves recovery.

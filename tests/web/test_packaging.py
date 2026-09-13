@@ -63,32 +63,15 @@ def test_wheel_includes_frontend_static_assets() -> None:
     assert expected_assets <= archive_names
     assert "tau_web/static/widget-bridge.js" in archive_names
     assert "tau_web/static/frontend-sdk.js" in archive_names
-    assert "tau_web/static/preact-shell.js" in archive_names
+    assert "tau_web/vibes/static/dist/app.js" in archive_names
 
 
-def test_classic_reference_assets_are_pinned_and_packaged(tmp_path: Path) -> None:
-    static_root = build_backend.ROOT / "src" / "tau_web" / "static"
-    css_bytes = (static_root / "piclaw-classic.css").read_bytes()
-    assert hashlib.sha256(css_bytes).hexdigest() == "632b049f34a164f73b4f2a379d4bfc4ee76327955b32331c9af6db28281b0ab6"
-    fonts = set(re.findall(r"url\(\./([^)]*)\)", css_bytes.decode()))
-    assert fonts == {"firacode-nerd-font-mono-bold-v7nf8tpn.ttf", "firacode-nerd-font-mono-regular-f4sytzp8.ttf"}
-    wheel_name = build_backend.build_wheel(str(tmp_path))
-    with zipfile.ZipFile(tmp_path / wheel_name) as archive:
-        for name in fonts | {"piclaw-classic.css"}:
-            assert archive.read(f"tau_web/static/{name}") == (static_root / name).read_bytes()
-
-
-def test_wheel_includes_preact_frontend_sources() -> None:
-    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
-
-    for expected in (
-        "tau_web/frontend/README.md",
-        "tau_web/frontend/build.ts",
-        "tau_web/frontend/package.json",
-        "tau_web/frontend/src/index.tsx",
-        "tau_web/frontend/tsconfig.json",
-    ):
-        assert expected in archive_names
+def test_replacement_excludes_superseded_chat_frontend():
+    names = {name for _, name in build_backend._package_files()}
+    assert 'tau_web/vibes/static/dist/app.js' in names
+    assert not any(name.startswith('tau_web/frontend/') for name in names)
+    assert 'tau_web/static/app.js' not in names
+    assert 'tau_web/static/preact-shell.js' not in names
 
 
 def test_wheel_excludes_dependency_and_cache_trees() -> None:
