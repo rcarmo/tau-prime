@@ -220,3 +220,8 @@ Markdown URL boundary browser checks: Chromium/WebKit verify javascript,
 mixed-case javascript and data links lose href while HTTPS, mailto and relative
 links retain exact href. 56 unit tests/lint pass. This is bounded protocol/semantic
 coverage, not an exhaustive sanitizer security audit.
+
+Composer resize keyboard migration: Chromium desktop/WebKit phone verify Home,
+End and arrow increments clamp at advertised min/max, actual textarea geometry
+matches maximum, separator keeps focus and draft remains intact. 56 unit tests
+and lint pass. Pointer/touch drag cleanup and resize across viewport remain open.
