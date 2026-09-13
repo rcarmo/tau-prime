@@ -78,6 +78,19 @@ try {
  await expect(composer).toHaveValue('/thinking invalid');
  const runs=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/runs`)).json();
  expect(runs.runs).toHaveLength(0);
+ const entries=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/entries`)).json();
+ const firstEntry=entries.entries.find(entry=>entry.type!=='leaf');
+ expect(firstEntry?.id).toBeTruthy();
+ const branchChange=await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/branches/select`,{method:'POST',headers:{'Content-Type':'application/json','X-Tau-CSRF':'1'},body:JSON.stringify({leaf_entry_id:firstEntry.id})});
+ expect(branchChange.status).toBe(200);
+ await page.locator('summary').filter({hasText:'Conversation branches'}).click();
+ await page.getByRole('button',{name:'Refresh branches',exact:true}).click();
+ const inactiveLeaf=page.getByRole('region',{name:'Conversation branches'}).getByRole('button',{name:/^Leaf /}).filter({hasNotText:'(active)'}).first();
+ await expect(inactiveLeaf).toBeVisible();
+ page.once('dialog',dialog=>dialog.accept());
+ await inactiveLeaf.click();
+ await expect.poll(async()=> (await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json()).active_leaf_entry_id).not.toBe(firstEntry.id);
+ await expect(composer).toHaveValue('/thinking invalid');
  await authFetch(`http://127.0.0.1:8893/api/sessions/${secondSession.session_id}`,{method:'DELETE'});
  const mediaCheck=await page.evaluate(async sessionId=>{
   const {uploadMedia}=await import('/static/js/api.js');

@@ -604,3 +604,10 @@ Branch browser checkpoint: Chromium desktop/WebKit phone display two leaf choice
 decline confirmation with no mutation, accept exact leaf POST, show selected leaf
 active/disabled and retain composer draft. Fixture-only nonempty branch check;
 real session storage branch mutation test still pending. 46 unit tests/lint pass.
+
+Real branch storage checkpoint: authenticated Chromium/WebKit use actual model/
+thinking session entries, select an earlier leaf via API, refresh real branch
+list and choose another leaf through UI confirmation. Session API confirms active
+leaf changes; composer draft retained. Both pass production-router workflows.
+No synthetic IDs or provider execution required. Full branch context metadata
+refresh and running-session interaction remain future regression cases.
