@@ -2585,7 +2585,7 @@ function App() {
                 ${searchQuery && isIOSDevice() && html`<div class="search-results-spacer"></div>`}
                 ${(currentHashtag || searchQuery) && html`
                     <div class="hashtag-header">
-                        <button class="back-btn" onClick=${handleBackToTimeline}>
+                        <button class="back-btn" aria-label="Back to timeline" onClick=${handleBackToTimeline}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                         </button>
                         <span>${currentHashtag ? `#${currentHashtag}` : `Search: ${searchQuery}`}</span>

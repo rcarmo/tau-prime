@@ -12,6 +12,7 @@ try {
  const page=await context.newPage(); const errors=[];const missing=new Set();
  const scan=async(selector)=>{
   if(!process.env.TAU_SMOKE_AXE)return;
+  await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})));});
   const result=await new AxeBuilder({page}).include(selector).analyze();
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
  };
@@ -86,7 +87,7 @@ try {
  await expect(page.locator('.compose-queue-item')).toHaveCount(2);
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
- await scan('.compose-box');
+ await scan('body');
  const composer=page.locator('.compose-box textarea');
  const approvals=page.getByRole('region',{name:'Tool approvals'});
  await expect(approvals).toContainText('echo fixture');
@@ -153,6 +154,7 @@ try {
  await expect(page.getByText('Fixture invalid search',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('link',{name:'Open source session'})).toHaveAttribute('href','?session=smoke');
  await expect(page.getByLabel('Images',{exact:true})).toBeHidden();
+ await scan('body');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;

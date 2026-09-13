@@ -526,3 +526,13 @@ html[data-tint]::after {
     color: var(--text-primary); background: var(--bg-secondary);
     border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
 }
+
+/* Preserve readable small metadata on highlighted posts and connection toast. */
+.post-time { color: var(--text-primary); }
+.connection-status.disconnected, .connection-status.connecting { color: #fff; background: #a80d19; }
+.hashtag-header > span, .agent-status-text { color: var(--text-primary); }
+.post-meta a.post-action-btn { color: var(--text-primary); }
+[aria-label="Tool approvals"] button, .tau-plan button, [aria-label="Session media"] button {
+    color: var(--text-primary); background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
+}

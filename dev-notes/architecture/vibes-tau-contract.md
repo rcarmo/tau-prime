@@ -311,3 +311,11 @@ Found/fixed small queue/model label contrast and WebKit dark native provider
 button contrast with local styles, vendor CSS untouched. All 12 cases pass with
 no serious/critical violations in those TWO scopes. Whole app/Plan/media/tools/
 search scans and visual review remain pending; do not generalize scoped results.
+
+Expanded accessibility checkpoint: all 12 cases now scan settled whole-page
+populated chat (including tools/approvals) and search, plus provider modal.
+Fixed missing Back accessible name and metadata/toast/search-link/native button
+contrast via local CSS. Wait for finite animations before contrast scans.
+All cases pass no serious/critical violations in exercised states; collapsed
+Plan/media interiors and runtime loading/error states are not covered by this
+claim. No vendor CSS changed; visual paired review still pending.
