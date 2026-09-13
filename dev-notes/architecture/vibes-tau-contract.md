@@ -617,3 +617,9 @@ reads authenticated /meters only while open, distinguishes unavailable values an
 retains explicit error. Both real production-router browsers open it and verify
 labels/data surface; 46 unit tests/lint/build pass. Historical sparkline series,
 Dashboard detail and responsive/a11y runtime review remain pending.
+
+Runtime responsive checkpoint: expanded metrics fixture verifies CPU percent,
+RSS conversion and explicit unavailable swap in all 12 workflow/Axe cases.
+Fresh run also caught added provider-token help text contrast on dark tablet;
+local text-primary correction applied. All 12 pass no serious/critical findings
+in exercised scopes. Bundles rebuilt. No claim of complete Dashboard parity.

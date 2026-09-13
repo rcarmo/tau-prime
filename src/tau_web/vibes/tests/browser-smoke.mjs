@@ -36,7 +36,8 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/media' && route.request().method()==='GET') data={media:[]};
+  if(url.pathname==='/meters') data={cpu_percent:12.5,ram_percent:44,swap_percent:null,process_rss_bytes:104857600};
+  else if(url.pathname==='/api/media' && route.request().method()==='GET') data={media:[]};
   else if(url.pathname==='/api/media') {
    uploads++;
    expect(route.request().headers()['x-tau-csrf']).toBe('1');
@@ -105,7 +106,11 @@ try {
  await expect(page.locator('.compose-queue-item')).toHaveCount(2);
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
+ await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
+ const metrics=page.getByRole('region',{name:'Runtime metrics'});
+ await expect(metrics).toContainText('12.5%');await expect(metrics).toContainText('100.0 MiB');await expect(metrics).toContainText('Unavailable');
  await scan('body');
+ await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
  if(process.env.TAU_CAPTURE_DIR){
   await mkdir(process.env.TAU_CAPTURE_DIR,{recursive:true});
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
