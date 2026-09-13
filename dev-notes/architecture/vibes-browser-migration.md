@@ -316,3 +316,9 @@ Supported slash completion: Chromium/WebKit type /thi, Tab accepts /thinking
 without a request, focus remains in composer, and Escape dismisses completion
 without deleting typed text. 56 unit tests/lint pass. Slash popup currently lacks
 listbox/option semantics (unlike session mentions); accessibility gap identified.
+
+Slash accessibility: listbox/selected-option semantics plus textarea controls and
+active-descendant relationships added. Expanded composer Axe scope exposed
+2.5:1 command-name contrast; local primary-text override fixes it without vendor
+CSS edits. Chromium/WebKit verify relationships and completion with Axe enabled;
+56 unit tests/lint/build pass. No screen-reader usability claim from Axe alone.

@@ -242,6 +242,11 @@ try {
  const beforeCompletion=submitted.length;
  await composer.fill('/thi');
  await expect(page.locator('.slash-autocomplete .slash-name')).toHaveText('/thinking');
+ const suggestions=page.getByRole('listbox',{name:'Slash commands'});
+ await expect(suggestions.getByRole('option')).toHaveAttribute('aria-selected','true');
+ await expect(composer).toHaveAttribute('aria-controls',await suggestions.getAttribute('id'));
+ await expect(composer).toHaveAttribute('aria-activedescendant',await suggestions.getByRole('option').getAttribute('id'));
+ await scan('.compose-box');
  await composer.press('Tab');
  await expect(composer).toHaveValue('/thinking');
  await expect(composer).toBeFocused();

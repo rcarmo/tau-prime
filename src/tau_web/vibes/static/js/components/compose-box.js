@@ -1037,6 +1037,9 @@ export function ComposeBox({
                     `}
                     <textarea
                         ref=${textareaRef}
+                        aria-autocomplete=${showSlash && slashMatches.length ? 'list' : 'none'}
+                        aria-controls=${showSlash && slashMatches.length ? `slash-${encodeURIComponent(sessionId)}` : undefined}
+                        aria-activedescendant=${showSlash && slashMatches.length ? `slash-${encodeURIComponent(sessionId)}-${slashIndex}` : undefined}
                         placeholder=${searchMode ? "Search (Enter to run)..." : "Message (Enter to send, Shift+Enter for newline)..."}
                         value=${searchMode ? searchText : content}
                         onInput=${handleInput}
@@ -1051,10 +1054,12 @@ export function ComposeBox({
                         ${mentionMatches.map((item, index) => html`<div key=${item.id} class=${`slash-item${index === mentionIndex ? ' active' : ''}`} role="option" aria-selected=${index === mentionIndex} onMouseDown=${e => { e.preventDefault(); acceptMention(item); }} onMouseEnter=${() => setMentionIndex(index)}><span class="slash-name">@${item.name}</span><span class="slash-desc">${item.id}</span></div>`)}
                     </div>`}
                     ${showSlash && slashMatches.length > 0 && html`
-                        <div class="slash-autocomplete" ref=${slashRef}>
+                        <div class="slash-autocomplete" ref=${slashRef} id=${`slash-${encodeURIComponent(sessionId)}`} role="listbox" aria-label="Slash commands">
                             ${slashMatches.map((cmd, i) => html`
                                 <div
                                     key=${cmd.name}
+                                    id=${`slash-${encodeURIComponent(sessionId)}-${i}`}
+                                    role="option" aria-selected=${i === slashIndex}
                                     class=${`slash-item${i === slashIndex ? ' active' : ''}`}
                                     onMouseDown=${(e) => { e.preventDefault(); acceptSlashCommand(cmd); }}
                                     onMouseEnter=${() => setSlashIndex(i)}
