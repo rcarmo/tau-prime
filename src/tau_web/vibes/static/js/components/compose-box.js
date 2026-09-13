@@ -970,15 +970,14 @@ export function ComposeBox({
                 <label class="compose-search-scope-wrap" title="Search scope">
                     <select class="compose-search-scope-select" aria-label="Search scope" value=${searchScope} onChange=${e => setSearchScope(e.currentTarget.value)}>
                         <option value="current">Current session</option>
-                        <option value="root">Branch family</option>
                         <option value="all">All sessions</option>
                     </select>
                 </label>
-                <label class="compose-search-filter-wrap" title="Only messages with images">
+                <label hidden style="display:none" class="compose-search-filter-wrap" title="Only messages with images">
                     <input type="checkbox" checked=${searchFilterImages} onChange=${() => setSearchFilterImages(v => !v)} />
                     <span class="compose-search-filter-label">Images</span>
                 </label>
-                <label class="compose-search-filter-wrap" title="Only messages with attachments">
+                <label hidden style="display:none" class="compose-search-filter-wrap" title="Only messages with attachments">
                     <input type="checkbox" checked=${searchFilterAttachments} onChange=${() => setSearchFilterAttachments(v => !v)} />
                     <span class="compose-search-filter-label">Attachments</span>
                 </label>

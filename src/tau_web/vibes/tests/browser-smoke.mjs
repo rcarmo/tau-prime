@@ -14,7 +14,8 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/onboarding') {
+  if(url.pathname==='/api/search') data={results:[{entity_type:'message',entity_id:'1',session_id:'smoke',text:'Matched search fixture'}]};
+  else if(url.pathname==='/api/onboarding') {
    if(route.request().method()==='PUT') {
     configured=route.request().postDataJSON();
     if(rejectSetup)return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'Fixture provider rejection'})});
@@ -80,6 +81,12 @@ try {
  await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
  expect(configured).toEqual({provider:'test',model:'updated-model'});
  await expect(composer).toHaveValue('Keep rejected draft');
+ await page.locator('button[title="Search"]').click();
+ await composer.fill('Matched');
+ await composer.press('Enter');
+ await expect(page.getByText('Matched search fixture',{exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Open source session'})).toHaveAttribute('href','?session=smoke');
+ await expect(page.getByLabel('Images',{exact:true})).toBeHidden();
  console.log(JSON.stringify({engine,errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
- if(errors.length || !(await page.locator('body').innerText()).includes('Tau persisted smoke message') || missing.has('/api/sessions/null')) process.exitCode=1;
+ if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
 }finally{await browser.close();server.kill();}

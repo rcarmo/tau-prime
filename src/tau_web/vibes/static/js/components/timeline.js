@@ -647,13 +647,14 @@ function Post({
                     </svg>
                 </button>
                 <div class="post-meta">
-                    <span class="post-author">${displayName}</span>
+                    <span class="post-author">${data.type === 'search_result' ? 'Search result' : displayName}</span>
+                    ${data.type === 'search_result' && data.session_id && html`<a href=${`?session=${encodeURIComponent(data.session_id)}`} class="post-action-btn">Open source session</a>`}
                     <span class="post-time" onClick=${(e) => {
                         if (onMessageRef) {
                             e.stopPropagation();
                             onMessageRef(String(post.id));
                         }
-                    }} style=${onMessageRef ? 'cursor:pointer' : ''}>${formatTimeLabel(post.timestamp)}</span>
+                    }} style=${onMessageRef ? 'cursor:pointer' : ''}>${post.timestamp ? formatTimeLabel(post.timestamp) : ''}</span>
                 </div>
                 ${isHardTruncated && truncatedInfo && html`
                     <div class="post-content truncated">

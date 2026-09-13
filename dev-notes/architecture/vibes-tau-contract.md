@@ -199,3 +199,9 @@ entity/session IDs and text without invented post timestamps. Unsupported image/
 attachment/thread/root filters and offsets fail explicitly. 28 unit tests,
 lint/build pass. Browser rendering, source-session navigation and disabling
 unsupported filter controls remain pending; not complete Search UX.
+
+Search browser checkpoint: Chromium desktop/WebKit phone submit composer search,
+render matched FTS text and verify explicit source-session link. Unsupported
+branch-family/image/attachment filter controls removed/hidden. Null timestamps
+no longer render epoch dates. 28 unit tests, lint/build pass. Real FTS fixture
+seeding, navigation draft handling and search-error presentation remain pending.
