@@ -359,3 +359,10 @@ focus before fill, plus verifies draft before mutation and captures bounded
 remount/storage-length diagnostics on later failure. Five installed WebKit
 desktop/dark repeats pass. 56 unit tests/lint pass. No production change or timeout
 increase; complete installed matrix still required.
+
+82d1f33 installed release checkpoint, harness 953745b: full 12-case authenticated
+matrix now passes with expanded Axe scopes and CSP assertions after awaiting
+picker focus restoration. Both epoch-pinned wheels remain identical; artifact
+includes all runtime changes through 82d1f33 (later commits test/docs only).
+Attached wheel/checksums supersede 87aebdb checkpoint. This closes the observed
+fixture sequencing failure, not live-provider/offline or paired-visual gates.
