@@ -311,3 +311,8 @@ Consolidated c656c22 source checkpoint: full Python 1313 pass; 56 JS tests and
 strict lint pass; complete 12-case workflow/Axe matrix passes first run after
 Markdown contrast, provider discard and pending-file warning changes. Worktree
 clean before evidence update. Latest runtime not yet in attached checkpoint.
+
+Supported slash completion: Chromium/WebKit type /thi, Tab accepts /thinking
+without a request, focus remains in composer, and Escape dismisses completion
+without deleting typed text. 56 unit tests/lint pass. Slash popup currently lacks
+listbox/option semantics (unlike session mentions); accessibility gap identified.

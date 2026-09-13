@@ -239,6 +239,20 @@ try {
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
  const composer=page.locator('.compose-box textarea');
+ const beforeCompletion=submitted.length;
+ await composer.fill('/thi');
+ await expect(page.locator('.slash-autocomplete .slash-name')).toHaveText('/thinking');
+ await composer.press('Tab');
+ await expect(composer).toHaveValue('/thinking');
+ await expect(composer).toBeFocused();
+ await expect(page.locator('.slash-autocomplete')).toHaveCount(0);
+ expect(submitted.length).toBe(beforeCompletion);
+ await composer.fill('/thi');
+ await expect(page.locator('.slash-autocomplete')).toBeVisible();
+ await composer.press('Escape');
+ await expect(page.locator('.slash-autocomplete')).toHaveCount(0);
+ await expect(composer).toHaveValue('/thi');
+ await composer.fill('');
  await composer.fill('Extension must preserve this draft');
  await page.getByRole('button',{name:'Extension submit',exact:true}).click();
  await expect(page.getByText('Extension submit accepted',{exact:true})).toBeVisible();
