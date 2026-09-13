@@ -477,3 +477,11 @@ page, reopen and verify old owned cache removed/new cache active, unrelated cach
 retained. Offline/credential exclusions still pass. 59 unit tests/lint pass.
 Still isolated static fixture index, not full application bootstrap; production
 registration remains disabled pending that gate.
+
+Offline full-app harness mode (TAU_OFFLINE_APP=1) serves actual index/bootstrap/
+bundles with correct MIME types. Chromium boots .app-shell offline with unavailable
+backend, API fetch still fails and worker upgrade succeeds. App's own credentialed
+asset requests are excluded from precache counting; isolated mode continues to
+assert every precache request is credential-free. Both modes pass plus 59 unit
+tests/lint. No real Tau backend, offline mutation/draft UX or WebKit completion
+claim; production registration remains disabled pending integration decision.
