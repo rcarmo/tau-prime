@@ -727,6 +727,8 @@ function Post({
                         `)}
                     </div>
                 `}
+                ${data.tau_tool_result && html`<div class="post-content">Tool result: ${data.tau_tool_result.name || 'tool'}${data.tau_tool_result.ok === false ? ' (failed)' : ''}</div>`}
+                ${(data.tau_tool_calls || []).map(call => html`<details class="post-content"><summary>Tool call: ${call.name || 'tool'}</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${JSON.stringify(call.arguments, null, 2)}</pre></details>`)}
                 ${shouldRenderContent && html`
                     <div
                         ref=${contentRef}

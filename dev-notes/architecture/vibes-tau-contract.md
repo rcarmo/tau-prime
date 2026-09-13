@@ -282,3 +282,10 @@ unmount. Chromium/WebKit real authenticated browser tests click Download and
 verify filename plus exact saved Unicode content; unauthenticated content still
 asserts 401. 31 unit tests, lint/build pass. Timeline inline-media rendering and
 large-file resource limits remain separate pending work.
+
+Persisted tool checkpoint: original message JSON now projects tool calls and
+result name/call ID/failure status instead of dropping metadata. Calls render as
+text-only argument disclosures, results have explicit tool/failure labels.
+Malformed legacy JSON retains readable message text. 32 unit tests, lint/build
+and live backend regression pass. Tool-call/result correlation, full browser
+fixtures, rich result rendering and live tool events remain pending.

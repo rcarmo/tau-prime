@@ -158,3 +158,10 @@ test('media upload is session-scoped with CSRF and send uses explicit references
  await client.send('one','inspect',{mediaIds:['media-one']});
  expect(JSON.parse(calls.at(-1).body).content).toContain('[media:media-one]');
 });
+test('persisted tool metadata survives projection and malformed payload keeps text',async()=>{
+ const {postFromTau}=await import('../static/js/tau-client.js');
+ const post=postFromTau({message_id:1,role:'assistant',content:'',content_blocks_json:JSON.stringify({tool_calls:[{id:'call',name:'bash',arguments:{command:'echo hi'}}]})});
+ expect(post.data.tau_tool_calls[0].name).toBe('bash');
+ expect(postFromTau({role:'tool',content:'failure',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call',ok:false})}).data.tau_tool_result.ok).toBe(false);
+ expect(postFromTau({content:'readable',content_blocks_json:'broken'}).data.content).toBe('readable');
+});

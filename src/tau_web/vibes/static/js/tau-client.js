@@ -13,10 +13,14 @@ export function sessionFromTau(session) {
 }
 
 export function postFromTau(record) {
+    let message = {};
+    try { message = typeof record.content_blocks_json === 'string' ? JSON.parse(record.content_blocks_json) : record.content_blocks_json || {}; } catch { /* Keep text readable if legacy metadata is malformed. */ }
     return {
         id: record.message_id, timestamp: record.created_at,
         data: { type: record.role === 'assistant' ? 'agent_response' : record.role,
-            content: record.content, session_id: record.session_id },
+            content: record.content, session_id: record.session_id,
+            tau_tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
+            tau_tool_result: record.role === 'tool' ? { name: message?.name, callId: message?.tool_call_id, ok: message?.ok } : null },
     };
 }
 
