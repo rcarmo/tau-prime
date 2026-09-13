@@ -114,7 +114,7 @@ try {
    {message_id:2,session_id:'smoke',role:'assistant',content:'',created_at:'2026-09-13T19:00:01Z',content_blocks_json:JSON.stringify({tool_calls:[{id:'call-fixture',name:'bash',arguments:{command:'<img src=x onerror="window.toolInjected=true">'}}]})},
    {message_id:3,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
    {message_id:4,session_id:'smoke',role:'assistant',content:'```text\n'+codeFixture+'\n```',created_at:'2026-09-13T19:00:03Z'},
-   {message_id:5,session_id:'smoke',role:'assistant',content:'# Review\n\n**Ready** and `inline code`.\n\n- First\n- Second\n\n[Unsafe](javascript:alert(1)) <img src="x" onerror="window.markdownInjected=true"><script>window.markdownInjected=true</script>',created_at:'2026-09-13T19:00:04Z'},
+   {message_id:5,session_id:'smoke',role:'assistant',content:'# Review\n\n**Ready** and `inline code`.\n\n- First\n- Second\n\n[Unsafe](javascript:alert(1)) [Mixed unsafe](JaVaScRiPt:alert(1)) [Data unsafe](data:text/html,hello) [Safe HTTPS](https://example.com/review) [Safe mail](mailto:review@example.com) [Safe relative](/review) <img src="x" onerror="window.markdownInjected=true"><script>window.markdownInjected=true</script>',created_at:'2026-09-13T19:00:04Z'},
    ...codeBoundaries.map(([text],i)=>({message_id:10+i,session_id:'smoke',role:'assistant',content:'```text\n'+text+'```',created_at:'2026-09-13T19:00:04Z'})),
    ...(process.env.TAU_SMOKE_LITERAL_USER?[{message_id:16,session_id:'smoke',role:'user',content:'**literal user text** <img src=x onerror="window.userInjected=true">',created_at:'2026-09-13T19:00:05Z'}]:[]),
   ]};
@@ -190,6 +190,10 @@ try {
  await expect(markdownPost.locator('code')).toHaveText('inline code');
  await expect(markdownPost.locator('script, [onerror], a[href^="javascript:"]')).toHaveCount(0);
  expect(await page.evaluate(()=>window.markdownInjected)).toBeUndefined();
+ for(const label of ['Unsafe','Mixed unsafe','Data unsafe'])await expect(markdownPost.locator('a').filter({hasText:new RegExp(`^${label}$`)})).not.toHaveAttribute('href');
+ await expect(markdownPost.getByRole('link',{name:'Safe HTTPS',exact:true})).toHaveAttribute('href','https://example.com/review');
+ await expect(markdownPost.getByRole('link',{name:'Safe mail',exact:true})).toHaveAttribute('href','mailto:review@example.com');
+ await expect(markdownPost.getByRole('link',{name:'Safe relative',exact:true})).toHaveAttribute('href','/review');
  const codePost=page.locator('#post-4');
  const codeBlock=codePost.locator('.post-code-block');
  const codeToggle=codeBlock.locator('.tau-code-toggle');

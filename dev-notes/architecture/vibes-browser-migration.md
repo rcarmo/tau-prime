@@ -215,3 +215,8 @@ and HTML-looking text without created strong/img/script elements or execution.
 Fixture uses increasing ID 16 (initial ID 6 after ID 14 was correctly filtered by
 ascending pagination validation). 56 unit tests/lint/build and standard Chromium
 smoke pass. User rendering is now distinct from assistant Markdown.
+
+Markdown URL boundary browser checks: Chromium/WebKit verify javascript,
+mixed-case javascript and data links lose href while HTTPS, mailto and relative
+links retain exact href. 56 unit tests/lint pass. This is bounded protocol/semantic
+coverage, not an exhaustive sanitizer security audit.
