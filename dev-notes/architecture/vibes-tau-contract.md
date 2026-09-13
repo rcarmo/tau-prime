@@ -348,3 +348,10 @@ composer draft. Extra fixture session archived before archive-selection checks.
 Unsupported instance-pin sync buttons removed; browser-local pins retained and
 scope explained. 35 unit tests/lint/build pass. This verifies selection mechanics,
 not execution or provider availability of fixture model names.
+
+Packaging inventory correction: wheel asset allowlist previously omitted Vibes
+.mjs runtime modules and extensionless license notices while collecting some
+frontend build JS. Scoped Vibes packaging now includes runtime .mjs/licenses/
+provenance and excludes tests/build/dev-server/source maps. Nine packaging tests
+pass. Generated dist still needs a deterministic clean-source build/ship policy;
+this patch alone does not make installed Vibes UI runnable or switch production.

@@ -121,3 +121,20 @@ def test_wheel_excludes_rejected_visual_assets() -> None:
     forbidden = ['piclaw-reference.css','piclaw-parity.css','JetBrainsMonoNFM-Medium-hh38vnv1.woff2','JetBrainsMonoNFM-Regular-rhdb9m6d.woff2']
     for name in forbidden:
         assert f"tau_web/static/{name}" not in names
+
+
+def test_imported_vibes_runtime_assets_and_licenses_are_packaged():
+    names = {name for _, name in build_backend._package_files()}
+    root = 'tau_web/vibes/'
+    assert root + 'LICENSE' in names
+    assert root + 'source-revision.txt' in names
+    assert root + 'static/js/app.js' in names
+    source = Path(__file__).resolve().parents[2] / 'src' / root
+    for path in (source / 'static').rglob('*'):
+        if path.is_file() and (path.suffix == '.mjs' or 'LICENSE' in path.name):
+            assert root + path.relative_to(source).as_posix() in names
+    assert not any(name.startswith(root + 'tests/') for name in names)
+    assert root + 'dev-server.js' not in names
+    assert root + 'build.js' not in names
+    assert not any('node_modules' in name for name in names)
+    assert not any(name.startswith(root) and name.endswith('.map') for name in names)
