@@ -218,3 +218,10 @@ explicit UI reconciliation; no retry or automatic revision replacement. Unit
 test checks 409 payload, original submitted draft/revision and CSRF. 29 unit
 tests, lint/build pass. Plan editor/state UI still pending; transport does not
 claim mounted draft or conflict UX parity.
+
+Plan UI checkpoint: explicit Plan disclosure with per-session in-memory draft,
+revision save and confirmed force reload. Loads preserve cached dirty drafts;
+409 retains edits and explains conflict. Real-backend Chromium opens Plan,
+saves markdown through CSRF-protected route and verifies persisted markdown.
+29 unit tests, lint/build pass. Conflict/reload/session-switch browser matrix,
+styling/accessibility and remote plan-update notifications remain pending.

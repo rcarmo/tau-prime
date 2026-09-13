@@ -26,6 +26,14 @@ try {
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('README.md',{exact:true}).first().click();
  await expect(page.locator('.workspace-preview-text')).toContainText('Tau Browser Fixture');
+ await page.locator('summary').filter({hasText:'Plan'}).click();
+ const plan=page.getByLabel('Plan markdown');
+ await expect(plan).toBeEnabled();
+ await plan.fill('- [ ] Live backend plan');
+ await page.getByRole('button',{name:'Save plan',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Save plan',exact:true})).toBeDisabled();
+ const savedPlan=await (await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/plan`)).json();
+ expect(savedPlan.markdown).toContain('Live backend plan');
  await page.getByText('@Live backend session',{exact:true}).click();
  await page.getByRole('button',{name:'Archive Live backend session',exact:true}).click();
  await expect(page.getByRole('button',{name:'Restore Live backend session',exact:true})).toBeVisible();

@@ -1,3 +1,4 @@
+import { TauPlan } from './components/tau-plan.js';
 import { TauProviderSetup } from './components/tau-provider-setup.js';
 import { TauRunControl } from './components/tau-run-control.js';
 import { TauEventStream } from './tau-events.js';
@@ -2615,6 +2616,7 @@ function App() {
                 />
                 <button type="button" class="compose-queue-btn" onClick=${()=>setProviderSetupOpen(true)}>Provider setup</button>
                 ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>setProviderSetupOpen(false)} />`}
+                ${selectedSession && html`<details><summary>Plan</summary><${TauPlan} key=${selectedSession} sessionId=${selectedSession} /></details>`}
                 <${TauRunControl} key=${selectedSession} sessionId=${selectedSession} />
                 <${AgentStatus}
                     status=${agentStatus}
