@@ -208,3 +208,22 @@ test('widget document enforces streamed size limit and cancels response',async()
  const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({start(c){c.enqueue(new Uint8Array(2*1024*1024+1));},cancel(){cancelled=true;}}))});
  await expect(client.widgetDocument('ext','widget')).rejects.toThrow('2 MiB');expect(cancelled).toBe(true);
 });
+
+test('widget declared oversize cancels without consuming response',async()=>{
+ let cancelled=false;
+ const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({cancel(){cancelled=true;}}),{headers:{'Content-Length':String(2*1024*1024+1)}})});
+ await expect(client.widgetDocument('ext','widget')).rejects.toThrow('2 MiB');
+ expect(cancelled).toBe(true);
+});
+
+test('widget document preserves UTF-8 split across response chunks at exact limit',async()=>{
+ const text='x'.repeat(2*1024*1024-6)+'日本';
+ const bytes=new TextEncoder().encode(text);
+ const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({start(c){c.enqueue(bytes.slice(0,bytes.length-4));c.enqueue(bytes.slice(bytes.length-4));c.close();}}))});
+ expect(await client.widgetDocument('ext','widget')).toBe(text);
+});
+
+test('widget truncated stream propagates read failure',async()=>{
+ const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({start(c){c.enqueue(new TextEncoder().encode('<html>'));c.error(new Error('Fixture connection reset'));}}))});
+ await expect(client.widgetDocument('ext','widget')).rejects.toThrow('Fixture connection reset');
+});

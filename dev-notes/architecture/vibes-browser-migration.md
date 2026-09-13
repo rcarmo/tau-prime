@@ -131,3 +131,9 @@ image requests to fail (503) until explicit retry. Chromium/WebKit verify alert,
 no fabricated image, enabled download retry, successful filename, error clearance
 and decoded blob-backed raster preview. 51 unit tests/lint pass. This is fixture
 failure/recovery coverage, not a real-provider media journey.
+
+Widget transport boundary regression: declared oversize cancels before reads;
+exact 2 MiB Unicode document survives split multibyte chunks; truncated stream
+propagates failure rather than returning partial document. Existing streamed
+oversize cancellation remains covered. 54 unit tests/166 assertions and lint pass.
+No production changes; tests exercise Tau client streams, not browser rendering.
