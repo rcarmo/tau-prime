@@ -123,3 +123,8 @@ test('workspace tree projects directories with bounded recursion and hidden filt
  expect(tree.root.children[0].children[0].type).toBe('file');
  expect(calls).toEqual(['/api/files?path=','/api/files?path=docs']);
 });
+test('text preview is bounded and never fabricates writable support',async()=>{
+ const client=createTauClient({fetchImpl:async()=>Response.json({kind:'file',path:'file.txt',content:'abc日本',size_bytes:9})});
+ const result=await client.workspaceFile('file.txt',5);
+ expect(result.text).toBe('abc');expect(result.truncated).toBe(true);expect(result.read_only).toBe(true);expect(result.content_type).toBe('text/plain');
+});

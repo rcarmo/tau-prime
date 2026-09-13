@@ -329,18 +329,14 @@ export async function getWorkspaceTree(path = '', depth = 2, showHidden = false)
  * Get workspace file preview.
  */
 export async function getWorkspaceFile(path, maxBytes = 20_000, mode = null) {
-    const modeParam = mode ? `&mode=${encodeURIComponent(mode)}` : '';
-    return request(`/workspace/file?path=${encodeURIComponent(path)}&max=${maxBytes}${modeParam}`);
+    return tau.workspaceFile(path, maxBytes);
 }
 
 /**
  * Update workspace file contents.
  */
 export async function updateWorkspaceFile(path, content) {
-    return request('/workspace/file', {
-        method: 'PUT',
-        body: JSON.stringify({ path, content }),
-    });
+    throw new Error('Tau workspace is read-only; file saving is not supported by this backend');
 }
 
 /**

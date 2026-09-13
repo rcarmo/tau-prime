@@ -46,6 +46,14 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async workspaceFile(path, maxBytes = 20000) {
+            const result = await request(`/files?path=${encodeURIComponent(path)}`);
+            if (result.kind !== 'file' || typeof result.content !== 'string') throw new Error('Tau text preview is unavailable for this file');
+            const bytes = new TextEncoder().encode(result.content);
+            const limit = Math.max(0, Math.min(1000000, Number(maxBytes) || 20000));
+            return { path: result.path, kind: 'text', text: new TextDecoder().decode(bytes.slice(0, limit), { stream: bytes.length > limit }),
+                size: result.size_bytes, content_type: 'text/plain', truncated: bytes.length > limit, read_only: true };
+        },
         async workspaceTree(path = '', depth = 2, showHidden = false) {
             const read = async (current, remaining) => {
                 const result = await request(`/files?path=${encodeURIComponent(current)}`);

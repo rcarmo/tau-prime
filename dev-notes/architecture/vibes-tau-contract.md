@@ -179,3 +179,10 @@ The imported explorer expands '.' by default, while projection supplied an empty
 root path. Root normalized to '.'; rebuilt and reran live-backend check including
 README visibility successfully, followed by 26 unit tests and lint. Earlier
 success claim applies only after this correction, not to dccf5a4 itself.
+
+Read-only preview checkpoint: /api/files UTF-8 content maps to bounded plain-text
+preview, dropping incomplete trailing UTF-8 at truncation. Does not infer safe
+Markdown HTML or writable editor capability. Save API explicitly rejects instead
+of invoking missing Vibes endpoint. Real backend Chromium selects README and
+verifies seeded content; 27 unit tests and lint/build pass. Editor affordances,
+other workspace mutation controls and richer media remain to be reconciled.

@@ -24,6 +24,8 @@ try {
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-box textarea')).toBeVisible();
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
+ await page.getByText('README.md',{exact:true}).first().click();
+ await expect(page.locator('.workspace-preview-text')).toContainText('Tau Browser Fixture');
  await page.getByText('@Live backend session',{exact:true}).click();
  await page.getByRole('button',{name:'Archive Live backend session',exact:true}).click();
  await expect(page.getByRole('button',{name:'Restore Live backend session',exact:true})).toBeVisible();
