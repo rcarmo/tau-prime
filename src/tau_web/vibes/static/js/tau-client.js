@@ -46,6 +46,17 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async search(query, limit = 50, offset = 0, filters = {}) {
+            if (offset || filters.images || filters.attachments || filters.threadId || filters.scope === 'root') throw new Error('This search filter is not supported by Tau');
+            const params = new URLSearchParams({ q: query, limit: String(limit) });
+            if (filters.sessionId) params.set('session_id', filters.sessionId);
+            const result = await request(`/search?${params}`);
+            return { results: result.results.map(item => ({
+                id: `search:${item.entity_type}:${item.entity_id}`, timestamp: null,
+                data: { type: 'search_result', content: item.text, session_id: item.session_id,
+                    entity_type: item.entity_type, entity_id: item.entity_id },
+            })) };
+        },
         async workspaceFile(path, maxBytes = 20000) {
             const result = await request(`/files?path=${encodeURIComponent(path)}`);
             if (result.kind !== 'file' || typeof result.content !== 'string') throw new Error('Tau text preview is unavailable for this file');

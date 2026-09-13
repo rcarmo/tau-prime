@@ -193,3 +193,9 @@ handlers gated and editor callback absent. Browsing/preview live test, lint/buil
 pass. Broader keyboard/touch and capability assertions still needed before
 production; these gates describe current Tau API, not a request to add file-write
 endpoints or discard the imported editor source.
+
+Search transport checkpoint: imported searchPosts delegates to Tau FTS, retaining
+entity/session IDs and text without invented post timestamps. Unsupported image/
+attachment/thread/root filters and offsets fail explicitly. 28 unit tests,
+lint/build pass. Browser rendering, source-session navigation and disabling
+unsupported filter controls remain pending; not complete Search UX.

@@ -51,13 +51,7 @@ export async function getPostsByHashtag(hashtag, limit = 50, offset = 0) {
  * Search posts
  */
 export async function searchPosts(query, limit = 50, offset = 0, filters = {}) {
-    const params = new URLSearchParams({ q: query, limit: String(limit), offset: String(offset) });
-    if (filters.images) params.set('has_images', 'true');
-    if (filters.attachments) params.set('has_attachments', 'true');
-    if (filters.threadId) params.set('thread_id', String(filters.threadId));
-    if (filters.sessionId) params.set('session_id', filters.sessionId);
-    if (filters.scope === 'root') params.set('scope', 'root');
-    return request(`/search?${params}`);
+    return tau.search(query, limit, offset, filters);
 }
 
 /**

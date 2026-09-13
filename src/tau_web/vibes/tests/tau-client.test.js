@@ -128,3 +128,10 @@ test('text preview is bounded and never fabricates writable support',async()=>{
  const result=await client.workspaceFile('file.txt',5);
  expect(result.text).toBe('abc');expect(result.truncated).toBe(true);expect(result.read_only).toBe(true);expect(result.content_type).toBe('text/plain');
 });
+test('search keeps entity/session identity without invented post timestamps',async()=>{
+ let path;const client=createTauClient({fetchImpl:async url=>{path=url;return Response.json({results:[{entity_type:'message',entity_id:'42',session_id:'one',text:'matched text',rank:1}]});}});
+ const result=await client.search('matched',20,0,{sessionId:'one'});
+ expect(path).toBe('/api/search?q=matched&limit=20&session_id=one');
+ expect(result.results[0].data.entity_id).toBe('42');expect(result.results[0].timestamp).toBe(null);
+ await expect(client.search('x',20,0,{images:true})).rejects.toThrow('not supported');
+});
