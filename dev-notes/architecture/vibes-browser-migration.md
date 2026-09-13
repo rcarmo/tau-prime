@@ -378,3 +378,19 @@ of an anchor for the latter was corrected to assert no actionable link. Delegate
 security review timed out without findings. WebKit new layout twice settled at
 1px scrollTop offset; scroll assertion now permits <=1 CSS pixel (was <1).
 56 unit tests/lint pass; no production changes or exhaustive-security claim.
+
+## Artifact/content audit at 75d9b04
+
+All 113 packaged static files in delivered 82d1f33 wheel byte-match current
+checkout; wheel contains no retired tau_web/frontend tree. Since 82d1f33 only
+browser tests and documentation changed. Clean worktree verified before audit.
+Thus no runtime rebuild is currently necessary. Automated installed/reproducible
+artifact gate is complete, independently of pending human acceptance.
+
+Remaining acceptance boundaries: provider-backed streamed run/tool/recovery,
+real touch gesture evidence, offline/new-branch requirement resolution and paired
+visual review. Basic history scroll, cross-session search, slash completion and
+keyboard/mouse/viewport resize now have replacement checks. Existing real Tau
+workspace/Plan/session/model/media/runtime workflows are covered by installed
+matrix; they should not remain marked pending solely because provider runs are.
+Independent review attempts timed out; no external audit completion claimed.
