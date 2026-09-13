@@ -79,3 +79,9 @@ imported textarea/Enter submission. Accepted Tau run POST clears the draft;
 zero page errors. These use deterministic route fixtures, not real agent runs.
 Unimplemented endpoint requests remain printed by the smoke harness. Unit suite
 16 passed; lint passed. Smoke supports TAU_SMOKE_ENGINE and TAU_SMOKE_PHONE.
+
+Authenticated SSE transport foundation: tau-events.js uses fetch streaming,
+bearer token, Last-Event-ID reconnect and abortable reader lifecycle. Incremental
+UTF-8/CRLF/comment decoding and reconnect/disconnect tests pass (18 total tests,
+56 assertions; lint pass). Not connected to app yet: canonical event projection,
+snapshot recovery, deduplication and live-delta presentation remain required.
