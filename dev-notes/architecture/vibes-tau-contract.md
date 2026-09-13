@@ -728,3 +728,9 @@ iframe prefill/submit tested in Chromium/WebKit, exact payload/clear confirmed.
 51 unit tests/lint/build pass. Rejected widget submit retains override text through
 normal path but still needs explicit fixture assertion; concurrent event guard
 beyond rendered loading state remains to review.
+
+Composer concurrent-submit guard: synchronous ref prevents duplicate normal/widget
+submissions before loading rerender. Widget receiver also ignores concurrent
+prefill while a submission is pending. Chromium/WebKit dispatch two same-turn
+renderer events, assert one rejected request and original override draft retained.
+51 unit tests/lint/build pass. Real iframe submit still covered separately.

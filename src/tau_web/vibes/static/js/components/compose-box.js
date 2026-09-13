@@ -243,6 +243,7 @@ export function ComposeBox({
     const [searchFilterImages, setSearchFilterImages] = useState(false);
     const [searchFilterAttachments, setSearchFilterAttachments] = useState(false);
     const [loading, setLoading] = useState(false);
+    const submissionPending = useRef(false);
     const [submitError, setSubmitError] = useState('');
     const [uploadProgress, setUploadProgress] = useState(null);
     const uploadController = useRef(null);
@@ -609,11 +610,11 @@ export function ComposeBox({
     };
 
     const handleSubmit = async (mode = 'auto', overrideText = null) => {
-        if (loading) return;
+        if (loading || submissionPending.current) return;
         const submittedText = overrideText ?? content;
         cancelSpeech();
         if (!submittedText.trim() && mediaFiles.length === 0 && fileRefs.length === 0 && folderRefs.length === 0 && messageRefs.length === 0) return;
-
+        submissionPending.current = true;
         setLoading(true);
         setSubmitError('');
         try {
@@ -691,6 +692,7 @@ export function ComposeBox({
         } finally {
             setUploadProgress(null);
             uploadController.current = null;
+            submissionPending.current = false;
             setLoading(false);
         }
     };
@@ -698,7 +700,7 @@ export function ComposeBox({
     useEffect(() => {
         const receive = event => {
             const detail = event.detail;
-            if (loading || searchMode || !detail || typeof detail.text !== 'string' || detail.text.length > 16384 || !['prefill', 'submit'].includes(detail.mode)) return;
+            if (loading || submissionPending.current || searchMode || !detail || typeof detail.text !== 'string' || detail.text.length > 16384 || !['prefill', 'submit'].includes(detail.mode)) return;
             setContent(detail.text);
             textareaRef.current?.focus();
             if (detail.mode === 'submit') void handleSubmit('auto', detail.text);

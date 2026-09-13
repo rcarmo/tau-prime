@@ -125,6 +125,15 @@ try {
  await page.frameLocator('iframe[title="Widget bridge fixture"]').locator('body').evaluate(()=>parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'submit-1',kind:'submit',mode:'submit',text:'Widget submitted message'},'*'));
  await expect(page.locator('.compose-box textarea')).toHaveValue('');
  expect(submitted).toEqual([{content:'Widget submitted message'}]);submitted.length=0;
+ rejectSend=true;
+ await page.evaluate(()=>{
+  const detail={frame_id:'fixture:widget',text:'Rejected widget draft',mode:'submit'};
+  document.dispatchEvent(new CustomEvent('tau:widget-submit',{detail}));
+  document.dispatchEvent(new CustomEvent('tau:widget-submit',{detail:{...detail,text:'Duplicate must not replace'}}));
+ });
+ await expect(page.getByText('Fixture run conflict',{exact:true})).toBeVisible();
+ await expect(page.locator('.compose-box textarea')).toHaveValue('Rejected widget draft');
+ expect(submitted).toEqual([{content:'Rejected widget draft'}]);submitted.length=0;rejectSend=false;
  await page.evaluate(()=>window.tauExtensionUI.removeWidget('fixture:widget'));
  const image=page.getByRole('img',{name:'fixture.png',exact:true});
  await expect(image).toBeVisible();
