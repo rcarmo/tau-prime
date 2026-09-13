@@ -150,8 +150,13 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             const result = await request(`/sessions/${encodeURIComponent(id)}`, { method: 'PATCH', body: { title: name } });
             return { session: sessionFromTau(result) };
         },
-        async createSession({ name, provider, model }) {
-            if (!provider || !model) throw new Error('Choose a provider and model before creating a Tau session');
+        async createSession({ name, provider, model, useConfiguredDefaults = false }) {
+            if (useConfiguredDefaults && !provider && !model) {
+                const setup = await request('/onboarding');
+                provider = setup.default_provider;
+                model = setup.default_model;
+            }
+            if (!provider || !model) throw new Error('Choose a provider and model in Tau provider setup before creating a session');
             const result = await request('/sessions', { method: 'POST', body: { title: name, provider_name: provider, model } });
             return { session: sessionFromTau(result) };
         },

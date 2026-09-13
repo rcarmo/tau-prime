@@ -93,3 +93,18 @@ test('context maps structural counts without fabricating tokens, cost or occupan
  expect(context).toEqual({entryCount:9,messageCount:4,compactionCount:1,activeLeafEntryId:'leaf'});
  expect(context.percent).toBeUndefined();expect(context.tokens).toBeUndefined();
 });
+test('session creation uses saved onboarding defaults, never catalogue guesses',async()=>{
+ const calls=[];
+ const client=createTauClient({fetchImpl:async(path,options)=>{
+  calls.push({path,...options});
+  return Response.json(path==='/api/onboarding'?{default_provider:'configured',default_model:'chosen'}:{...session,provider_name:'configured',model:'chosen'});
+ }});
+ await client.createSession({name:'New session',useConfiguredDefaults:true});
+ expect(calls.map(c=>c.path)).toEqual(['/api/onboarding','/api/sessions']);
+ expect(JSON.parse(calls[1].body)).toEqual({title:'New session',provider_name:'configured',model:'chosen'});
+});
+test('unconfigured onboarding never submits a session',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async path=>{calls.push(path);return Response.json({default_provider:null,default_model:null});}});
+ await expect(client.createSession({name:'new',useConfiguredDefaults:true})).rejects.toThrow('provider setup');
+ expect(calls).toEqual(['/api/onboarding']);
+});

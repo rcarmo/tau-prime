@@ -128,3 +128,10 @@ transport, so provider execution remains blocked, not passed.
 Context reads now use Tau context endpoint and expose only actual structural
 counts/leaf identity: no invented tokens, cost, context occupancy or compaction
 action. 21 unit tests/65 assertions, lint/build and real-backend startup pass.
+
+Session-create defaults checkpoint: imported creation now loads actual Tau
+onboarding default_provider/default_model and submits those explicit values.
+Missing configuration rejects before POST and leaves the dialog error path intact.
+No inferred catalogue choice or fabricated provider. Branch creation remains
+unsupported and explicit. 23 unit tests/69 assertions, lint/build pass; provider
+setup UI and browser creation workflow still pending.

@@ -128,8 +128,7 @@ export async function getSessionTimeline(sessionId, limit = 10, beforeId = null)
 
 export async function createSession(name, parentId = null) {
     if (parentId) throw new Error('Tau branching requires a branch point; session creation cannot substitute for it');
-    // Setup must supply actual provider/model choices before enabling this action.
-    return tau.createSession({ name });
+    return tau.createSession({ name, useConfiguredDefaults: true });
 }
 
 export async function updateSession(sessionId, changes) {
