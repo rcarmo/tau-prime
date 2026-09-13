@@ -552,3 +552,5 @@ html[data-tint]::after {
     color: var(--text-primary); background: var(--bg-secondary);
     border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px;
 }
+/* Readable Markdown links in both themes; retain a non-color link cue. */
+.post-content a { color: var(--text-primary); text-decoration: underline; }

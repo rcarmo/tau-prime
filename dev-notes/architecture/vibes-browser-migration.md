@@ -270,3 +270,12 @@ engine/theme/viewport journeys with expanded scans and CSP assertions. Scope
 regions are opened explicitly; provider waits for enabled model input. This
 wheel predates Markdown/user rendering and provider-discard changes, so final
 current-runtime artifact audit remains required. 56 unit tests/lint pass.
+
+Current artifact attempt ca45478: identical wheels and expanded installed matrix
+12/12 pass. Fixture Axe exposed 3:1 Markdown link contrast; local post-content
+link override uses primary text color plus underline, vendor CSS unchanged.
+Updated fixture matrix passes 12/12 on full retry. First fixed run had unrelated
+WebKit phone/dark missing run-conflict alert timeout, not explained or fixed.
+56 unit tests/lint/build pass. ca45478 artifact not attached because contrast fix
+postdates it; final wheel refresh remains. Logs under tmp/tau-vibes-ca45478 and
+/workspace/tmp/link-contrast-matrix-retry.log.
