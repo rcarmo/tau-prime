@@ -688,3 +688,10 @@ IDs route through authenticated API boundary and return correlated renderer
 success/error; listener removed on disposal. 49 unit tests/lint/build and real
 root regression pass. Embedded iframe message validation remains in preserved
 renderer; end-to-end iframe action and widget submit/refresh paths still pending.
+
+Widget response contract correction: preserved respondWidget fourth parameter is
+nullable error TEXT, not success boolean. Previous unit mock incorrectly accepted
+booleans; fixed bridge success/error calls and expectations. 49 unit tests/lint
+pass; bundles rebuilt. Attempted full iframe fixture did not receive reply yet
+and is preserved at /workspace/tmp/widget-iframe-failing.mjs for diagnosis, not
+counted as passing coverage. End-to-end widget action remains open.

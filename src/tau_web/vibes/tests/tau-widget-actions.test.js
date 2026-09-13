@@ -5,7 +5,7 @@ test('widget actions return correlated success/errors and clean up',async()=>{
  const dispose=installTauWidgetActions({target,renderer:{respondWidget:(...args)=>replies.push(args)},client:{extensionRequest:async(...args)=>{calls.push(args);if(reject)throw new Error('denied');return {ok:true};}}});
  const detail={frame_id:'frame',extension_id:'ext',widget_id:'widget',request_id:'request',name:'click',payload:{value:1}};
  target.dispatchEvent(new CustomEvent('tau:widget-action',{detail}));await Bun.sleep(0);
- expect(calls[0][0]).toBe('/api/extensions/widgets/ext/widget/actions/click');expect(replies[0]).toEqual(['frame','request',{ok:true},true]);
- reject=true;target.dispatchEvent(new CustomEvent('tau:widget-action',{detail}));await Bun.sleep(0);expect(replies[1]).toEqual(['frame','request','denied',false]);
+ expect(calls[0][0]).toBe('/api/extensions/widgets/ext/widget/actions/click');expect(replies[0]).toEqual(['frame','request',{ok:true}]);
+ reject=true;target.dispatchEvent(new CustomEvent('tau:widget-action',{detail}));await Bun.sleep(0);expect(replies[1]).toEqual(['frame','request',null,'denied']);
  dispose();target.dispatchEvent(new CustomEvent('tau:widget-action',{detail}));await Bun.sleep(0);expect(calls.length).toBe(2);
 });
