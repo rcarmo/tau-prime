@@ -48,6 +48,13 @@ try{
  await page.goto('http://127.0.0.1:8893/?session=private');
  await expect(fullApp?page.locator('.app-shell'):page.getByText('Public shell',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>fetch('/api/private').then(()=>true,()=>false))).toBe(false);
+ if(fullApp){
+  await expect(page.getByRole('alert').first()).toBeVisible();
+  const composer=page.locator('.compose-box textarea');
+  await composer.fill('Offline unsent draft');await composer.press('Enter');
+  await expect(composer).toHaveValue('Offline unsent draft');
+  await expect(page.getByRole('alert').first()).toBeVisible();
+ }
  await context.setOffline(false);
  nextVersion=true;
  await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration();await registration.update();});

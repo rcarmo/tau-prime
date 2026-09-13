@@ -497,3 +497,9 @@ and build.js retained in source distribution inputs, template excluded from
 runtime package. Packaging/build backend suite 13 pass. Initial assertion treated
 archive-name strings as Paths; corrected test, no packaging implementation change.
 Production offline registration still disabled.
+
+Offline full-app feedback: Chromium offline reload shows an alert, attempted
+composer submission retains 'Offline unsent draft' and alert remains visible;
+API fetch fails. Existing cache privacy/upgrade checks pass. 60 unit tests/lint
+pass. Fixture has unavailable backend throughout and no selected server session;
+not a provider or online-to-offline active-session recovery test.
