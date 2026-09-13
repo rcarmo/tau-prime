@@ -232,3 +232,10 @@ save a plan, apply an independent API revision, reject stale browser save with
 verify remote markdown. Live harness supports TAU_LIVE_ENGINE=webkit. Both also
 verify workspace preview, archive/restore and SSE snapshot. 29 unit tests/lint
 pass. This is real database/revision evidence, not a provider-model execution.
+
+Approval UI checkpoint: selected session polls real pending-approval API; tool,
+description and JSON arguments render as text. Explicit Allow/Deny posts actual
+approval ID with CSRF and leaves item visible on failure. Pending guard prevents
+double-click submission. 30 unit tests, lint/build and real startup regression
+pass. Nonempty approval browser fixtures, denial/retry and genuine tool-run
+validation remain pending; no approvals automatically granted.

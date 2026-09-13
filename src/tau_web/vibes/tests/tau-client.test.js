@@ -144,3 +144,9 @@ test('plan save sends caller revision and exposes current plan on conflict witho
  expect(calls.length).toBe(1);expect(JSON.parse(calls[0].body)).toEqual({markdown:draft,expected_revision:2});
  expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
 });
+test('approval decisions are explicit, authenticated mutations and reject invalid choices',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({approval_id:'a',decision:'deny'});}});
+ await client.resolveApproval('a','deny');
+ expect(calls[0].path).toBe('/api/approvals/a');expect(JSON.parse(calls[0].body)).toEqual({decision:'deny'});expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
+ await expect(client.resolveApproval('a','maybe')).rejects.toThrow('Invalid');expect(calls.length).toBe(1);
+});

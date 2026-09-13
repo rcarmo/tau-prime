@@ -48,6 +48,15 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async approvals(id) {
+            if (!id) return [];
+            const result = await request(`/sessions/${encodeURIComponent(id)}/approvals`);
+            return result.approvals;
+        },
+        async resolveApproval(id, decision) {
+            if (!id || !['allow', 'deny'].includes(decision)) throw new Error('Invalid approval decision');
+            return request(`/approvals/${encodeURIComponent(id)}`, { method: 'POST', body: { decision } });
+        },
         async plan(id) {
             if (!id) throw new Error('Select a session to load its plan');
             return request(`/sessions/${encodeURIComponent(id)}/plan`);
