@@ -109,3 +109,10 @@ without editing vendor CSS. Accepted/rejected composer checks still pass with
 queue populated, no page errors. Remaining missing requests now exclude queue
 and agent status. Twenty unit tests and lint/build pass. Fixtures are not live
 backend evidence; final integration remains open.
+
+Cancellation checkpoint: Tau-specific run control reads the selected session's
+active run and POSTs its actual ID to /api/runs/{id}/cancel. Pending/error states
+are explicit; status is reloaded after acknowledgement. Chromium desktop/WebKit
+phone verify the control appears, cancellation POST occurs, control disappears
+and composer draft survives. Build/lint and 20 unit tests pass. Browser fixtures
+are not runtime cancellation evidence; real backend integration still required.

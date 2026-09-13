@@ -1,3 +1,4 @@
+import { TauRunControl } from './components/tau-run-control.js';
 import { TauEventStream } from './tau-events.js';
 import { initialTauSession } from './tau-session-selection.js';
 import { SessionDeleteDialog } from './components/session-delete-dialog.js';
@@ -2606,6 +2607,7 @@ function App() {
                     formatTime=${formatTime}
                     formatCount=${formatCount}
                 />
+                <${TauRunControl} key=${selectedSession} sessionId=${selectedSession} />
                 <${AgentStatus}
                     status=${agentStatus}
                     draft=${agentDraft}

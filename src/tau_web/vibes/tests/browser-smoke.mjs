@@ -6,7 +6,7 @@ const browser=await ({chromium,webkit}[engine]).launch();
 try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const page=await browser.newPage({viewport:process.env.TAU_SMOKE_PHONE ? {width:390,height:844} : {width:1440,height:900}}); const errors=[];const missing=new Set();
- const submitted=[]; let rejectSend=false;
+ const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false;
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
@@ -14,12 +14,16 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body:'id: 1\nevent: tau.snapshot\ndata: {}\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/api/sessions/smoke/runs') {
+  if(url.pathname==='/api/runs/cancel-fixture/cancel') {
+   expect(route.request().method()).toBe('POST');
+   cancelled=true;activeRun=false;data={accepted:true,run:{status:'cancelled'}};
+  }
+  else if(url.pathname==='/api/sessions/smoke/runs') {
    if(route.request().method()==='POST') {
     submitted.push(route.request().postDataJSON());
     if(rejectSend) return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture run conflict'})});
     data={run_id:'accepted-fixture',status:'pending'};
-   } else data={runs:[]};
+   } else data={runs:activeRun?[{run_id:'cancel-fixture',session_id:'smoke',status:'running'}]:[]};
   }
   else if(url.pathname==='/api/sessions/smoke/queue') data={queue:[
    {queue_id:11,session_id:'smoke',queue_kind:'follow_up',position:0,content:'First FIFO message'},
@@ -47,6 +51,13 @@ try {
  await expect(page.getByText('Fixture run conflict',{exact:true})).toBeVisible();
  await expect(composer).toHaveValue('Keep rejected draft');
  expect(submitted[1]).toEqual({content:'Keep rejected draft'});
+ activeRun=true;
+ const cancel=page.getByRole('button',{name:'Cancel run',exact:true});
+ await expect(cancel).toBeVisible();
+ await cancel.click();
+ await expect(page.locator('.tau-run-control button')).toHaveCount(0);
+ expect(cancelled).toBe(true);
+ await expect(composer).toHaveValue('Keep rejected draft');
  console.log(JSON.stringify({engine,errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || !(await page.locator('body').innerText()).includes('Tau persisted smoke message') || missing.has('/api/sessions/null')) process.exitCode=1;
 }finally{await browser.close();server.kill();}

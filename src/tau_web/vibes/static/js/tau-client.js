@@ -45,6 +45,10 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async cancelRun(runId) {
+            if (!runId) throw new Error('A Tau run ID is required');
+            return request(`/runs/${encodeURIComponent(runId)}/cancel`, { method: 'POST' });
+        },
         async status(id) {
             if (!id) return { active_turns: [] };
             const result = await request(`/sessions/${encodeURIComponent(id)}/runs`);

@@ -155,6 +155,10 @@ export async function getAgentContext(sessionId = 'default') {
 /**
  * Get current agent busy state and active turns (for polling on SSE reconnect).
  */
+export async function cancelTauRun(runId) {
+    return tau.cancelRun(runId);
+}
+
 export async function getAgentStatus(sessionId = 'default') {
     return tau.status(sessionId === 'default' ? null : sessionId);
 }
