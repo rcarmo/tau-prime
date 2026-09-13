@@ -48,6 +48,16 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async upload(file, { sessionId, signal } = {}) {
+            if (!sessionId || sessionId === 'default') throw new Error('Select a session before uploading');
+            const body = new FormData(); body.append('file', file, file.name); body.append('session_id', sessionId);
+            const headers = { 'X-Tau-CSRF': '1' }; const token = getToken();
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const response = await fetchImpl('/api/media', { method: 'POST', headers, body, signal, credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Tau upload failed (${response.status})`);
+            const media = await response.json();
+            return { ...media, id: media.media_id };
+        },
         async approvals(id) {
             if (!id) return [];
             const result = await request(`/sessions/${encodeURIComponent(id)}/approvals`);
@@ -139,7 +149,8 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         async send(id, content, { mode = 'auto', mediaIds = [], intent = null } = {}) {
             if (!id || id === 'default') throw new Error('Select a Tau session before sending');
             if (!content?.trim()) throw new Error('Message is empty');
-            if (mediaIds.length) throw new Error('Tau attachment submission is not integrated yet');
+            if (mediaIds.some(id => typeof id !== 'string' || !id || /[\r\n\[\]]/.test(id))) throw new Error('Invalid Tau attachment reference');
+            if (mediaIds.length) content += '\n\nAttachments (uploaded separately; references only, not inline media):\n' + mediaIds.map(id => `- [media:${id}]`).join('\n');
             if (intent || content.trimStart().startsWith('/')) throw new Error('Tau command submission is not integrated yet');
             if (!['auto', 'steer', 'follow_up', 'queue'].includes(mode)) throw new Error('Unsupported Tau delivery mode');
             if (mode === 'auto') {

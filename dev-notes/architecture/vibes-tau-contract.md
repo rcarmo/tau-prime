@@ -246,3 +246,10 @@ request and error, then retry Deny and remove only after acknowledgement. Reques
 payloads are asserted. Existing composer/setup/search checks remain passing.
 30 unit tests/lint pass. These explicit denials are fixture-only; genuine runtime
 tool approval and allow-path/security review remain open.
+
+Media transport checkpoint: composer uploads multipart to Tau /api/media with
+actual session ID, bearer token, CSRF and abort signal. Upload progress is only
+0/100 completion (fetch does not report byte progress). Sends append explicit
+[media:id] references with non-inline disclaimer, preserving existing Tau prompt
+semantics. 31 unit tests, lint/build pass. Real upload/download and composer
+attachment browser tests remain pending; no vision-input claim.

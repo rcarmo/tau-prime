@@ -150,3 +150,11 @@ test('approval decisions are explicit, authenticated mutations and reject invali
  expect(calls[0].path).toBe('/api/approvals/a');expect(JSON.parse(calls[0].body)).toEqual({decision:'deny'});expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
  await expect(client.resolveApproval('a','maybe')).rejects.toThrow('Invalid');expect(calls.length).toBe(1);
 });
+test('media upload is session-scoped with CSRF and send uses explicit references',async()=>{
+ const calls=[];const client=createTauClient({getToken:()=> 'fixture',fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json(path==='/api/media'?{media_id:'media-one'}:path.endsWith('/runs')&&options.method==='GET'?{runs:[]}:{run_id:'run'});}});
+ const file=new File(['hello'],'note.txt',{type:'text/plain'});
+ expect((await client.upload(file,{sessionId:'one'})).id).toBe('media-one');
+ expect(calls[0].body.get('session_id')).toBe('one');expect(calls[0].headers.Authorization).toBe('Bearer fixture');
+ await client.send('one','inspect',{mediaIds:['media-one']});
+ expect(JSON.parse(calls.at(-1).body).content).toContain('[media:media-one]');
+});
