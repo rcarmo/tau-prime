@@ -344,3 +344,9 @@ matrix/CSP pass. Fixture dark-theme composer scan exposed slash-description
 contrast 3.59:1. Local primary-text override extended to description; complete
 12-case fixture matrix then passes. 56 unit tests/lint/build pass. Final artifact
 must include this CSS correction; pre-correction wheel not delivered as final.
+
+82d1f33 artifact attempt: epoch-pinned wheels byte-identical. Installed matrix
+passes 11 cases then WebKit desktop/dark loses 'Draft survives model selection'
+(expected text, actual empty). Three targeted repeats pass. Not explained/fixed;
+do not claim complete installed pass or deliver as final. Logs/builds retained
+under /workspace/tmp/tau-vibes-82d1f33. Further race diagnostics required.
