@@ -295,3 +295,12 @@ only call, show literal HTML-shaped arguments without execution, and render a
 failed tool result plus output. Fixture corrected to distinguish newly added
 GET media listing from POST uploads. 32 unit tests/lint pass. Correlation and
 live tool lifecycle remain separate pending requirements.
+
+Full imported workflow matrix checkpoint: 12 fresh sequential cases passed:
+Chromium/WebKit × phone 390×844/tablet 820×1180/desktop 1440×900 × light/dark.
+Cases exercise persisted text/tools, approval denial/retry, composer accepted/
+rejected sends and media retry, FIFO display, cancel, provider setup failure/
+retry, search failure/retry and document horizontal bounds. New test:browser
+script runs the matrix; test:adapter and test:live expose existing checks.
+This is deterministic fixture behavior, NOT image comparison/a11y/full-live
+provider acceptance. Production replacement and final installed wheel pending.

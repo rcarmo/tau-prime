@@ -5,7 +5,9 @@ const engine=process.env.TAU_SMOKE_ENGINE || 'chromium';
 const browser=await ({chromium,webkit}[engine]).launch();
 try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
- const page=await browser.newPage({viewport:process.env.TAU_SMOKE_PHONE ? {width:390,height:844} : {width:1440,height:900}}); const errors=[];const missing=new Set();
+ const size=process.env.TAU_SMOKE_SIZE || (process.env.TAU_SMOKE_PHONE?'phone':'desktop');
+ const viewport={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}}[size];
+ const page=await browser.newPage({viewport,colorScheme:process.env.TAU_SMOKE_THEME || 'light'}); const errors=[];const missing=new Set();
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
  let uploads=0;
  let approvalPending=true;let rejectApproval=true;const decisions=[];
@@ -142,6 +144,7 @@ try {
  await expect(page.getByText('Fixture invalid search',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('link',{name:'Open source session'})).toHaveAttribute('href','?session=smoke');
  await expect(page.getByLabel('Images',{exact:true})).toBeHidden();
- console.log(JSON.stringify({engine,errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
 }finally{await browser.close();server.kill();}

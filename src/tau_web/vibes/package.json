@@ -9,7 +9,10 @@
   },
   "scripts": {
     "lint:frontend": "eslint \"static/js/**/*.js\"",
-    "build:frontend": "bun run build.js"
+    "build:frontend": "bun run build.js",
+    "test:adapter": "bun test tests",
+    "test:browser": "node tests/browser-matrix.mjs",
+    "test:live": "node tests/live-backend.mjs"
   },
   "dependencies": {
     "beautiful-mermaid": "1.1.3",
