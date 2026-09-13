@@ -22,7 +22,7 @@ try {
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
  };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
- let uploads=0;let snapshots=0;
+ let uploads=0;let snapshots=0;let selectedLeaf='leaf-a';const leafChanges=[];
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
@@ -48,6 +48,10 @@ try {
    decisions.push(route.request().postDataJSON());
    if(rejectApproval)return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture approval conflict'})});
    approvalPending=false;data={approval_id:'approval-fixture',decision:'deny'};
+  }
+  else if(url.pathname==='/api/sessions/smoke/branches') data={branches:['leaf-a','leaf-b'].map(id=>({leaf_entry_id:id,active:id===selectedLeaf,depth:2}))};
+  else if(url.pathname==='/api/sessions/smoke/branches/select') {
+   leafChanges.push(route.request().postDataJSON());selectedLeaf=leafChanges.at(-1).leaf_entry_id;data={session,leaf_entry_id:selectedLeaf};
   }
   else if(url.pathname==='/api/sessions/smoke/plan') data={markdown:'',revision:null};
   else if(url.pathname==='/api/search') {
@@ -107,6 +111,15 @@ try {
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
  const composer=page.locator('.compose-box textarea');
+ await composer.fill('Branch switch keeps draft');
+ await page.locator('summary').filter({hasText:'Conversation branches'}).click();
+ const branch=page.getByRole('button',{name:'Leaf leaf-b · depth 2',exact:true});
+ page.once('dialog',dialog=>dialog.dismiss());await branch.click();expect(leafChanges).toEqual([]);
+ page.once('dialog',dialog=>dialog.accept());await branch.click();
+ await expect.poll(()=>leafChanges.length).toBe(1);expect(leafChanges[0]).toEqual({leaf_entry_id:'leaf-b'});
+ await expect(page.getByRole('button',{name:'Leaf leaf-b · depth 2 (active)',exact:true})).toBeDisabled();
+ await expect(composer).toHaveValue('Branch switch keeps draft');
+ await page.locator('summary').filter({hasText:'Conversation branches'}).click();
  const approvals=page.getByRole('region',{name:'Tool approvals'});
  await expect(approvals).toContainText('echo fixture');
  await approvals.getByRole('button',{name:'Deny bash',exact:true}).click();

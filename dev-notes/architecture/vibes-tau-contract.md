@@ -599,3 +599,8 @@ uses Tau leaf listing/select endpoint, confirmation and pending/error state;
 accepted switch refreshes selected session through existing path. This is not
 Vibes child-session creation. 46 unit tests/lint/build and real root regression
 pass; nonempty branch fixture and confirmation/draft browser checks pending.
+
+Branch browser checkpoint: Chromium desktop/WebKit phone display two leaf choices,
+decline confirmation with no mutation, accept exact leaf POST, show selected leaf
+active/disabled and retain composer draft. Fixture-only nonempty branch check;
+real session storage branch mutation test still pending. 46 unit tests/lint pass.
