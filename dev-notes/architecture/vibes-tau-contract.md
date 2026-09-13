@@ -575,3 +575,12 @@ Focused frontend/assets/packaging 45 pass. Full Python with venv PATH: 1324 pass
 Prior bash stdin failure was missing python on PATH (isolated rerun passed), not
 sandbox regression. Old frontend source and behavioral browser migration still
 pending; extension functionality must not be removed as obsolete shell code.
+
+Installed production-root checkpoint 0b50223: two epoch-pinned wheel builds
+byte-identical (9,587,561 bytes). Isolated installed Tau with checkout PYTHONPATH
+removed serves all HTML/assets/API via real production router (proxy-all).
+Authenticated Chromium/WebKit perform wrong-token recovery/login/logout, model/
+thinking commands, session creation/archive, Plan conflicts/drafts, media
+upload/download and workspace preview successfully. Wheel/checksum delivered as
+checkpoint, not final acceptance; obsolete source cleanup, provider execution,
+remaining runtime parity and paired visuals still pending.
