@@ -1,12 +1,13 @@
 """Production frontend routes: imported Vibes UI with Tau backend adapters."""
 from __future__ import annotations
 
+from importlib.resources import files
 from aiohttp import web
 from tau_web.routes.vibes_assets import asset_names, asset_response, index_response
 
 
 def is_frontend_path(path: str) -> bool:
-    if path in {'/', '/index.html', '/manifest.json', '/manifest.webmanifest', '/sw.js'}:
+    if path in {'/', '/index.html', '/manifest.json', '/manifest.webmanifest', '/sw.js', '/static/widget-bridge.js', '/static/extension-ui.js', '/static/frontend-sdk.js'}:
         return True
     return path.startswith('/static/') and path.removeprefix('/static/') in asset_names()
 
@@ -16,7 +17,13 @@ async def serve_root(request: web.Request) -> web.Response:
 
 
 async def serve_static(request: web.Request) -> web.Response:
-    return asset_response(request.match_info['filename'])
+    name = request.match_info['filename']
+    # Extension contracts remain independent of the replaced chat shell.
+    if name in {'widget-bridge.js', 'extension-ui.js', 'frontend-sdk.js'}:
+        return web.Response(body=files('tau_web').joinpath('static', name).read_bytes(),
+                            content_type='application/javascript', charset='utf-8',
+                            headers={'Cache-Control': 'no-cache'})
+    return asset_response(name)
 
 
 async def serve_named_asset(request: web.Request) -> web.Response:

@@ -567,3 +567,11 @@ workflows pass with proxy forwarding ALL responses from actual Tau router.
 frontend asset/markup expectations plus bash stdin regression (not dismissed as
 flaky without investigation). Old source cleanup and test migration required;
 this checkpoint is not final acceptance or a green full suite.
+
+Root switch test migration: preserved extension-ui/frontend-sdk/widget-bridge
+asset contracts (widget route still embeds bridge), while old chat asset/index/
+worker expectations now assert imported entrypoint and scoped worker retirement.
+Focused frontend/assets/packaging 45 pass. Full Python with venv PATH: 1324 pass.
+Prior bash stdin failure was missing python on PATH (isolated rerun passed), not
+sandbox regression. Old frontend source and behavioral browser migration still
+pending; extension functionality must not be removed as obsolete shell code.

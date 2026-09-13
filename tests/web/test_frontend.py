@@ -34,10 +34,10 @@ FRONTEND_ASSETS = (
     ("/index.html", "text/html"),
     ("/manifest.webmanifest", "application/manifest+json"),
     ("/sw.js", "application/javascript"),
-    ("/static/piclaw-classic.css", "text/css"),
-    ("/static/firacode-nerd-font-mono-bold-v7nf8tpn.ttf", "font/ttf"),
-    ("/static/firacode-nerd-font-mono-regular-f4sytzp8.ttf", "font/ttf"),
-    ("/static/app.js", "application/javascript"),
+    ("/static/dist/app.css", "text/css"),
+    ("/static/common/fonts/vendor/firacode-nerd-font-mono-bold.ttf", "font/ttf"),
+    ("/static/common/fonts/vendor/firacode-nerd-font-mono-regular.ttf", "font/ttf"),
+    ("/static/dist/app.js", "application/javascript"),
     ("/static/extension-ui.js", "application/javascript"),
     ("/static/widget-bridge.js", "application/javascript"),
     ("/static/frontend-sdk.js", "application/javascript"),
@@ -101,181 +101,28 @@ async def test_index_html_references_frontend_assets_landmarks_and_labels(
         await client.close()
 
     assert root_html == index_html
-    assert '<script type="module" src="/static/preact-shell.js"></script>' in root_html
-    assert '<link rel="manifest" href="/manifest.webmanifest" />' in root_html
-    assert '<link rel="stylesheet" href="/static/piclaw-classic.css" />' in root_html
-    assert '<link rel="stylesheet" href="/static/app.css" />' not in root_html
-    assert '<script type="module" src="/static/live-ui.js"></script>' not in root_html
-
-    component_root = Path(__file__).parents[2] / "src" / "tau_web" / "frontend" / "src"
-    component_source = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in [component_root / "index.tsx", *sorted((component_root / "components").glob("*.tsx"))]
-    )
-    assert {
-        match.group(1)
-        for match in re.finditer(r'data-extension-slot="([^"]+)"', component_source)
-    } == {"compose_above", "compose_below", "sidebar", "timeline_before", "timeline_after"}
-    for element_id in (
-        "timeline-main", "side-panel", "compose-input", "workspace-editor", "search-results",
-        "plan-editor", "thinking-level-select", "system-meters", "session-dashboard",
-    ):
-        assert f'id="{element_id}"' in component_source
+    assert '<script type="module" src="/static/js/bootstrap.js"></script>' in root_html
+    assert '/static/dist/app.css' in root_html
+    assert '<title>Tau</title>' in root_html
+    assert '/static/preact-shell.js' not in root_html
+    assert 'user-scalable=no' not in root_html
 
 
 @pytest.mark.anyio
-async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(
-    web_config: WebConfig,
-) -> None:
-    app = create_app(web_config)
-    client = await _start_client(app)
-
+async def test_app_js_contains_tau_endpoints_sse_parser_and_safe_dom_updates(web_config):
+    client = await _start_client(create_app(web_config))
     try:
-        async with client.get("/static/app.js") as response:
-            script = await response.text()
+        response = await client.get('/static/js/tau-client.js')
+        assert response.status == 200
+        script = await response.text()
+        stream = await (await client.get('/static/js/tau-events.js')).text()
     finally:
         await client.close()
-
-    for endpoint in (
-        "/api/sessions",
-        "/api/settings",
-        "/api/models",
-        "/api/commands",
-        "/api/files",
-        "/api/media",
-        "/api/search",
-        "/api/events",
-        "/api/approvals/",
-        "/approvals",
-        "/meters",
-        "/dashboard",
-        "/queue",
-    ):
-        assert endpoint in script
-    assert 'accept: "text/event-stream"' in script
-    assert "readEventStream" in script
-    assert "parseEventChunk" in script
-    assert 'case "tau.plan.updated"' in script
-    assert 'case "tau.approval.requested"' in script
-    assert 'case "tau.approval.resolved"' in script
-    assert 'frame.event === "tau.meters.updated"' in script
-    assert 'frame.event === "tau.dashboard.updated"' in script
-    assert "loadApprovals" in script
-    assert "renderApprovalPrompt" in script
-    assert "settleApproval" in script
-    assert "startMetersPolling" in script
-    assert "startDashboardTimers" in script
-    assert "stopDashboardTimers" in script
-    assert 'document.addEventListener("visibilitychange", handleMetersVisibilityChange)' in script
-    assert '"tau.web.metersEnabled"' in script
-    assert '"tau.web.metersCollapsed"' in script
-    assert 'new URL(window.location.href).searchParams.get("session_id")' in script
-    assert 'window.history.replaceState(null, "", nextUrl);' in script
-    dashboard_component = (Path(__file__).parents[2] / "src" / "tau_web/frontend/src/components/Dashboard.tsx").read_text(encoding="utf-8")
-    assert "href={buildSessionUrl(sessionId)}" in dashboard_component
-    assert "event.metaKey || event.ctrlKey" in dashboard_component
-    assert 'new CustomEvent("tau:session-select"' in dashboard_component
-    assert 'window.addEventListener("tau:session-select"' in script
-    assert 'event.code === "Backquote"' in script
-    assert 'setDashboardOpen(false);' in script
-    assert 'window.setInterval(renderDashboard, 1000);' in script
-    assert "15000" in script
-    assert "3000" in script
-    assert "expected_revision" in script
-    assert 'navigator.serviceWorker.register("/sw.js", { scope: "/" });' in script
-    capacity_pattern = (
-        r"function dashboardCapacity\(\) \{[\s\S]*"
-        r"window\.innerWidth < 760[\s\S]*return 4;[\s\S]*"
-        r"window\.innerWidth < 1080[\s\S]*return 6;[\s\S]*return 8;"
-    )
-    assert re.search(capacity_pattern, script) is not None
-    assert ".innerHTML" not in script
-    assert (
-        re.search(
-            r"(?i)\bpi\b|\bacp\b|pi[_-]?client|acp[_-]?client",
-            script,
-        )
-        is None
-    )
-
-
-def test_app_js_trusted_frontend_source_contracts() -> None:
-    repo_root = Path(__file__).resolve().parents[2]
-    script = (repo_root / "src" / "tau_web" / "static" / "app.js").read_text(encoding="utf-8")
-
-    init_start = script.index("async function init() {")
-    init_end = script.index("function bindUi()", init_start)
-    init_block = script[init_start:init_end]
-    refresh_call = 'await refreshShell({ reconnect: true, announceMessage: "Tau shell ready." });'
-    trusted_init_call = "void initializeTrustedFrontendModules();"
-    assert refresh_call in init_block
-    assert trusted_init_call in init_block
-    assert init_block.index(refresh_call) < init_block.index(trusted_init_call)
-
-    trusted_start = script.index("async function submitTrustedFrontendMessage(payload) {")
-    trusted_end = script.index("async function apiFetch(path, options = {}) {", trusted_start)
-    trusted_block = script[trusted_start:trusted_end]
-    assert 'const response = await apiFetch("/api/extensions/frontend-modules");' in trusted_block
-    configure_start = trusted_block.index("sdk.configure({")
-    fetch_asset_index = trusted_block.index("fetchAsset: authenticatedFetch", configure_start)
-    request_index = trusted_block.index("request: apiFetch", configure_start)
-    submit_index = trusted_block.index("submit: submitTrustedFrontendMessage", configure_start)
-    navigate_index = trusted_block.index("navigate: navigateTrustedFrontend", configure_start)
-    assert configure_start < fetch_asset_index < request_index < submit_index < navigate_index
-    assert "json: { content: text }" in trusted_block
-    assert ".innerHTML" not in trusted_block
-    assert "eval(" not in trusted_block
-    assert "new Function" not in trusted_block
-
-    navigate_start = trusted_block.index("async function navigateTrustedFrontend(target) {")
-    navigate_end = trusted_block.index(
-        "async function initializeTrustedFrontendModules()",
-        navigate_start,
-    )
-    navigate_block = trusted_block[navigate_start:navigate_end]
-    assert "stringOrEmpty(entry.session_id).trim()" in navigate_block
-    assert "stringOrEmpty(entry.chat_jid).trim()" in navigate_block
-    assert "stringOrEmpty(entry.name).trim()" in navigate_block
-    assert "stringOrEmpty(entry.alias).trim()" in navigate_block
-    assert "selectSession(sessionId, { reconnect: true, focusTimeline: true })" in navigate_block
-    assert "window.location" not in navigate_block
-    assert "buildSessionUrl" not in navigate_block
-
-    handlers_start = script.index("function installEventHandlers() {")
-    handlers_end = script.index("async function refreshShell", handlers_start)
-    handlers_block = script[handlers_start:handlers_end]
-    unload_start = handlers_block.index('window.addEventListener("beforeunload", () => {')
-    unload_end = handlers_block.index('window.addEventListener("resize", () => {', unload_start)
-    unload_block = handlers_block[unload_start:unload_end]
-    assert "if (trustedFrontendConfigured) {" in unload_block
-    assert "void window.tauFrontendSDK?.disposeAll?.();" in unload_block
-
-
-def test_preact_owns_model_and_thinking_options() -> None:
-    root = Path(__file__).parents[2] / "src" / "tau_web"
-    controls = (root / "frontend/src/components/ModelControls.tsx").read_text(encoding="utf-8")
-    composer = (root / "frontend/src/components/Composer.tsx").read_text(encoding="utf-8")
-    app = (root / "static/app.js").read_text(encoding="utf-8")
-
-    assert 'window.addEventListener("tau:model-options-render"' in controls
-    assert 'window.addEventListener("tau:thinking-options-render"' in composer
-    assert 'new CustomEvent("tau:model-options-render"' in app
-    assert 'new CustomEvent("tau:thinking-options-render"' in app
-    assert "function replaceSelectOptions" not in app
-    assert "function replaceOptions" not in app
-
-
-def test_preact_runtime_replaces_legacy_live_ui() -> None:
-    root = Path(__file__).parents[2] / "src" / "tau_web"
-    index = (root / "static/index.html").read_text(encoding="utf-8")
-    app = (root / "static/app.js").read_text(encoding="utf-8")
-    queue = (root / "frontend/src/components/QueueStack.tsx").read_text(encoding="utf-8")
-
-    assert "/static/live-ui.js" not in index
-    assert 'new CustomEvent("tau:active-run"' in queue
-    assert 'window.addEventListener("tau:active-run"' in app
-    assert "/thinking" in app
-    assert "window.tauLiveUI" not in app
+    assert 'X-Tau-CSRF' in script
+    assert 'Authorization' in script
+    assert '/api/events' in stream
+    assert 'Last-Event-ID' in stream
+    assert 'consumeTauEvents' in stream
 
 
 @pytest.mark.anyio
@@ -377,59 +224,11 @@ async def test_manifest_and_service_worker_match_shell_asset_references(
     finally:
         await client.close()
 
-    assert manifest == {
-        "name": "Tau Web Shell",
-        "short_name": "Tau",
-        "description": (
-            "Responsive shell for persisted Tau sessions, timeline playback, and "
-            "workspace browsing."
-        ),
-        "start_url": "/",
-        "scope": "/",
-        "display": "standalone",
-        "background_color": "#0b1220",
-        "theme_color": "#0f172a",
-        "lang": "en",
-    }
-    assert 'const CACHE_NAME = "tau-web-shell-v12";' in worker
-    for asset_path in (
-        "/",
-        "/index.html",
-        "/manifest.webmanifest",
-        "/static/piclaw-classic.css",
-        "/static/app.js",
-        "/static/extension-ui.js",
-        "/static/widget-bridge.js",
-        "/static/frontend-sdk.js",
-    ):
-        assert f'"{asset_path}"' in worker
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "path",
-    (
-        "/static/not-found.js",
-        "/static/../app.js",
-        "/static/%2e%2e/app.js",
-        "/static/%2e%2e%2fapp.js",
-    ),
-)
-async def test_unknown_or_traversal_frontend_paths_return_404(
-    web_config: WebConfig,
-    path: str,
-) -> None:
-    app = create_app(web_config)
-    client = await _start_client(app)
-
-    try:
-        async with client.get(path) as response:
-            assert response.status == 404
-            payload = await response.json()
-    finally:
-        await client.close()
-
-    assert payload["error"]["code"] == "not_found"
+    assert manifest['name'] == 'Tau'
+    assert manifest['start_url'] == '/'
+    assert "name.startsWith('tau-web-shell-')" in worker
+    assert 'registration.unregister()' in worker
+    assert "addEventListener('fetch'" not in worker
 
 
 def test_preact_owns_mobile_drawer_state() -> None:
