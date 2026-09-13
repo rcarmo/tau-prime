@@ -676,3 +676,9 @@ actual SRI-hashed JS module through preserved SDK, assert bearer asset fetch,
 module API request to Tau settings, and mounted text in compose_above slot.
 No mocked SDK/import function. 48 unit tests/lint pass. Real enabled extension
 registry and submit/navigation/view-action browser paths remain pending.
+
+Extension action browser checkpoint: actual SRI module buttons submit explicit
+run content through SDK to selected session and navigate to a verified session;
+Chromium/WebKit assert acceptance and composer draft preservation. No SDK mocks.
+48 unit tests/lint pass. General view-action event bridge and deployed nonfixture
+extension registry remain separate gaps.

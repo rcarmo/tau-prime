@@ -23,7 +23,7 @@ try {
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
  };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
- const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); }); }`;
+ const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); for(const [label,action] of [['Extension submit',()=>api.submit({text:'Extension message',mode:'run'})],['Extension navigate',()=>api.navigate('smoke')]]) { const button=document.createElement('button'); button.textContent=label; button.onclick=async()=>{try{await action();text.textContent=label+' accepted';}catch(error){text.textContent=error.message;}};container.append(button); } }); }`;
  const extensionIntegrity='sha256-'+createHash('sha256').update(extensionSource).digest('base64');
  let uploads=0;let snapshots=0;let selectedLeaf='leaf-a';const leafChanges=[];
  let approvalPending=true;let rejectApproval=true;const decisions=[];
@@ -130,6 +130,14 @@ try {
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
  const composer=page.locator('.compose-box textarea');
+ await composer.fill('Extension must preserve this draft');
+ await page.getByRole('button',{name:'Extension submit',exact:true}).click();
+ await expect(page.getByText('Extension submit accepted',{exact:true})).toBeVisible();
+ expect(submitted).toEqual([{content:'Extension message'}]);submitted.length=0;
+ await expect(composer).toHaveValue('Extension must preserve this draft');
+ await page.getByRole('button',{name:'Extension navigate',exact:true}).click();
+ await expect(page.getByText('Extension navigate accepted',{exact:true})).toBeVisible();
+ await expect(composer).toHaveValue('Extension must preserve this draft');
  await page.locator('summary').filter({hasText:'Session dashboard'}).click();
  const dashboard=page.getByRole('region',{name:'Session dashboard'});
  await expect(dashboard).toContainText('Page 1 of 2');
