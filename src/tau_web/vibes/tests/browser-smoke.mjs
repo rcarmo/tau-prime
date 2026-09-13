@@ -421,6 +421,11 @@ try {
  await expect.poll(()=>page.evaluate(()=>{
   const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;
  })).toBe(true);
+ await page.getByRole('button',{name:'Remove attachment',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>{
+  const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;
+ })).toBe(false);
+ await expect(composer).toHaveValue('Keep rejected draft');
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
  if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
 }finally{await browser?.close();await stopChild(server);}

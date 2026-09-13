@@ -300,3 +300,7 @@ uploads a pending file then asserts cancellation of a synthetic beforeunload;
 this verifies handler behavior, not browser-native dialog policy. Initial test
 selected the workspace file input; corrected to composer input. 56 unit tests,
 lint/build and both smoke journeys pass. Runtime requires final wheel refresh.
+
+Pending-file warning cleanup: Chromium/WebKit remove the attachment via its UI
+button, verify synthetic beforeunload is no longer cancelled and text draft is
+unchanged. 56 unit tests/lint pass. No production changes.
