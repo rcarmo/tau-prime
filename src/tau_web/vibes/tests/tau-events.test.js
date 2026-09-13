@@ -29,3 +29,23 @@ test('replayed event ids are delivered once while cursor advances',async()=>{
  expect(frames.length).toBe(1);expect(stream.cursor).toBe('2');
  }finally{stream.disconnect();}
 });
+test('focus preserves a healthy stream and reconnects after disconnect',async()=>{
+ let calls=0,cancelled=0;
+ const stream=new TauEventStream({onFrame:()=>{},fetchImpl:async()=>{
+  calls++;return new Response(new ReadableStream({cancel(){cancelled++;}}),{headers:{'Content-Type':'text/event-stream'}});
+ }});
+ try{
+  stream.connect();for(let i=0;i<100&&!stream.connected;i++)await Bun.sleep(2);
+  expect(stream.connected).toBe(true);stream.reconnectIfNeeded();await Bun.sleep(5);expect(calls).toBe(1);
+  stream.disconnect();await Bun.sleep(5);expect(cancelled).toBe(1);
+  stream.reconnectIfNeeded();for(let i=0;i<100&&!stream.connected;i++)await Bun.sleep(2);
+  expect(calls).toBe(2);expect(stream.connected).toBe(true);
+ }finally{stream.disconnect();}
+});
+test('failed event consumer leaves cursor and dedupe uncommitted',async()=>{
+ const stream=new TauEventStream({retryMs:10000,onFrame:()=>{throw new Error('consumer failed');},fetchImpl:async()=>new Response('id: 9\nevent: tau.test\ndata: {"event_id":"failed"}\n\n',{headers:{'Content-Type':'text/event-stream'}})});
+ try{
+  stream.connect();for(let i=0;i<100&&!stream.lastError;i++)await Bun.sleep(2);
+  expect(stream.lastError.message).toBe('consumer failed');expect(stream.cursor).toBe(null);expect(stream.seenEvents.has('failed')).toBe(false);
+ }finally{stream.disconnect();}
+});

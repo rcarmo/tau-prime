@@ -420,3 +420,8 @@ Removed duplicate unscoped append path. Inspection also found focus handler call
 missing reconnectIfNeeded; TauEventStream now implements it with connected state.
 38 unit tests, lint/build and authenticated live regression pass. Actual streamed
 draft browser/visibility reconnect assertions remain pending, not inferred here.
+
+SSE lifecycle unit checkpoint: healthy connection focus leaves transport intact;
+disconnect cancels reader, focus reconnects; throwing event consumer leaves cursor
+and event-ID dedupe uncommitted for replay. 40 unit tests/126 assertions and lint
+pass. These are transport units, not sustained browser/live-provider stream proof.
