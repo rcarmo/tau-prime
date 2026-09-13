@@ -119,3 +119,9 @@ not reproduced or explained. Harness now captures readyState, token presence
 (boolean only), unauthenticated sessions status, dialog identity and bounded
 alerts before teardown on recurrence; no timeout increase or production change.
 51 unit tests/lint pass. Keep finding open rather than treating repetition as fix.
+
+Approval Allow migration: browser-smoke supports TAU_SMOKE_APPROVAL=allow (default
+remains deny). Chromium desktop/WebKit phone pass explicit Allow click, 409 error,
+retry availability, exact allow payload on both attempts and disappearance only
+following accepted decision. This is fixture approval UI evidence, not live tool
+execution. Existing deny matrix remains unchanged. 51 unit tests/lint pass.

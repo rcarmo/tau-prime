@@ -29,6 +29,9 @@ try {
  const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); for(const [label,action] of [['Extension submit',()=>api.submit({text:'Extension message',mode:'run'})],['Extension navigate',()=>api.navigate('smoke')]]) { const button=document.createElement('button'); button.textContent=label; button.className='compose-queue-btn'; button.onclick=async()=>{try{await action();text.textContent=label+' accepted';}catch(error){text.textContent=error.message;}};container.append(button); } }); }`;
  const extensionIntegrity='sha256-'+createHash('sha256').update(extensionSource).digest('base64');
  let uploads=0;let snapshots=0;let selectedLeaf='leaf-a';const leafChanges=[];
+ const approvalDecision=process.env.TAU_SMOKE_APPROVAL||'deny';
+ if(!['allow','deny'].includes(approvalDecision))throw new Error('Invalid TAU_SMOKE_APPROVAL');
+ const approvalLabel=approvalDecision==='allow'?'Allow bash':'Deny bash';
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
@@ -69,7 +72,7 @@ try {
   else if(url.pathname==='/api/approvals/approval-fixture') {
    decisions.push(route.request().postDataJSON());
    if(rejectApproval)return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture approval conflict'})});
-   approvalPending=false;data={approval_id:'approval-fixture',decision:'deny'};
+   approvalPending=false;data={approval_id:'approval-fixture',decision:approvalDecision};
   }
   else if(url.pathname==='/api/sessions/smoke/branches') data={branches:['leaf-a','leaf-b'].map(id=>({leaf_entry_id:id,active:id===selectedLeaf,depth:2}))};
   else if(url.pathname==='/api/sessions/smoke/branches/select') {
@@ -233,13 +236,13 @@ try {
  await page.locator('summary').filter({hasText:'Conversation branches'}).click();
  const approvals=page.getByRole('region',{name:'Tool approvals'});
  await expect(approvals).toContainText('echo fixture');
- await approvals.getByRole('button',{name:'Deny bash',exact:true}).click();
+ await approvals.getByRole('button',{name:approvalLabel,exact:true}).click();
  await expect(approvals.getByRole('alert')).toHaveText('Fixture approval conflict');
- await expect(approvals.getByRole('button',{name:'Deny bash',exact:true})).toBeEnabled();
+ await expect(approvals.getByRole('button',{name:approvalLabel,exact:true})).toBeEnabled();
  rejectApproval=false;
- await approvals.getByRole('button',{name:'Deny bash',exact:true}).click();
- await expect(approvals.getByRole('button',{name:'Deny bash',exact:true})).toHaveCount(0);
- expect(decisions).toEqual([{decision:'deny'},{decision:'deny'}]);
+ await approvals.getByRole('button',{name:approvalLabel,exact:true}).click();
+ await expect(approvals.getByRole('button',{name:approvalLabel,exact:true})).toHaveCount(0);
+ expect(decisions).toEqual([{decision:approvalDecision},{decision:approvalDecision}]);
  await codeToggle.click();
  await expect(codeToggle).toHaveAttribute('aria-expanded','true');
  codeFixture='日'.repeat(8192);
