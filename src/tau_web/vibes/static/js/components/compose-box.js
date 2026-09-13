@@ -15,31 +15,7 @@ import { getModelPreferences, saveModelPreferences, getSessionModels, changeSess
  * Slash command definitions for autocomplete.
  * Base set — merged with dynamic commands from the server on connect.
  */
-const SLASH_COMMANDS = [
-    { name: '/model', description: 'Show or set the model' },
-    { name: '/models', description: 'Alias for /model' },
-    { name: '/cycle-model', description: 'Cycle to the next available model' },
-    { name: '/thinking', description: 'Show or set thinking level' },
-    { name: '/cycle-thinking', description: 'Cycle to the next thinking level' },
-    { name: '/context', description: 'Show context window usage' },
-    { name: '/ctx', description: 'Alias for /context' },
-    { name: '/state', description: 'Show current agent/session state' },
-    { name: '/prompt', description: 'Show or set the user system prompt' },
-    { name: '/theme', description: 'Show or set the UI theme' },
-    { name: '/tint', description: 'Set or clear a UI colour tint' },
-    { name: '/name', description: 'Show or set the agent display name' },
-    { name: '/agent-name', description: 'Show or set the agent display name' },
-    { name: '/agent-avatar', description: 'Set or show the agent avatar URL' },
-    { name: '/user-name', description: 'Set or show your display name' },
-    { name: '/user-avatar', description: 'Set or show your avatar URL' },
-    { name: '/user-github', description: 'Set name/avatar from GitHub profile' },
-    { name: '/queue', description: 'Queue a message for after the current turn' },
-    { name: '/abort', description: 'Cancel the current agent operation' },
-    { name: '/restart', description: 'Restart the active agent' },
-    { name: '/shell', description: 'Run a shell command' },
-    { name: '/bash', description: 'Run a shell command and return output inline' },
-    { name: '/commands', description: 'List available commands' },
-];
+const SLASH_COMMANDS = []; // Only adapter-supported commands are advertised.
 
 function formatK(n) {
     if (n == null) return '?';

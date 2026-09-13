@@ -94,6 +94,14 @@ export async function deletePost(postId, cascade = false) {
  */
 export async function sendAgentMessage(agentId, content, threadId = null, mediaIds = [], mode = null, sessionId = 'default', intent = null) {
     if (threadId) throw new Error('Tau thread submission is not integrated yet');
+    if (/^\/thinking(?:\s|$)/.test(content.trim())) {
+        if (mediaIds.length) throw new Error('Thinking commands cannot include attachments');
+        const level = content.trim().split(/\s+/).slice(1);
+        if (level.length !== 1) throw new Error('Usage: /thinking off|minimal|low|medium|high|xhigh');
+        await tau.modelState(sessionId);
+        const result = await tau.changeModel(sessionId, { thinking_level: level[0] });
+        return { ...result, command: 'thinking' };
+    }
     return tau.send(sessionId, content, { mediaIds, mode: mode || 'auto', intent });
 }
 
@@ -399,7 +407,7 @@ export function getWorkspaceDownloadUrl(path, showHidden = false) {
 }
 
 export async function getAgentCommands() {
-    return request('/agent/commands');
+    return { commands: [{ name: '/thinking', description: 'Set Tau thinking policy: off|minimal|low|medium|high|xhigh' }] };
 }
 
 /**

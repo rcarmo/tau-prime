@@ -26,3 +26,14 @@ test('imported UI session/model functions use Tau transport and token', async()=
         else delete globalThis.localStorage;
     }
 });
+test('advertised thinking command uses dedicated policy mutation, never an agent run',async()=>{
+ const original=globalThis.fetch;const calls=[];
+ try{
+ globalThis.fetch=async(path,options)=>{calls.push({path,...options});return Response.json({session_id:'one',provider_name:'p',model:'m',thinking_level:'low',updated_at:'r1'});};
+ // API singleton captured fetch on first import, so test transport independently
+ const {createTauClient}=await import('../static/js/tau-client.js');
+ const client=createTauClient();await client.modelState('one');await client.changeModel('one',{thinking_level:'low'});
+ expect(calls.map(c=>c.path)).toEqual(['/api/sessions/one','/api/sessions/one/thinking']);
+ const {getAgentCommands}=await import('../static/js/api.js');expect((await getAgentCommands()).commands.map(c=>c.name)).toEqual(['/thinking']);
+ }finally{globalThis.fetch=original;}
+});

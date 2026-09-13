@@ -375,3 +375,10 @@ from authenticated /api/settings without fabricated capabilities; compatibility
 browser-local (existing app persistence) and no longer posts nonexistent Vibes
 endpoint. 36 unit tests/lint/build and authenticated live checks pass. Command
 catalogue/execution and remaining old event handlers still need migration.
+
+Command capability checkpoint: removed inherited unsupported slash-command list
+and nonexistent /agent/commands probe. Menu advertises only /thinking, mapped to
+actual revision-checked policy mutation and rejects attached-media misuse.
+Other slash input continues explicit error rather than model execution. 37 unit
+tests/lint/build and authenticated live regression pass. New command dispatcher
+still needs direct composer browser assertion; no claim all Tau CLI commands work.
