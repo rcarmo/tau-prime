@@ -12,6 +12,14 @@ export function sessionFromTau(session) {
     };
 }
 
+export function postFromTau(record) {
+    return {
+        id: record.message_id, timestamp: record.created_at,
+        data: { type: record.role === 'assistant' ? 'agent_response' : record.role,
+            content: record.content, session_id: record.session_id },
+    };
+}
+
 export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () => '' } = {}) {
     async function request(path, { method = 'GET', body } = {}) {
         const headers = { Accept: 'application/json' };
@@ -37,6 +45,26 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         return session;
     }
     return {
+        async timeline(id, limit = 10, before = null) {
+            if (!id || id === 'default') throw new Error('Select a real Tau session before loading messages');
+            if (!Number.isInteger(limit) || limit < 1) throw new Error('Invalid timeline page size');
+            const records = [];
+            let after = 0;
+            // Tau exposes ascending pagination only. Scan it explicitly until a
+            // reverse-page backend endpoint exists; never claim a partial scan complete.
+            for (let page = 0; ; page++) {
+                if (page >= 1000) throw new Error('Timeline scan limit exceeded');
+                const result = await request(`/sessions/${encodeURIComponent(id)}/timeline?after=${after}&limit=200`);
+                const batch = result.timeline;
+                for (const record of batch) {
+                    if (!Number.isInteger(record.message_id) || record.message_id <= after) throw new Error('Invalid Tau timeline cursor');
+                    after = record.message_id;
+                    if (before === null || record.message_id < Number(before)) records.push(record);
+                }
+                if (batch.length < 200 || (before !== null && after >= Number(before))) break;
+            }
+            return { posts: records.slice(-limit).reverse().map(postFromTau), has_more: records.length > limit };
+        },
         async modelState(id) {
             const session = await loadSession(id);
             return { model: `${session.provider_name}/${session.model}`, thinking_level: session.thinking_level };

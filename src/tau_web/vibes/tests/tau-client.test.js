@@ -42,3 +42,21 @@ test('model change uses displayed revision and propagates conflict without retry
     expect(calls.length).toBe(2);
     expect(JSON.parse(calls[1].body)).toEqual({provider_name:'new',model:'other',expected_updated_at:'r1'});
 });
+test('timeline translates forward pages into newest-first older pages', async()=> {
+    const records=Array.from({length:205},(_,i)=>({message_id:i+1,session_id:'one',role:'assistant',content:`text ${i+1}`,created_at:'2026-09-13T00:00:00Z'}));
+    const client=createTauClient({fetchImpl:async path=> {
+        const after=Number(new URL(path,'http://localhost').searchParams.get('after'));
+        return Response.json({timeline:records.filter(r=>r.message_id>after).slice(0,200)});
+    }});
+    const first=await client.timeline('one',5);
+    expect(first.posts.map(p=>p.id)).toEqual([205,204,203,202,201]);
+    expect(first.posts[0].data.type).toBe('agent_response');
+    expect(first.has_more).toBe(true);
+    const second=await client.timeline('one',5,201);
+    expect(second.posts.map(p=>p.id)).toEqual([200,199,198,197,196]);
+    expect((await client.timeline('one',5,4)).has_more).toBe(false);
+});
+test('timeline rejects nonadvancing cursors', async()=> {
+    const client=createTauClient({fetchImpl:async()=>Response.json({timeline:[{message_id:0}]})});
+    await expect(client.timeline('one')).rejects.toThrow('cursor');
+});

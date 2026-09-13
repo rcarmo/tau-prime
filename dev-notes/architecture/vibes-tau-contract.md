@@ -41,3 +41,11 @@ Creation without provider setup and deletion explicitly fail instead of calling
 wrong Vibes endpoints. These are interim integration errors, not finished UI:
 creation controls need setup, deletion must become Archive, initial default and
 timeline/SSE are still pending. Ten tests/31 assertions, lint and build pass.
+
+Persisted timeline checkpoint: both imported timeline functions now use the Tau
+adapter. Ascending backend pages are scanned into newest-first UI pages with
+explicit older-message boundaries and monotonic cursor validation. Scan cap
+fails visibly rather than truncating silently; a reverse-page backend endpoint
+is preferable before large-history performance signoff. Current projection is
+text/role/identity only: tool blocks/media and live SSE remain unimplemented.
+Twelve tests/37 assertions, lint and build pass; not end-to-end acceptance.

@@ -37,11 +37,7 @@ async function request(url, options = {}, includeEtag = false) {
  * Get timeline posts (chat style - returns oldest first)
  */
 export async function getTimeline(limit = 10, beforeId = null, sessionId = 'default') {
-    let url = `/timeline?limit=${limit}&session_id=${encodeURIComponent(sessionId)}`;
-    if (beforeId) {
-        url += `&before=${beforeId}`;
-    }
-    return request(url);
+    return tau.timeline(sessionId, limit, beforeId);
 }
 
 /**
@@ -129,9 +125,7 @@ export async function getSessions(includeArchived = false) {
 }
 
 export async function getSessionTimeline(sessionId, limit = 10, beforeId = null) {
-    const params = new URLSearchParams({ limit: String(limit) });
-    if (beforeId) params.set('before', String(beforeId));
-    return request(`/sessions/${encodeURIComponent(sessionId)}/timeline?${params}`);
+    return tau.timeline(sessionId, limit, beforeId);
 }
 
 export async function createSession(name, parentId = null) {
