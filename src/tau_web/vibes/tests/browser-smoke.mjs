@@ -21,6 +21,10 @@ try {
     data={run_id:'accepted-fixture',status:'pending'};
    } else data={runs:[]};
   }
+  else if(url.pathname==='/api/sessions/smoke/queue') data={queue:[
+   {queue_id:11,session_id:'smoke',queue_kind:'follow_up',position:0,content:'First FIFO message'},
+   {queue_id:12,session_id:'smoke',queue_kind:'follow_up',position:1,content:'Second FIFO message'},
+  ]};
   else if(url.pathname==='/api/sessions') data={sessions:[session]};
   else if(url.pathname==='/api/sessions/smoke') data=session;
   else if(url.pathname==='/api/sessions/smoke/timeline') data={timeline:[{message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z'}]};
@@ -29,6 +33,9 @@ try {
  });
  await page.goto('http://127.0.0.1:8893/?session=smoke');
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ await expect(page.locator('.compose-queue-item')).toHaveCount(2);
+ await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
+ for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
  const composer=page.locator('.compose-box textarea');
  await composer.fill('Accepted browser message');
  await composer.press('Enter');

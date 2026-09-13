@@ -101,3 +101,11 @@ Only pending/running runs become active turns. Queue projection preserves backen
 order and identity; unsupported reorder/promote/remove controls are hidden for
 Tau items. Twenty unit tests/62 assertions, lint/build pass. Active-status UI,
 queue browser assertions and actual cancellation remain pending.
+
+Queue browser checkpoint: Chromium desktop and WebKit phone verify two FIFO
+messages in backend order and no visible queue mutation actions. Browser checks
+caught classic CSS overriding HTML hidden; local display override fixes that
+without editing vendor CSS. Accepted/rejected composer checks still pass with
+queue populated, no page errors. Remaining missing requests now exclude queue
+and agent status. Twenty unit tests and lint/build pass. Fixtures are not live
+backend evidence; final integration remains open.
