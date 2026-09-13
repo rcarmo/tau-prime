@@ -267,3 +267,11 @@ and fetch returned content_url with exact Unicode-byte content roundtrip.
 Existing real plan conflicts/archive/workspace/SSE checks still pass. Harness
 runs without bearer auth, so this is NOT evidence of authenticated download UI
 or unauthorized rejection; those remain pending. 31 unit tests and lint pass.
+
+Authenticated real backend checkpoint: test harness opt-in TAU_LIVE_AUTH uses an
+isolated test-only bearer token, forwarded through Tau client/proxy. Chromium
+and WebKit pass real session/plan/archive/workspace/SSE/media checks; raw media
+content request without token is asserted 401 and bearer request returns exact
+content. Regular browser harness remains unauthenticated unless explicit
+TAU_BROWSER_TEST_AUTH_TOKEN is set. 31 unit tests/lint pass. Authenticated media
+UI link handling still needs implementation; backend auth evidence is not that.

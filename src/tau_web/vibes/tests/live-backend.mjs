@@ -1,25 +1,28 @@
 import {chromium,webkit,expect} from '@playwright/test';
 import {spawn} from 'node:child_process';
-const backend=spawn('node',['start-server.mjs'],{cwd:new URL('../../../../tests/browser/',import.meta.url),env:{...process.env,TAU_BROWSER_PORT:'8894'},stdio:'pipe'});
+const token=process.env.TAU_LIVE_AUTH ? 'local-test-only-token' : '';
+const authFetch=(url,options={})=>fetch(url,{...options,headers:{...options.headers,...(token?{Authorization:`Bearer ${token}`}:{})}});
+const backend=spawn('node',['start-server.mjs'],{cwd:new URL('../../../../tests/browser/',import.meta.url),env:{...process.env,TAU_BROWSER_PORT:'8894',TAU_BROWSER_TEST_AUTH_TOKEN:token},stdio:'pipe'});
 let log='';backend.stderr.on('data',d=>log+=d);backend.stdout.on('data',d=>log+=d);
 const proxy=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),env:{...process.env,TAU_VIBES_PORT:'8893',TAU_VIBES_BACKEND:'http://127.0.0.1:8894'},stdio:'ignore'});
 let browser;
 try {
  for(const url of ['http://127.0.0.1:8894/api/health','http://127.0.0.1:8893/']) {
   let ready=false;
-  for(let i=0;i<200;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
+  for(let i=0;i<200;i++){try{if((await authFetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
   if(!ready)throw new Error(`Server unavailable: ${url}\n${log}`);
  }
- const response=await fetch('http://127.0.0.1:8893/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider_name:'test',model:'fixture',title:'Live backend session'})});
+ const response=await authFetch('http://127.0.0.1:8893/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider_name:'test',model:'fixture',title:'Live backend session'})});
  expect(response.status).toBe(201);const session=await response.json();
  const controller=new AbortController();
- const stream=await fetch('http://127.0.0.1:8893/api/events',{signal:controller.signal});
+ const stream=await authFetch('http://127.0.0.1:8893/api/events',{signal:controller.signal});
  expect(stream.status).toBe(200);
  const reader=stream.body.getReader();let text='';
  const timeout=setTimeout(()=>controller.abort(),5000);
  try {while(!text.includes('\n\n')){const {value,done}=await reader.read();if(done)break;text+=new TextDecoder().decode(value);}expect(text).toContain('event: tau.snapshot');}
  finally{clearTimeout(timeout);controller.abort();await reader.cancel().catch(()=>{});}
  browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ if(token)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  await expect(page.getByText('@Live backend session',{exact:true})).toBeVisible();
  await expect(page.locator('.compose-box textarea')).toBeVisible();
@@ -27,13 +30,16 @@ try {
   const {uploadMedia}=await import('/static/js/api.js');
   const content='Real media fixture: café 日本語';
   const media=await uploadMedia(new File([content],'live-media.txt',{type:'text/plain'}),{sessionId});
-  const response=await fetch(media.content_url);
-  return {id:media.id,sessionId:media.session_id,filename:media.filename,status:response.status,content:await response.text()};
+  const unauthorized=await fetch(media.content_url);
+  const token=localStorage.getItem('tau.web.authToken');
+  const response=await fetch(media.content_url,{headers:token?{Authorization:`Bearer ${token}`}:{}});
+  return {unauthorizedStatus:unauthorized.status,id:media.id,sessionId:media.session_id,filename:media.filename,status:response.status,content:await response.text()};
  },session.session_id);
  expect(mediaCheck.sessionId).toBe(session.session_id);
  expect(mediaCheck.filename).toBe('live-media.txt');expect(mediaCheck.status).toBe(200);
  expect(mediaCheck.content).toBe('Real media fixture: café 日本語');
  expect(mediaCheck.id).toBeTruthy();
+ if(token)expect(mediaCheck.unauthorizedStatus).toBe(401);
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('README.md',{exact:true}).first().click();
  await expect(page.locator('.workspace-preview-text')).toContainText('Tau Browser Fixture');
@@ -43,10 +49,10 @@ try {
  await plan.fill('- [ ] Live backend plan');
  await page.getByRole('button',{name:'Save plan',exact:true}).click();
  await expect(page.getByRole('button',{name:'Save plan',exact:true})).toBeDisabled();
- const savedPlan=await (await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/plan`)).json();
+ const savedPlan=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/plan`)).json();
  expect(savedPlan.markdown).toContain('Live backend plan');
  await plan.fill('- [ ] Keep local conflict draft');
- const remoteUpdate=await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/plan`,{
+ const remoteUpdate=await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/plan`,{
   method:'PUT',headers:{'Content-Type':'application/json','X-Tau-CSRF':'1'},
   body:JSON.stringify({markdown:'- [ ] Remote changed plan',expected_revision:savedPlan.revision}),
  });
@@ -64,11 +70,11 @@ try {
  await page.getByRole('button',{name:'Archive Live backend session',exact:true}).click();
  await expect(page.getByRole('button',{name:'Restore Live backend session',exact:true})).toBeVisible();
  await expect.poll(async()=>new URL(page.url()).searchParams.get('session')).toBe(null);
- const archived=await (await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
+ const archived=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
  expect(archived.archived_at).toBeTruthy();
  await page.getByRole('button',{name:'Restore Live backend session',exact:true}).click();
  await expect(page.getByRole('button',{name:'Archive Live backend session',exact:true})).toBeVisible();
- const restored=await (await fetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
+ const restored=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}`)).json();
  expect(restored.archived_at).toBe(null);
  expect(errors).toEqual([]);
  console.log('PASS real Tau session create/list/model/timeline startup, plan save/conflict/confirmed reload, archive/restore and proxied SSE snapshot; no provider run attempted');

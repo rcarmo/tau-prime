@@ -58,6 +58,8 @@ async function cleanup() {
 function setupEnv() {
   const env = { ...process.env };
   delete env.TAU_WEB_AUTH_TOKEN;
+  // Explicit test-only opt-in; ordinary browser tests stay unauthenticated.
+  if (process.env.TAU_BROWSER_TEST_AUTH_TOKEN) env.TAU_WEB_AUTH_TOKEN = process.env.TAU_BROWSER_TEST_AUTH_TOKEN;
 
   if (process.env.TAU_BROWSER_BIN) {
     // Exercise the installed wheel without silently importing checkout code.
