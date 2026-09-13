@@ -149,7 +149,7 @@ function FileAttachmentCard({ mediaId }) {
     `;
 }
 
-export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true, active = undefined, onOpenEditor, onOpenTerminalTab, renderMarkdown }) {
+export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true, active = undefined, onOpenEditor, onOpenTerminalTab, renderMarkdown, readOnly = false }) {
     const [tree, setTree] = useState(null);
     const [expanded, setExpanded] = useState(new Set(['.']));
     const [selectedPath, setSelectedPath] = useState(null);
@@ -263,6 +263,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
     }, []);
 
     const beginRename = useCallback((path) => {
+        if (readOnly) return;
         if (!path) return;
         const node = nodeMapRef.current?.get(path);
         const base = (node?.name || path.split('/').pop() || path).trim();
@@ -332,6 +333,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
     }, []);
 
     const handleCreateFileClick = useCallback((event) => {
+        if (readOnly) return;
         event?.stopPropagation?.();
         if (uploading) return;
         const target = resolveCreateTargetPath(selectedPathRef.current);
@@ -665,6 +667,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
     }, []);
 
     const deleteFileAtPath = useCallback((path) => {
+        if (readOnly) return;
         const node = nodeMapRef.current.get(path);
         if (node && node.type !== 'dir') {
             const filename = path.split('/').pop() || path;
@@ -979,6 +982,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
     }, []);
 
     const handleDrop = useCallback(async (event) => {
+        if (readOnly) return;
         const fileDrag = isFileDrag(event);
         const workspaceDrag = isWorkspaceDrag(event);
         if (!fileDrag && !workspaceDrag) return;
@@ -1003,6 +1007,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
     }, [resolveDropTargetPath, resolveDropTargetFromEvent, uploadFilesToTarget, moveEntryToTarget]);
 
     const handleRowDragStart = useCallback((event) => {
+        if (readOnly) return;
         const rowEl = event?.currentTarget;
         if (!rowEl || !rowEl.dataset) return;
         const path = rowEl.dataset.path;
@@ -1089,7 +1094,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                                     style=${{ paddingLeft: `${8 + depth * INDENT}px` }}
                                     data-path=${node.path}
                                     data-type=${node.type}
-                                    draggable=${!isRenaming && node.path !== '.'}
+                                    draggable=${!readOnly && !isRenaming && node.path !== '.'}
                                     onDragStart=${handleRowDragStart}
                                     onDragEnd=${handleRowDragEnd}
                                 >
@@ -1155,7 +1160,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                                     <line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
                             </button>
-                            ${onOpenEditor && preview?.kind === 'text' && html`
+                            ${!readOnly && onOpenEditor && preview?.kind === 'text' && html`
                                 <button class="workspace-edit" onClick=${() => onOpenEditor(selectedPath)} title="Edit file">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -1163,7 +1168,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                                     </svg>
                                 </button>
                             `}
-                            ${!selectedIsDir && html`
+                            ${!readOnly && !selectedIsDir && html`
                                 <button class="workspace-download workspace-delete" onClick=${handleDeleteFile} title="Delete file">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1196,7 +1201,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                                         <line x1="12" y1="15" x2="12" y2="3"/>
                                     </svg>
                                 </a>`
-                                : html`<button class="workspace-download" onClick=${handleDownload} title="Download">
+                                : html`<button hidden=${readOnly} style=${readOnly ? "display:none" : undefined} class="workspace-download" onClick=${handleDownload} title="Download">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                         <polyline points="7 10 12 15 17 10"/>

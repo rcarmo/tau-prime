@@ -186,3 +186,10 @@ Markdown HTML or writable editor capability. Save API explicitly rejects instead
 of invoking missing Vibes endpoint. Real backend Chromium selects README and
 verifies seeded content; 27 unit tests and lint/build pass. Editor affordances,
 other workspace mutation controls and richer media remain to be reconciled.
+
+Workspace capability checkpoint: Tau opts imported explorer into readOnly mode.
+Create/delete/edit/download/upload buttons hidden; rename/delete/drop/drag-start
+handlers gated and editor callback absent. Browsing/preview live test, lint/build
+pass. Broader keyboard/touch and capability assertions still needed before
+production; these gates describe current Tau API, not a request to add file-write
+endpoints or discard the imported editor source.
