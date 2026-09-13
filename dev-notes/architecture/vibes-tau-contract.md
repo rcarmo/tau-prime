@@ -492,3 +492,9 @@ storage. Real Chromium/WebKit start without injected token, dismiss unauthorized
 session picker, save token through UI and complete authenticated workflows. 44
 unit tests/lint/build passed earlier in checkpoint. Token clearing/reload warning
 edge cases and polished unauthenticated landing remain pending.
+
+Unauthenticated entry checkpoint: session-list 401 opens token/provider setup
+rather than empty session picker; non-auth errors retain explicit picker error.
+Authenticated Chromium/WebKit login-UI test asserts direct modal, no picker,
+then enters token and completes real workflows. 44 unit tests/lint/build pass.
+Invalid-token retry and logout behavior still need final security review.

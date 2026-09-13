@@ -30,9 +30,8 @@ try {
  if(token && !process.env.TAU_LIVE_LOGIN_UI)await page.addInitScript(value=>localStorage.setItem('tau.web.authToken',value),token);
  await page.goto(`http://127.0.0.1:8893/?session=${encodeURIComponent(session.session_id)}`);
  if(token && process.env.TAU_LIVE_LOGIN_UI){
-  // Dismiss failed-session picker if startup authentication has opened it.
-  await page.getByRole('button',{name:'Close session picker',exact:true}).click();
-  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Provider setup',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Close session picker',exact:true})).toHaveCount(0);
   await page.getByLabel('Tau bearer token',{exact:true}).fill(token);
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Save token and reload',exact:true}).click();

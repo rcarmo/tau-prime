@@ -810,7 +810,11 @@ function App() {
             if (id) await selectSession(id);
             else { setSessionRefreshError('No Tau sessions available. Provider setup is required.'); setSessionPickerOpen(true); }
         }).catch(error => {
-            if (!disposed) { setSessionRefreshError(error.message); setSessionPickerOpen(true); }
+            if (!disposed) {
+                setSessionRefreshError(error.message);
+                if (error.status === 401) { setSessionPickerOpen(false); setProviderSetupOpen(true); }
+                else setSessionPickerOpen(true);
+            }
         });
         return () => { disposed = true; };
     }, []);
