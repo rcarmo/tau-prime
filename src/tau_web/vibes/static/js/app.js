@@ -790,6 +790,7 @@ function App() {
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [currentHashtag, setCurrentHashtag] = useState(null);
     const [searchQuery, setSearchQuery] = useState(null);
+    const [searchError, setSearchError] = useState('');
     const [searchOpen, setSearchOpen] = useState(false);
     const [fileRefs, setFileRefs] = useState(() => composeDrafts.load('default').fileRefs);
     const [folderRefs, setFolderRefs] = useState(() => composeDrafts.load('default').folderRefs);
@@ -1721,6 +1722,7 @@ function App() {
         if (!query || !query.trim()) return;
         const generation = ++searchGeneration.current;
         const session = selectedSessionRef.current;
+        setSearchError('');
         setSearchQuery(query.trim());
         setCurrentHashtag(null);
         setPosts(null);
@@ -1732,6 +1734,7 @@ function App() {
         } catch (error) {
             if (generation !== searchGeneration.current || session !== selectedSessionRef.current) return;
             console.error('Failed to search:', error);
+            setSearchError(error.message || 'Search failed');
             setPosts([]);
         }
     }, []);
@@ -2575,6 +2578,7 @@ function App() {
                 ${!popoutMode && !terminalPopout && html`<div class="editor-splitter" onMouseDown=${handleEditorSplitterMouseDown} onTouchStart=${handleEditorSplitterTouchStart}></div>`}
             `}
             ${!popoutMode && html`<div class="container">
+                ${searchQuery && searchError && html`<div role="alert" class="workspace-error">${searchError}</div>`}
                 ${searchQuery && isIOSDevice() && html`<div class="search-results-spacer"></div>`}
                 ${(currentHashtag || searchQuery) && html`
                     <div class="hashtag-header">

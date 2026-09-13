@@ -205,3 +205,9 @@ render matched FTS text and verify explicit source-session link. Unsupported
 branch-family/image/attachment filter controls removed/hidden. Null timestamps
 no longer render epoch dates. 28 unit tests, lint/build pass. Real FTS fixture
 seeding, navigation draft handling and search-error presentation remain pending.
+
+Search error checkpoint: failed requests now render a visible alert rather than
+only empty results/console output; new requests clear prior error and stale
+responses retain generation/session guards. Chromium desktop/WebKit phone test
+400 failure followed by successful retry and alert removal. 28 unit tests,
+lint/build pass. Remaining main integration gates are unchanged.
