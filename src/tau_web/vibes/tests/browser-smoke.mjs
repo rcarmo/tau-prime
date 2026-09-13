@@ -2,6 +2,7 @@ import {requireFreePorts,stopChild,requireRunning} from './server-lifecycle.mjs'
 import { chromium, webkit, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import {mkdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 await requireFreePorts(8893);
 const server=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),env:{...process.env,TAU_VIBES_PORT:'8893'},stdio:'ignore'});
@@ -22,6 +23,8 @@ try {
   expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
  };
  const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true; let rejectSearch=true;
+ const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); }); }`;
+ const extensionIntegrity='sha256-'+createHash('sha256').update(extensionSource).digest('base64');
  let uploads=0;let snapshots=0;let selectedLeaf='leaf-a';const leafChanges=[];
  let approvalPending=true;let rejectApproval=true;const decisions=[];
  page.on('pageerror',e=>errors.push(e.message));
@@ -36,7 +39,13 @@ try {
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
-  if(url.pathname==='/dashboard') {
+  if(url.pathname==='/api/extensions/frontend-modules') data={modules:[{extension_id:'fixture',module_id:'mounted',sdk_version:'1.0',integrity:extensionIntegrity,asset_url:'/api/extensions/assets/fixture/module.js'}]};
+  else if(url.pathname==='/api/extensions/assets/fixture/module.js') {
+   expect(route.request().headers().authorization).toBe('Bearer image-test-token');
+   return route.fulfill({contentType:'application/javascript',body:extensionSource});
+  }
+  else if(url.pathname==='/api/settings') data={agent_name:'Tau'};
+  else if(url.pathname==='/dashboard') {
    const pageNumber=Number(url.searchParams.get('page')||1);
    data={page:pageNumber,total_pages:2,total_sessions:9,active_sessions:0,sessions:[{session_id:pageNumber===1?'smoke':'unavailable',title:pageNumber===1?'Dashboard first':'Dashboard unavailable',activity:'idle',model:'test/fixture',queue_count:0,summary:'Fixture summary',preview_text:''}]};
   }
@@ -97,6 +106,7 @@ try {
  });
  await page.goto('http://127.0.0.1:8893/?session=smoke');
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ await expect(page.locator('[data-extension-slot="compose_above"]')).toContainText('Extension mounted: Tau');
  const image=page.getByRole('img',{name:'fixture.png',exact:true});
  await expect(image).toBeVisible();
  await expect.poll(()=>image.evaluate(el=>el.naturalWidth)).toBe(1);

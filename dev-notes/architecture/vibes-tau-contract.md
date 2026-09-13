@@ -670,3 +670,9 @@ run mode restored in send adapter for SDK contract. 48 unit tests/lint/build and
 real production-router regression pass. Nonempty enabled-module/browser slots
 and action event integration remain pending; empty registry is not extension
 feature completion.
+
+Nonempty extension activation checkpoint: Chromium desktop/WebKit phone load an
+actual SRI-hashed JS module through preserved SDK, assert bearer asset fetch,
+module API request to Tau settings, and mounted text in compose_above slot.
+No mocked SDK/import function. 48 unit tests/lint pass. Real enabled extension
+registry and submit/navigation/view-action browser paths remain pending.
