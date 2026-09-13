@@ -1,5 +1,34 @@
 # Vibes → Tau integration boundary
 
+## Current capability map (audited after 8527332)
+
+This map supersedes historical checkpoint descriptions below. Vibes retains
+app/composer/timeline ownership. `api.js` is the compatibility surface;
+`tau-client.js` owns Tau HTTP projection; `tau-events.js` owns authenticated
+fetch-SSE; `tau-widget-actions.js` owns widget action/refresh dispatch. Legacy API
+exports alone are not evidence that their capabilities are implemented.
+
+| Surface | Implemented boundary | Limits / outstanding evidence |
+| --- | --- | --- |
+| Auth | Bearer from browser storage, same-origin requests, CSRF mutation header, confirmed token reload | Intermittent WebKit logout-modal timeout unexplained |
+| Sessions | Explicit ID, configured-default creation, rename, archive/restore | No synthetic default; archival is not deletion |
+| Models | Catalogue plus session state; cached revision on PATCH | No invented pricing/context-fit; thinking levels are policy, not discovery |
+| Runs/FIFO | Idle creates run; busy queues follow-up; explicit steer; acknowledged cancel | Queue removal/reordering unsupported; live provider execution pending |
+| Timeline/SSE | Paged persistence, session/run drafts, reconnect cursor and replay deduplication | Transport fixtures and real snapshots are not live-provider evidence |
+| Tools/approvals | Persisted tool projection and explicit allow/deny | Conflict/retry fixtures cover both decisions; live tools still pending |
+| Media | Authenticated upload/blob downloads, raster previews, bounded 32 MiB reads | References are not vision input; SVG/HTML not inline previews |
+| Workspace | Authenticated tree/text preview | Read-only; terminal disabled |
+| Plan | Session-local drafts, revision-aware save, confirmed conflict reload | No auto-overwrite/retry |
+| Search/context | Tau search/source-session links; observed context counts and leaf | Full legacy navigation/completion parity not audited |
+| Runtime/branches | Open-only dashboard/metrics polling; existing conversation-leaf selection | Leaf selection is not new-session branching |
+| Extensions | Integrity-checked modules, retained SDK/renderer, action/refresh, bounded 2 MiB documents | Sandbox/origin checks retained; not arbitrary plugin compatibility |
+| Local/offline | Browser-local state and old-worker retirement | No offline reload parity |
+
+See `vibes-browser-migration.md` for execution evidence and remaining gaps.
+Installed tests, fixtures, provider execution and paired visual acceptance remain
+separate gates. This map completes contract documentation, not all validation.
+
+
 Pinned Vibes source is recorded under src/tau_web/vibes/source-revision.txt.
 The imported app is not wired to Tau yet. New tau-client.js is a unit-tested
 transport foundation, not a claim that session UI integration is complete.
