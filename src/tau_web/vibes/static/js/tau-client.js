@@ -67,7 +67,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         },
         async modelState(id) {
             const session = await loadSession(id);
-            return { model: `${session.provider_name}/${session.model}`, thinking_level: session.thinking_level };
+            return { available: true, model: { provider: session.provider_name, id: session.model, name: session.model }, thinking_level: session.thinking_level };
         },
         async models(id) {
             const [catalogue, session] = await Promise.all([request('/models'), loadSession(id)]);
@@ -92,7 +92,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
                 method: 'PATCH', body: { provider_name: provider, model, expected_updated_at: revisions.get(id) },
             });
             revisions.set(id, session.updated_at);
-            return { model: `${session.provider_name}/${session.model}`, thinking_level: session.thinking_level };
+            return { available: true, model: { provider: session.provider_name, id: session.model, name: session.model }, thinking_level: session.thinking_level };
         },
         async sessions(includeArchived = false) {
             const result = await request(`/sessions?include_archived=${includeArchived}`);

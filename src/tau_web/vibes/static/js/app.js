@@ -794,9 +794,9 @@ function App() {
     const [agentDraft, setAgentDraft] = useState({ text: '', totalLines: 0 });
     useEffect(() => {
         let disposed = false;
-        const generation = sessionSwitchGeneration.current;
+        const generation = switchGeneration.current;
         getSessions().then(async result => {
-            if (disposed || sessionSwitchGeneration.current !== generation) return;
+            if (disposed || switchGeneration.current !== generation) return;
             setSessionOptions(result.sessions || []);
             const id = initialTauSession(result.sessions || [], window.location.search);
             if (id) await selectSession(id);
@@ -893,6 +893,7 @@ function App() {
         }
     };
     useEffect(() => {
+        if (!selectedSession) return;
         let disposed = false;
         let refreshing = false;
         const refreshModel = async () => {
@@ -926,6 +927,7 @@ function App() {
     const queueRefreshGeneration = useRef(0);
     const refreshSelectedQueue = async () => {
         const session = selectedSessionRef.current;
+        if (!session) return;
         const generation = ++queueRefreshGeneration.current;
         const selection = switchGeneration.current;
         const result = await getAgentQueue(null, null, session);

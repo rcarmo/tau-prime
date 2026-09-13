@@ -13,7 +13,7 @@ test('imported UI session/model functions use Tau transport and token', async()=
         };
         const api=await import('../static/js/api.js');
         expect((await api.getSessions()).sessions[0].id).toBe('actual');
-        expect((await api.getSessionModelState('actual')).model).toBe('p/m');
+        expect((await api.getSessionModelState('actual')).model).toEqual({provider:'p',id:'m',name:'m'});
         await api.changeSessionModel('actual',{provider:'p',model_id:'new'});
         expect(calls.map(call=>call.path)).toEqual(['/api/sessions?include_archived=false','/api/sessions/actual','/api/sessions/actual/model']);
         expect(calls[0].options.headers.Authorization).toBe('Bearer fixture-token');

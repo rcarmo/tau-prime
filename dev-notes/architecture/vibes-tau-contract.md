@@ -56,3 +56,11 @@ sessions surface an error rather than selecting another conversation. Timeline
 startup waits for selection. Fourteen tests/42 assertions, lint and build pass.
 Browser lifecycle validation and remaining default-dependent agent/event paths
 are pending; this is not a production-ready startup claim.
+
+First Chromium integration smoke executed against imported app and deterministic
+Tau session/timeline fixtures. It caught an undefined startup generation ref and
+an incompatible model-state shape; both corrected. No page errors after fixes;
+real session label, persisted text and model label render. Null-session polling
+is gated. Fourteen unit tests, build/lint and browser smoke pass. The smoke
+explicitly reports nine unimplemented endpoint families, with 501 fixture
+responses: not a full passing workflow or live backend/SSE validation.
