@@ -6,7 +6,7 @@ const browser=await ({chromium,webkit}[engine]).launch();
 try {
  for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const page=await browser.newPage({viewport:process.env.TAU_SMOKE_PHONE ? {width:390,height:844} : {width:1440,height:900}}); const errors=[];const missing=new Set();
- const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null;
+ const submitted=[]; let rejectSend=false; let activeRun=false; let cancelled=false; let configured=null; let rejectSetup=true;
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url());
@@ -15,7 +15,10 @@ try {
   const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data;
   if(url.pathname==='/api/onboarding') {
-   if(route.request().method()==='PUT') configured=route.request().postDataJSON();
+   if(route.request().method()==='PUT') {
+    configured=route.request().postDataJSON();
+    if(rejectSetup)return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'Fixture provider rejection'})});
+   }
    data={default_provider:'test',default_model:'fixture'};
   }
   else if(url.pathname==='/api/runs/cancel-fixture/cancel') {
@@ -65,8 +68,16 @@ try {
  const setup=page.getByRole('dialog',{name:'Provider setup'});
  await expect(setup.getByLabel('Provider',{exact:true})).toHaveValue('test');
  await setup.getByLabel('Model',{exact:true}).fill('updated-model');
+ expect(await composer.evaluate(el=>!!el.closest('[inert]'))).toBe(true);
+ await setup.getByRole('button',{name:'Save provider',exact:true}).click();
+ await expect(setup.getByRole('alert')).toHaveText('Fixture provider rejection');
+ await expect(setup.getByLabel('Model',{exact:true})).toHaveValue('updated-model');
+ await expect(setup.getByLabel('Model',{exact:true})).toBeEnabled();
+ rejectSetup=false;
  await setup.getByRole('button',{name:'Save provider',exact:true}).click();
  await expect(setup).toHaveCount(0);
+ expect(await composer.evaluate(el=>!!el.closest('[inert]'))).toBe(false);
+ await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
  expect(configured).toEqual({provider:'test',model:'updated-model'});
  await expect(composer).toHaveValue('Keep rejected draft');
  console.log(JSON.stringify({engine,errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));

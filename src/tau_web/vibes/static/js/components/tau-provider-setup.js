@@ -7,10 +7,18 @@ export function TauProviderSetup({onClose}) {
  const panel=useRef(null);const pending=useRef(false);
  useEffect(()=>{
   let disposed=false;const previous=document.activeElement;
-  panel.current?.querySelector('button')?.focus();
+  const isolated=[];
+  let branch=panel.current?.parentElement;
+  while(branch && branch!==document.body){
+   for(const sibling of branch.parentElement?.children||[]){
+    if(sibling!==branch){isolated.push([sibling,sibling.inert]);sibling.inert=true;}
+   }
+   branch=branch.parentElement;
+  }
+  panel.current?.querySelector('button:not(:disabled)')?.focus();
   getTauOnboarding().then(result=>{if(!disposed){setProvider(result.default_provider||'');setModel(result.default_model||'');}})
    .catch(e=>{if(!disposed)setError(e.message);}).finally(()=>{if(!disposed)setLoading(false);});
-  return()=>{disposed=true;if(previous?.isConnected)previous.focus();};
+  return()=>{disposed=true;for(const [element,inert] of isolated)element.inert=inert;if(previous?.isConnected)previous.focus();};
  },[]);
  const submit=async event=>{
   event.preventDefault();if(pending.current||loading)return;pending.current=true;setBusy(true);setError('');

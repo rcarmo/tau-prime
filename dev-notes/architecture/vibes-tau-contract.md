@@ -142,3 +142,10 @@ blank credential is omitted so existing credentials remain. Chromium desktop and
 WebKit phone verify prefill, save payload, dismissal and composer draft survival.
 23 existing unit tests, lint/build pass. This modal still needs complete inert-
 background/accessibility and failure-path coverage before production switch.
+
+Provider modal lifecycle checkpoint: sibling branches up to body are made inert
+and original inert values restored on unmount. Initial focus targets an enabled
+control. Chromium desktop/WebKit phone verify background inertness, rejected
+save retains editable values, successful retry, focus return and composer draft
+preservation. 23 unit tests, lint/build pass. Comprehensive accessibility matrix
+and nested/concurrent modal review remain pending.
