@@ -715,3 +715,8 @@ from actual opaque-origin iframe, assert authenticated identity-derived document
 fetch and updated frame text, then remove frame. Action roundtrip remains green.
 50 unit tests/lint pass. Widget prefill/submit and document streaming bound remain
 pending; test does not weaken iframe sandbox/origin checks.
+
+Widget streaming bound: shared bounded reader now enforces 2 MiB widget-document
+limit during receipt, not after text buffering; declared/streamed excess cancels
+body. Existing 32 MiB media behavior unchanged. 51 unit tests/lint/build and
+Chromium widget action/refresh workflow pass. No provider/visual completion claim.

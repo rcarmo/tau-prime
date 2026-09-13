@@ -203,3 +203,8 @@ test('extension requests stay inside Tau API and retain authentication',async()=
  await client.extensionRequest('/api/settings');expect(calls[1].path).toBe('/api/settings');expect(calls[1].headers.Authorization).toBe('Bearer fixture');
  for(const path of ['https://outside/api/x','//outside/api/x','/api/../outside','/outside'])await expect(client.extensionRequest(path)).rejects.toThrow('Invalid');
 });
+test('widget document enforces streamed size limit and cancels response',async()=>{
+ let cancelled=false;
+ const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({start(c){c.enqueue(new Uint8Array(2*1024*1024+1));},cancel(){cancelled=true;}}))});
+ await expect(client.widgetDocument('ext','widget')).rejects.toThrow('2 MiB');expect(cancelled).toBe(true);
+});

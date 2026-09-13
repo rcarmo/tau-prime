@@ -1,3 +1,20 @@
+async function boundedBlob(response, limit, message) {
+    if (Number(response.headers.get('Content-Length')) > limit) {
+        await response.body?.cancel(); throw new Error(message);
+    }
+    if (!response.body) throw new Error('Tau response has no body');
+    const reader = response.body.getReader(), chunks = []; let size = 0;
+    try {
+        while (true) {
+            const {value, done} = await reader.read(); if (done) break;
+            size += value.byteLength;
+            if (size > limit) throw new Error(message);
+            chunks.push(value);
+        }
+        return new Blob(chunks, {type: response.headers.get('Content-Type') || 'application/octet-stream'});
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+}
+
 /** Tau transport boundary. Components must not interpret Tau REST resources. */
 export function sessionFromTau(session) {
     if (!session.session_id) throw new Error('Tau session is missing its identity');
@@ -58,9 +75,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             const token = getToken();
             const response = await fetchImpl(`/api/extensions/widgets/${encodeURIComponent(extensionId)}/${encodeURIComponent(widgetId)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: 'same-origin' });
             if (!response.ok) throw new Error(`Widget refresh failed (${response.status})`);
-            const text = await response.text();
-            if (new TextEncoder().encode(text).byteLength > 2 * 1024 * 1024) throw new Error('Widget document exceeds limit');
-            return text;
+            return (await boundedBlob(response, 2 * 1024 * 1024, 'Widget document exceeds 2 MiB limit')).text();
         },
         async frontendModules() {
             return (await request('/extensions/frontend-modules')).modules;
@@ -104,22 +119,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             if (token) headers.Authorization = `Bearer ${token}`;
             const response = await fetchImpl(`/api/media/${encodeURIComponent(id)}/content`, { headers, credentials: 'same-origin' });
             if (!response.ok) throw new Error(`Tau download failed (${response.status})`);
-            const limit = 32 * 1024 * 1024;
-            if (Number(response.headers.get('Content-Length')) > limit) {
-                await response.body?.cancel();
-                throw new Error('Media exceeds the 32 MiB browser download limit');
-            }
-            if (!response.body) throw new Error('Tau media response has no body');
-            const reader = response.body.getReader(); const chunks = []; let size = 0;
-            try {
-                while (true) {
-                    const { value, done } = await reader.read(); if (done) break;
-                    size += value.byteLength;
-                    if (size > limit) throw new Error('Media exceeds the 32 MiB browser download limit');
-                    chunks.push(value);
-                }
-                return new Blob(chunks, { type: response.headers.get('Content-Type') || 'application/octet-stream' });
-            } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+            return boundedBlob(response, 32 * 1024 * 1024, 'Media exceeds the 32 MiB browser download limit');
         },
         async upload(file, { sessionId, signal } = {}) {
             if (!sessionId || sessionId === 'default') throw new Error('Select a session before uploading');
