@@ -31,10 +31,10 @@ try{
    try{const body=await readFile(file);return route.fulfill({body,contentType:path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':path.endsWith('.html')?'text/html':'application/octet-stream'});}catch{return route.fulfill({status:404,body:''});}
   }
   if(u.pathname.includes('events'))return route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'});
-  const session={id:'default',name:'Reference session',session_id:'default',title:'Reference session',provider_name:'test',model:'fixture',updated_at:'r1'};
+  const session={id:'reference-session',name:'Reference session',session_id:'reference-session',title:'Reference session',provider_name:'test',model:'fixture',updated_at:'r1'};
   let data={};
   if(u.pathname.endsWith('/sessions'))data={sessions:[session]};
-  else if(u.pathname==='/api/sessions/default')data=session;
+  else if(u.pathname==='/api/sessions/reference-session')data=session;
   else if(u.pathname.includes('timeline'))data=name==='current'?{timeline:[]}:{posts:[],has_more:false};
   else if(u.pathname.includes('agents'))data={agents:[]};
   else if(u.pathname.endsWith('/runs'))data={runs:[]};
@@ -45,14 +45,16 @@ try{
   else if(u.pathname.includes('files')||u.pathname.includes('tree'))data={entries:[],files:[]};
   return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
  });
- await page.goto('http://127.0.0.1:8896/?session=default');
+ await page.goto('http://127.0.0.1:8896/?session=reference-session');
  await expect(page.locator('.compose-box textarea')).toBeVisible();await page.waitForTimeout(1500);
  const geometry=await page.evaluate(()=>Object.fromEntries(['.app-shell','.container','.timeline','.compose-box','.compose-box textarea','.workspace-toggle-tab'].map(s=>{const e=document.querySelector(s),r=e?.getBoundingClientRect();return [s,r?{x:r.x,y:r.y,width:r.width,height:r.height}:null];})));
  measurements[name]=geometry;
  console.log(name,JSON.stringify(geometry));
+ await expect(page.locator('.timeline')).toContainText('No messages yet. Start a conversation!');
+ await expect(page.locator('.app-shell > .container > details')).toHaveCount(0);
  await page.screenshot({path:`${out}/${name}.png`});await page.close();
  }
- for(const selector of ['.app-shell','.container','.compose-box','.compose-box textarea','.workspace-toggle-tab']){
+ for(const selector of ['.app-shell','.container','.timeline','.compose-box','.compose-box textarea','.workspace-toggle-tab']){
   expect(measurements.current[selector],`${selector} must match pinned reference geometry`).toEqual(measurements.reference[selector]);
  }
  console.log(`PASS exact reference geometry: ${engine}/${size}/${theme}`);

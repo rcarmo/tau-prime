@@ -782,3 +782,10 @@ Migrated fixture/Axe matrix 12/12; installed real workflow matrix 12/12 with CSP
 WebKit auxiliary-frame AxeBuilder crashed around native modal; same axe rules
 run directly in document pass, no CSP policy changes. 60 units/frontend lint and
 Python frontend/packaging tests pass. Wheel builds in tmp/tau-alignment identical.
+
+Reference fixture correction: default is a reserved/non-real Tau session ID, so
+initial current screenshot showed selection error instead of equivalent idle chat.
+Use reference-session ID; both show empty timeline + idle status. Timeline now
+included in exact geometry equality: all six shell/container/timeline/composer/
+textarea/workspace-handle regions match across 12 engine/theme/size cases. This
+supersedes prior 37.5px status-difference exclusion. Runtime unchanged.
