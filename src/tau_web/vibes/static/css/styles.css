@@ -555,3 +555,14 @@ html[data-tint]::after {
 /* Readable Markdown links in both themes; retain a non-color link cue. */
 .post-content a { color: var(--text-primary); text-decoration: underline; }
 .compose-box .slash-name, .compose-box .slash-desc { color: var(--text-primary); }
+.tau-session-tools {
+    color: var(--text-primary); background: var(--bg-primary);
+    border: 1px solid var(--border-color); border-radius: 12px;
+    width: min(560px, calc(100vw - 32px)); max-height: 80dvh; overflow: auto;
+    padding: 20px;
+}
+.tau-session-tools::backdrop { background: rgba(0,0,0,.5); }
+.tau-session-tools header { display: flex; align-items: center; justify-content: space-between; }
+.tau-session-tools h2 { font-size: 18px; margin: 0 0 16px; }
+.tau-session-tools header button { color: inherit; background: none; border: 0; font-size: 24px; }
+.tau-session-tools > details { margin: 12px 0; }

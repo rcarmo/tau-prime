@@ -1,7 +1,8 @@
 import {requireFreePorts,stopChild,requireRunning} from './server-lifecycle.mjs';
 import {chromium,webkit,expect} from '@playwright/test';
 import {spawn} from 'node:child_process';
-import AxeBuilder from '@axe-core/playwright';
+import {readFile as readTestFile} from 'node:fs/promises';
+const axeSource=await readTestFile(new URL(import.meta.resolve('axe-core')),'utf8');
 const token=process.env.TAU_LIVE_AUTH ? 'local-test-only-token' : '';
 const sizes={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}};
 const viewport=sizes[process.env.TAU_LIVE_SIZE||'desktop'];
@@ -50,9 +51,24 @@ try {
  await page.waitForTimeout(250);
  await expect(page.locator('.connection-status')).toHaveCount(0);
  await expect(page.locator('.compose-box textarea')).toBeVisible();
+ const openTools=async()=>{
+  if(await page.getByRole('dialog',{name:'Session tools',exact:true}).count())return;
+  await page.getByTestId('session-switcher').click();
+  await page.getByRole('button',{name:'Session tools…',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toBeVisible();
+ };
+ const closeTools=async()=>{
+  if(await page.getByRole('dialog',{name:'Session tools',exact:true}).count()){
+   await page.getByRole('button',{name:'Close session tools',exact:true}).click();
+   await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toHaveCount(0);
+   await expect(page.getByTestId('session-switcher')).toBeFocused();
+  }
+ };
+ await openTools();
  await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
  await expect(page.getByRole('region',{name:'Runtime metrics'})).toContainText('Host CPU');
  await expect(page.getByRole('region',{name:'Runtime metrics'})).toContainText('Tau process RSS');
+ await closeTools();
  const thinking=await page.evaluate(async id=>{
   const api=await import('/static/js/api.js');await api.getSessionModelState(id);
   return api.changeSessionModel(id,{thinking_level:'high'});
@@ -102,6 +118,7 @@ try {
  expect(firstEntry?.id).toBeTruthy();
  const branchChange=await authFetch(`http://127.0.0.1:8893/api/sessions/${session.session_id}/branches/select`,{method:'POST',headers:{'Content-Type':'application/json','X-Tau-CSRF':'1'},body:JSON.stringify({leaf_entry_id:firstEntry.id})});
  expect(branchChange.status).toBe(200);
+ await openTools();
  await page.locator('summary').filter({hasText:'Conversation branches'}).click();
  await page.getByRole('button',{name:'Refresh branches',exact:true}).click();
  const inactiveLeaf=page.getByRole('region',{name:'Conversation branches'}).getByRole('button',{name:/^Leaf /}).filter({hasNotText:'(active)'}).first();
@@ -133,12 +150,14 @@ try {
  const {readFile}=await import('node:fs/promises');
  expect(await readFile(await downloaded.path(),'utf8')).toBe('Real media fixture: café 日本語');
  if(token)expect(mediaCheck.unauthorizedStatus).toBe(401);
+ await closeTools();
  const showWorkspace=page.getByRole('button',{name:'Show workspace',exact:true});
  if(await showWorkspace.isVisible())await showWorkspace.click();
  await expect(page.getByText('README.md',{exact:true}).first()).toBeVisible();
  await page.getByText('README.md',{exact:true}).first().click();
  await expect(page.locator('.workspace-preview-text')).toContainText('Tau Browser Fixture');
  if(viewport.width<1024)await page.getByRole('button',{name:'Hide workspace',exact:true}).click();
+ await openTools();
  await page.locator('summary').filter({hasText:'Plan'}).click();
  const plan=page.getByLabel('Plan markdown');
  await expect(plan).toBeEnabled();
@@ -162,6 +181,7 @@ try {
  page.once('dialog',dialog=>dialog.accept());
  await page.getByRole('button',{name:'Reload plan',exact:true}).click();
  await expect(plan).toHaveValue(/Remote changed plan/);
+ await closeTools();
  await page.getByText('@Live backend session',{exact:true}).click();
  await page.getByRole('button',{name:'Archive Live backend session',exact:true}).click();
  await expect(page.getByRole('button',{name:'Restore Live backend session',exact:true})).toBeVisible();
@@ -185,18 +205,25 @@ try {
  const created=await (await authFetch(`http://127.0.0.1:8893/api/sessions/${newId}`)).json();
  expect(created.provider_name).toBe(onboarding.default_provider);expect(created.model).toBe(onboarding.default_model);
  await expect(composer).toHaveValue('');
+ await closeTools();
  await composer.fill('New session draft remains local');
+ await openTools();
  const planSummary=page.locator('summary').filter({hasText:/^Plan$/});
+ await openTools();
  if(!await plan.isVisible())await planSummary.click();
  await expect(plan).toBeEnabled();await plan.fill('- [ ] Unsaved new-session plan');
+ await closeTools();
  await page.getByText('@Created through imported dialog',{exact:true}).click();
  await page.getByRole('option').filter({hasText:'Live backend session'}).click();
  await expect(composer).toHaveValue('/thinking invalid');
+ await closeTools();
  await page.getByText('@Live backend session',{exact:true}).click();
  await page.getByRole('option').filter({hasText:'Created through imported dialog'}).click();
  await expect(composer).toHaveValue('New session draft remains local');
+ await openTools();
  if(!await plan.isVisible())await planSummary.click();
  await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
+ await openTools();
  const dashboardSummary=page.locator('summary').filter({hasText:'Session dashboard'});
  await dashboardSummary.click();
  const dashboard=page.getByRole('region',{name:'Session dashboard'});
@@ -210,6 +237,7 @@ try {
  await dashboardSummary.click();page.once('dialog',dialog=>dialog.accept());
  await dashboard.getByRole('button',{name:'Open Created through imported dialog',exact:true}).click();
  await expect(dashboard).toBeHidden();await expect(composer).toHaveValue('New session draft remains local');
+ await openTools();
  if(!await plan.isVisible())await planSummary.click();
  await expect(plan).toHaveValue('- [ ] Unsaved new-session plan');
  if(process.env.TAU_LIVE_AXE){
@@ -218,10 +246,15 @@ try {
    const details=region.locator('xpath=ancestor::details[1]');
    if(await details.count() && !(await details.evaluate(el=>el.open)))await details.locator('summary').click();
    await expect(region).toBeVisible();
-   const result=await new AxeBuilder({page}).include(selector).analyze();
+   console.log('Accessibility scan',selector);
+   // Run axe in the existing document: WebKit crashes when the builder's
+   // auxiliary frame is created beneath a native modal on tablet viewports.
+   await page.evaluate(axeSource);
+   const result=await page.evaluate(scope=>window.axe.run(document.querySelector(scope)),selector);
    expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
   }
  }
+ await closeTools();
  if(process.env.TAU_LIVE_OFFLINE){
   const offlineSession=new URL(page.url()).searchParams.get('session');
   await composer.fill('Draft across offline reload');
@@ -242,10 +275,12 @@ try {
   expect(new URL(page.url()).searchParams.get('session')).toBe(offlineSession);
  }
  if(token && process.env.TAU_LIVE_LOGIN_UI){
+  await openTools();
   await page.getByRole('button',{name:'Provider setup',exact:true}).click();
   if(process.env.TAU_LIVE_AXE){
    await expect(page.getByLabel('Model',{exact:true})).toBeEnabled();
-   const result=await new AxeBuilder({page}).include('[aria-labelledby="tau-provider-title"]').analyze();
+   await page.evaluate(axeSource);
+   const result=await page.evaluate(()=>window.axe.run(document.querySelector('[aria-labelledby="tau-provider-title"]')));
    expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
   }
   page.once('dialog',dialog=>dialog.accept());

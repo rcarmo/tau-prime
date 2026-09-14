@@ -138,6 +138,27 @@ try {
   await browser.close();browser=null;await stopChild(server);process.exit(0);
  }
  await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ if(process.env.TAU_REFERENCE_LAYOUT){
+  // Pinned Vibes 4337868 has no utility accordions in the conversation column.
+  await expect(page.locator('.app-shell > .container > details')).toHaveCount(0);
+  await expect(page.locator('.app-shell > .container > button').filter({hasText:'Provider setup'})).toHaveCount(0);
+  await page.getByTestId('session-switcher').click();
+  await page.getByRole('button',{name:'Session tools…',exact:true}).click();
+  const tools=page.getByRole('dialog',{name:'Session tools',exact:true});
+  await expect(tools).toBeVisible();
+  await tools.locator('summary').filter({hasText:'Plan'}).click();
+  await tools.getByLabel('Plan markdown').fill('- [ ] Retain tool-pane draft');
+  await page.getByRole('button',{name:'Close session tools',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toHaveCount(0);
+  await expect(page.getByTestId('session-switcher')).toBeFocused();
+  await page.getByTestId('session-switcher').click();
+  await page.getByRole('button',{name:'Session tools…',exact:true}).click();
+  await tools.locator('summary').filter({hasText:'Plan'}).click();
+  await expect(tools.getByLabel('Plan markdown')).toHaveValue('- [ ] Retain tool-pane draft');
+  await page.getByRole('button',{name:'Close session tools',exact:true}).click();
+  console.log('PASS reference conversation structure, utility access and retained Plan draft');
+  await browser.close();browser=null;await stopChild(server);process.exit(0);
+ }
  await expect(page.locator('[data-extension-slot="compose_above"]')).toContainText('Extension mounted: Tau');
  await page.evaluate(()=>{
   const target=document.querySelector('[data-extension-slot="timeline_before"]');
@@ -238,6 +259,18 @@ try {
  await expect(page.locator('.compose-queue-item')).toHaveCount(2);
  await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
  for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
+ const openTools=async()=>{
+  if(await page.getByRole('dialog',{name:'Session tools',exact:true}).count())return;
+  await page.getByTestId('session-switcher').click();
+  await page.getByRole('button',{name:'Session tools…',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toBeVisible();
+ };
+ const closeTools=async()=>{
+  await page.getByRole('button',{name:'Close session tools',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toHaveCount(0);
+  await expect(page.getByTestId('session-switcher')).toBeFocused();
+ };
+ await openTools();
  await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
  const metrics=page.getByRole('region',{name:'Runtime metrics'});
  await expect(metrics).toContainText('12.5%');await expect(metrics).toContainText('100.0 MiB');await expect(metrics).toContainText('Unavailable');
@@ -247,6 +280,7 @@ try {
   await mkdir(process.env.TAU_CAPTURE_DIR,{recursive:true});
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
+ await closeTools();
  const composer=page.locator('.compose-box textarea');
  const beforeCompletion=submitted.length;
  await composer.fill('/thi');
@@ -275,6 +309,8 @@ try {
  await page.getByRole('button',{name:'Extension navigate',exact:true}).click();
  await expect(page.getByText('Extension navigate accepted',{exact:true})).toBeVisible();
  await expect(composer).toHaveValue('Extension must preserve this draft');
+ await composer.fill('Branch switch keeps draft');
+ await openTools();
  await page.locator('summary').filter({hasText:'Session dashboard'}).click();
  const dashboard=page.getByRole('region',{name:'Session dashboard'});
  await expect(dashboard).toContainText('Page 1 of 2');
@@ -289,7 +325,6 @@ try {
  await expect(dashboard).toContainText('Page 1 of 2');
  await scan('[aria-label="Session dashboard"]');
  await page.locator('summary').filter({hasText:'Session dashboard'}).click();
- await composer.fill('Branch switch keeps draft');
  await page.locator('summary').filter({hasText:'Conversation branches'}).click();
  const branch=page.getByRole('button',{name:'Leaf leaf-b · depth 2',exact:true});
  page.once('dialog',dialog=>dialog.dismiss());await branch.click();expect(leafChanges).toEqual([]);
@@ -298,6 +333,7 @@ try {
  await expect(page.getByRole('button',{name:'Leaf leaf-b · depth 2 (active)',exact:true})).toBeDisabled();
  await expect(composer).toHaveValue('Branch switch keeps draft');
  await page.locator('summary').filter({hasText:'Conversation branches'}).click();
+ await closeTools();
  const approvals=page.getByRole('region',{name:'Tool approvals'});
  await expect(approvals).toContainText('echo fixture');
  await approvals.getByRole('button',{name:approvalLabel,exact:true}).click();
@@ -344,6 +380,7 @@ try {
  await cancel.click();
  await expect(page.locator('.tau-run-control button')).toHaveCount(0);
  expect(cancelled).toBe(true);
+ await openTools();
  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
  const setup=page.getByRole('dialog',{name:'Provider setup'});
  await expect(setup.getByLabel('Provider',{exact:true})).toHaveValue('test');
@@ -370,8 +407,9 @@ try {
  await setup.getByRole('button',{name:'Save provider',exact:true}).click();
  await expect(setup).toHaveCount(0);
  expect(await composer.evaluate(el=>!!el.closest('[inert]'))).toBe(false);
- await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
+ await expect(page.getByTestId('session-switcher')).toBeFocused();
  expect(configured).toEqual({provider:'test',model:'updated-model'});
+ await openTools();
  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
  await setup.getByLabel('Model',{exact:true}).fill('Discard this edit');
  page.once('dialog',dialog=>dialog.dismiss());
@@ -380,16 +418,17 @@ try {
  page.once('dialog',dialog=>dialog.accept());
  await setup.getByRole('button',{name:'Cancel',exact:true}).click();
  await expect(setup).toHaveCount(0);
- await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
+ await expect(page.getByTestId('session-switcher')).toBeFocused();
+ await openTools();
  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
  await expect(setup.getByLabel('Model',{exact:true})).not.toHaveValue('Discard this edit');
  await expect(setup.getByLabel('Model',{exact:true})).toBeEnabled();
  await setup.getByRole('button',{name:'Cancel',exact:true}).click();
  await expect(setup).toHaveCount(0);
  await expect(composer).toHaveValue('Keep rejected draft');
- await page.getByRole('button',{name:'Provider setup',exact:true}).focus();
+ await page.getByTestId('session-switcher').focus();
  await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent('keydown',{key:'k',ctrlKey:true,repeat:true,bubbles:true,cancelable:true})));
- await expect(page.getByRole('button',{name:'Provider setup',exact:true})).toBeFocused();
+ await expect(page.getByTestId('session-switcher')).toBeFocused();
  await page.keyboard.press('Control+k');
  await expect(composer).toBeFocused();
  await composer.fill('Matched');

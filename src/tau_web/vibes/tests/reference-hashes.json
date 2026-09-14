@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/rcarmo/vibes",
+  "revision": "4337868",
+  "files": {
+    "index.html": "570909d90b2db05f5e5db1efbccddc4f7566def3706f4fc7e6eaa62107f07b86",
+    "dist/app.js": "c715a35db86b3b2633de7411ae97704b08e5017f8b8fd0f9afab25deddc3d309",
+    "dist/app.css": "645efb510e3744aa8a0f120c5b59428357320d24b6b63b14b70a2ec3b16ce847"
+  }
+}

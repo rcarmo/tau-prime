@@ -765,3 +765,20 @@ browser-disconnect recovery journeys both pass after all type/lint changes.
 Artifacts/logs under /workspace/tmp/tau-vibes-396a252. Full Python 1323, project
 mypy 162 sources and Ruff clean at preceding checkpoint. Human/device acceptance
 remains distinct from software test fixes; no new failing automated gate observed.
+
+## Reference-alignment correction
+
+Prior functional completion did not establish UI alignment. Removed Tau utility
+accordions/provider button from the conversation column, moving utilities to
+session-menu Session tools dialog. Existing approvals/run status remain inline
+only when relevant. Tools close/reopen preserves Plan draft and restores focus.
+Pinned Vibes 4337868 index/bundle/CSS hashes in tests/reference-hashes.json;
+TAU_REFERENCE_STATIC can point to extracted pinned static tree. reference-layout
+compares exact shell/container/composer/textarea/workspace-handle geometry in
+both engines, 3 sizes, 2 themes: 12/12 pass. Timeline status fixture difference
+remains explicitly outside equality assertion. Screens under tmp/vibes-reference.
+Old UI fails 5-vs-0 utility accordion assertion; corrected structure passes.
+Migrated fixture/Axe matrix 12/12; installed real workflow matrix 12/12 with CSP.
+WebKit auxiliary-frame AxeBuilder crashed around native modal; same axe rules
+run directly in document pass, no CSP policy changes. 60 units/frontend lint and
+Python frontend/packaging tests pass. Wheel builds in tmp/tau-alignment identical.

@@ -1,12 +1,8 @@
+import { TauSessionTools } from './components/tau-session-tools.js';
 import { installTauWidgetActions } from './tau-widget-actions.js';
 import { activateTauExtensions } from './tau-extensions.js';
-import { TauDashboard } from './components/tau-dashboard.js';
-import { TauMeters } from './components/tau-meters.js';
-import { TauBranches } from './components/tau-branches.js';
 import { reduceTauDraft } from './tau-draft.js';
-import { TauMedia } from './components/tau-media.js';
 import { TauApprovals } from './components/tau-approvals.js';
-import { TauPlan } from './components/tau-plan.js';
 import { TauProviderSetup } from './components/tau-provider-setup.js';
 import { TauRunControl } from './components/tau-run-control.js';
 import { TauEventStream } from './tau-events.js';
@@ -741,6 +737,7 @@ function App() {
     const [deletingSession, setDeletingSession] = useState(null);
     const deletedSessionRef = useRef(false);
     const [creatingSession, setCreatingSession] = useState(false);
+    const [sessionToolsOpen, setSessionToolsOpen] = useState(false);
     const [providerSetupOpen, setProviderSetupOpen] = useState(false);
     const createdSessionRef = useRef(null);
     const createParentRef = useRef(null);
@@ -2668,13 +2665,6 @@ function App() {
                 <div data-extension-slot="timeline_after"></div>
                 <div data-extension-slot="dashboard"></div>
                 <div data-extension-slot="sidebar"></div>
-                <${TauDashboard} onSelect=${selectSession} />
-                <${TauMeters} />
-                <button type="button" class="compose-queue-btn" onClick=${()=>setProviderSetupOpen(true)}>Provider setup</button>
-                ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>setProviderSetupOpen(false)} />`}
-                ${selectedSession && html`<details><summary>Plan</summary><${TauPlan} key=${selectedSession} sessionId=${selectedSession} /></details>`}
-                ${selectedSession && html`<${TauBranches} key=${selectedSession} sessionId=${selectedSession} onSelected=${selectSession} />`}
-                ${selectedSession && html`<${TauMedia} key=${selectedSession} sessionId=${selectedSession} />`}
                 ${selectedSession && html`<${TauApprovals} key=${selectedSession} sessionId=${selectedSession} />`}
                 <${TauRunControl} key=${selectedSession} sessionId=${selectedSession} />
                 <${AgentStatus}
@@ -2691,6 +2681,7 @@ function App() {
                     onPanelExpandedChange=${handlePanelExpandedChange}
                 />
                 ${sessionPickerOpen && html`<${SessionPicker} sessions=${sessionOptions} refreshError=${sessionRefreshError} currentId=${selectedSession} onSelect=${async id => { if (sessionOptions.find(item => item.id === id)?.archived) { await updateSession(id, { archived: false }); await refreshSessions(); } await selectSession(id); }} onClose=${closeSessionPicker}
+                    onTools=${() => { setSessionPickerOpen(false); setSessionToolsOpen(true); }}
                     onCreate=${() => { createdSessionRef.current = null; createParentRef.current = null; setCreatingSession(true); }}
                     onRename=${id => setRenamingSession(sessionOptions.find(item => item.id === id))}
                     onArchive=${async (id, archived) => {
@@ -2751,7 +2742,9 @@ function App() {
                     onToggleNotifications=${handleToggleNotifications}
                 />
                 <div data-extension-slot="compose_below"></div>
-                ${renamingSession && html`<${SessionNameDialog} key=${renamingSession.id} name=${renamingSession.name} onClose=${() => setRenamingSession(null)} onSave=${async name => { await updateSession(renamingSession.id, { name }); await refreshSessions(); }} />`}
+                ${sessionToolsOpen && html`<${TauSessionTools} sessionId=${selectedSession} onSelect=${selectSession} onClose=${()=>{setSessionToolsOpen(false);requestAnimationFrame(()=>document.querySelector('[data-testid="session-switcher"]')?.focus());}} onProvider=${()=>{setSessionToolsOpen(false);setProviderSetupOpen(true);}} />`}
+            ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>{setProviderSetupOpen(false);requestAnimationFrame(()=>document.querySelector('[data-testid="session-switcher"]')?.focus());}} />`}
+            ${renamingSession && html`<${SessionNameDialog} key=${renamingSession.id} name=${renamingSession.name} onClose=${() => setRenamingSession(null)} onSave=${async name => { await updateSession(renamingSession.id, { name }); await refreshSessions(); }} />`}
             ${creatingSession && html`<${SessionNameDialog} creating=${true} parentName=${createParentRef.current ? (sessionOptions.find(item => item.id === createParentRef.current)?.name || createParentRef.current) : null} onClose=${() => setCreatingSession(false)} onSave=${async name => { if (!createdSessionRef.current) { const result = await createSession(name, createParentRef.current); createdSessionRef.current = result.session.id; } await refreshSessions(); await selectSession(createdSessionRef.current); }} />`}
             ${deletingSession && html`<${SessionDeleteDialog} key=${deletingSession.id} name=${deletingSession.name} onClose=${() => setDeletingSession(null)} onDelete=${async () => { if (!deletedSessionRef.current) { await deleteSession(deletingSession.id); deletedSessionRef.current = true; } if (deletingSession.id === selectedSession) await selectSession('default'); await refreshSessions(); }} />`}
             <${ConnectionStatus} status=${connectionStatus} />

@@ -87,6 +87,7 @@
   "js/components/tau-plan.js",
   "js/components/tau-provider-setup.js",
   "js/components/tau-run-control.js",
+  "js/components/tau-session-tools.js",
   "js/components/terminal-panel.js",
   "js/components/timeline.js",
   "js/components/usage.js",
