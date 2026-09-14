@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import json
 from types import UnionType
-from typing import Any, get_args, get_origin, get_type_hints
+from typing import Any, cast, get_args, get_origin, get_type_hints
 
 
 class ValidationError(ValueError):
@@ -151,10 +151,7 @@ class BaseModel:
                 raw = remaining.pop(name)
             elif hasattr(self.__class__, name):
                 default = getattr(self.__class__, name)
-                if isinstance(default, _FieldInfo):
-                    raw = default.value()
-                else:
-                    raw = copy.deepcopy(default)
+                raw = default.value() if isinstance(default, _FieldInfo) else copy.deepcopy(default)
             else:
                 raise ValidationError(f"Missing required field: {name}")
             setattr(self, name, _coerce_value(annotation, raw))
@@ -222,15 +219,11 @@ class BaseModel:
         return f"{self.__class__.__name__}({args})"
 
 
-class TypeAdapter:
-    def __class_getitem__(cls, item: Any) -> type[TypeAdapter]:
-        del item
-        return cls
-
+class TypeAdapter[AdapterValue]:
     def __init__(self, annotation: Any) -> None:
         self.annotation = annotation
 
-    def validate_json(self, value: str | bytes) -> Any:
+    def validate_json(self, value: str | bytes) -> AdapterValue:
         try:
             data = json.loads(value)
         except Exception as exc:  # noqa: BLE001
@@ -238,9 +231,9 @@ class TypeAdapter:
         result = _coerce_value(self.annotation, data)
         if isinstance(result, dict):
             raise ValidationError("Could not match union type")
-        return result
+        return cast(AdapterValue, result)
 
-    def dump_json(self, value: Any, **kwargs: Any) -> bytes:
+    def dump_json(self, value: AdapterValue, **kwargs: Any) -> bytes:
         indent = kwargs.get("indent")
         return json.dumps(
             _to_plain(value), separators=None if indent else (",", ":"), indent=indent

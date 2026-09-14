@@ -702,3 +702,8 @@ streamed edit line-number result checked as integer. Coding tools suite 25 pass;
 mypy decreases 48 to 45 errors (10 files). Ruff on tools.py exposes existing
 lint failures elsewhere in that file; not claimed clean. Full lint/type gates
 remain open and must be addressed rather than suppressed.
+
+Pydantic shim typing: TypeAdapter now declares a generic validated return/value
+type using Python type parameters; runtime coercion remains unchanged. Session
+JSONL Any/generic errors removed. 110 session/export/coding-session tests pass;
+shim Ruff clean. Mypy now 43 errors in 9 files; remaining lint/type gate open.
