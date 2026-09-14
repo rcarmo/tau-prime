@@ -559,3 +559,22 @@ capability unsupported by Tau's session API. f335896 hides that invalid action;
 existing Tau leaf selection has real-backend browser coverage. No backend feature
 is removed or silently substituted. New child-session creation would require a
 separate feature request, not completion of this replacement parity plan.
+
+## Final automated delivery audit at 70738f4
+
+Clean worktree; all 166 tau_web files packaged in delivered 75926fa wheel match
+current checkout bytes. Retired frontend absent. Changes since artifact revision
+are browser-test/docs only; no runtime rebuild required. Reproducible build,
+installed online matrix, Chromium installed offline journey, both-engine outage
+fallback/upgrade, and source regressions have explicit evidence above.
+
+Unfinished acceptance gates are not build failures:
+- No OpenRouter credential available in environment/keychain; live provider run,
+  live tools/approval and disconnect recovery cannot be verified yet.
+- Emulated Chromium touch passes; physical-device gestures and paired aesthetic
+  acceptance require an actual reviewer/device. Automated scans are not approval.
+- Independent delegated reviews timed out; no independent sign-off claimed.
+
+Overall goal remains incomplete until required external acceptance is supplied
+or explicitly scoped by the user. Do not loop on more passing fixture tests as a
+substitute for those missing gates.
