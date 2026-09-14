@@ -736,3 +736,7 @@ Manager adapter typing (first pass): signature introspection now checks callable
 objects, and sync/async list results use covariant Sequence before copying to a
 list. 13 live/SQLite manager tests and Ruff pass. Mypy now 18 errors in 3 files;
 dynamic keyword dispatch remains to type without dropping legacy compatibility.
+
+CLI session-list typing: read-only property protocol accepts immutable records
+from both managers; contextual list construction avoids invariant list mismatch.
+63 CLI tests and Ruff pass. Mypy now 17 errors in 2 files.

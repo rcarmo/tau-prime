@@ -115,10 +115,17 @@ app = typer.Typer(
 
 
 class _RenderableSessionRecord(Protocol):
-    id: str
-    title: str | None
-    model: str
-    cwd: Path
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def title(self) -> str | None: ...
+
+    @property
+    def model(self) -> str: ...
+
+    @property
+    def cwd(self) -> Path: ...
 
 
 async def _list_live_sessions() -> list[_RenderableSessionRecord]:
@@ -126,7 +133,7 @@ async def _list_live_sessions() -> list[_RenderableSessionRecord]:
     from tau_coding.live_session_manager import live_session_manager_context, manager_list_sessions
 
     async with live_session_manager_context(None) as manager:
-        return await manager_list_sessions(manager)
+        return [record for record in await manager_list_sessions(manager)]
 
 
 def providers_command() -> None:
