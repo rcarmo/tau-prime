@@ -604,7 +604,7 @@ async def test_run_routes_validate_requests_and_report_missing_or_unregistered_r
             unregistered = await response.json()
 
         assert unregistered["error"]["code"] == "conflict"
-        assert "not registered" in unregistered["error"]["message"]
+        assert "Unknown provider: test" in unregistered["error"]["message"]
     finally:
         run_release.set()
         await _wait_for_run(services, "validation-run")

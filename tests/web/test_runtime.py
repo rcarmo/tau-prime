@@ -165,6 +165,7 @@ async def _open_runtime(
     *,
     session_id: str = "alpha",
     owned: bool = False,
+    lazy: bool = False,
     event_projector: EventProjectorCallback | None = None,
 ) -> _RuntimeHarness:
     database = SqliteDatabase(tmp_path / "tau.sqlite3")
@@ -180,6 +181,10 @@ async def _open_runtime(
     queues = QueueRepository(database)
     audit = AuditRepository(database)
     media = MediaRepository(database)
+
+    async def load_session(_: str) -> _FakeSession:
+        return session
+
     runtime = DurableAgentRuntime(
         AsyncAgentPool(max_concurrency=1),
         runs,
@@ -187,8 +192,10 @@ async def _open_runtime(
         audit,
         event_projector=event_projector,
         media=media,
+        session_loader=load_session if lazy else None,
     )
-    runtime.register_session(session_id, session, owned=owned)
+    if not lazy:
+        runtime.register_session(session_id, session, owned=owned)
     return _RuntimeHarness(
         database=database,
         runtime=runtime,
@@ -811,3 +818,20 @@ async def test_runtime_shutdown_drains_driver_tasks_and_closes_owned_sessions(
         assert await _transition_statuses(harness) == ["pending", "cancelled"]
     finally:
         await harness.database.close()
+
+
+@pytest.mark.anyio
+async def test_runtime_lazily_loads_durable_session_and_reuses_owned_agent(tmp_path: Path) -> None:
+    session = _FakeSession(
+        prompt_scripts=[_Script(events=(AgentStartEvent(), AgentEndEvent()))] * 2
+    )
+    harness = await _open_runtime(tmp_path, session, lazy=True)
+    try:
+        first = await harness.runtime.submit_prompt("alpha", "first")
+        await first.wait()
+        second = await harness.runtime.submit_prompt("alpha", "second")
+        await second.wait()
+        assert session.prompt_calls == ["first", "second"]
+    finally:
+        await harness.aclose()
+    assert session.close_calls == 1

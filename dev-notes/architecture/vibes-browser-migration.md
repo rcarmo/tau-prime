@@ -599,3 +599,15 @@ from durable session metadata/storage before run/queue submission, preserving
 approval callbacks, Plan tools, provider config and ownership/shutdown semantics.
 Then rerun real provider/browser/tools/reconnect and regenerate installed wheel.
 Test output retained at /workspace/tmp/provider-live-chrom.log. No completion claim.
+
+Runtime lazy-loading fix: DurableAgentRuntime optionally initializes unregistered
+sessions under a lock, registers ownership and approval callback, and reuses the
+agent. Web services use CodingSessionFactory with durable storage, provider/model/
+thinking metadata and Plan hooks. Regression verifies sequential reuse and one
+owned close. 278 web tests and changed-file Ruff checks pass. Previous orphan
+route expectation updated: invalid provider now fails provider validation rather
+than unconditional unregistered-session error.
+Live browser now reaches agent execution/retries, but local llama endpoint refuses
+connections (direct curl also fails); no successful live tool result claimed.
+Provider harness now awaits selected session and reports run/approval states.
+Broader model-change/reload/queue lifecycle review and full suite remain pending.

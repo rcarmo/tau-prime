@@ -10,7 +10,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Self
 
 from tau_agent import AgentTool
-from tau_coding.agent_pool import AsyncAgentPool
+from tau_coding.agent_pool import AsyncAgentPool, CodingSessionLike
+from tau_coding.coding_session_factory import (
+    CodingSessionFactory,
+    CodingSessionFactoryConfig,
+    CodingSessionFactoryRequest,
+)
+from tau_coding.provider_config import load_provider_settings
+from tau_coding.thinking import normalize_thinking_level
 from tau_web.approvals import ToolApprovalManager
 from tau_web.baseline_extensions.meters import HostMetersSampler
 from tau_web.baseline_extensions.session_dashboard import (
@@ -22,6 +29,7 @@ from tau_web.config import WebConfig
 from tau_web.events import EventProjector, WebEventEnvelope, build_invalidation_envelope
 from tau_web.extensions import ExtensionDirectory, SqliteExtensionStorageBackend
 from tau_web.media_tools import create_attachment_tool
+from tau_web.plan import create_plan_factory_hooks
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
 from tau_web.sqlite.repositories import (
@@ -137,6 +145,34 @@ class TauWebServices:
                     )
 
             unsubscribe = projector.subscribe(publish_event)
+
+            async def load_runtime_session(session_id: str) -> CodingSessionLike:
+                record = await sessions.get(session_id)
+                if record is None:
+                    raise ValueError(f"Unknown session: {session_id}")
+                workspace = await sessions.get_workspace(record.workspace_id)
+                if workspace is None:
+                    raise ValueError(f"Unknown workspace: {record.workspace_id}")
+                tools, context = create_plan_factory_hooks(plans, broker=broker)
+                return await CodingSessionFactory(
+                    config=CodingSessionFactoryConfig(
+                        thinking_level=normalize_thinking_level(record.thinking_level)
+                        if record.thinking_level
+                        else None,
+                        extra_tools_factory=tools,
+                        turn_context_provider_factory=context,
+                    ),
+                    provider_settings=load_provider_settings(),
+                ).load(
+                    CodingSessionFactoryRequest(
+                        cwd=workspace.root_path,
+                        storage=SqliteSessionStorage(database, session_id),
+                        session_id=session_id,
+                        provider_name=record.provider_name,
+                        model=record.model,
+                    )
+                )
+
             runtime = DurableAgentRuntime(
                 pool,
                 runs,
@@ -145,6 +181,7 @@ class TauWebServices:
                 event_projector=projector.project,
                 media=media,
                 approvals=approvals,
+                session_loader=load_runtime_session,
             )
             router = ChatRouter(sessions, deliveries, runtime, pool)
             return cls(

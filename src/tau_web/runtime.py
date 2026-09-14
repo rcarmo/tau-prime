@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from tau_agent import UserAttachment, UserMessage
@@ -16,6 +16,7 @@ from tau_coding.agent_pool import (
     PoolSessionSnapshot,
     RunHandle,
     RunResult,
+    UnknownSessionError,
 )
 from tau_coding.agent_pool import (
     RunStatus as PoolRunStatus,
@@ -69,8 +70,11 @@ class DurableAgentRuntime:
         event_projector: EventProjectorCallback | None = None,
         media: MediaRepository | None = None,
         approvals: ToolApprovalManager | None = None,
+        session_loader: Callable[[str], Awaitable[CodingSessionLike]] | None = None,
     ) -> None:
         self._pool = pool
+        self._session_loader = session_loader
+        self._session_load_lock = asyncio.Lock()
         self._runs = runs
         self._queues = queues
         self._audit = audit
@@ -271,6 +275,13 @@ class DurableAgentRuntime:
         )
         await self._append_transition(created, previous_status=None)
         try:
+            if self._session_loader is not None:
+                async with self._session_load_lock:
+                    try:
+                        self._pool.snapshot(session_id)
+                    except UnknownSessionError:
+                        session = await self._session_loader(session_id)
+                        self.register_session(session_id, session, owned=True)
             pool_handle = submitter(created.run_id)
         except Exception as exc:
             failed = await self._runs.update_status(

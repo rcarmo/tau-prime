@@ -13,10 +13,22 @@ try{
  browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();
  const context=await browser.newContext();await context.addInitScript(t=>localStorage.setItem('tau.web.authToken',t),token);
  const page=await context.newPage();await page.goto(base+'/?session='+session.session_id);
- const composer=page.locator('.compose-box textarea');await expect(composer).toBeVisible();
+ await expect(page.getByText('@Local provider validation',{exact:true})).toBeVisible();
+ const composer=page.locator('.compose-box textarea');await expect(composer).toBeEnabled();
  await composer.fill('Use the read tool to read README.md in the current workspace. Then report the heading verbatim and finish with LOCAL_PROVIDER_OK. Do not modify any files.');await composer.press('Enter');
+ console.log('After send',await page.locator('body').innerText());
  let runs;
- await expect.poll(async()=>{runs=(await request(`/api/sessions/${session.session_id}/runs`)).runs;return runs.some(r=>['completed','failed','cancelled'].includes(r.status));},{timeout:180000,intervals:[500,1000]}).toBe(true);
+ let lastState='';
+ await expect.poll(async()=>{
+  runs=(await request(`/api/sessions/${session.session_id}/runs`)).runs;
+  const approvals=await request(`/api/sessions/${session.session_id}/approvals`);
+  const state=JSON.stringify({runs,approvals});if(state!==lastState){console.log(state);lastState=state;}
+  for(const approval of approvals.approvals||[]){
+   if(!['read','read_file'].includes(approval.tool_name))throw new Error(`Unexpected tool requiring approval: ${approval.tool_name}`);
+   await page.getByRole('button',{name:`Allow ${approval.tool_name}`,exact:true}).click();
+  }
+  return runs.some(r=>['completed','failed','cancelled'].includes(r.status));
+ },{timeout:180000,intervals:[500,1000]}).toBe(true);
  const timeline=await request(`/api/sessions/${session.session_id}/timeline?limit=200`);
  console.log(JSON.stringify({engine:process.env.TAU_LIVE_ENGINE||'chromium',runs,timeline},null,2));
  expect(runs[0].status).toBe('completed');
