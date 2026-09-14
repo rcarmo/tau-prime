@@ -41,7 +41,7 @@ async def resolve_approval(request: web.Request) -> web.Response:
     approval_id = request.match_info["approval_id"]
     resolved = await services.approvals.resolve(
         approval_id,
-        decision,
+        "allow" if decision == "allow" else "deny",
         actor_id=request.remote,
         request_id=request.get(REQUEST_ID_KEY),
     )

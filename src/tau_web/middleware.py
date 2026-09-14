@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 from aiohttp import web
+from aiohttp.typedefs import Middleware
 from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 
@@ -28,7 +29,6 @@ _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
 _REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 
 Handler = Callable[[Request], Awaitable[StreamResponse]]
-Middleware = Callable[[Request, Handler], Awaitable[StreamResponse]]
 
 
 def build_middlewares(config: WebConfig) -> tuple[Middleware, ...]:

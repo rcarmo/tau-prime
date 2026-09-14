@@ -717,3 +717,8 @@ Provider typing fixes: Anthropic payload list is contextually typed as JSON valu
 Copilot compatible-provider path validates narrowed config before constructing
 client. No blanket casts/ignores. 59 provider/config/history tests and file Ruff
 pass. Mypy now 32 errors across 6 files; remaining strict checks pending.
+
+Web typing: use aiohttp's keyword-compatible Middleware protocol instead of an
+unnamed positional Callable alias; pass explicitly narrowed allow/deny decision
+after existing validation. All 286 web tests and changed-file Ruff pass. Mypy
+now 30 errors in 4 files, none in tau_web; project-wide gate still open.
