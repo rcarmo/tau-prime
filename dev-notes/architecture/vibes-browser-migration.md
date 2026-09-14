@@ -824,3 +824,20 @@ Evidence lanes:
 Remaining: full-host/populated deployed visual acceptance and detailed HUD
 behavior comparison. Do not infer full parity from shared CSS or these passes.
 Unfinished thinking/tool work remains separate and is not in deployed bundle.
+
+### Mobile HUD correction deployed
+
+Source `e0c7682`, generated assets `d80e450`: current Piclaw <=600px compact
+CPU/RAM summary (swap only when active), rather than desktop rows on phones.
+Served app SHA-256 now
+`b9a9f9c60fbfd6b2e30cb31261e71463834644bd6552c3888f398a9fdbe7e1ea`.
+Chromium/WebKit full-app phone smoke and installed Plan journeys passed before
+install. Deployed desktop/phone toggle and compact-summary checks passed after
+restart. One pending follow-up remains preserved; database backup refreshed.
+
+Remaining acceptance gap: existing demo Plan is empty. Deployed captures do not
+prove populated Plan visual parity. Controlled populated fixtures execute pinned
+reference code, but share Tau base CSS and editor vendor; they are not complete
+Piclaw-host comparisons. Human visual acceptance is not recorded. Goal remains
+open for this gap; do not count background queued-message/thinking/tool defects
+as completed by this sidebar deployment.

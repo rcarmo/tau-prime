@@ -20,6 +20,7 @@ for(const engine of [chromium,webkit]){
    if(size.width<1024){const hide=page.getByRole('button',{name:'Hide workspace',exact:true});if(await hide.isVisible())await hide.click();}
    const meter=page.getByRole('button',{name:'Collapse system meters',exact:true});
    await meter.click();await page.getByRole('button',{name:'Expand system meters',exact:true}).click();
+   if(size.width<=600)await page.locator('.system-meters-compact-summary').waitFor();
    await page.getByRole('button',{name:'Open plan sidebar',exact:true}).click();
    await page.waitForFunction(width=>document.querySelector('.plan-sidebar-panel').getBoundingClientRect().right<=width+1,size.width);
    await page.screenshot({path:`/workspace/tmp/tau-demo-evidence/${engine.name()}-${size.width}-plan.png`});
