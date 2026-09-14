@@ -656,3 +656,8 @@ probe still connection refused; live tool success/recovery not verified. Attache
 pass with checkout PYTHONPATH disabled. Artifact/checksum in tmp/tau-vibes-269a82a
 supersede old runtime wheel. These journeys do not supply a successful local
 provider/tool run; endpoint outage remains a separate unresolved gate.
+
+Metadata failure retention regression: rejected durable-change callback leaves
+loaded agent open; subsequent run reuses it, then shutdown closes exactly once.
+Runtime suite 21 pass, Ruff passes. No production changes. Local provider direct
+probe still refuses connections, so live completion remains unavailable.

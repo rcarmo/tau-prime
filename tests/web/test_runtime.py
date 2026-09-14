@@ -986,3 +986,25 @@ async def test_metadata_change_rejects_active_run_before_writing(tmp_path: Path)
     finally:
         release.set()
         await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_failed_metadata_change_preserves_loaded_agent(tmp_path: Path) -> None:
+    session = _FakeSession(
+        prompt_scripts=[_Script(events=(AgentStartEvent(), AgentEndEvent()))] * 2
+    )
+    harness = await _open_runtime(tmp_path, session, lazy=True)
+
+    async def conflict() -> None:
+        raise RuntimeError("Fixture revision conflict")
+
+    try:
+        await (await harness.runtime.submit_prompt("alpha", "before conflict")).wait()
+        with pytest.raises(RuntimeError, match="revision conflict"):
+            await harness.runtime.change_session_metadata("alpha", conflict)
+        assert session.close_calls == 0
+        await (await harness.runtime.submit_prompt("alpha", "after conflict")).wait()
+        assert session.prompt_calls == ["before conflict", "after conflict"]
+    finally:
+        await harness.aclose()
+    assert session.close_calls == 1
