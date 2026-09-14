@@ -170,6 +170,12 @@ export const saveTauPlan = (id, markdown, revision) => tau.savePlan(id, markdown
 export const getTauOnboarding = () => tau.onboarding();
 export const configureTauProvider = settings => tau.configureProvider(settings);
 
+export async function abortTauSession(sessionId, runId) {
+    const state = await tau.status(sessionId);
+    if (!state.active_turns.some(turn => turn.turn_id === runId)) throw new Error('Active turn changed; abort was not sent');
+    return tau.extensionRequest(`/api/runs/${encodeURIComponent(runId)}/abort`, {method: 'POST', body: {}});
+}
+
 export async function cancelTauRun(runId) {
     return tau.cancelRun(runId);
 }

@@ -1,5 +1,5 @@
 import {html,useEffect,useState} from '../vendor/preact-htm.js';
-import {getAgentStatus,cancelTauRun} from '../api.js';
+import {getAgentStatus,abortTauSession} from '../api.js';
 
 /** Tau-specific cancellation; never infer acknowledgement from a local click. */
 export function TauRunControl({sessionId}) {
@@ -27,15 +27,15 @@ export function TauRunControl({sessionId}) {
         if(!run||pending)return;
         setPending(true);setError('');
         try{
-            const result=await cancelTauRun(run.turn_id);
+            const result=await abortTauSession(sessionId,run.turn_id);
             if(!result.accepted && ['pending','running'].includes(result.run?.status)) throw new Error('Tau did not accept cancellation');
             const status=await getAgentStatus(sessionId);
             setRun(status.active_turns.at(-1)||null);
         }catch(e){setError(e.message);}
         finally{setPending(false);}
     };
-    return html`<div class="tau-run-control" aria-live="polite">
-        ${run && html`<button type="button" class="compose-queue-btn" disabled=${pending} onClick=${cancel}>${pending?'Cancelling…':'Cancel run'}</button>`}
+    return html`
+        ${run && html`<button type="button" class="icon-btn send-btn abort-mode" data-testid="stop-button" aria-label="Cancel current turn" title="Cancel current turn" disabled=${pending} onClick=${cancel}><span class="compose-submit-spinner" aria-hidden="true"><svg class="compose-submit-spinner-svg" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle class="compose-submit-spinner-ring" cx="12" cy="12" r="5.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect class="compose-submit-spinner-stop" x="10" y="10" width="4" height="4" rx="0.65" fill="currentColor"/></svg></span></button>`}
         ${error && html`<span role="alert">${error}</span>`}
-    </div>`;
+    `;
 }

@@ -1236,14 +1236,17 @@ export function ComposeBox({
                             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                             <input type="file" multiple hidden onChange=${handleFileChange} />
                         </label>
+                        <div class="compose-send-stack">
                         <${TauRunControl} key=${sessionId} sessionId=${sessionId} />
                         <button type="button" class="icon-btn send-btn"
                             onClick=${() => handleSubmit('auto')}
                             disabled=${!canSend}
+                            data-testid="send-button"
                             title="Send (Enter); steer with Ctrl/Cmd+Enter"
                         >
                             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                         </button>
+                        </div>
                     `}
                 </div>
                 </div>

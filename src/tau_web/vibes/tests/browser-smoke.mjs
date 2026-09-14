@@ -9,7 +9,7 @@ const server=spawn('bun',['dev-server.js'],{cwd:new URL('..',import.meta.url),en
 const engine=process.env.TAU_SMOKE_ENGINE || 'chromium';
 let browser;
 try {
- browser=await ({chromium,webkit}[engine]).launch();
+ browser=await ({chromium,webkit}[engine]).launch({headless:!process.env.TAU_SMOKE_HEADED});
  for(let i=0;i<50;i++){requireRunning(server);try{await fetch('http://127.0.0.1:8893/');break;}catch{await new Promise(r=>setTimeout(r,100));}}
  const size=process.env.TAU_SMOKE_SIZE || (process.env.TAU_SMOKE_PHONE?'phone':'desktop');
  const viewport={phone:{width:390,height:844},tablet:{width:820,height:1180},desktop:{width:1440,height:900}}[size];
@@ -99,8 +99,10 @@ try {
    }
    data={default_provider:'test',default_model:'fixture'};
   }
-  else if(url.pathname==='/api/runs/cancel-fixture/cancel') {
+  else if(url.pathname==='/api/runs/cancel-fixture/abort') {
    expect(route.request().method()).toBe('POST');
+   expect(route.request().postDataJSON()).toEqual({});
+   expect(route.request().headers()['x-tau-csrf']).toBe('1');
    cancelled=true;activeRun=false;data={accepted:true,run:{status:'cancelled'}};
   }
   else if(url.pathname==='/api/sessions/smoke/runs') {
@@ -381,12 +383,15 @@ try {
  expect(uploads).toBe(1);
  expect(submitted[3].content).toContain('[media:uploaded-fixture]');
  await composer.fill('Keep rejected draft');
+ await expect(page.getByTestId('stop-button')).toHaveCount(0);
  activeRun=true;
- const cancel=page.getByRole('button',{name:'Cancel run',exact:true});
- await expect(page.locator('.compose-box').getByRole('button',{name:'Cancel run',exact:true})).toBeVisible();
+ const cancel=page.getByRole('button',{name:'Cancel current turn',exact:true});
+ await expect(page.locator('.compose-box').getByRole('button',{name:'Cancel current turn',exact:true})).toBeVisible();
  await expect(cancel).toBeVisible();
+ await expect(page.locator('.compose-box .compose-send-stack .send-btn.abort-mode[data-testid="stop-button"] .compose-submit-spinner')).toBeVisible();
+ await expect(page.locator('.compose-send-stack [data-testid="send-button"]')).toBeVisible();
  await cancel.click();
- await expect(page.locator('.tau-run-control button')).toHaveCount(0);
+ await expect(page.getByTestId('stop-button')).toHaveCount(0);
  expect(cancelled).toBe(true);
  await openTools();
  await page.getByRole('button',{name:'Provider setup',exact:true}).click();
