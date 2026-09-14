@@ -617,3 +617,8 @@ Lazy initialization recovery checkpoint: full Python suite at 2bd553e passes
 prompt execution; second submission initializes successfully and completes,
 owned agent closes once. Runtime suite now 16 pass; Ruff passes. Local llama
 endpoint still refuses direct connections; successful provider run remains blocked.
+
+Concurrent lazy-load regression: two first submissions overlap while loader is
+blocked; loader called once, pool serializes both prompts, owned session closes
+once. Runtime suite 17 pass and Ruff pass. Pool queues competing submissions;
+it does not reject the second as busy (correcting initial investigation wording).

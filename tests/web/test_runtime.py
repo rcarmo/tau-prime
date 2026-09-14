@@ -864,3 +864,38 @@ async def test_failed_lazy_initialization_allows_retry(tmp_path: Path) -> None:
     finally:
         await harness.aclose()
     assert session.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_concurrent_first_submissions_initialize_session_once(tmp_path: Path) -> None:
+    session = _FakeSession(
+        prompt_scripts=[_Script(events=(AgentStartEvent(), AgentEndEvent()))] * 2
+    )
+    harness = await _open_runtime(tmp_path, session, lazy=True)
+    loading = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def delayed_load(session_id: str) -> _FakeSession:
+        nonlocal calls
+        assert session_id == "alpha"
+        calls += 1
+        loading.set()
+        await release.wait()
+        return session
+
+    harness.runtime._session_loader = delayed_load
+    try:
+        first = asyncio.create_task(harness.runtime.submit_prompt("alpha", "first"))
+        await asyncio.wait_for(loading.wait(), timeout=1)
+        second = asyncio.create_task(harness.runtime.submit_prompt("alpha", "second"))
+        await asyncio.sleep(0)
+        release.set()
+        handles = await asyncio.gather(first, second)
+        await asyncio.gather(*(handle.wait() for handle in handles))
+        assert calls == 1
+        assert session.prompt_calls == ["first", "second"]
+    finally:
+        release.set()
+        await harness.aclose()
+    assert session.close_calls == 1
