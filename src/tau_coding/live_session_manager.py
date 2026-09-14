@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import cast
@@ -30,6 +30,8 @@ async def manager_result[T](result: T | Awaitable[T]) -> T:
 
 def _manager_supports_parameter(manager_call: object, parameter_name: str) -> bool:
     """Return whether a manager call accepts one keyword parameter."""
+    if not callable(manager_call):
+        return False
     try:
         signature = inspect.signature(manager_call)
     except (TypeError, ValueError):
@@ -42,6 +44,8 @@ def _manager_supports_parameter(manager_call: object, parameter_name: str) -> bo
 
 def _manager_keyword_arguments(manager_call: object, **kwargs: object) -> dict[str, object]:
     """Filter kwargs down to those accepted by one manager call."""
+    if not callable(manager_call):
+        raise TypeError("Session manager operation must be callable")
     try:
         signature = inspect.signature(manager_call)
     except (TypeError, ValueError):
@@ -66,9 +70,12 @@ async def manager_list_sessions(
 ) -> list[CodingSessionRecordLike]:
     """Return session records from sync or async managers."""
     list_sessions = manager.list_sessions
+    result: Sequence[CodingSessionRecordLike] | Awaitable[Sequence[CodingSessionRecordLike]]
     if cwd is None or not _manager_supports_parameter(list_sessions, "cwd"):
-        return list(await manager_result(list_sessions()))
-    return list(await manager_result(list_sessions(cwd)))
+        result = list_sessions()
+    else:
+        result = list_sessions(cwd)
+    return list(await manager_result(result))
 
 
 async def manager_get_session(

@@ -731,3 +731,8 @@ TUI optional credential guards: login/OAuth/logout do not pass absent credential
 names to store; stored-provider list excludes credentialless entries; startup
 falls back to configured default when resumed provider is absent. 223 TUI tests
 and file Ruff pass. Mypy now 21 errors in 3 files; remaining checks open.
+
+Manager adapter typing (first pass): signature introspection now checks callable
+objects, and sync/async list results use covariant Sequence before copying to a
+list. 13 live/SQLite manager tests and Ruff pass. Mypy now 18 errors in 3 files;
+dynamic keyword dispatch remains to type without dropping legacy compatibility.
