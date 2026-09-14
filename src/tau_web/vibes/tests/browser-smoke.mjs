@@ -87,7 +87,7 @@ try {
   else if(url.pathname==='/api/sessions/smoke/branches/select') {
    leafChanges.push(route.request().postDataJSON());selectedLeaf=leafChanges.at(-1).leaf_entry_id;data={session,leaf_entry_id:selectedLeaf};
   }
-  else if(url.pathname==='/api/sessions/smoke/plan') data={markdown:'',revision:null};
+  else if(/^\/api\/sessions\/[^/]+\/plan$/.test(url.pathname)) data={markdown:'- [x] Reference inspected\n- [-] Verify sidebar\n- [ ] Deploy',revision:1};
   else if(url.pathname==='/api/search') {
    if(rejectSearch)return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'Fixture invalid search'})});
    data={results:[{entity_type:'message',entity_id:'1',session_id:searchSession,text:'Matched search fixture'}]};
@@ -287,6 +287,15 @@ try {
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
  await closeTools();
+ await page.getByRole('button',{name:'Open plan sidebar',exact:true}).click();
+ await expect(page.locator('.plan-sidebar-cm-text-current')).toHaveText('Verify sidebar');
+ await expect(page.locator('.plan-sidebar-progress-percent')).toHaveText('33%');
+ await page.waitForFunction(width=>document.querySelector('.plan-sidebar-panel').getBoundingClientRect().right<=width+1,viewport.width);
+ const planPanel=await page.locator('.plan-sidebar-panel').boundingBox();
+ expect(planPanel.x).toBeGreaterThanOrEqual(0);
+ expect(planPanel.x+planPanel.width).toBeLessThanOrEqual(viewport.width+1);
+ if(process.env.TAU_CAPTURE_DIR)await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-plan.png`,fullPage:true});
+ await page.getByRole('button',{name:'Close plan sidebar',exact:true}).click();
  const composer=page.locator('.compose-box textarea');
  await expect(page.getByRole('button',{name:'Open model picker',exact:true})).toBeVisible();
  await expect(page.getByRole('img',{name:'Context usage unavailable',exact:true})).toBeVisible();
