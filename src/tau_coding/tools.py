@@ -376,7 +376,10 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
 
                 first_changed_line = _line_number_at_offset(base_content, edit_spans[0][0])
             else:
-                first_changed_line = streaming_result["first_changed_line"]
+                changed_line = streaming_result["first_changed_line"]
+                if not isinstance(changed_line, int):
+                    raise TypeError("Streaming edit returned a non-integer line number")
+                first_changed_line = changed_line
         return AgentToolResult(
             tool_call_id="",
             name="edit",
@@ -470,7 +473,7 @@ def create_python_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
                 sys.executable,
                 "-c",
                 code,
-                *raw_args,
+                *(item for item in raw_args if isinstance(item, str)),
                 cwd=root,
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
@@ -600,7 +603,7 @@ def create_pytest_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
         if signal is not None and signal.is_cancelled():
             raise ToolInputError("pytest execution cancelled")
 
-        pytest_args = _linear_pytest_args(tuple(raw_args))
+        pytest_args = _linear_pytest_args(tuple(item for item in raw_args if isinstance(item, str)))
         start = monotonic()
         limiter = _python_process_semaphore()
         async with limiter:
@@ -638,7 +641,9 @@ def create_pytest_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
         exit_code = process.returncode
         status: str | None = None
         if timed_out:
-            status = f"pytest timed out after {timeout:g} seconds" if timeout else "pytest timed out"
+            status = (
+                f"pytest timed out after {timeout:g} seconds" if timeout else "pytest timed out"
+            )
         elif cancelled:
             status = "pytest execution cancelled"
         elif exit_code not in (0, None):
@@ -838,7 +843,10 @@ def create_sh_tool_definition(
         input_schema={
             "type": "object",
             "properties": {
-                "command": {"type": "string", "description": "Single non-interactive shell command to execute; prefer POSIX sh syntax"},
+                "command": {
+                    "type": "string",
+                    "description": "Single non-interactive shell command to execute; prefer POSIX sh syntax",
+                },
                 "timeout": {
                     "type": "number",
                     "description": "Timeout in seconds (optional, no default timeout)",
@@ -1253,7 +1261,6 @@ def _line_number_for_byte_offset(path: Path, byte_offset: int) -> int:
     return line
 
 
-
 def apply_edits_to_normalized_content(
     normalized_content: str,
     edits: list[dict[str, str]],
@@ -1298,6 +1305,7 @@ def _apply_replacements(content: str, matches: list[tuple[int, int, str]]) -> st
 
 def _line_number_at_offset(content: str, offset: int) -> int:
     return content.count("\n", 0, max(0, offset)) + 1
+
 
 def _truncation_result(
     content: str,

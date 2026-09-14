@@ -696,3 +696,9 @@ failed missing py.typed. Config now resolves checkout src explicitly. This expos
 literals, fixing CodingSession compatibility in new loader without a cast/ignore.
 43 pool/runtime tests and Ruff pass. Mypy now checks 162 files and reports 48
 remaining errors in 11 files; typecheck gate explicitly unfinished.
+
+Tool JSON typing fixes: validated subprocess/pytest arguments narrowed to strings,
+streamed edit line-number result checked as integer. Coding tools suite 25 pass;
+mypy decreases 48 to 45 errors (10 files). Ruff on tools.py exposes existing
+lint failures elsewhere in that file; not claimed clean. Full lint/type gates
+remain open and must be addressed rather than suppressed.
