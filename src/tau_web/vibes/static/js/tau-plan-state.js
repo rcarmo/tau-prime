@@ -20,7 +20,7 @@ export function createPlanState({read,write}) {
  };
  const api = {
   get,
-  async remote(id){get(id).remotePending=true;return reconcile(id);},
+  async remote(id){if(!id)return false;get(id).remotePending=true;return reconcile(id);},
   edit(id,text){const state=get(id);state.text=text;state.edit++;},
   async load(id,{discard=false}={}){
    if(!id)throw new Error('Select a session first');

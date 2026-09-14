@@ -278,11 +278,10 @@ try {
   await expect(page.getByTestId('session-switcher')).toBeFocused();
  };
  await openTools();
- await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
- const metrics=page.getByRole('region',{name:'Runtime metrics'});
+ const metrics=page.getByRole('button',{name:'Collapse system meters',exact:true});
  await expect(metrics).toContainText('12.5%');await expect(metrics).toContainText('100.0 MiB');await expect(metrics).toContainText('Unavailable');
  await scan('body');
- await page.locator('summary').filter({hasText:'Runtime metrics'}).click();
+ await expect(page.locator('summary').filter({hasText:'Runtime metrics'})).toHaveCount(0);
  if(process.env.TAU_CAPTURE_DIR){
   await mkdir(process.env.TAU_CAPTURE_DIR,{recursive:true});
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});

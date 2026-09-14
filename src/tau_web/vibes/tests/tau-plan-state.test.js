@@ -31,3 +31,7 @@ test('remote notification during save preserves newer local edits without retry'
  await state.remote('a');state.edit('a','newer');resolve({markdown:'submitted',revision:2});
  expect(await pending).toBe(false);expect(reads).toBe(1);expect(state.get('a').text).toBe('newer');expect(state.get('a').error).toContain('remotely');
 });
+test('snapshot before session selection does not issue a Plan request',async()=>{
+ let reads=0;const state=createPlanState({read:async()=>{reads++;},write:async()=>{}});
+ expect(await state.remote(null)).toBe(false);expect(await state.remote('')).toBe(false);expect(reads).toBe(0);
+});
