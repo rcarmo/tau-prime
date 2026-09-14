@@ -1008,3 +1008,21 @@ async def test_failed_metadata_change_preserves_loaded_agent(tmp_path: Path) -> 
     finally:
         await harness.aclose()
     assert session.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_metadata_change_after_shutdown_does_not_write(tmp_path: Path) -> None:
+    harness = await _open_runtime(tmp_path, _FakeSession(), owned=True)
+    changed = False
+
+    async def change() -> None:
+        nonlocal changed
+        changed = True
+
+    try:
+        await harness.runtime.shutdown()
+        with pytest.raises(AgentPoolError, match="shutting down"):
+            await harness.runtime.change_session_metadata("alpha", change)
+        assert not changed
+    finally:
+        await harness.aclose()

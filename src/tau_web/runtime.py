@@ -257,6 +257,8 @@ class DurableAgentRuntime:
     ) -> None:
         """Apply a durable change only while idle, then discard the stale agent."""
         async with self._session_load_lock:
+            if self._shutdown_started:
+                raise AgentPoolError("Runtime is shutting down")
             try:
                 snapshot = self._pool.snapshot(session_id)
             except UnknownSessionError:

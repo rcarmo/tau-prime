@@ -661,3 +661,8 @@ Metadata failure retention regression: rejected durable-change callback leaves
 loaded agent open; subsequent run reuses it, then shutdown closes exactly once.
 Runtime suite 21 pass, Ruff passes. No production changes. Local provider direct
 probe still refuses connections, so live completion remains unavailable.
+
+Metadata shutdown guard: coordinated model/thinking/branch changes now reject
+once shutdown begins, before invoking durable write. Regression verifies no write
+after shutdown. Runtime suite 22 pass; changed-file Ruff passes. New backend
+change requires artifact refresh before final delivery.
