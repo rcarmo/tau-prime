@@ -6,7 +6,7 @@ import inspect
 from collections.abc import AsyncIterator, Awaitable, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import cast
+from typing import NotRequired, TypedDict, cast
 
 from tau_agent.session import JsonlSessionStorage, SessionStorage
 from tau_coding.session_manager import CodingSessionRecord, SessionManager
@@ -14,6 +14,20 @@ from tau_coding.sqlite_session_manager import SqliteCodingSessionManager, Sqlite
 
 type CodingSessionManager = SessionManager | SqliteCodingSessionManager
 type CodingSessionRecordLike = CodingSessionRecord | SqliteCodingSessionRecord
+
+
+class _SessionArguments(TypedDict):
+    cwd: Path
+    model: str
+    provider_name: NotRequired[str]
+    title: NotRequired[str | None]
+    session_id: NotRequired[str | None]
+
+
+class _TouchArguments(TypedDict, total=False):
+    model: str | None
+    provider_name: str | None
+    title: str | None
 
 
 def manager_requires_persisted_session_record(manager: object) -> bool:
@@ -75,7 +89,11 @@ async def manager_list_sessions(
         result = list_sessions()
     else:
         result = list_sessions(cwd)
-    return list(await manager_result(result))
+    if inspect.isawaitable(result):
+        records: Sequence[CodingSessionRecordLike] = await result
+    else:
+        records = result
+    return list(records)
 
 
 async def manager_get_session(
@@ -104,7 +122,7 @@ async def manager_prepare_session(
         title=title,
         session_id=session_id,
     )
-    return await manager_result(manager.prepare_session(**kwargs))
+    return await manager_result(manager.prepare_session(**cast(_SessionArguments, kwargs)))
 
 
 async def manager_prepare_or_create_session(
@@ -155,7 +173,7 @@ async def manager_create_session(
         title=title,
         session_id=session_id,
     )
-    return await manager_result(manager.create_session(**kwargs))
+    return await manager_result(manager.create_session(**cast(_SessionArguments, kwargs)))
 
 
 async def manager_create_session_exclusive(
@@ -204,7 +222,7 @@ async def manager_touch_session(
         provider_name=provider_name,
         title=title,
     )
-    return await manager_result(manager.touch_session(session_id, **kwargs))
+    return await manager_result(manager.touch_session(session_id, **cast(_TouchArguments, kwargs)))
 
 
 def session_storage_for_record(

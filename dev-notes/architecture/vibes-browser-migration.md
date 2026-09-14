@@ -740,3 +740,9 @@ dynamic keyword dispatch remains to type without dropping legacy compatibility.
 CLI session-list typing: read-only property protocol accepts immutable records
 from both managers; contextual list construction avoids invariant list mismatch.
 63 CLI tests and Ruff pass. Mypy now 17 errors in 2 files.
+
+Manager keyword boundary typed with precise TypedDict shapes for prepare/create/
+touch, preserving signature filtering. Casts document the known typed inputs
+passed through that filter; no Any/error suppression. Awaitable sequence branch
+made explicit to avoid generic inference narrowing. 76 manager/CLI tests and Ruff
+pass; mypy now two errors in TUI app only.
