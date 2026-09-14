@@ -166,6 +166,7 @@ async def _open_runtime(
     session_id: str = "alpha",
     owned: bool = False,
     lazy: bool = False,
+    fail_first_load: bool = False,
     event_projector: EventProjectorCallback | None = None,
 ) -> _RuntimeHarness:
     database = SqliteDatabase(tmp_path / "tau.sqlite3")
@@ -182,7 +183,13 @@ async def _open_runtime(
     audit = AuditRepository(database)
     media = MediaRepository(database)
 
+    load_attempts = 0
+
     async def load_session(_: str) -> _FakeSession:
+        nonlocal load_attempts
+        load_attempts += 1
+        if fail_first_load and load_attempts == 1:
+            raise RuntimeError("Fixture initialization failed")
         return session
 
     runtime = DurableAgentRuntime(
@@ -832,6 +839,28 @@ async def test_runtime_lazily_loads_durable_session_and_reuses_owned_agent(tmp_p
         second = await harness.runtime.submit_prompt("alpha", "second")
         await second.wait()
         assert session.prompt_calls == ["first", "second"]
+    finally:
+        await harness.aclose()
+    assert session.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_failed_lazy_initialization_allows_retry(tmp_path: Path) -> None:
+    session = _FakeSession(prompt_scripts=[_Script(events=(AgentStartEvent(), AgentEndEvent()))])
+    harness = await _open_runtime(tmp_path, session, lazy=True, fail_first_load=True)
+    try:
+        with pytest.raises(RuntimeError, match="Fixture initialization failed"):
+            await harness.runtime.submit_prompt("alpha", "failed", run_id="failed-load")
+        failed = await harness.runs.get("failed-load")
+        assert failed is not None
+        assert failed.status == "failed"
+        assert session.prompt_calls == []
+        handle = await harness.runtime.submit_prompt("alpha", "retry", run_id="retry-load")
+        await handle.wait()
+        retried = await harness.runs.get("retry-load")
+        assert retried is not None
+        assert retried.status == "completed"
+        assert session.prompt_calls == ["retry"]
     finally:
         await harness.aclose()
     assert session.close_calls == 1

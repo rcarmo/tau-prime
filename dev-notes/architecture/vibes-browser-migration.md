@@ -611,3 +611,9 @@ Live browser now reaches agent execution/retries, but local llama endpoint refus
 connections (direct curl also fails); no successful live tool result claimed.
 Provider harness now awaits selected session and reports run/approval states.
 Broader model-change/reload/queue lifecycle review and full suite remain pending.
+
+Lazy initialization recovery checkpoint: full Python suite at 2bd553e passes
+1315 tests. Added regression: first loader failure records failed run without
+prompt execution; second submission initializes successfully and completes,
+owned agent closes once. Runtime suite now 16 pass; Ruff passes. Local llama
+endpoint still refuses direct connections; successful provider run remains blocked.
