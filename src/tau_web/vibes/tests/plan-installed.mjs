@@ -30,6 +30,12 @@ try{
    const liveUpdate=await request(`/api/sessions/${session.session_id}/plan`,{method:'PUT',body:JSON.stringify({markdown:'- [x] live SSE update',expected_revision:current.revision})});
    assert.equal(liveUpdate.status,200);
    await page.waitForFunction(()=>document.querySelector('.plan-sidebar-editor .cm-content')?.textContent==='- [x] live SSE update');
+   await page.context().setOffline(true);
+   const disconnected=await (await request(`/api/sessions/${session.session_id}/plan`)).json();
+   const offlineUpdate=await request(`/api/sessions/${session.session_id}/plan`,{method:'PUT',body:JSON.stringify({markdown:'- [x] changed while disconnected',expected_revision:disconnected.revision})});
+   assert.equal(offlineUpdate.status,200);
+   await page.context().setOffline(false);
+   await page.waitForFunction(()=>document.querySelector('.plan-sidebar-editor .cm-content')?.textContent==='- [x] changed while disconnected');
    await page.getByRole('button',{name:'Close plan sidebar',exact:true}).click();
    const meters=await request('/meters');assert.equal(meters.status,200);
    await page.waitForFunction(()=>{const value=document.querySelector('.system-meters-row.rss .system-meters-value');return value?.textContent.includes('MiB');});

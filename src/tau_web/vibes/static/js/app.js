@@ -2363,11 +2363,21 @@ function App() {
                 sse.reconnectIfNeeded();
             }, 150);
         };
+        const handleOffline = () => { sse.disconnect(); setConnectionStatus('disconnected'); };
+        const handleOnline = () => {
+            sse.disconnect();
+            sse.connect();
+            window.dispatchEvent(new CustomEvent('tau:plan-updated', {detail:{session_id:selectedSessionRef.current}}));
+        };
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('online', handleOnline);
         window.addEventListener('focus', handleWindowFocus);
         document.addEventListener('visibilitychange', handleWindowFocus);
         
         return () => {
             if (reconnectTimer) clearTimeout(reconnectTimer);
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('online', handleOnline);
             window.removeEventListener('focus', handleWindowFocus);
             document.removeEventListener('visibilitychange', handleWindowFocus);
             sse.disconnect();
