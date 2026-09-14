@@ -18,7 +18,7 @@ const server=createServer(async(req,res)=>{
  try{const data=await readFile(resolve(ref?reference:current,path==='/'?'index.html':path.replace(/^\/static\//,'')));res.writeHead(200,{'Content-Type':extname(path)==='.js'?'text/javascript':extname(path)==='.css'?'text/css':'text/html'});res.end(data);}catch{res.writeHead(404);res.end();}
 });await new Promise(r=>server.listen(8896,'127.0.0.1',r));
 const browser=await (engine==='webkit'?webkit:chromium).launch();
-const measurements={};
+const measurements={},styles={};
 try{
  for(const [name,root] of [['reference',reference],['current',current]]){
  const page=await browser.newPage({viewport,colorScheme:theme});
@@ -49,6 +49,10 @@ try{
  await expect(page.locator('.compose-box textarea')).toBeVisible();await page.waitForTimeout(1500);
  const geometry=await page.evaluate(()=>Object.fromEntries(['.app-shell','.container','.timeline','.compose-box','.compose-box textarea','.workspace-toggle-tab'].map(s=>{const e=document.querySelector(s),r=e?.getBoundingClientRect();return [s,r?{x:r.x,y:r.y,width:r.width,height:r.height}:null];})));
  measurements[name]=geometry;
+ styles[name]=await page.evaluate(()=>Object.fromEntries(['.container','.timeline','.compose-box','.compose-box textarea','.workspace-toggle-tab'].map(selector=>{
+  const style=getComputedStyle(document.querySelector(selector));
+  return [selector,Object.fromEntries(['fontFamily','fontSize','lineHeight','color','backgroundColor','borderTopWidth','borderTopColor','borderRadius','padding','gap'].map(key=>[key,style[key]]))];
+ })));
  console.log(name,JSON.stringify(geometry));
  await expect(page.locator('.timeline')).toContainText('No messages yet. Start a conversation!');
  await expect(page.locator('.app-shell > .container > details')).toHaveCount(0);
@@ -57,5 +61,6 @@ try{
  for(const selector of ['.app-shell','.container','.timeline','.compose-box','.compose-box textarea','.workspace-toggle-tab']){
   expect(measurements.current[selector],`${selector} must match pinned reference geometry`).toEqual(measurements.reference[selector]);
  }
- console.log(`PASS exact reference geometry: ${engine}/${size}/${theme}`);
+ expect(styles.current,'Reference computed font/color/border/spacing styles').toEqual(styles.reference);
+ console.log(`PASS exact reference geometry and styles: ${engine}/${size}/${theme}`);
 }finally{await browser.close();await new Promise(r=>server.close(r));}

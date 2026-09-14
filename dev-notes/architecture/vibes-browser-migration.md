@@ -789,3 +789,10 @@ Use reference-session ID; both show empty timeline + idle status. Timeline now
 included in exact geometry equality: all six shell/container/timeline/composer/
 textarea/workspace-handle regions match across 12 engine/theme/size cases. This
 supersedes prior 37.5px status-difference exclusion. Runtime unchanged.
+
+Reference computed-style validation: exact font family/size/line-height, text and
+background color, top border width/color, radius, padding and gap match across
+container/timeline/composer/textarea/workspace handle in all 12 cases, in addition
+to exact geometry. No tolerance or pixel masking used for these assertions.
+Does not assert identity labels or content-specific Markdown colors are identical;
+Tau identity and accessible URL styling remain intentional differences.
