@@ -535,3 +535,11 @@ offline registration/draft/reconnect/CSP journey also passes. Wheel/checksum in
 /workspace/tmp/tau-vibes-75926fa supersede older runtime checkpoints. WebKit offline
 navigation remains a reported engine limitation, not a passing gate. Provider
 execution, new-branch scope and human/device acceptance remain open.
+
+WebKit offline isolation: TAU_OFFLINE_OUTAGE=1 drops incoming server sockets and
+closes existing connections instead of context.setOffline. WebKit isolated and
+actual-app fallback/upgrade journeys pass; Chromium actual-app outage also passes.
+Both verify API network failure, cached shell, error/draft handling and upgrade.
+Thus prior WebKit internal navigation error is specific to offline emulation in
+this harness, not reproduced with server outage. Not proof of every device's
+network-off behavior. 60 unit tests/lint pass; no production changes.

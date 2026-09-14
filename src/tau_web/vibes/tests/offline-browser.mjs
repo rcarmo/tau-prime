@@ -7,8 +7,10 @@ const requests=[];
 const fullApp=process.env.TAU_OFFLINE_APP==='1';
 const worker=await readFile(new URL('../static/offline-sw.js',import.meta.url),'utf8');
 const manifest=JSON.parse(worker.match(/const SHELL = (.*);/)[1]);
-let nextVersion=false;
+let nextVersion=false,serverOutage=false;
+const outageMode=process.env.TAU_OFFLINE_OUTAGE==='1';
 const server=createServer(async(req,res)=>{
+ if(serverOutage){req.socket.destroy();return;}
  requests.push({url:req.url,cookie:req.headers.cookie||'',authorization:req.headers.authorization||''});
  if(req.url==='/sw.js'){res.writeHead(200,{'Content-Type':'text/javascript','Service-Worker-Allowed':'/'});res.end(nextVersion?worker.replace(manifest.version,manifest.version+'-next'):worker);return;}
  if(req.url==='/'){res.writeHead(200,{'Content-Type':'text/html'});res.end(fullApp?await readFile(new URL('../static/index.html',import.meta.url),'utf8'):'<!doctype html><title>Public offline fixture</title><p>Public shell</p>');return;}
@@ -44,7 +46,7 @@ try{
  await page.evaluate(()=>fetch('/api/private').catch(()=>{}));
  const keys=await page.evaluate(async()=>{const name=(await caches.keys()).find(key=>key.startsWith('tau-vibes-shell-'));return (await (await caches.open(name)).keys()).map(request=>new URL(request.url).pathname);});
  expect(keys.some(key=>key.startsWith('/api/'))).toBe(false);
- await context.setOffline(true);
+ if(outageMode){serverOutage=true;server.closeAllConnections();}else await context.setOffline(true);
  await page.goto('http://127.0.0.1:8893/?session=private');
  await expect(fullApp?page.locator('.app-shell'):page.getByText('Public shell',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>fetch('/api/private').then(()=>true,()=>false))).toBe(false);
@@ -55,7 +57,7 @@ try{
   await expect(composer).toHaveValue('Offline unsent draft');
   await expect(page.getByRole('alert').first()).toBeVisible();
  }
- await context.setOffline(false);
+ if(outageMode)serverOutage=false;else await context.setOffline(false);
  nextVersion=true;
  await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration();await registration.update();});
  await expect.poll(()=>page.evaluate(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting)).toBe(true);
