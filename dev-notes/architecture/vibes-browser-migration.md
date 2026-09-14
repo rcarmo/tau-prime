@@ -650,3 +650,9 @@ Runtime-coherence consolidated checkpoint bdaa844: full Python suite 1321 pass,
 journeys pass after lazy-load/model/thinking/branch changes. Local llama direct
 probe still connection refused; live tool success/recovery not verified. Attached
 75926fa wheel predates backend fixes and is no longer current final artifact.
+
+269a82a runtime-fix wheel: two epoch-pinned builds byte-identical. Installed
+12-case authenticated/Axe/CSP matrix and Chromium offline/draft/reconnect journey
+pass with checkout PYTHONPATH disabled. Artifact/checksum in tmp/tau-vibes-269a82a
+supersede old runtime wheel. These journeys do not supply a successful local
+provider/tool run; endpoint outage remains a separate unresolved gate.
