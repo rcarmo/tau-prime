@@ -18,3 +18,16 @@ test('conflict retains draft and revision without retry',async()=>{
  await state.load('a');state.edit('a','draft');expect(await state.save('a')).toBe(false);
  expect(state.get('a').text).toBe('draft');expect(state.get('a').revision).toBe(1);expect(calls).toBe(1);
 });
+test('remote notification during load refreshes after outstanding read',async()=>{
+ let resolve,calls=0;
+ const state=createPlanState({read:()=>++calls===1?new Promise(r=>resolve=r):Promise.resolve({markdown:'new',revision:2}),write:async()=>{}});
+ const pending=state.load('a');await state.remote('a');resolve({markdown:'old',revision:1});await pending;
+ expect(calls).toBe(2);expect(state.get('a').text).toBe('new');expect(state.get('a').busy).toBe(false);
+});
+test('remote notification during save preserves newer local edits without retry',async()=>{
+ let resolve,reads=0;
+ const state=createPlanState({read:async()=>{reads++;return {markdown:'old',revision:1};},write:()=>new Promise(r=>resolve=r)});
+ await state.load('a');state.edit('a','submitted');const pending=state.save('a');
+ await state.remote('a');state.edit('a','newer');resolve({markdown:'submitted',revision:2});
+ expect(await pending).toBe(false);expect(reads).toBe(1);expect(state.get('a').text).toBe('newer');expect(state.get('a').error).toContain('remotely');
+});

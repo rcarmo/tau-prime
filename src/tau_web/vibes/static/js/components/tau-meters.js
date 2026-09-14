@@ -1,15 +1,24 @@
 import {html,useEffect,useState} from '../vendor/preact-htm.js';
 import {getTauMeters} from '../api.js';
-const percent=value=>typeof value==='number'&&Number.isFinite(value)?`${value.toFixed(1)}%`:'Unavailable';
+import {meterRows} from '../tau-meter-data.js';
+const initialCollapsed=()=>{try{return localStorage.getItem('tau.meters.collapsed')==='true';}catch{return false;}};
 export function TauMeters(){
- const [open,setOpen]=useState(false),[snapshot,setSnapshot]=useState(null),[error,setError]=useState('');
+ const [collapsed,setCollapsed]=useState(initialCollapsed),[snapshot,setSnapshot]=useState(null),[error,setError]=useState('');
+ useEffect(()=>{try{localStorage.setItem('tau.meters.collapsed',String(collapsed));}catch{}},[collapsed]);
  useEffect(()=>{
-  if(!open)return;let disposed=false,loading=false;
-  const refresh=async()=>{if(loading)return;loading=true;try{const result=await getTauMeters();if(!disposed){setSnapshot(result);setError('');}}catch(e){if(!disposed)setError(e.message);}finally{loading=false;}};
-  refresh();const timer=setInterval(refresh,2000);return()=>{disposed=true;clearInterval(timer);};
- },[open]);
- return html`<details onToggle=${e=>setOpen(e.currentTarget.open)}><summary>Runtime metrics</summary><section aria-label="Runtime metrics">
- ${error&&html`<div role="alert">${error}</div>`}
- ${snapshot?html`<dl><dt>Host CPU</dt><dd>${percent(snapshot.cpu_percent)}</dd><dt>Host RAM</dt><dd>${percent(snapshot.ram_percent)}</dd><dt>Host swap</dt><dd>${percent(snapshot.swap_percent)}</dd><dt>Tau process RSS</dt><dd>${typeof snapshot.process_rss_bytes==='number'?`${(snapshot.process_rss_bytes/1048576).toFixed(1)} MiB`:'Unavailable'}</dd></dl>`:html`<p>Waiting for metrics…</p>`}
- </section></details>`;
+  if(collapsed)return;let disposed=false,loading=false;
+  const refresh=async()=>{
+   if(loading||document.hidden)return;loading=true;
+   try{const result=await getTauMeters();if(!disposed){setSnapshot(result);setError('');}}
+   catch(e){if(!disposed){setSnapshot(null);setError(e.message);}}
+   finally{loading=false;}
+  };
+  void refresh();const timer=setInterval(refresh,2000);
+  document.addEventListener('visibilitychange',refresh);
+  return()=>{disposed=true;clearInterval(timer);document.removeEventListener('visibilitychange',refresh);};
+ },[collapsed]);
+ return html`<div class=${`system-meters-hud system-meters-hud-overlay${collapsed?' is-collapsed':''}`}>
+ <button type="button" class="system-meters-card" aria-label=${collapsed?'Expand system meters':'Collapse system meters'} aria-expanded=${!collapsed} title=${error?`Metrics unavailable: ${error}`:'Host CPU, memory, swap and Tau process RSS'} onClick=${()=>setCollapsed(value=>!value)}>
+ ${collapsed?html`<span class="system-meters-collapse-tab" aria-hidden="true">‹</span>`:meterRows(snapshot||{}).map(row=>html`<span class=${`system-meters-row ${row.kind}`} key=${row.kind}><span class="system-meters-label">${row.label}</span><svg class="system-meters-spark" viewBox="0 0 56 16" aria-hidden="true"><path d=${row.path}/></svg><span class="system-meters-value">${row.value}</span></span>`)}
+ </button></div>`;
 }

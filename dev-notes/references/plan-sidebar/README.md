@@ -5,9 +5,11 @@ Package metadata declares MIT. Upstream: https://github.com/rcarmo/piclaw-addons
 Snapshot: `index.ts.reference`, SHA-256 `db031d33487eb92ff7fa850b70e55242a3bb6dd83b5c8589c7cea5140bcdec3d`.
 
 The CSS template was extracted unchanged into Vibes `static/css/plan-sidebar.css`.
-It is not yet imported by the build. This is reference groundwork, not a working port.
-No standalone LICENSE file was present in the installed package; preserve upstream
-license/attribution before shipping the derived sidebar.
+It is now imported by the build; integration is in progress and visual parity remains unverified.
+The installed package lacked a standalone license. The upstream MIT license was
+retrieved from https://raw.githubusercontent.com/rcarmo/piclaw-addons/main/LICENSE
+and preserved in `LICENSE` here and `static/PLAN-SIDEBAR-LICENSE.txt` in the frontend.
+Copyright (c) 2026 Rui Carmo. Package inclusion still needs artifact verification.
 
 Tau adaptation requirements:
 - `session_id`, bearer/CSRF and `expected_revision`, not Piclaw chat_jid/overwrite.

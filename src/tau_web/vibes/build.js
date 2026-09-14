@@ -18,6 +18,8 @@ const staticDir = resolve(__dirname, "static");
 const distDir = resolve(staticDir, "dist");
 
 // ── JS bundle ─────────────────────────────────────────────────────────────
+const planVendor = await Bun.build({entrypoints:[resolve(__dirname, 'plan-editor-vendor.js')], outdir:resolve(staticDir, 'js/vendor'), naming:'plan-codemirror.js', target:'browser', format:'esm', minify:true});
+if (!planVendor.success) throw new Error(`Plan editor vendor build failed: ${planVendor.logs.join('\n')}`);
 const jsResult = await Bun.build({
   entrypoints: [resolve(staticDir, "js/app.js")],
   outdir: distDir,
@@ -46,6 +48,7 @@ const cssSources = [
   ...["base", "shell", "workspace", "editor", "chat", "content", "agent", "overlays", "responsive", "settings"]
     .map(name => resolve(staticDir, `css/classic/${name}.css`)),
   resolve(staticDir, "css/styles.css"),
+  resolve(staticDir, "css/plan-sidebar.css"),
 ];
 
 const combined = cssSources

@@ -8,11 +8,19 @@ export function planProgress(markdown) {
 export function createPlanState({read,write}) {
  const sessions=new Map();
  const get=id=>{
-  if(!sessions.has(id))sessions.set(id,{text:'',base:'',revision:null,loaded:false,busy:false,error:'',edit:0,epoch:0});
+  if(!sessions.has(id))sessions.set(id,{text:'',base:'',revision:null,loaded:false,busy:false,remotePending:false,error:'',edit:0,epoch:0});
   return sessions.get(id);
  };
- return {
+ const reconcile=async id=>{
+  const state=get(id);
+  if(!state.remotePending||state.busy)return false;
+  state.remotePending=false;
+  if(state.text!==state.base){state.error='Plan changed remotely; your draft is retained. Refresh to reconcile.';return false;}
+  return api.load(id);
+ };
+ const api = {
   get,
+  async remote(id){get(id).remotePending=true;return reconcile(id);},
   edit(id,text){const state=get(id);state.text=text;state.edit++;},
   async load(id,{discard=false}={}){
    if(!id)throw new Error('Select a session first');
@@ -28,7 +36,7 @@ export function createPlanState({read,write}) {
     state.text=result.markdown;state.base=result.markdown;state.revision=result.revision;state.loaded=true;
     return true;
    }catch(error){if(epoch===state.epoch)state.error=error.message;return false;}
-   finally{if(epoch===state.epoch)state.busy=false;}
+   finally{if(epoch===state.epoch){state.busy=false;await reconcile(id);}}
   },
   async save(id){
    const state=get(id);if(!id||state.busy||!state.loaded)return false;
@@ -42,7 +50,8 @@ export function createPlanState({read,write}) {
     if(edit===state.edit)state.text=result.markdown;
     return state.text===state.base;
    }catch(error){state.error=error.status===409?'Plan changed remotely. Refresh to reconcile; your draft is retained.':error.message;return false;}
-   finally{if(epoch===state.epoch)state.busy=false;}
+   finally{if(epoch===state.epoch){state.busy=false;await reconcile(id);}}
   },
  };
+ return api;
 }
