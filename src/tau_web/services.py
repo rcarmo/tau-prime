@@ -13,6 +13,7 @@ from tau_agent import AgentTool
 from tau_coding.agent_pool import AsyncAgentPool, CodingSessionLike
 from tau_coding.coding_session_factory import (
     CodingSessionFactory,
+    CodingSessionFactoryBinding,
     CodingSessionFactoryConfig,
     CodingSessionFactoryRequest,
 )
@@ -29,6 +30,7 @@ from tau_web.config import WebConfig
 from tau_web.events import EventProjector, WebEventEnvelope, build_invalidation_envelope
 from tau_web.extensions import ExtensionDirectory, SqliteExtensionStorageBackend
 from tau_web.media_tools import create_attachment_tool
+from tau_web.message_tool import create_message_tool
 from tau_web.plan import create_plan_factory_hooks
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
@@ -154,12 +156,21 @@ class TauWebServices:
                 if workspace is None:
                     raise ValueError(f"Unknown workspace: {record.workspace_id}")
                 tools, context = create_plan_factory_hooks(plans, broker=broker)
+
+                def session_tools(
+                    binding: CodingSessionFactoryBinding
+                ) -> tuple[AgentTool, ...]:
+                    return (
+                        *tools(binding),
+                        create_message_tool(timeline, session_id),
+                    )
+
                 return await CodingSessionFactory(
                     config=CodingSessionFactoryConfig(
                         thinking_level=normalize_thinking_level(record.thinking_level)
                         if record.thinking_level
                         else None,
-                        extra_tools_factory=tools,
+                        extra_tools_factory=session_tools,
                         turn_context_provider_factory=context,
                     ),
                     provider_settings=load_provider_settings(),
