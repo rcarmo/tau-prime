@@ -285,6 +285,8 @@ try {
  }
  await closeTools();
  const composer=page.locator('.compose-box textarea');
+ await expect(page.getByRole('button',{name:'Open model picker',exact:true})).toBeVisible();
+ await expect(page.getByRole('img',{name:'Context usage unavailable',exact:true})).toBeVisible();
  const beforeCompletion=submitted.length;
  await composer.fill('/thi');
  await expect(page.locator('.slash-autocomplete .slash-name')).toHaveText('/thinking');

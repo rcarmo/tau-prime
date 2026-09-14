@@ -30,9 +30,9 @@ function formatK(n) {
  * Green when <75%, amber 75–90%, red >90%. Tooltip shows exact numbers.
  */
 function ContextPie({ usage, onCompact, disabled, compacting }) {
+    usage = usage || {};
     const canCompact = usage.compactCommand === '/compact';
     const known = typeof usage.percent === 'number' && Number.isFinite(usage.percent) && usage.percent >= 0;
-    if (!known && !canCompact) return null;
     const Tag = canCompact ? 'button' : 'span';
     const pct = known ? usage.percent : 0;
     const tokens = usage.tokens;
@@ -1154,10 +1154,10 @@ export function ComposeBox({
                     `}
                 </div>
                 <div class="compose-footer">
-                    ${!searchMode && (activeModel || supportsThinking || usageMeta.label || contextUsage?.compactCommand || (contextUsage && contextUsage.percent != null)) && html`
+                    ${!searchMode && html`
                         <div class="compose-meta-row">
                             ${(activeModel || supportsThinking || usageMeta.label) && html`<div class="compose-model-meta">
-                            ${activeModel && html`
+                            ${html`
                                 <button type="button" ref=${modelHintRef}
                                     class="compose-model-hint compose-model-hint-btn"
                                     title=${switchingModel ? 'Switching model…' : `Current model: ${modelHintLabel} (tap to open model picker)`}
@@ -1165,7 +1165,7 @@ export function ComposeBox({
                                     onClick=${toggleModelPopup}
                                     disabled=${loading || switchingModel}
                                 >
-                                    ${switchingModel ? 'Switching…' : modelHintLabel}
+                                    ${switchingModel ? 'Switching…' : (modelHintLabel || 'Choose model')} ▾
                                 </button>
                             `}
                             <div class="compose-model-meta-subline">
@@ -1182,7 +1182,7 @@ export function ComposeBox({
                             `}
                             </div>
                             </div>`}
-                            ${contextUsage && (contextUsage.percent != null || contextUsage.compactCommand) && html`
+                            ${html`
                                 <${ContextPie} usage=${contextUsage} onCompact=${compact} disabled=${loading || agentBusy || isCompacting} compacting=${isCompacting} />
                             `}
                         </div>
