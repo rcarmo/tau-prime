@@ -1,3 +1,5 @@
+import { TauMeters } from './components/tau-meters.js';
+import { TauPlanSidebar } from './components/tau-plan-sidebar.js';
 import { TauSessionTools } from './components/tau-session-tools.js';
 import { installTauWidgetActions } from './tau-widget-actions.js';
 import { activateTauExtensions } from './tau-extensions.js';
@@ -2332,10 +2334,12 @@ function App() {
                     setAgentDraft({text:nextDraft.text,totalLines:estimatePreviewLines(nextDraft.text)});
                 }
                 if (event === 'tau.snapshot') {
+                    window.dispatchEvent(new CustomEvent('tau:plan-updated', {detail:{session_id:selectedSessionRef.current}}));
                     refreshSessions().catch(error => setSessionRefreshError(error.message));
                     loadPosts();
                     return;
                 }
+                if (event === 'tau.plan.updated') window.dispatchEvent(new CustomEvent('tau:plan-updated', {detail:data}));
                 if (data.session_id !== selectedSessionRef.current) return;
                 const payload = data.payload || {};
                 if (event === 'tau.agent.message_start' && payload.role === 'assistant') {
@@ -2740,7 +2744,9 @@ function App() {
                     onToggleNotifications=${handleToggleNotifications}
                 />
                 <div data-extension-slot="compose_below"></div>
-                ${sessionToolsOpen && html`<${TauSessionTools} sessionId=${selectedSession} onSelect=${selectSession} onClose=${()=>{setSessionToolsOpen(false);requestAnimationFrame(()=>document.querySelector('[data-testid="session-switcher"]')?.focus());}} onProvider=${()=>{setSessionToolsOpen(false);setProviderSetupOpen(true);}} />`}
+                <${TauMeters}/>
+            <${TauPlanSidebar} sessionId=${selectedSession}/>
+            ${sessionToolsOpen && html`<${TauSessionTools} sessionId=${selectedSession} onSelect=${selectSession} onClose=${()=>{setSessionToolsOpen(false);requestAnimationFrame(()=>document.querySelector('[data-testid="session-switcher"]')?.focus());}} onProvider=${()=>{setSessionToolsOpen(false);setProviderSetupOpen(true);}} />`}
             ${providerSetupOpen && html`<${TauProviderSetup} onClose=${()=>{setProviderSetupOpen(false);requestAnimationFrame(()=>document.querySelector('[data-testid="session-switcher"]')?.focus());}} />`}
             ${renamingSession && html`<${SessionNameDialog} key=${renamingSession.id} name=${renamingSession.name} onClose=${() => setRenamingSession(null)} onSave=${async name => { await updateSession(renamingSession.id, { name }); await refreshSessions(); }} />`}
             ${creatingSession && html`<${SessionNameDialog} creating=${true} parentName=${createParentRef.current ? (sessionOptions.find(item => item.id === createParentRef.current)?.name || createParentRef.current) : null} onClose=${() => setCreatingSession(false)} onSave=${async name => { if (!createdSessionRef.current) { const result = await createSession(name, createParentRef.current); createdSessionRef.current = result.session.id; } await refreshSessions(); await selectSession(createdSessionRef.current); }} />`}
