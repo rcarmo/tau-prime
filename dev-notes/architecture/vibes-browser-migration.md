@@ -527,3 +527,11 @@ online/login journey with registration also passes CSP checks. 60 JS tests/lint/
 build and 27 frontend/packaging Python tests pass. WebKit offline navigation still
 fails in engine harness and is not claimed supported by evidence. Final installed
 artifact/matrix refresh required; old delivered wheel predates offline feature.
+
+75926fa production offline checkpoint: full Python 1314 pass, fixture/Axe matrix
+12/12 pass, two epoch-pinned wheels byte-identical. Installed corrected runtime
+passes all 12 expanded authenticated/Axe/CSP workflows; installed Chromium automatic
+offline registration/draft/reconnect/CSP journey also passes. Wheel/checksum in
+/workspace/tmp/tau-vibes-75926fa supersede older runtime checkpoints. WebKit offline
+navigation remains a reported engine limitation, not a passing gate. Provider
+execution, new-branch scope and human/device acceptance remain open.
