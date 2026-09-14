@@ -287,6 +287,10 @@ try {
   await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-chat.png`,fullPage:true});
  }
  await closeTools();
+ for(const control of [page.getByTestId('session-switcher'),page.getByRole('button',{name:'Open model picker',exact:true}),metrics]){
+  await expect(control).toBeVisible();
+  expect(await control.evaluate(el=>{const r=el.getBoundingClientRect();const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return top===el||el.contains(top);})).toBe(true);
+ }
  await page.getByRole('button',{name:'Open plan sidebar',exact:true}).click();
  await expect(page.locator('.plan-sidebar-cm-text-current')).toHaveText('Verify sidebar');
  await expect(page.locator('.plan-sidebar-progress-percent')).toHaveText('33%');
