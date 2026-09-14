@@ -644,3 +644,9 @@ rejects busy sessions with 409, and invalidates idle agent after durable selecti
 Route regression verifies busy rejection writes no entry; existing branch route
 and runtime reload tests pass (25 targeted tests), Ruff passes. Test setup mistakes
 (fixture/storage method names) corrected before pass. Full suite still pending.
+
+Runtime-coherence consolidated checkpoint bdaa844: full Python suite 1321 pass,
+60 JS tests/lint pass, real authenticated source production-route Chromium/WebKit
+journeys pass after lazy-load/model/thinking/branch changes. Local llama direct
+probe still connection refused; live tool success/recovery not verified. Attached
+75926fa wheel predates backend fixes and is no longer current final artifact.
