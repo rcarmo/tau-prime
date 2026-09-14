@@ -722,3 +722,7 @@ Web typing: use aiohttp's keyword-compatible Middleware protocol instead of an
 unnamed positional Callable alias; pass explicitly narrowed allow/deny decision
 after existing validation. All 286 web tests and changed-file Ruff pass. Mypy
 now 30 errors in 4 files, none in tau_web; project-wide gate still open.
+
+TUI widget type corrections: public textual.style import, explicit union for
+plain/Markdown body widget, heading alignment literals match base class. Ruff
+passes; 223 TUI app tests pass. Mypy now 27 errors in 3 files; no type suppression.
