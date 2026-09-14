@@ -457,3 +457,25 @@ async def test_timeline_routes_reject_unknown_sessions_unknown_leaves_and_invali
 
     assert payload["error"]["code"] == "bad_request"
     assert payload["error"]["message"] == "Field 'leaf_entry_id' must not be blank."
+
+
+@pytest.mark.anyio
+async def test_branch_selection_uses_runtime_coordination(
+    app_client: TestClient, services: TauWebServices, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tau_coding.agent_pool import AgentPoolError
+
+    session_id = await _create_durable_session(services, session_id="branch-busy")
+    before = await services.session_storage(session_id).read_all()
+
+    async def reject_change(self, selected_id, change):
+        assert selected_id == session_id
+        raise AgentPoolError("Cannot change session settings while runs are active or queued")
+
+    monkeypatch.setattr(type(services.runtime), "change_session_metadata", reject_change)
+    async with app_client.post(
+        f"/api/sessions/{session_id}/branches/select",
+        json={"leaf_entry_id": None},
+    ) as response:
+        assert response.status == 409
+    assert await services.session_storage(session_id).read_all() == before

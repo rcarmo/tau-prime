@@ -638,3 +638,9 @@ verify replacement agent and owned cleanup, plus no write during active run.
 303 web/pool tests passed before additional active-run case; runtime now 20 pass,
 changed-file Ruff passes. Initial current_run typo corrected to current_run_id.
 Branch-selection coherence and broader execution lifecycle still require review.
+
+Branch loaded-agent coherence: leaf selection uses runtime coordinated change,
+rejects busy sessions with 409, and invalidates idle agent after durable selection.
+Route regression verifies busy rejection writes no entry; existing branch route
+and runtime reload tests pass (25 targeted tests), Ruff passes. Test setup mistakes
+(fixture/storage method names) corrected before pass. Full suite still pending.

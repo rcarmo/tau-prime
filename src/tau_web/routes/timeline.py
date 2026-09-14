@@ -18,6 +18,7 @@ from tau_agent.session import (
     path_to_entry,
 )
 from tau_agent.types import JSONObject, JSONValue
+from tau_coding.agent_pool import AgentPoolError
 from tau_web.routes.common import (
     json_response,
     record_json,
@@ -179,8 +180,13 @@ async def select_branch(request: web.Request) -> web.Response:
     ):
         raise web.HTTPNotFound(reason=f"Unknown leaf entry: {leaf_entry_id}")
 
-    try:
+    async def write_selection() -> None:
         await storage.append(LeafEntry(parent_id=leaf_entry_id, entry_id=leaf_entry_id))
+
+    try:
+        await services.runtime.change_session_metadata(session_id, write_selection)
+    except AgentPoolError as exc:
+        raise web.HTTPConflict(text=str(exc)) from exc
     except SqliteSessionStorageError as exc:
         _raise_for_storage_error(exc, leaf_entry_id=leaf_entry_id)
 
