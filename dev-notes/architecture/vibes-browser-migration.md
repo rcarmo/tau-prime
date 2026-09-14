@@ -746,3 +746,8 @@ touch, preserving signature filtering. Casts document the known typed inputs
 passed through that filter; no Any/error suppression. Awaitable sequence branch
 made explicit to avoid generic inference narrowing. 76 manager/CLI tests and Ruff
 pass; mypy now two errors in TUI app only.
+
+Strict typecheck clean: all 162 configured source files pass mypy. Final TUI fixes
+keep Textual's dynamic selection override in instance dictionary (not shared class
+state), and narrow getattr manager to object rather than leaking Any. 223 TUI
+tests and file Ruff pass. Full project lint/regression and new artifact remain.

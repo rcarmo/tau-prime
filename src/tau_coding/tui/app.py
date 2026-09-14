@@ -2292,7 +2292,9 @@ class TauTuiApp(App[None]):
 
     def _sync_text_selection_state(self) -> None:
         """Disable native text selection while the transcript is mutating."""
-        self.ALLOW_SELECT = not self.state.running
+        # Textual reads this flag from the instance despite its ClassVar annotation.
+        # Keep the dynamic override local rather than changing every app instance.
+        self.__dict__["ALLOW_SELECT"] = not self.state.running
         if self.state.running and self.screen_stack:
             with suppress(Exception):
                 self.screen.clear_selection()
@@ -4089,10 +4091,11 @@ def _session_options_from_records(
 
 
 def _session_record_manager(session: CodingSession) -> CodingSessionManager | object | None:
-    manager = getattr(session, "live_session_manager", None)
+    manager: object | None = getattr(session, "live_session_manager", None)
     if manager is not None:
         return manager
-    return getattr(session, "session_manager", None)
+    manager = getattr(session, "session_manager", None)
+    return manager
 
 
 def _legacy_session_records(session: CodingSession) -> tuple[SessionCompletionRecord, ...]:
