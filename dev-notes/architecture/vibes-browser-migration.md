@@ -757,3 +757,11 @@ redundant path validation assignment removed (same validation remains in _path_a
 paths conditional simplified. Full Python 1323 tests pass; mypy all 162 sources
 pass; full ruff check . passes. No rule disabling. Runtime/package refresh and
 frontend/live smoke after all type/lint changes still required.
+
+396a252 post-type/lint artifact: two epoch-pinned wheels identical, 60 JS tests/
+frontend lint pass, 12-case fixture/Axe and 12-case installed expanded Axe/CSP
+matrices pass. Installed Chromium/WebKit actual local-provider read/approval and
+browser-disconnect recovery journeys both pass after all type/lint changes.
+Artifacts/logs under /workspace/tmp/tau-vibes-396a252. Full Python 1323, project
+mypy 162 sources and Ruff clean at preceding checkpoint. Human/device acceptance
+remains distinct from software test fixes; no new failing automated gate observed.
