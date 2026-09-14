@@ -398,7 +398,7 @@ def _build_messages_payload(
         "max_tokens": max_tokens,
         "stream": True,
         "system": system,
-        "messages": _anthropic_messages(messages),
+        "messages": [item for item in _anthropic_messages(messages)],
     }
     if thinking_type is not None:
         payload["thinking"] = {"type": thinking_type}

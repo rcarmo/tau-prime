@@ -33,6 +33,7 @@ from tau_coding.provider_catalog import catalog_model_override
 from tau_coding.provider_config import (
     AnthropicProviderConfig,
     OpenAICodexProviderConfig,
+    OpenAICompatibleProviderConfig,
     ProviderConfig,
     ProviderConfigError,
     anthropic_config_from_provider,
@@ -151,7 +152,9 @@ def _refresh_github_copilot_if_needed(
         refreshed = asyncio.run(
             refresh_github_copilot_token(
                 credential.refresh,
-                enterprise_domain=credential.account_id if credential.account_id != "github.com" else "",
+                enterprise_domain=credential.account_id
+                if credential.account_id != "github.com"
+                else "",
             )
         )
         credential_store.set_oauth(credential_name, refreshed)
@@ -217,6 +220,8 @@ class GitHubCopilotCredentialRefreshingProvider:
 
     async def _fresh_inner_provider(self, *, model: str) -> ClosableModelProvider:
         provider = await self._fresh_provider_config()
+        if not isinstance(provider, OpenAICompatibleProviderConfig):
+            raise ProviderConfigError("OpenAI-compatible configuration required for this model")
         return OpenAICompatibleProvider(
             openai_compatible_config_from_provider(
                 provider,
@@ -239,7 +244,9 @@ class GitHubCopilotCredentialRefreshingProvider:
         if oauth_credential_is_expired(credential):
             credential = await refresh_github_copilot_token(
                 credential.refresh,
-                enterprise_domain=credential.account_id if credential.account_id != "github.com" else "",
+                enterprise_domain=credential.account_id
+                if credential.account_id != "github.com"
+                else "",
             )
             self._credential_store.set_oauth(credential_name, credential)
         return replace(
@@ -247,7 +254,6 @@ class GitHubCopilotCredentialRefreshingProvider:
             base_url=github_copilot_base_url(credential.access, credential.account_id),
             headers=headers,
         )
-
 
 
 def _anthropic_provider_config_for_model(

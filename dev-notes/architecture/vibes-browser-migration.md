@@ -712,3 +712,8 @@ Landlock typing: libc wrapper annotated as CDLL, syscall number/arguments explic
 and result converted to int, preserving error checks and confinement behavior.
 Four Linux sandbox tests pass; file Ruff clean. Mypy decreases 43 to 34 errors in
 8 files. No relaxation of ABI requirement, allowed roots or fail-closed policy.
+
+Provider typing fixes: Anthropic payload list is contextually typed as JSON values;
+Copilot compatible-provider path validates narrowed config before constructing
+client. No blanket casts/ignores. 59 provider/config/history tests and file Ruff
+pass. Mypy now 32 errors across 6 files; remaining strict checks pending.
