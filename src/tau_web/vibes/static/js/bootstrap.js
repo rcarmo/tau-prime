@@ -11,5 +11,9 @@ async function start() {
     await import('/static/extension-ui.js');
     await import('/static/frontend-sdk.js');
     await import('/static/dist/app.js?v=1');
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+        navigator.serviceWorker.register('/offline-sw.js', { scope: '/', updateViaCache: 'none' })
+            .catch(error => console.warn('Tau offline shell unavailable:', error.message));
+    }
 }
 start().catch(error=>showFailure(error.message||String(error)));

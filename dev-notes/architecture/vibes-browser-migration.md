@@ -518,3 +518,12 @@ unavailable, reconnects/reloads and verifies selected session and composer text
 restored. 60 unit tests/lint and real authenticated journey pass. Offline UI does
 not restore server-selected session until backend returns; no offline send queue.
 Automatic registration remains disabled; WebKit offline limitation persists.
+
+Offline registration enabled: external bootstrap registers /offline-sw.js in
+secure contexts after app import, updateViaCache none; registration failure logs
+warning without blocking app startup. Chromium real Tau automatic-registration
+journey passes offline reload/draft/reconnect with CSP checks; WebKit authenticated
+online/login journey with registration also passes CSP checks. 60 JS tests/lint/
+build and 27 frontend/packaging Python tests pass. WebKit offline navigation still
+fails in engine harness and is not claimed supported by evidence. Final installed
+artifact/matrix refresh required; old delivered wheel predates offline feature.

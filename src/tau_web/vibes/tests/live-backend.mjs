@@ -226,7 +226,8 @@ try {
   const offlineSession=new URL(page.url()).searchParams.get('session');
   await composer.fill('Draft across offline reload');
   await expect.poll(()=>page.evaluate(id=>JSON.parse(localStorage.getItem(`vibes_compose_draft:${encodeURIComponent(id)}`)||'{}').text,offlineSession)).toBe('Draft across offline reload');
-  await page.evaluate(async()=>{await navigator.serviceWorker.register('/offline-sw.js',{scope:'/'});await navigator.serviceWorker.ready;});
+  // Bootstrap, not the test, must register the production offline worker.
+  await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
   await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
   await context.setOffline(true);
   await page.reload();
