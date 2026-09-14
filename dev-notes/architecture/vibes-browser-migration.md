@@ -511,3 +511,10 @@ only worker route). Opt-in TAU_LIVE_OFFLINE Chromium journey installs against
 real authenticated Tau, reloads offline with shell/error and failing API, then
 reloads online. Frontend/packaging Python gates, 60 unit tests/lint pass. Automatic
 registration still disabled; active-session draft restoration assertion pending.
+
+Real Tau offline draft round-trip: Chromium saves active-session text draft,
+installs opt-in worker, reloads offline, verifies stored draft unchanged and API
+unavailable, reconnects/reloads and verifies selected session and composer text
+restored. 60 unit tests/lint and real authenticated journey pass. Offline UI does
+not restore server-selected session until backend returns; no offline send queue.
+Automatic registration remains disabled; WebKit offline limitation persists.

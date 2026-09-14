@@ -223,6 +223,9 @@ try {
   }
  }
  if(process.env.TAU_LIVE_OFFLINE){
+  const offlineSession=new URL(page.url()).searchParams.get('session');
+  await composer.fill('Draft across offline reload');
+  await expect.poll(()=>page.evaluate(id=>JSON.parse(localStorage.getItem(`vibes_compose_draft:${encodeURIComponent(id)}`)||'{}').text,offlineSession)).toBe('Draft across offline reload');
   await page.evaluate(async()=>{await navigator.serviceWorker.register('/offline-sw.js',{scope:'/'});await navigator.serviceWorker.ready;});
   await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
   await context.setOffline(true);
@@ -230,9 +233,12 @@ try {
   await expect(page.locator('.app-shell')).toBeVisible();
   await expect(page.getByRole('alert').first()).toBeVisible();
   expect(await page.evaluate(()=>fetch('/api/sessions').then(()=>true,()=>false))).toBe(false);
+  expect(await page.evaluate(id=>JSON.parse(localStorage.getItem(`vibes_compose_draft:${encodeURIComponent(id)}`)||'{}').text,offlineSession)).toBe('Draft across offline reload');
   await context.setOffline(false);
   await page.reload();
   await expect(page.locator('.app-shell')).toBeVisible();
+  await expect(composer).toHaveValue('Draft across offline reload');
+  expect(new URL(page.url()).searchParams.get('session')).toBe(offlineSession);
  }
  if(token && process.env.TAU_LIVE_LOGIN_UI){
   await page.getByRole('button',{name:'Provider setup',exact:true}).click();
