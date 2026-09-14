@@ -503,3 +503,11 @@ composer submission retains 'Offline unsent draft' and alert remains visible;
 API fetch fails. Existing cache privacy/upgrade checks pass. 60 unit tests/lint
 pass. Fixture has unavailable backend throughout and no selected server session;
 not a provider or online-to-offline active-session recovery test.
+
+Real Tau offline route checkpoint: /offline-sw.js serves generated public worker
+with root scope permission, separate from legacy retirement /sw.js. Explicit
+public-route allowlist required (initial registration returned 401, corrected
+only worker route). Opt-in TAU_LIVE_OFFLINE Chromium journey installs against
+real authenticated Tau, reloads offline with shell/error and failing API, then
+reloads online. Frontend/packaging Python gates, 60 unit tests/lint pass. Automatic
+registration still disabled; active-session draft restoration assertion pending.

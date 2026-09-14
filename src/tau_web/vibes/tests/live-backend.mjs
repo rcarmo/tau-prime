@@ -222,6 +222,18 @@ try {
    expect(result.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))}))).toEqual([]);
   }
  }
+ if(process.env.TAU_LIVE_OFFLINE){
+  await page.evaluate(async()=>{await navigator.serviceWorker.register('/offline-sw.js',{scope:'/'});await navigator.serviceWorker.ready;});
+  await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('.app-shell')).toBeVisible();
+  await expect(page.getByRole('alert').first()).toBeVisible();
+  expect(await page.evaluate(()=>fetch('/api/sessions').then(()=>true,()=>false))).toBe(false);
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.locator('.app-shell')).toBeVisible();
+ }
  if(token && process.env.TAU_LIVE_LOGIN_UI){
   await page.getByRole('button',{name:'Provider setup',exact:true}).click();
   if(process.env.TAU_LIVE_AXE){
