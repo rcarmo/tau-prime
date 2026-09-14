@@ -796,3 +796,31 @@ container/timeline/composer/textarea/workspace handle in all 12 cases, in additi
 to exact geometry. No tolerance or pixel masking used for these assertions.
 Does not assert identity labels or content-specific Markdown colors are identical;
 Tau identity and accessible URL styling remain intentional differences.
+
+## Plan sidebar and meters deployment — 2026-09-14
+
+Deployed candidate includes Plan/sidebar/meter bundle commit `42d58d9` (network
+reconnection fix `b25f5d6`). App bundle SHA-256:
+`80426f29370c48641055cdde4f97c7b96bdf9cabf419f480febee3169a4a743b`.
+Demo :8895 serves that exact bundle. Existing database/config retained; one
+unconsumed follow-up preserved. Rollback files: `/workspace/tmp/tau-plan-rollback`.
+Transient systemd unit recreated with the saved command after stop removed it.
+
+Evidence lanes:
+- Clean committed frontend: 72 tests; backend web: 287 tests.
+- Source fixtures: Chromium/WebKit editor, sidebar, meters; eight pinned-source
+  chrome and populated editor geometry comparisons within 1px.
+- Corrected reference captures: `/workspace/tmp/tau-plan-paired-corrected`.
+  Earlier paired captures lacked RangeSetBuilder and are superseded.
+- Installed wheel against authenticated temporary real backend: save/conflict,
+  SSE refresh, offline/change/online catch-up and real RSS on Chromium/WebKit.
+- Deployed read-only browser checks: sidebar/editor and real RSS visible;
+  desktop/phone HUD collapse works with workspace drawer closed in both engines.
+  An open mobile workspace drawer intentionally intercepts underlying HUD input.
+- Deployed screenshots: `/workspace/tmp/tau-demo-evidence` (existing empty Plan;
+  populated deployed state was NOT established). No provider run performed.
+- Desktop HUD CSS block equals current deployed Piclaw CSS byte-for-byte.
+
+Remaining: full-host/populated deployed visual acceptance and detailed HUD
+behavior comparison. Do not infer full parity from shared CSS or these passes.
+Unfinished thinking/tool work remains separate and is not in deployed bundle.
