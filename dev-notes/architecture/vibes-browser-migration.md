@@ -666,3 +666,11 @@ Metadata shutdown guard: coordinated model/thinking/branch changes now reject
 once shutdown begins, before invoking durable write. Regression verifies no write
 after shutdown. Runtime suite 22 pass; changed-file Ruff passes. New backend
 change requires artifact refresh before final delivery.
+
+fe04f58 installed checkpoint: full Python 1323 pass, two epoch-pinned wheels
+identical, installed 12-case expanded Axe/CSP matrix pass. Local llama became
+reachable; installed Chromium AND WebKit provider-live journeys now complete
+qwen38-gsq run, browser Allow for requested read tool, real README tool execution,
+assistant LOCAL_PROVIDER_OK answer and persisted timeline after reload. Logs:
+/workspace/tmp/provider-online{,-web}.log. First successful live provider/tool
+validation, not just direct curl/fixtures. Disconnect recovery still pending.
