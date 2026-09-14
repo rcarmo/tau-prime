@@ -227,6 +227,8 @@ try {
  await expect(markdownPost.getByRole('link',{name:'Safe mail',exact:true})).toHaveAttribute('href','mailto:review@example.com');
  await expect(markdownPost.getByRole('link',{name:'Safe relative',exact:true})).toHaveAttribute('href','/review');
  const codePost=page.locator('#post-4');
+ await expect(codePost).toHaveClass(/thread-reply/);
+ expect(await codePost.evaluate(el=>parseFloat(getComputedStyle(el).marginLeft))).toBeGreaterThan(0);
  const codeBlock=codePost.locator('.post-code-block');
  const codeToggle=codeBlock.locator('.tau-code-toggle');
  await expect(codeBlock).toHaveClass(/post-code-block-collapsed/);

@@ -950,7 +950,8 @@ export function Timeline({
             <div class="timeline-content">
                 <div class="timeline-sentinel" ref=${sentinelRef}></div>
                 ${displayPosts.map((post) => {
-                    const isThreadReply = Boolean(post.data?.thread_id && post.data.thread_id !== post.id);
+                    const isThreadReply = post.data?.type === 'agent_response' || post.data?.type === 'tool'
+                        || Boolean(post.data?.thread_id && post.data.thread_id !== post.id);
                     return html`
                     <${Post}
                         key=${post.id}
