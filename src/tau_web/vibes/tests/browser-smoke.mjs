@@ -279,7 +279,9 @@ try {
  };
  await openTools();
  const metrics=page.getByRole('button',{name:'Collapse system meters',exact:true});
- await expect(metrics).toContainText('12.5%');await expect(metrics).toContainText('100.0 MiB');await expect(metrics).toContainText('Unavailable');
+ await expect(metrics).toContainText('12.5%');
+ if(viewport.width<=600)await expect(metrics).toContainText('CPU 12.5% • RAM 44.0%');
+ else{await expect(metrics).toContainText('100.0 MiB');await expect(metrics).toContainText('Unavailable');}
  await scan('body');
  await expect(page.locator('summary').filter({hasText:'Runtime metrics'})).toHaveCount(0);
  if(process.env.TAU_CAPTURE_DIR){
