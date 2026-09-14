@@ -543,3 +543,19 @@ Both verify API network failure, cached shell, error/draft handling and upgrade.
 Thus prior WebKit internal navigation error is specific to offline emulation in
 this harness, not reproduced with server outage. Not proof of every device's
 network-off behavior. 60 unit tests/lint pass; no production changes.
+
+## New-branch parity resolution (historical audit)
+
+At ca3e468^ (last tree before old frontend removal), frontend/src/api/tau.ts
+createSession accepts only title/provider/model. Its branches/selectBranch methods
+list/select existing entries; Timeline.tsx:167 exposes leaf-selection buttons.
+No parent_session/parentId/fork/createBranch source matches exist in that frontend.
+Legacy branches.spec.mjs likewise verifies listing/selection, not child creation.
+Current routes/timeline.py retains list/select semantics, including validation.
+
+Therefore earlier classification of imported 'New branch' as missing Tau parity
+was incorrect. It creates an empty child session in upstream Vibes, a different
+capability unsupported by Tau's session API. f335896 hides that invalid action;
+existing Tau leaf selection has real-backend browser coverage. No backend feature
+is removed or silently substituted. New child-session creation would require a
+separate feature request, not completion of this replacement parity plan.
