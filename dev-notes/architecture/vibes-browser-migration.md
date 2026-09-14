@@ -674,3 +674,10 @@ qwen38-gsq run, browser Allow for requested read tool, real README tool executio
 assistant LOCAL_PROVIDER_OK answer and persisted timeline after reload. Logs:
 /workspace/tmp/provider-online{,-web}.log. First successful live provider/tool
 validation, not just direct curl/fixtures. Disconnect recovery still pending.
+
+Installed live-provider recovery: TAU_PROVIDER_RECOVERY=1 disconnects browser at
+pending real read approval, verifies browser API failure while backend retains
+same approval, reconnects/reloads, approves through UI, waits for completion and
+reloads persisted answer. Chromium/WebKit pass with exactly one run and at least
+one actual approval. Provider execution continues server-side; no provider network
+outage/restart claim. 60 JS tests/lint pass. Logs provider-recover-{chrom,web}.log.

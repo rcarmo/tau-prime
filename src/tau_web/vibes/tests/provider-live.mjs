@@ -18,19 +18,33 @@ try{
  await composer.fill('Use the read tool to read README.md in the current workspace. Then report the heading verbatim and finish with LOCAL_PROVIDER_OK. Do not modify any files.');await composer.press('Enter');
  console.log('After send',await page.locator('body').innerText());
  let runs;
- let lastState='';
+ let lastState='';let interrupted=false;let approved=0;
  await expect.poll(async()=>{
   runs=(await request(`/api/sessions/${session.session_id}/runs`)).runs;
   const approvals=await request(`/api/sessions/${session.session_id}/approvals`);
   const state=JSON.stringify({runs,approvals});if(state!==lastState){console.log(state);lastState=state;}
   for(const approval of approvals.approvals||[]){
    if(!['read','read_file'].includes(approval.tool_name))throw new Error(`Unexpected tool requiring approval: ${approval.tool_name}`);
-   await page.getByRole('button',{name:`Allow ${approval.tool_name}`,exact:true}).click();
+   if(process.env.TAU_PROVIDER_RECOVERY&&!interrupted){
+    await context.setOffline(true);
+    expect(await page.evaluate(()=>fetch('/api/sessions').then(()=>true,()=>false))).toBe(false);
+    await page.waitForTimeout(1200);
+    const pending=await request(`/api/sessions/${session.session_id}/approvals`);
+    expect(pending.approvals.some(item=>item.approval_id===approval.approval_id)).toBe(true);
+    await context.setOffline(false);
+    await page.reload();
+    await expect(page.getByText('@Local provider validation',{exact:true})).toBeVisible();
+    interrupted=true;
+   }
+   await page.getByRole('button',{name:`Allow ${approval.tool_name}`,exact:true}).click();approved++;
   }
   return runs.some(r=>['completed','failed','cancelled'].includes(r.status));
  },{timeout:180000,intervals:[500,1000]}).toBe(true);
  const timeline=await request(`/api/sessions/${session.session_id}/timeline?limit=200`);
  console.log(JSON.stringify({engine:process.env.TAU_LIVE_ENGINE||'chromium',runs,timeline},null,2));
+ expect(runs).toHaveLength(1);
+ expect(approved).toBeGreaterThan(0);
+ if(process.env.TAU_PROVIDER_RECOVERY)expect(interrupted).toBe(true);
  expect(runs[0].status).toBe('completed');
  expect(JSON.stringify(timeline)).toContain('LOCAL_PROVIDER_OK');
  await page.reload();await expect(page.locator('.timeline')).toContainText('LOCAL_PROVIDER_OK',{timeout:15000});
