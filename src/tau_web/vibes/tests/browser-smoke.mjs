@@ -262,6 +262,9 @@ try {
  const openTools=async()=>{
   if(await page.getByRole('dialog',{name:'Session tools',exact:true}).count())return;
   await page.getByTestId('session-switcher').click();
+  const bounds=await page.locator('.compose-session-popup').boundingBox();
+  expect(bounds.width).toBeLessThanOrEqual(420);
+  expect(bounds.height).toBeLessThanOrEqual(viewport.height*0.61);
   await page.getByRole('button',{name:'Session tools…',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toBeVisible();
  };
@@ -376,6 +379,7 @@ try {
  await composer.fill('Keep rejected draft');
  activeRun=true;
  const cancel=page.getByRole('button',{name:'Cancel run',exact:true});
+ await expect(page.locator('.compose-box').getByRole('button',{name:'Cancel run',exact:true})).toBeVisible();
  await expect(cancel).toBeVisible();
  await cancel.click();
  await expect(page.locator('.tau-run-control button')).toHaveCount(0);

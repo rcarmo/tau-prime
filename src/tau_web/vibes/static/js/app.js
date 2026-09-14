@@ -4,7 +4,6 @@ import { activateTauExtensions } from './tau-extensions.js';
 import { reduceTauDraft } from './tau-draft.js';
 import { TauApprovals } from './components/tau-approvals.js';
 import { TauProviderSetup } from './components/tau-provider-setup.js';
-import { TauRunControl } from './components/tau-run-control.js';
 import { TauEventStream } from './tau-events.js';
 import { initialTauSession } from './tau-session-selection.js';
 import { SessionDeleteDialog } from './components/session-delete-dialog.js';
@@ -2666,7 +2665,6 @@ function App() {
                 <div data-extension-slot="dashboard"></div>
                 <div data-extension-slot="sidebar"></div>
                 ${selectedSession && html`<${TauApprovals} key=${selectedSession} sessionId=${selectedSession} />`}
-                <${TauRunControl} key=${selectedSession} sessionId=${selectedSession} />
                 <${AgentStatus}
                     status=${agentStatus}
                     draft=${agentDraft}

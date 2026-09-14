@@ -17,7 +17,19 @@ export function SessionPicker({ sessions = [], refreshError = '', currentId = 'd
     const parents = new Set(sessions.map(item => item.parent_id).filter(Boolean));
     const selectedIndex = Math.max(0, Math.min(index, matches.length - 1));
     const selectedId = matches[selectedIndex]?.id;
-    useEffect(() => { search.current?.focus(); }, []);
+    useEffect(() => {
+        search.current?.focus();
+        const position = () => {
+            const popup = search.current?.closest('.compose-session-popup');
+            const trigger = document.querySelector('[data-testid="session-switcher"]');
+            if (!popup || !trigger) return;
+            const rect = trigger.getBoundingClientRect();
+            popup.style.bottom = `${Math.max(8, innerHeight - rect.top + 8)}px`;
+            popup.style.right = `${Math.max(8, innerWidth - rect.right)}px`;
+        };
+        position();window.addEventListener('resize', position);
+        return () => window.removeEventListener('resize', position);
+    }, []);
     useEffect(() => {
         const option = Array.from(results.current?.querySelectorAll('[role="option"]') || [])
             .find(node => node.id === `session-option-${selectedId}`);

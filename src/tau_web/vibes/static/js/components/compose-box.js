@@ -3,6 +3,7 @@ import { loadModelPins, saveModelPins, modelPinStorage } from './model-pins.js';
 import { createSpeechInput, speechInputConstructor, shouldStartSpeechPushToTalk } from './compose-speech.js';
 import { sessionMentionQuery, sessionMentionMatches, insertSessionMention } from './session-mentions.js';
 import { composeDrafts } from './compose-drafts.js';
+import { TauRunControl } from './tau-run-control.js';
 import { usagePresentation } from './usage.js';
 import { useComposeSizing } from './compose-sizing.js';
 import { loadComposeHistory, saveComposeHistory } from './compose-history.js';
@@ -1236,6 +1237,7 @@ export function ComposeBox({
                             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                             <input type="file" multiple hidden onChange=${handleFileChange} />
                         </label>
+                        <${TauRunControl} key=${sessionId} sessionId=${sessionId} />
                         <button type="button" class="icon-btn send-btn"
                             onClick=${() => handleSubmit('auto')}
                             disabled=${!canSend}
