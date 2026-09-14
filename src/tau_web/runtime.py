@@ -86,6 +86,7 @@ class DurableAgentRuntime:
         self._queue_locks: dict[str, asyncio.Lock] = {}
         self._shutdown_lock = asyncio.Lock()
         self._shutdown_complete = False
+        self._shutdown_started = False
 
     def register_session(
         self,
@@ -256,7 +257,9 @@ class DurableAgentRuntime:
         async with self._shutdown_lock:
             if self._shutdown_complete:
                 return
-            await self._pool.shutdown(cancel_timeout=cancel_timeout)
+            self._shutdown_started = True
+            async with self._session_load_lock:
+                await self._pool.shutdown(cancel_timeout=cancel_timeout)
             await self._drain_driver_tasks()
             self._shutdown_complete = True
 
@@ -267,6 +270,8 @@ class DurableAgentRuntime:
         *,
         run_id: str | None,
     ) -> DurableRunHandle:
+        if self._shutdown_started:
+            raise AgentPoolError("Runtime is shutting down")
         created = await self._runs.create(
             session_id,
             run_id=run_id,
@@ -277,6 +282,8 @@ class DurableAgentRuntime:
         try:
             if self._session_loader is not None:
                 async with self._session_load_lock:
+                    if self._shutdown_started:
+                        raise AgentPoolError("Runtime is shutting down")
                     try:
                         self._pool.snapshot(session_id)
                     except UnknownSessionError:

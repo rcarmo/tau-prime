@@ -17,7 +17,12 @@ from tau_agent import (
     QueueUpdateEvent,
     UserMessage,
 )
-from tau_coding.agent_pool import AsyncAgentPool, PoolSessionState, UnknownSessionError
+from tau_coding.agent_pool import (
+    AgentPoolError,
+    AsyncAgentPool,
+    PoolSessionState,
+    UnknownSessionError,
+)
 from tau_web.events import EventProjectorCallback
 from tau_web.runtime import DurableAgentRuntime
 from tau_web.sqlite.connection import SqliteDatabase
@@ -899,3 +904,34 @@ async def test_concurrent_first_submissions_initialize_session_once(tmp_path: Pa
         release.set()
         await harness.aclose()
     assert session.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_shutdown_waits_for_lazy_loader_and_closes_owned_session(tmp_path: Path) -> None:
+    session = _FakeSession()
+    harness = await _open_runtime(tmp_path, session, lazy=True)
+    loading = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delayed_load(_: str) -> _FakeSession:
+        loading.set()
+        await release.wait()
+        return session
+
+    harness.runtime._session_loader = delayed_load
+    try:
+        submission = asyncio.create_task(harness.runtime.submit_prompt("alpha", "first"))
+        await asyncio.wait_for(loading.wait(), timeout=1)
+        shutdown = asyncio.create_task(harness.runtime.shutdown())
+        await asyncio.sleep(0)
+        assert not shutdown.done()
+        release.set()
+        handle = await submission
+        await shutdown
+        await handle.wait()
+        assert session.close_calls == 1
+        with pytest.raises(AgentPoolError, match="shutting down"):
+            await harness.runtime.submit_prompt("alpha", "too late")
+    finally:
+        release.set()
+        await harness.aclose()

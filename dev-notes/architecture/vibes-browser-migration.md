@@ -622,3 +622,10 @@ Concurrent lazy-load regression: two first submissions overlap while loader is
 blocked; loader called once, pool serializes both prompts, owned session closes
 once. Runtime suite 17 pass and Ruff pass. Pool queues competing submissions;
 it does not reject the second as busy (correcting initial investigation wording).
+
+Lazy-load shutdown fix: shutdown marks runtime closing and holds initialization
+lock while closing pool, preventing late construction from escaping cleanup.
+New submissions rejected once shutdown starts. Deferred-loader regression verifies
+shutdown waits, loaded owned agent closes once and subsequent submit rejects.
+281 web tests pass; changed-file Ruff passes. Provider remains unavailable;
+model/thinking mutation coherence after a loaded run still requires review.
