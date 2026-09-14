@@ -726,3 +726,8 @@ now 30 errors in 4 files, none in tau_web; project-wide gate still open.
 TUI widget type corrections: public textual.style import, explicit union for
 plain/Markdown body widget, heading alignment literals match base class. Ruff
 passes; 223 TUI app tests pass. Mypy now 27 errors in 3 files; no type suppression.
+
+TUI optional credential guards: login/OAuth/logout do not pass absent credential
+names to store; stored-provider list excludes credentialless entries; startup
+falls back to configured default when resumed provider is absent. 223 TUI tests
+and file Ruff pass. Mypy now 21 errors in 3 files; remaining checks open.

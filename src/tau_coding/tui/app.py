@@ -3374,6 +3374,9 @@ class TauTuiApp(App[None]):
     def _handle_login_result(self, entry: ProviderCatalogEntry, api_key: str | None) -> None:
         if api_key is None:
             return
+        if entry.credential_name is None:
+            self._notify(NO_STORED_CREDENTIALS_MESSAGE, severity="warning")
+            return
         try:
             FileCredentialStore().set(entry.credential_name, api_key)
             provider = provider_config_from_catalog_entry(entry.name)
@@ -3395,6 +3398,9 @@ class TauTuiApp(App[None]):
         credential: OAuthCredential | None,
     ) -> None:
         if credential is None:
+            return
+        if entry.credential_name is None:
+            self._notify(NO_STORED_CREDENTIALS_MESSAGE, severity="warning")
             return
         try:
             FileCredentialStore().set_oauth(entry.credential_name, credential)
@@ -3437,7 +3443,9 @@ class TauTuiApp(App[None]):
             return
 
         credential_store = FileCredentialStore()
-        if not _credential_store_has_entry(credential_store, entry.credential_name):
+        if entry.credential_name is None or not _credential_store_has_entry(
+            credential_store, entry.credential_name
+        ):
             self._notify(NO_STORED_CREDENTIALS_MESSAGE, severity="warning")
             return
 
@@ -4269,7 +4277,8 @@ def _stored_credential_providers(
     return tuple(
         provider
         for provider in providers
-        if _credential_store_has_entry(credential_store, provider.credential_name)
+        if provider.credential_name is not None
+        and _credential_store_has_entry(credential_store, provider.credential_name)
     )
 
 
@@ -4726,7 +4735,7 @@ async def run_tui_app(
         )
         provider_settings = await ensure_dynamic_provider_models(
             provider_settings,
-            provider_name=target_provider,
+            provider_name=target_provider or provider_settings.default_provider,
         )
         selection = _resolve_tui_startup_selection(
             provider_settings,
