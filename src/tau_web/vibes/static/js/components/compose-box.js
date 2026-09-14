@@ -3,6 +3,7 @@ import { loadModelPins, saveModelPins, modelPinStorage } from './model-pins.js';
 import { createSpeechInput, speechInputConstructor, shouldStartSpeechPushToTalk } from './compose-speech.js';
 import { sessionMentionQuery, sessionMentionMatches, insertSessionMention } from './session-mentions.js';
 import { composeDrafts } from './compose-drafts.js';
+import { resolveMessageReferences } from '../tau-message-references.js';
 import { TauRunControl } from './tau-run-control.js';
 import { usagePresentation } from './usage.js';
 import { useComposeSizing } from './compose-sizing.js';
@@ -10,7 +11,7 @@ import { loadComposeHistory, saveComposeHistory } from './compose-history.js';
 import { FilePill } from './file-pill.js';
 import { parseQueuedContent } from './queued-content.js';
 import { html, useRef, useState, useEffect, useCallback } from '../vendor/preact-htm.js';
-import { getModelPreferences, saveModelPreferences, getSessionModels, changeSessionModel, getSessions, sendAgentMessage, uploadMedia, getAgentCommands } from '../api.js';
+import { getSessionTimeline, getModelPreferences, saveModelPreferences, getSessionModels, changeSessionModel, getSessions, sendAgentMessage, uploadMedia, getAgentCommands } from '../api.js';
 
 /**
  * Slash command definitions for autocomplete.
@@ -654,9 +655,7 @@ export function ComposeBox({
                 ? `Files:\n${fileRefs.map((path) => `- ${path}`).join('\n')}`
                 : '';
             const folderBlock = folderRefs.length ? `Folders:\n${folderRefs.map(path => `- ${path}`).join('\n')}` : '';
-            const messageBlock = messageRefs.length
-                ? `Messages:\n${messageRefs.map((id) => `- ${id}`).join('\n')}`
-                : '';
+            const messageBlock = await resolveMessageReferences(sessionId, messageRefs, getSessionTimeline);
             const mediaBlock = mediaIds.length
                 ? `${mediaFiles.every(file => file.type.startsWith('image/')) ? 'Images' : 'Attachments'}:\n${mediaIds.map((id, index) => {
                     const file = mediaFiles[index];

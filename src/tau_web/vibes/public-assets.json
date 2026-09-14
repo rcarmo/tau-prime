@@ -99,6 +99,7 @@
   "js/tau-draft.js",
   "js/tau-events.js",
   "js/tau-extensions.js",
+  "js/tau-message-references.js",
   "js/tau-session-selection.js",
   "js/tau-widget-actions.js",
   "js/vendor/beautiful-mermaid.js",
