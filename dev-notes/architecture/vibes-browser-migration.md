@@ -707,3 +707,8 @@ Pydantic shim typing: TypeAdapter now declares a generic validated return/value
 type using Python type parameters; runtime coercion remains unchanged. Session
 JSONL Any/generic errors removed. 110 session/export/coding-session tests pass;
 shim Ruff clean. Mypy now 43 errors in 9 files; remaining lint/type gate open.
+
+Landlock typing: libc wrapper annotated as CDLL, syscall number/arguments explicit
+and result converted to int, preserving error checks and confinement behavior.
+Four Linux sandbox tests pass; file Ruff clean. Mypy decreases 43 to 34 errors in
+8 files. No relaxation of ABI requirement, allowed roots or fail-closed policy.

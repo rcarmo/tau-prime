@@ -3,6 +3,7 @@
 Reads, execution and networking remain unrestricted. Existing open descriptors
 are not revoked. This is filesystem write confinement, not namespace isolation.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -12,6 +13,7 @@ import sys
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
+
 from tau_coding.paths import TauPaths
 
 _SANDBOXED_ENV = "TAU_LINUX_SANDBOXED"
@@ -25,30 +27,41 @@ _FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 _WRITE = (1 << 1) | sum(1 << bit for bit in range(4, 15))
 _entered = False
 
+
 class LinuxSandboxError(RuntimeError):
     """The requested Landlock policy could not be installed."""
+
 
 class _Ruleset(ctypes.Structure):
     _fields_ = [("handled_access_fs", ctypes.c_uint64)]
 
+
 class _PathRule(ctypes.Structure):
     _fields_ = [("allowed_access", ctypes.c_uint64), ("parent_fd", ctypes.c_int32)]
 
-def _libc():
+
+def _libc() -> ctypes.CDLL:
     if sys.platform != "linux" or host_platform.machine() not in {
-        "x86_64", "aarch64", "riscv64", "i386", "i686", "armv7l"
+        "x86_64",
+        "aarch64",
+        "riscv64",
+        "i386",
+        "i686",
+        "armv7l",
     }:
         raise LinuxSandboxError("Landlock syscall numbers unavailable on this platform")
     libc = ctypes.CDLL(None, use_errno=True)
     libc.syscall.restype = ctypes.c_long
     return libc
 
-def _call(number, *args):
-    result = _libc().syscall(ctypes.c_long(number), *args)
+
+def _call(number: int, *args: object) -> int:
+    result = int(_libc().syscall(ctypes.c_long(number), *args))
     if result < 0:
         error = ctypes.get_errno()
         raise LinuxSandboxError(f"Landlock syscall {number}: {os.strerror(error)}")
     return result
+
 
 def landlock_abi() -> int:
     """Probe kernel support without applying any restrictions."""
@@ -56,6 +69,7 @@ def landlock_abi() -> int:
         return _call(444, ctypes.c_void_p(), ctypes.c_size_t(0), ctypes.c_uint(1))
     except LinuxSandboxError:
         return 0
+
 
 def should_enter_linux_sandbox(*, disabled: bool, platform: str | None = None) -> bool:
     if disabled or _entered or (platform or sys.platform) != "linux":
@@ -65,9 +79,13 @@ def should_enter_linux_sandbox(*, disabled: bool, platform: str | None = None) -
         return True
     return mode == "auto" and landlock_abi() >= 3
 
+
 def enter_linux_sandbox(
-    *, argv: Sequence[str] | None = None, project_dir: Path,
-    tau_paths: TauPaths | None = None, temp_dir: Path | None = None,
+    *,
+    argv: Sequence[str] | None = None,
+    project_dir: Path,
+    tau_paths: TauPaths | None = None,
+    temp_dir: Path | None = None,
     extra_writable_paths: Sequence[Path] | None = None,
 ) -> None:
     """Restrict this thread and its future children; never re-exec or fail open."""
@@ -78,7 +96,9 @@ def enter_linux_sandbox(
     if not project.is_dir():
         raise LinuxSandboxError(f"Project directory does not exist: {project}")
     paths = tau_paths or TauPaths()
-    extras = extra_writable_paths_from_env() if extra_writable_paths is None else extra_writable_paths
+    extras = (
+        extra_writable_paths_from_env() if extra_writable_paths is None else extra_writable_paths
+    )
     roots = [project, paths.home, paths.logs_dir, temp_dir or Path(tempfile.gettempdir())]
     for path in extras:
         if not path.expanduser().resolve().is_dir():
@@ -88,14 +108,18 @@ def enter_linux_sandbox(
             path.expanduser().mkdir(parents=True, exist_ok=True)
         roots = _dedupe_paths([p.expanduser().resolve() for p in [*roots, *extras]])
         ruleset = _Ruleset(_WRITE)
-        fd = _call(444, ctypes.byref(ruleset), ctypes.c_size_t(ctypes.sizeof(ruleset)), ctypes.c_uint(0))
+        fd = _call(
+            444, ctypes.byref(ruleset), ctypes.c_size_t(ctypes.sizeof(ruleset)), ctypes.c_uint(0)
+        )
         try:
             # Device writes were allowed by the former /dev bind mount.
             for root in [*roots, Path("/dev")]:
                 parent = os.open(root, os.O_PATH | os.O_CLOEXEC)
                 try:
                     rule = _PathRule(_WRITE, parent)
-                    _call(445, ctypes.c_int(fd), ctypes.c_int(1), ctypes.byref(rule), ctypes.c_uint(0))
+                    _call(
+                        445, ctypes.c_int(fd), ctypes.c_int(1), ctypes.byref(rule), ctypes.c_uint(0)
+                    )
                 finally:
                     os.close(parent)
             if _libc().prctl(38, 1, 0, 0, 0) != 0:
@@ -109,6 +133,7 @@ def enter_linux_sandbox(
     os.environ[_SANDBOXED_ENV] = "1"  # informational, never trusted to bypass policy
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     sys.dont_write_bytecode = True
+
 
 def extra_writable_paths_from_env(value: str | None = None) -> tuple[Path, ...]:
     """Return extra writable paths requested through TAU_SANDBOX_WRITABLE_PATHS."""
