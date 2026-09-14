@@ -57,6 +57,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
 python_version = "3.13"
 strict = true
 packages = ["tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"]

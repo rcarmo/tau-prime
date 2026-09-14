@@ -7,7 +7,7 @@ from collections import deque
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import uuid4
 
 from tau_agent import AgentEvent, ErrorEvent, QueueUpdateEvent, UserMessage
@@ -50,14 +50,16 @@ class CodingSessionLike(Protocol):
         self,
         content: str | UserMessage,
         *,
-        streaming_behavior: str | None = None,
+        streaming_behavior: Literal["steer", "follow_up"] | None = None,
     ) -> AsyncIterator[AgentEvent]:
         """Start one prompt run and stream resulting agent events."""
 
     def continue_(self) -> AsyncIterator[AgentEvent]:
         """Continue one restored or interrupted run."""
 
-    async def queue_message(self, content: str | UserMessage, *, behavior: str) -> QueueUpdateEvent:
+    async def queue_message(
+        self, content: str | UserMessage, *, behavior: Literal["steer", "follow_up"]
+    ) -> QueueUpdateEvent:
         """Queue one message for the currently active run."""
 
     def cancel(self) -> None:
@@ -405,7 +407,7 @@ class AsyncAgentPool:
         session_id: str,
         content: str | UserMessage,
         *,
-        behavior: str,
+        behavior: Literal["steer", "follow_up"],
         current_run_id: str,
     ) -> QueueUpdateEvent:
         if not current_run_id.strip():

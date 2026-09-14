@@ -689,3 +689,10 @@ coverage and actual installed local-provider execution/recovery in both engines.
 Physical-device gestures and paired visual acceptance remain unverified; they
 must not be inferred from automated successes. Earlier broad mypy invocation
 also emitted unrelated type errors; no clean project-wide mypy claim is made.
+
+Typecheck audit: default mypy command previously resolved installed packages and
+failed missing py.typed. Config now resolves checkout src explicitly. This exposes
+49 strict errors; narrowed pool behavior protocol to actual steer/follow_up
+literals, fixing CodingSession compatibility in new loader without a cast/ignore.
+43 pool/runtime tests and Ruff pass. Mypy now checks 162 files and reports 48
+remaining errors in 11 files; typecheck gate explicitly unfinished.
