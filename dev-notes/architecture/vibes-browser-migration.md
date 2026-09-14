@@ -629,3 +629,12 @@ New submissions rejected once shutdown starts. Deferred-loader regression verifi
 shutdown waits, loaded owned agent closes once and subsequent submit rejects.
 281 web tests pass; changed-file Ruff passes. Provider remains unavailable;
 model/thinking mutation coherence after a loaded run still requires review.
+
+Loaded-agent metadata coherence fix: model/thinking REST mutations now coordinate
+with lazy-load lock, reject active/queued runs before metadata write, and close/
+unregister idle loaded agents after successful transaction. Next run reloads
+updated durable settings. Added idle pool removal API with busy guard. Tests
+verify replacement agent and owned cleanup, plus no write during active run.
+303 web/pool tests passed before additional active-run case; runtime now 20 pass,
+changed-file Ruff passes. Initial current_run typo corrected to current_run_id.
+Branch-selection coherence and broader execution lifecycle still require review.

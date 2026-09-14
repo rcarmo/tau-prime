@@ -10,6 +10,7 @@ from aiohttp import web
 
 from tau_agent.session import LeafEntry, ModelChangeEntry, ThinkingLevelChangeEntry
 from tau_agent.types import JSONObject, JSONValue
+from tau_coding.agent_pool import AgentPoolError
 from tau_coding.commands import create_default_command_registry
 from tau_coding.plan import (
     PlanConflictError,
@@ -197,7 +198,9 @@ async def patch_session_model(request: web.Request) -> web.Response:
         await services.database.write(write)
 
     try:
-        await write_model_change()
+        await services.runtime.change_session_metadata(session_id, write_model_change)
+    except AgentPoolError as exc:
+        raise web.HTTPConflict(text=str(exc)) from exc
     except Exception as exc:
         raise_for_repository_error(exc)
 
@@ -239,7 +242,9 @@ async def patch_session_thinking(request: web.Request) -> web.Response:
         await services.database.write(write)
 
     try:
-        await write_thinking_change()
+        await services.runtime.change_session_metadata(session_id, write_thinking_change)
+    except AgentPoolError as exc:
+        raise web.HTTPConflict(text=str(exc)) from exc
     except Exception as exc:
         raise_for_repository_error(exc)
 

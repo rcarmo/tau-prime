@@ -252,6 +252,23 @@ class DurableAgentRuntime:
                 return None
             return await self._dispatch_locked(record, queued[0])
 
+    async def change_session_metadata(
+        self, session_id: str, change: Callable[[], Awaitable[None]]
+    ) -> None:
+        """Apply a durable change only while idle, then discard the stale agent."""
+        async with self._session_load_lock:
+            try:
+                snapshot = self._pool.snapshot(session_id)
+            except UnknownSessionError:
+                snapshot = None
+            if snapshot is not None and (snapshot.current_run_id or snapshot.queued_runs):
+                raise AgentPoolError(
+                    "Cannot change session settings while runs are active or queued"
+                )
+            await change()
+            if snapshot is not None:
+                await self._pool.remove_idle_session(session_id)
+
     async def shutdown(self, *, cancel_timeout: float = 1.0) -> None:
         """Drain pool and driver tasks, closing owned sessions through the pool."""
         async with self._shutdown_lock:

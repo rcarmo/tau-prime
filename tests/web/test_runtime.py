@@ -935,3 +935,54 @@ async def test_shutdown_waits_for_lazy_loader_and_closes_owned_session(tmp_path:
     finally:
         release.set()
         await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_metadata_change_discards_loaded_agent_for_next_run(tmp_path: Path) -> None:
+    first = _FakeSession(prompt_scripts=[_Script(events=(AgentStartEvent(), AgentEndEvent()))])
+    second = _FakeSession(prompt_scripts=[_Script(events=(AgentStartEvent(), AgentEndEvent()))])
+    harness = await _open_runtime(tmp_path, first, lazy=True)
+    changed = False
+
+    async def change() -> None:
+        nonlocal changed
+        changed = True
+
+    async def reload(_: str) -> _FakeSession:
+        assert changed
+        return second
+
+    try:
+        await (await harness.runtime.submit_prompt("alpha", "first")).wait()
+        await harness.runtime.change_session_metadata("alpha", change)
+        assert first.close_calls == 1
+        harness.runtime._session_loader = reload
+        await (await harness.runtime.submit_prompt("alpha", "second")).wait()
+        assert second.prompt_calls == ["second"]
+    finally:
+        await harness.aclose()
+    assert second.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_metadata_change_rejects_active_run_before_writing(tmp_path: Path) -> None:
+    started, release = asyncio.Event(), asyncio.Event()
+    session = _FakeSession(prompt_scripts=[_Script(started=started, release=release)])
+    harness = await _open_runtime(tmp_path, session)
+    changed = False
+
+    async def change() -> None:
+        nonlocal changed
+        changed = True
+
+    try:
+        handle = await harness.runtime.submit_prompt("alpha", "running")
+        await asyncio.wait_for(started.wait(), timeout=1)
+        with pytest.raises(AgentPoolError, match="active or queued"):
+            await harness.runtime.change_session_metadata("alpha", change)
+        assert not changed
+        release.set()
+        await handle.wait()
+    finally:
+        release.set()
+        await harness.aclose()

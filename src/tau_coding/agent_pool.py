@@ -344,6 +344,14 @@ class AsyncAgentPool:
             task.cancel()
         return True
 
+    async def remove_idle_session(self, session_id: str) -> None:
+        """Close and unregister an idle session so durable settings can be reloaded."""
+        entry = self._require_session(session_id)
+        if entry.current_run_id is not None or entry.run_tasks:
+            raise AgentPoolError("Cannot reload a session with active or queued runs")
+        await self.close_session(session_id)
+        del self._sessions[session_id]
+
     async def close_session(self, session_id: str) -> None:
         """Stop accepting work, drain in-flight tasks, and close owned resources."""
         entry = self._require_session(session_id)
