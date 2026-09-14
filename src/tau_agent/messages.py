@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from tau_agent.tools import ToolCall
 from tau_agent.types import JSONValue
 
@@ -33,7 +32,9 @@ class UserMessage(BaseModel):
 
     role: Literal["user"] = "user"
     content: str
-    attachments: list[UserAttachment] = Field(default_factory=list, exclude_if=lambda value: not value)
+    attachments: list[UserAttachment] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
 
 
 class AssistantMessage(BaseModel):

@@ -751,3 +751,9 @@ Strict typecheck clean: all 162 configured source files pass mypy. Final TUI fix
 keep Textual's dynamic selection override in instance dictionary (not shared class
 state), and narrow getattr manager to object rather than leaking Any. 223 TUI
 tests and file Ruff pass. Full project lint/regression and new artifact remain.
+
+Project lint gate cleaned: safe import fixes, formatting/wrapped adjacent strings,
+redundant path validation assignment removed (same validation remains in _path_arg),
+paths conditional simplified. Full Python 1323 tests pass; mypy all 162 sources
+pass; full ruff check . passes. No rule disabling. Runtime/package refresh and
+frontend/live smoke after all type/lint changes still required.

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pydantic import TypeAdapter, ValidationError
-
 from tau_agent.session.entries import SessionEntry
 
 _SESSION_ENTRY_ADAPTER: TypeAdapter[SessionEntry] = TypeAdapter(SessionEntry)

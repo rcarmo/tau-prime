@@ -116,10 +116,7 @@ class TauPaths:
 def _sandbox_documents_logs_dir(home: Path) -> Path | None:
     """Return an iOS/a-Shell visible Documents dotpath log dir for sandbox Library homes."""
     expanded = home.expanduser()
-    if expanded.name.startswith("."):
-        library_dir = expanded.parent
-    else:
-        library_dir = expanded
+    library_dir = expanded.parent if expanded.name.startswith(".") else expanded
     if library_dir.name != "Library":
         return None
     documents_dir = library_dir.parent / "Documents"

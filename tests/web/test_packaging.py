@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import re
 import zipfile
 from pathlib import Path
 
@@ -68,10 +66,10 @@ def test_wheel_includes_frontend_static_assets() -> None:
 
 def test_replacement_excludes_superseded_chat_frontend():
     names = {name for _, name in build_backend._package_files()}
-    assert 'tau_web/vibes/static/dist/app.js' in names
-    assert not any(name.startswith('tau_web/frontend/') for name in names)
-    assert 'tau_web/static/app.js' not in names
-    assert 'tau_web/static/preact-shell.js' not in names
+    assert "tau_web/vibes/static/dist/app.js" in names
+    assert not any(name.startswith("tau_web/frontend/") for name in names)
+    assert "tau_web/static/app.js" not in names
+    assert "tau_web/static/preact-shell.js" not in names
 
 
 def test_wheel_excludes_dependency_and_cache_trees() -> None:
@@ -101,39 +99,46 @@ def test_wheel_declares_tau_console_script(tmp_path: Path) -> None:
 
 def test_wheel_excludes_rejected_visual_assets() -> None:
     names = {name for _, name in build_backend._package_files()}
-    forbidden = ['piclaw-reference.css','piclaw-parity.css','JetBrainsMonoNFM-Medium-hh38vnv1.woff2','JetBrainsMonoNFM-Regular-rhdb9m6d.woff2']
+    forbidden = [
+        "piclaw-reference.css",
+        "piclaw-parity.css",
+        "JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
+        "JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
+    ]
     for name in forbidden:
         assert f"tau_web/static/{name}" not in names
 
 
 def test_imported_vibes_runtime_assets_and_licenses_are_packaged():
     names = {name for _, name in build_backend._package_files()}
-    root = 'tau_web/vibes/'
-    assert root + 'LICENSE' in names
-    assert root + 'source-revision.txt' in names
-    assert root + 'static/js/app.js' in names
-    source = Path(__file__).resolve().parents[2] / 'src' / root
-    for path in (source / 'static').rglob('*'):
-        if path.is_file() and (path.suffix == '.mjs' or 'LICENSE' in path.name):
+    root = "tau_web/vibes/"
+    assert root + "LICENSE" in names
+    assert root + "source-revision.txt" in names
+    assert root + "static/js/app.js" in names
+    source = Path(__file__).resolve().parents[2] / "src" / root
+    for path in (source / "static").rglob("*"):
+        if path.is_file() and (path.suffix == ".mjs" or "LICENSE" in path.name):
             assert root + path.relative_to(source).as_posix() in names
-    assert not any(name.startswith(root + 'tests/') for name in names)
-    assert root + 'dev-server.js' not in names
-    assert root + 'build.js' not in names
-    assert not any('node_modules' in name for name in names)
-    assert not any(name.startswith(root) and name.endswith('.map') for name in names)
+    assert not any(name.startswith(root + "tests/") for name in names)
+    assert root + "dev-server.js" not in names
+    assert root + "build.js" not in names
+    assert not any("node_modules" in name for name in names)
+    assert not any(name.startswith(root) and name.endswith(".map") for name in names)
 
 
 def test_imported_runtime_bundle_is_available_without_bun():
     files = dict((name, path) for path, name in build_backend._package_files())
-    for name in ('app.js', 'app.css'):
-        path = files['tau_web/vibes/static/dist/' + name]
+    for name in ("app.js", "app.css"):
+        path = files["tau_web/vibes/static/dist/" + name]
         assert path.stat().st_size > 1000
 
 
 def test_offline_worker_runtime_and_build_inputs_are_packaged() -> None:
     package_paths = {relative for _, relative in build_backend._package_files()}
-    assert 'tau_web/vibes/static/offline-sw.js' in package_paths
-    assert 'tau_web/vibes/offline-worker.js' not in package_paths
-    source_paths = {path.relative_to(build_backend.ROOT).as_posix() for path in build_backend._source_files()}
-    assert 'src/tau_web/vibes/offline-worker.js' in source_paths
-    assert 'src/tau_web/vibes/build.js' in source_paths
+    assert "tau_web/vibes/static/offline-sw.js" in package_paths
+    assert "tau_web/vibes/offline-worker.js" not in package_paths
+    source_paths = {
+        path.relative_to(build_backend.ROOT).as_posix() for path in build_backend._source_files()
+    }
+    assert "src/tau_web/vibes/offline-worker.js" in source_paths
+    assert "src/tau_web/vibes/build.js" in source_paths

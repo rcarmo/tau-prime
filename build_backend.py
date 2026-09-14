@@ -225,13 +225,22 @@ def _package_files() -> list[tuple[Path, str]]:
             if not path.is_file() or _is_excluded_source(path):
                 continue
             relative = path.relative_to(src)
-            if relative.is_relative_to(Path('tau_web/vibes')):
-                imported = relative.relative_to('tau_web/vibes')
-                if imported.parts[0] != 'static' and imported.name not in {'LICENSE', 'UPSTREAM.md', 'source-revision.txt', 'public-assets.json'}:
+            if relative.is_relative_to(Path("tau_web/vibes")):
+                imported = relative.relative_to("tau_web/vibes")
+                if imported.parts[0] != "static" and imported.name not in {
+                    "LICENSE",
+                    "UPSTREAM.md",
+                    "source-revision.txt",
+                    "public-assets.json",
+                }:
                     continue
-                if path.suffix == '.map':
+                if path.suffix == ".map":
                     continue
-                if path.suffix == '.mjs' or 'LICENSE' in path.name or imported.name in {'UPSTREAM.md', 'source-revision.txt'}:
+                if (
+                    path.suffix == ".mjs"
+                    or "LICENSE" in path.name
+                    or imported.name in {"UPSTREAM.md", "source-revision.txt"}
+                ):
                     files.append((path, relative.as_posix()))
                     continue
             if path.suffix == ".py" or path.suffix in package_data_suffixes:

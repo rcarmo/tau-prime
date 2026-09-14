@@ -146,7 +146,6 @@ def create_read_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
         signal: ToolCancellationToken | None = None,
     ) -> AgentToolResult:
         del signal
-        raw_path = _str_arg(arguments, "path")
         path = _path_arg(arguments, "path", cwd=root)
         offset = _optional_int_arg(arguments, "offset")
         limit = _optional_int_arg(arguments, "limit")
@@ -405,8 +404,10 @@ def create_edit_tool_definition(*, cwd: str | Path | None = None) -> ToolDefinit
             "edits in one call"
         ),
         prompt_guidelines=(
-            "Use edit for precise file changes instead of shell commands, here-docs, perl, or sed -i.",
-            "Before using edit, read the relevant file contents so edits[].oldText can match exactly.",
+            "Use edit for precise file changes instead of shell commands, "
+            "here-docs, perl, or sed -i.",
+            "Before using edit, read the relevant file contents so edits[].oldText "
+            "can match exactly.",
             "Use edit for precise changes (edits[].oldText must match exactly)",
             "When changing multiple separate locations in one file, use one edit call with "
             "multiple entries in edits[] instead of multiple edit calls",
@@ -548,15 +549,19 @@ def create_python_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
         name="python",
         description=(
             "Execute Python code using the current Python interpreter without going through sh. "
-            "Use this instead of shell heredocs or complex shell quoting for small scripts, JSON/text processing, "
-            "and portable file transformations. Code is passed directly to python -c, stdin is closed, and "
+            "Use this instead of shell heredocs or complex shell quoting for small "
+            "scripts, JSON/text processing, "
+            "and portable file transformations. Code is passed directly to python "
+            "-c, stdin is closed, and "
             f"output is truncated to last {DEFAULT_MAX_OUTPUT_LINES} lines or "
             f"{DEFAULT_MAX_OUTPUT_BYTES // 1024}KB (whichever is hit first)."
         ),
         prompt_snippet="Execute Python code directly without shell heredocs",
         prompt_guidelines=(
-            "Use python for inline scripts instead of sh heredocs, python <<EOF, or complex shell quoting.",
-            "Use read/edit/write for simple file inspection and edits; use python when structured parsing or transformation is clearer.",
+            "Use python for inline scripts instead of sh heredocs, python <<EOF, or "
+            "complex shell quoting.",
+            "Use read/edit/write for simple file inspection and edits; use python "
+            "when structured parsing or transformation is clearer.",
             "Keep code self-contained and portable; do not rely on shell expansion or stdin.",
         ),
         input_schema={
@@ -675,13 +680,15 @@ def create_pytest_tool_definition(*, cwd: str | Path | None = None) -> ToolDefin
         name="pytest",
         description=(
             "Run pytest with the current Python interpreter in a serialized, agent-safe way. "
-            "This avoids shell quoting, disables common pytest parallelism, and shares Tau's Python process limiter."
+            "This avoids shell quoting, disables common pytest parallelism, and "
+            "shares Tau's Python process limiter."
         ),
         prompt_snippet="Run pytest linearly with python -m pytest",
         prompt_guidelines=(
             "Use pytest instead of sh for Python test runs.",
             "Pass test paths and pytest flags as args; do not wrap them in a shell command string.",
-            "Runs are serialized by Tau's Python process limiter and force pytest-xdist to -n 0 when available.",
+            "Runs are serialized by Tau's Python process limiter and force "
+            "pytest-xdist to -n 0 when available.",
         ),
         input_schema={
             "type": "object",
@@ -828,24 +835,33 @@ def create_sh_tool_definition(
         description=(
             "Execute one non-interactive shell command in the current working directory. "
             "Assume only basic POSIX sh is available (for example a-Shell on iOS); "
-            "do not assume non-POSIX syntax, job control, a persistent session, or a full desktop toolchain. "
+            "do not assume non-POSIX syntax, job control, a persistent session, or "
+            "a full desktop toolchain. "
             "Returns stdout and stderr. "
             f"Output is truncated to last {DEFAULT_MAX_OUTPUT_LINES} lines or "
             f"{DEFAULT_MAX_OUTPUT_BYTES // 1024}KB (whichever is hit first). If truncated, "
             "full output is saved to a temp file. Optionally provide a timeout in seconds."
         ),
-        prompt_snippet="Execute a single non-interactive shell command (basic sh may be all that is available)",
+        prompt_snippet=(
+            "Execute a single non-interactive shell command "
+            "(basic sh may be all that is available)"
+        ),
         prompt_guidelines=(
-            "Use sh only for simple non-interactive commands; it may be basic POSIX sh on constrained systems such as a-Shell/iOS.",
-            "Do not use non-POSIX shell features like arrays, [[ ... ]], process substitution, pipefail, brace expansion, or a persistent shell session.",
-            "Prefer read/edit/write for file inspection and modification instead of shelling out with cat, sed, here-docs, or redirection.",
+            "Use sh only for simple non-interactive commands; it may be basic POSIX "
+            "sh on constrained systems such as a-Shell/iOS.",
+            "Do not use non-POSIX shell features like arrays, [[ ... ]], process "
+            "substitution, pipefail, brace expansion, or a persistent shell "
+            "session.",
+            "Prefer read/edit/write for file inspection and modification instead of "
+            "shelling out with cat, sed, here-docs, or redirection.",
         ),
         input_schema={
             "type": "object",
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "Single non-interactive shell command to execute; prefer POSIX sh syntax",
+                    "description": "Single non-interactive shell command to execute; prefer "
+                    "POSIX sh syntax",
                 },
                 "timeout": {
                     "type": "number",
