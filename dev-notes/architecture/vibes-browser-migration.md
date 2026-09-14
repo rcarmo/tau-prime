@@ -681,3 +681,11 @@ same approval, reconnects/reloads, approves through UI, waits for completion and
 reloads persisted answer. Chromium/WebKit pass with exactly one run and at least
 one actual approval. Provider execution continues server-side; no provider network
 outage/restart claim. 60 JS tests/lint pass. Logs provider-recover-{chrom,web}.log.
+
+Post-fix delivery audit 0bcd16f: clean worktree, all 235 packaged tau_web/tau_coding
+files in delivered fe04f58 wheel byte-match current checkout. Later change is
+provider recovery test only. Confirmed runtime defects addressed with regression
+coverage and actual installed local-provider execution/recovery in both engines.
+Physical-device gestures and paired visual acceptance remain unverified; they
+must not be inferred from automated successes. Earlier broad mypy invocation
+also emitted unrelated type errors; no clean project-wide mypy claim is made.
