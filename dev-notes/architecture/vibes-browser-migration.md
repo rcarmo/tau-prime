@@ -578,3 +578,24 @@ Unfinished acceptance gates are not build failures:
 Overall goal remains incomplete until required external acceptance is supplied
 or explicitly scoped by the user. Do not loop on more passing fixture tests as a
 substitute for those missing gates.
+
+## Local provider execution failure (2026-09-14)
+
+Added opt-in tests/provider-live.mjs using configured local-llama/qwen38-gsq,
+authenticated production web routes and an isolated temporary database/workspace.
+Actual browser submits a read-only README tool request. Run fails before provider
+execution: submission_failed / UnknownSessionError, session not registered;
+persisted timeline is empty. Direct server completion previously returned OK.
+
+Evidence: services.py constructs AsyncAgentPool without a lazy session loader;
+runtime._submit delegates directly to pool.submit_prompt. REST session creation
+persists a repository record but does not load/register CodingSession. Existing
+runtime unit tests explicitly register fake sessions. Full fixture/API suites did
+not cover this real execution boundary. This is a release-blocking integration
+failure, not missing credentials or a successful provider validation.
+
+Next required implementation: lazy/concurrency-safe CodingSessionFactory loading
+from durable session metadata/storage before run/queue submission, preserving
+approval callbacks, Plan tools, provider config and ownership/shutdown semantics.
+Then rerun real provider/browser/tools/reconnect and regenerate installed wheel.
+Test output retained at /workspace/tmp/provider-live-chrom.log. No completion claim.

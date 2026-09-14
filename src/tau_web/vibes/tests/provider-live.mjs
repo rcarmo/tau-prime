@@ -1,0 +1,26 @@
+import {spawn} from 'node:child_process';
+import {chromium,webkit,expect} from '@playwright/test';
+import {requireFreePorts,requireRunning,stopChild} from './server-lifecycle.mjs';
+await requireFreePorts(8894);
+const token='provider-live-test-token';
+const server=spawn('node',['start-server.mjs'],{cwd:new URL('../../../../tests/browser/',import.meta.url),env:{...process.env,TAU_BROWSER_PORT:'8894',TAU_BROWSER_TEST_AUTH_TOKEN:token},stdio:'ignore'});
+const base='http://127.0.0.1:8894';
+const request=async(path,body)=>{const r=await fetch(base+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${token}`,'X-Tau-CSRF':'1','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw new Error(`${path}: ${r.status} ${await r.text()}`);return r.json();};
+let browser;
+try{
+ for(let i=0;i<200;i++){requireRunning(server);try{if((await fetch(base+'/api/health')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+ const session=await request('/api/sessions',{provider_name:'local-llama',model:'qwen38-gsq',title:'Local provider validation'});
+ browser=await (process.env.TAU_LIVE_ENGINE==='webkit'?webkit:chromium).launch();
+ const context=await browser.newContext();await context.addInitScript(t=>localStorage.setItem('tau.web.authToken',t),token);
+ const page=await context.newPage();await page.goto(base+'/?session='+session.session_id);
+ const composer=page.locator('.compose-box textarea');await expect(composer).toBeVisible();
+ await composer.fill('Use the read tool to read README.md in the current workspace. Then report the heading verbatim and finish with LOCAL_PROVIDER_OK. Do not modify any files.');await composer.press('Enter');
+ let runs;
+ await expect.poll(async()=>{runs=(await request(`/api/sessions/${session.session_id}/runs`)).runs;return runs.some(r=>['completed','failed','cancelled'].includes(r.status));},{timeout:180000,intervals:[500,1000]}).toBe(true);
+ const timeline=await request(`/api/sessions/${session.session_id}/timeline?limit=200`);
+ console.log(JSON.stringify({engine:process.env.TAU_LIVE_ENGINE||'chromium',runs,timeline},null,2));
+ expect(runs[0].status).toBe('completed');
+ expect(JSON.stringify(timeline)).toContain('LOCAL_PROVIDER_OK');
+ await page.reload();await expect(page.locator('.timeline')).toContainText('LOCAL_PROVIDER_OK',{timeout:15000});
+ console.log('PASS real local provider run and persisted browser reload');
+}finally{await browser?.close();await stopChild(server);}
