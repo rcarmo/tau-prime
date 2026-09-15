@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { quickActionItems, shouldOpenQuickActions } from '../static/js/components/quick-actions.js';
+import { quickActionItems, shouldOpenQuickActions, shouldPopoutQuickAction } from '../static/js/components/quick-actions.js';
 
 test('quick actions use session metadata, exclude archived, dedupe and filter normalized titles/IDs/descriptions', () => {
   const options = {
@@ -13,6 +13,16 @@ test('quick actions use session metadata, exclude archived, dedupe and filter no
   expect(quickActionItems({ ...options, query: '/MODEL' })[0].commandName).toBe('/model');
   expect(quickActionItems({ ...options, query: 'shell   pane' })[0].key).toBe('workspace:terminal');
   expect(quickActionItems({ ...options, query: 'provider' })[0].key).toBe('slash:/model');
+});
+
+test('Alt+Enter pop-out is available only for session actions with a real callback', () => {
+  const callback = () => {};
+  expect(shouldPopoutQuickAction({ key: 'Enter', altKey: true }, { kind: 'agent' }, callback)).toBe(true);
+  for (const item of [{ kind: 'workspace' }, { kind: 'slash' }, null]) {
+    expect(shouldPopoutQuickAction({ key: 'Enter', altKey: true }, item, callback)).toBe(false);
+  }
+  expect(shouldPopoutQuickAction({ key: 'Enter' }, { kind: 'agent' }, callback)).toBe(false);
+  expect(shouldPopoutQuickAction({ key: 'Enter', altKey: true }, { kind: 'agent' })).toBe(false);
 });
 
 test('timeline typing gate excludes shortcuts, controls, composition, repeats, whitespace and consumed events', () => {

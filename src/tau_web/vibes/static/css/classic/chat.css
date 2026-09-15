@@ -2356,6 +2356,15 @@
     font-weight: 500;
 }
 
+.quick-actions-close-hint {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    line-height: 1.5;
+}
+
 .timeline-quick-actions-keyhint kbd {
     min-width: 28px;
     height: 22px;

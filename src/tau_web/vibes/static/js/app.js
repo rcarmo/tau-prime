@@ -2625,7 +2625,9 @@ function App() {
             ${!popoutMode && html`<${QuickActions}
                 sessions=${sessionOptions} sessionId=${selectedSession}
                 workspace=${[{id:'toggle-workspace',title:workspaceOpen?'Hide workspace':'Show workspace',subtitle:workspaceOpen?'Hide the workspace sidebar.':'Show the workspace sidebar.',run:toggleWorkspace}]}
-                openRequest=${quickActionsRequest} onRefreshSessions=${refreshSessions} onSwitchSession=${selectSession} loadCommands=${getAgentCommands}
+                openRequest=${quickActionsRequest} onRefreshSessions=${refreshSessions} onSwitchSession=${selectSession}
+                onPopoutSession=${id => window.open(`${window.location.pathname}?session=${encodeURIComponent(id)}&chat_only=1`, '_blank', 'noopener,noreferrer')}
+                loadCommands=${getAgentCommands}
                 onPrefill=${command=>document.dispatchEvent(new CustomEvent('tau:widget-submit',{detail:{mode:'prefill',text:command}}))}
             />`}
             ${!popoutMode && html`<${WorkspaceExplorer} readOnly=${true} onFileSelect=${addFileRef} onFolderSelect=${path => setFolderRefs(prev => prev.includes(path) ? prev : [...prev, path])} visible=${workspaceOpen} active=${workspaceOpen || editorOpen} onOpenEditor=${undefined} onOpenTerminalTab=${terminalEnabled && !terminalPopout ? () => { setTerminalVisible(true); setWorkspaceOpen(false); } : undefined} renderMarkdown=${renderMarkdown} />`}

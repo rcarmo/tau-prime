@@ -2,6 +2,10 @@
 // classic/chat.css; actions are provided by the host, never guessed from labels.
 import { html, useEffect, useLayoutEffect, useMemo, useRef, useState } from '../vendor/preact-htm.js';
 
+export function shouldPopoutQuickAction(event, item, onPopoutSession) {
+    return event.key === 'Enter' && event.altKey && item?.kind === 'agent' && typeof onPopoutSession === 'function';
+}
+
 export function shouldOpenQuickActions(event) {
     if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return false;
     if (typeof event.key !== 'string' || [...event.key].length !== 1 || !/\S/u.test(event.key)) return false;
@@ -47,7 +51,7 @@ function preferredIndex(items, query) {
     return Math.max(0, prefix);
 }
 
-export function QuickActions({ sessions, sessionId, workspace, openRequest = 0, onSwitchSession, onPrefill, onRefreshSessions, loadCommands }) {
+export function QuickActions({ sessions, sessionId, workspace, openRequest = 0, onSwitchSession, onPopoutSession, onPrefill, onRefreshSessions, loadCommands }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [highlight, setHighlight] = useState(0);
@@ -73,12 +77,15 @@ export function QuickActions({ sessions, sessionId, workspace, openRequest = 0, 
         setOpen(false); setQuery(''); setPending(false); busy.current = false;
         if (restore) requestAnimationFrame(() => previousFocus.current?.isConnected && previousFocus.current.focus?.({ preventScroll: true }));
     };
-    const activate = async item => {
+    const activate = async (item, { popout = false } = {}) => {
         if (!item || busy.current) return;
         const epoch = generation.current;
         busy.current = true; setPending(true); setError('');
         try {
-            if (item.kind === 'agent') await onSwitchSession(item.sessionId);
+            if (item.kind === 'agent') {
+                if (popout) await onPopoutSession?.(item.sessionId);
+                else await onSwitchSession(item.sessionId);
+            }
             else if (item.kind === 'workspace') await item.run();
             else onPrefill(item.commandName);
             if (epoch === generation.current) close(false);
@@ -131,10 +138,13 @@ export function QuickActions({ sessions, sessionId, workspace, openRequest = 0, 
                 else if (!event.shiftKey && index === focusable.length - 1) { event.preventDefault(); focusable[0]?.focus(); }
                 return;
             }
-            if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
-                if (event.key === 'Enter') event.preventDefault();
+            if (event.key === 'Enter' && event.altKey) {
+                event.preventDefault();
+                const item = items[highlight];
+                if (shouldPopoutQuickAction(event, item, onPopoutSession)) void activate(item, { popout: true });
                 return;
             }
+            if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
                 if (items.length) setHighlight(value => (value + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length);
@@ -167,6 +177,7 @@ export function QuickActions({ sessions, sessionId, workspace, openRequest = 0, 
                             <div class="timeline-quick-actions-hints">
                                 <span class="timeline-quick-actions-keyhint"><kbd>↑↓</kbd><span>Move</span></span>
                                 <span class="timeline-quick-actions-keyhint"><kbd>↵</kbd><span>Select</span></span>
+                                ${onPopoutSession && html`<span class="timeline-quick-actions-keyhint"><kbd>Alt+↵</kbd><span>Pop out</span></span>`}
                                 <button type="button" class="timeline-quick-actions-keyhint quick-actions-close-hint" aria-label="Close quick actions" onClick=${() => close()}><kbd>Esc</kbd><span>Close</span></button>
                             </div>
                         </div>
