@@ -511,9 +511,11 @@ def _anthropic_tool(tool: AgentTool) -> dict[str, JSONValue]:
 
 
 def _parse_sse_line(line: str) -> str | None:
-    if not line.startswith("data:"):
+    stripped = line.strip()
+    if not stripped.startswith("data:"):
         return None
-    return line.removeprefix("data:").strip()
+    data = stripped.removeprefix("data:").strip()
+    return data or None
 
 
 def _loads_object(text: str) -> dict[str, Any] | None:
