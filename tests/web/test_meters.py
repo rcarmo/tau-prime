@@ -53,6 +53,8 @@ async def test_meters_route_returns_initial_cached_snapshot(web_config: WebConfi
         "process_rss_series_bytes",
         "sample_interval_ms",
         "platform",
+        "buffer_cache_bytes",
+        "buffer_cache_series_bytes",
     }
     assert payload["sample_interval_ms"] == 2_000
     assert len(payload["cpu_series"]) == 1
@@ -137,6 +139,8 @@ async def test_host_meters_sampler_bounds_series_and_uses_memfree_fallback(tmp_p
         snapshot = await sampler.sample_once()
 
     assert snapshot.cpu_series == pytest.approx((200.0 / 300.0 * 100.0,) * 3)
+    assert snapshot.buffer_cache_bytes == 200 * 1024
+    assert snapshot.buffer_cache_series_bytes == (200 * 1024,) * 3
     assert snapshot.ram_series == (70.0, 70.0, 70.0)
     assert snapshot.swap_series == (0.0, 0.0, 0.0)
     assert snapshot.process_rss_series_bytes == (3 * 1_024, 4 * 1_024, 5 * 1_024)

@@ -159,3 +159,28 @@ async def test_plan_usage_and_search_routes(app_client: TestClient) -> None:
     assert (await search.json())["results"][0]["entity_id"] == "m1"
     assert (await app_client.get("/api/search", params={"q": " "})).status == 400
     assert (await app_client.get("/api/search", params={"q": "alpaca", "limit": "0"})).status == 400
+
+
+@pytest.mark.anyio
+async def test_settings_exposes_nonsecret_display_identity(tmp_path):
+    config = WebConfig(
+        cwd=tmp_path,
+        database_path=tmp_path / "identity.sqlite3",
+        agent_name="Configured agent",
+        user_name="Configured user",
+        agent_avatar="/fixture/avatar.svg",
+        user_avatar="/fixture/user.svg",
+    )
+    client = TestClient(TestServer(create_app(config)))
+    await client.start_server()
+    try:
+        response = await client.get("/api/settings")
+        assert response.status == 200
+        payload = await response.json()
+        assert payload["agent_name"] == "Configured agent"
+        assert payload["user_name"] == "Configured user"
+        assert payload["agent_avatar"] == "/fixture/avatar.svg"
+        assert payload["user_avatar"] == "/fixture/user.svg"
+        assert "auth_token" not in payload
+    finally:
+        await client.close()

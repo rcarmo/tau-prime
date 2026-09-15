@@ -16,7 +16,7 @@ import {
 } from '../api.js';
 import { DiskUsageSunburst } from './sunburst.js';
 
-const INDENT = 16;
+const INDENT = 18;
 const REFRESH_INTERVAL_MS = 60_000;
 
 /**
@@ -150,6 +150,15 @@ function FileAttachmentCard({ mediaId }) {
 }
 
 export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true, active = undefined, onOpenEditor, onOpenTerminalTab, renderMarkdown, readOnly = false }) {
+    const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+    const workspaceMenuRef = useRef(null);
+    useEffect(() => {
+        if (!workspaceMenuOpen) return;
+        const outside = event => { if (!workspaceMenuRef.current?.contains(event.target)) setWorkspaceMenuOpen(false); };
+        const escape = event => { if (event.key === 'Escape') { event.preventDefault(); setWorkspaceMenuOpen(false); workspaceMenuRef.current?.querySelector('button')?.focus(); } };
+        document.addEventListener('mousedown', outside); document.addEventListener('keydown', escape);
+        return () => { document.removeEventListener('mousedown', outside); document.removeEventListener('keydown', escape); };
+    }, [workspaceMenuOpen]);
     const [tree, setTree] = useState(null);
     const [expanded, setExpanded] = useState(new Set(['.']));
     const [selectedPath, setSelectedPath] = useState(null);
@@ -1034,6 +1043,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
     return html`
         <aside
             class=${`workspace-sidebar${dragActive ? ' workspace-drop-active' : ''}`}
+            data-workspace-scale="comfortable"
             ref=${sidebarRef}
             onDragEnter=${handleDragEnter}
             onDragOver=${handleDragOver}
@@ -1041,10 +1051,13 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
             onDrop=${handleDrop}
         >
             <div class="workspace-header">
-                <span>Workspace</span>
+                <div class="workspace-header-left"><div class="workspace-menu-wrap" ref=${workspaceMenuRef}>
+                    <button type="button" class=${`workspace-menu-button${workspaceMenuOpen?' active':''}`} title="Workspace actions" aria-label="Workspace actions" aria-haspopup="menu" aria-expanded=${workspaceMenuOpen} onClick=${()=>setWorkspaceMenuOpen(open=>!open)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+                    ${workspaceMenuOpen&&html`<div class="workspace-menu-dropdown" role="menu"><button type="button" class="workspace-menu-item" role="menuitem" onClick=${()=>{setWorkspaceMenuOpen(false);handleRefresh();}}>Refresh tree</button><button type="button" class="workspace-menu-item workspace-toggle-hidden" role="menuitem" onClick=${()=>{setWorkspaceMenuOpen(false);handleToggleHidden();}}>${showHidden?'Hide hidden files':'Show hidden files'}</button></div>`}
+                </div><span>Workspace</span></div>
                 <div class="workspace-header-actions">
                     ${onOpenTerminalTab && html`<button class="workspace-refresh workspace-terminal" onClick=${onOpenTerminalTab} title="Open terminal" aria-label="Open terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4 6 6 6-6 6M13 18h7" /></svg></button>`}
-                    <button class="workspace-create" onClick=${handleCreateFileClick} title="New file" disabled=${uploading}>
+                    <button class="workspace-create" onClick=${handleCreateFileClick} title=${readOnly ? 'File creation unavailable in read-only workspace' : 'New file'} disabled=${uploading || readOnly}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <line x1="12" y1="5" x2="12" y2="19" />
@@ -1057,17 +1070,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                             <polyline points="21 3 21 9 15 9" />
                         </svg>
                     </button>
-                    <button
-                        class=${`workspace-toggle-hidden${showHidden ? ' active' : ''}`}
-                        onClick=${handleToggleHidden}
-                        title=${showHidden ? 'Hide hidden files' : 'Show hidden files'}
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                            <circle cx="12" cy="12" r="3" />
-                            ${!showHidden && html`<line x1="3" y1="3" x2="21" y2="21" />`}
-                        </svg>
-                    </button>
+
                 </div>
             </div>
             <div class="workspace-tree" onClick=${handleBackgroundClick}>
@@ -1101,8 +1104,8 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                                     <span class="workspace-caret" aria-hidden="true">
                                         ${isDir
                                             ? (isOpen
-                                                ? html`<svg viewBox="0 0 12 12"><polygon points="1,2 11,2 6,11"/></svg>`
-                                                : html`<svg viewBox="0 0 12 12"><polygon points="2,1 11,6 2,11"/></svg>`)
+                                                ? html`<svg class="ui-disclosure-triangle ui-disclosure-triangle-down" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><polygon points="2 3 8 3 5 8"/></svg>`
+                                                : html`<svg class="ui-disclosure-triangle ui-disclosure-triangle-right" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><polygon points="3 2 8 5 3 8"/></svg>`)
                                             : null}
                                     </span>
                                     <svg class=${`workspace-node-icon${isDir ? ' folder' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1125,7 +1128,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                                                 onClick=${(e) => e.stopPropagation()}
                                             />
                                         `
-                                        : html`<span class="workspace-label">${node.name}</span>`}
+                                        : html`<span class="workspace-label"><span class="workspace-label-text">${node.name}</span></span>`}
                                     ${isDir && !isOpen && ((Array.isArray(node.children) && node.children.length > 0) || node.child_count > 0) && html`
                                         <span class="workspace-count">${Array.isArray(node.children) && node.children.length > 0 ? node.children.length : node.child_count}</span>
                                     `}
@@ -1153,7 +1156,7 @@ export function WorkspaceExplorer({ onFileSelect, onFolderSelect, visible = true
                     <div class="workspace-preview-header">
                         <span class="workspace-preview-title">${selectedPath}</span>
                         <div class="workspace-preview-actions">
-                            <button class="workspace-create" onClick=${handleCreateFileClick} title="New file" disabled=${uploading}>
+                            <button class="workspace-create" onClick=${handleCreateFileClick} title=${readOnly ? 'File creation unavailable in read-only workspace' : 'New file'} disabled=${uploading || readOnly}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <line x1="12" y1="5" x2="12" y2="19" />

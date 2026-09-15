@@ -88,6 +88,13 @@ class DurableAgentRuntime:
         self._shutdown_complete = False
         self._shutdown_started = False
 
+    def context_estimate(self, session_id: str) -> tuple[int, int] | None:
+        """Return loaded-session estimates only; never trigger lazy initialization."""
+        try:
+            return self._pool.context_estimate(session_id)
+        except UnknownSessionError:
+            return None
+
     def register_session(
         self,
         session_id: str,

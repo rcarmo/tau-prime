@@ -3,6 +3,7 @@ import { loadModelPins, saveModelPins, modelPinStorage } from './model-pins.js';
 import { createSpeechInput, speechInputConstructor, shouldStartSpeechPushToTalk } from './compose-speech.js';
 import { sessionMentionQuery, sessionMentionMatches, insertSessionMention } from './session-mentions.js';
 import { composeDrafts } from './compose-drafts.js';
+import { preserveQueuedRecovery, recoverQueuedDraft, returnQueuedText } from '../tau-queue-return.js';
 import { resolveMessageReferences } from '../tau-message-references.js';
 import { TauRunControl } from './tau-run-control.js';
 import { usagePresentation } from './usage.js';
@@ -34,6 +35,7 @@ function ContextPie({ usage, onCompact, disabled, compacting }) {
     usage = usage || {};
     const canCompact = usage.compactCommand === '/compact';
     const known = typeof usage.percent === 'number' && Number.isFinite(usage.percent) && usage.percent >= 0;
+    if (!known && !canCompact) return null;
     const Tag = canCompact ? 'button' : 'span';
     const pct = known ? usage.percent : 0;
     const tokens = usage.tokens;
@@ -42,7 +44,7 @@ function ContextPie({ usage, onCompact, disabled, compacting }) {
         ? `Context: ${formatK(tokens)} / ${formatK(ctxWindow)} tokens (${pct.toFixed(0)}%)`
         : `Context: ${pct.toFixed(0)}%`;
 
-    const r = 8;
+    const r = 9;
     const circ = 2 * Math.PI * r;
     const filled = (Math.min(100, pct) / 100) * circ;
 
@@ -55,25 +57,25 @@ function ContextPie({ usage, onCompact, disabled, compacting }) {
             role=${canCompact ? undefined : 'img'} aria-label=${canCompact ? `${label}. Compact context` : label}
             disabled=${canCompact ? disabled : undefined} aria-busy=${compacting ? 'true' : undefined}
             onClick=${canCompact ? onCompact : undefined}
-            title=${[label, usagePresentation(usage).title, canCompact && 'Compact context (agent-advertised /compact)'].filter(Boolean).join('\n')}>
-            <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
-                <circle cx="10" cy="10" r=${r}
+            title=${[label, usage.source === 'local_estimate' && 'Locally estimated token usage', usagePresentation(usage).title, canCompact && 'Compact context (agent-advertised /compact)'].filter(Boolean).join('\n')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r=${r}
                     fill="none"
                     stroke="var(--context-track, rgba(128,128,128,0.2))"
-                    stroke-width="3" />
-                <circle cx="10" cy="10" r=${r}
+                    stroke-width="2.5" />
+                <circle cx="12" cy="12" r=${r}
                     fill="none"
                     stroke=${color}
-                    stroke-width="3"
+                    stroke-width="2.5"
                     stroke-dasharray=${`${filled} ${circ}`}
                     stroke-linecap="round"
-                    transform="rotate(-90 10 10)" />
+                    transform="rotate(-90 12 12)" />
             </svg>
         <//>
     `;
 }
 
-function FollowupQueue({ items, onRemove, onSteer, onReorder }) {
+function FollowupQueue({ items, onRemove, onSteer, onReorder, onReturn, agentBusy }) {
     if (!items || items.length === 0) return null;
     return html`
         <div class="compose-queue-stack" aria-label="Queued follow-ups" role="list">
@@ -82,38 +84,18 @@ function FollowupQueue({ items, onRemove, onSteer, onReorder }) {
                 const position = peers.findIndex(other => other.row_id === item.row_id);
                 const parsed = parseQueuedContent(item.content);
                 const content = parsed.text;
-                const preview = content.length > 140 ? `${content.slice(0, 140)}…` : content;
-                const itemLabel = preview || 'Untitled follow-up';
+                const itemLabel = content || 'Untitled follow-up';
                 return html`
-                    <div key=${item.row_id} class="compose-queue-item" role="listitem">
-                        <div class="compose-queue-item-main">
-                            <span class="compose-queue-badge">${item.mode === 'steer' ? 'Steer' : 'Queued'}</span>
-                            <div class="compose-queue-text" title=${content}>${content ? itemLabel : parsed.refs.length ? '' : itemLabel}</div>
-                            ${parsed.refs.length > 0 && html`<div class="compose-file-refs">${parsed.refs.map((ref, index) => html`<${FilePill} key=${index} prefix="compose" icon=${ref.kind === 'attachment' ? 'file' : ref.kind} label=${ref.label} title=${ref.title} />`)}</div>`}
+                    <div key=${item.row_id} class="compose-queue-stack-item" data-testid="queue-item" role="listitem">
+                        <div class="compose-queue-stack-content" title=${content}>
+                            <div class="compose-queue-stack-text">${content ? itemLabel : parsed.refs.length ? '' : itemLabel}</div>
+                            ${parsed.refs.length > 0 && html`<div class="compose-queue-stack-refs">${parsed.refs.map((ref, index) => html`<${FilePill} key=${index} prefix="compose" icon=${ref.kind === 'attachment' ? 'file' : ref.kind} label=${ref.label} title=${ref.title} />`)}</div>`}
                         </div>
-                        <div class="compose-queue-actions" hidden=${item.tau_readonly === true} style=${item.tau_readonly ? 'display:none' : undefined}>
-                            <button type="button" data-action="move-up" class="followup-queue-move" disabled=${position === 0} title="Move up" aria-label="Move up in queue" onClick=${() => onReorder?.(item.row_id, 'up')}>
-                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l5-5 5 5" /></svg>
-                            </button>
-                            <button type="button" data-action="move-down" class="followup-queue-move" disabled=${position === peers.length - 1} title="Move down" aria-label="Move down in queue" onClick=${() => onReorder?.(item.row_id, 'down')}>
-                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l5 5 5-5" /></svg>
-                            </button>
-                            <button
-                                type="button"
-                                class="compose-queue-btn"
-                                aria-label=${`Promote queued item to steering: ${itemLabel}`}
-                                onClick=${() => onSteer?.(item.row_id)}
-                            >
-                                Steer
-                            </button>
-                            <button
-                                type="button"
-                                class="compose-queue-btn danger"
-                                aria-label=${`Cancel queued item: ${itemLabel}`}
-                                onClick=${() => onRemove?.(item.row_id)}
-                            >
-                                Cancel
-                            </button>
+                        <div class="compose-queue-stack-actions" role="group" aria-label="Queued follow-up controls">
+                            ${item.tau_can_reorder&&html`<button type="button" data-action="move-up" class="compose-queue-stack-move-btn" title="Move up" aria-label="Move up in queue" disabled=${position===0} onClick=${()=>onReorder?.(item.row_id,'up')}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button><button type="button" data-action="move-down" class="compose-queue-stack-move-btn" title="Move down" aria-label="Move down in queue" disabled=${position===peers.length-1} onClick=${()=>onReorder?.(item.row_id,'down')}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>`}
+                            ${onReturn&&html`<button type="button" class="compose-queue-stack-move-btn queue-edit" data-action="edit" title="Edit in compose" aria-label="Return queued message to editor" onClick=${()=>onReturn(item)}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`}
+                            ${item.tau_can_steer&&html`<button type="button" class="compose-queue-stack-steer-btn" disabled=${!agentBusy} title="Steer active run" aria-label="Steer queued message" onClick=${()=>onSteer?.(item.row_id)}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h12a2 2 0 0 0 2-2V8"/><polyline points="14 12 18 8 22 12"/></svg><span>Steer</span></button>`}
+                            ${item.tau_can_remove&&html`<button type="button" class="compose-queue-stack-close-btn queue-remove" data-action="remove" aria-label="Remove queued message" title="Cancel queued message" onClick=${()=>onRemove?.(item.row_id)}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`}
                         </div>
                     </div>
                 `;
@@ -251,6 +233,37 @@ export function ComposeBox({
     const uploadController = useRef(null);
     useEffect(() => () => uploadController.current?.abort(), []);
     const [mediaFiles, setMediaFiles] = useState(() => composeDrafts.load(sessionId).files);
+    const latestQueueDraft = useRef(null), returningQueue = useRef(false), queueMounted = useRef(true);
+    latestQueueDraft.current = { sessionId, text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs };
+    useEffect(() => { queueMounted.current = true; return () => { queueMounted.current = false; }; }, []);
+    const returnQueueToEditor = async item => {
+        if (returningQueue.current || !onQueueRemove) return;
+        const origin = sessionId;
+        const text = typeof item.content === 'string' ? item.content : '';
+        if (!text.trim()) return;
+        if (content.trim() && !confirm('Append this queued message to your existing draft?')) return;
+        returningQueue.current = true;
+        let recoveryKey;
+        try {
+            const outcome = await returnQueuedText({
+                text,
+                preserve: async value => {
+                    recoveryKey = preserveQueuedRecovery(localStorage, {sessionId: origin, queueId: item.row_id, text: value});
+                },
+                remove: () => onQueueRemove(item.row_id, origin),
+            });
+            if (!outcome.removed) return;
+            const current = latestQueueDraft.current;
+            if (queueMounted.current && current.sessionId === origin) composeDrafts.save(origin, current);
+            const restored = recoverQueuedDraft(localStorage, recoveryKey, origin);
+            if (queueMounted.current && latestQueueDraft.current.sessionId === origin) {
+                setContent(restored);
+                requestAnimationFrame(() => textareaRef.current?.focus());
+            }
+        } catch (error) {
+            alert(`Could not return queued message: ${error.message}. Any preserved recovery copy is retained.`);
+        } finally { returningQueue.current = false; }
+    };
     useEffect(() => {
         composeDrafts.save(sessionId, { text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs });
     }, [content, mediaFiles, fileRefs, folderRefs, messageRefs, sessionId]);
@@ -968,6 +981,7 @@ export function ComposeBox({
     return html`
         <div class="compose-box" data-testid="compose-box">
             <div class="compose-resize-handle" ...${resizeHandleProps}></div>
+            ${!searchMode && html`<${FollowupQueue} items=${queuedFollowups} onReturn=${returnQueueToEditor} agentBusy=${agentBusy} onRemove=${onQueueRemove} onSteer=${onQueueSteer} onReorder=${onQueueReorder}/>`}
             ${searchMode && html`<div class="compose-search-filters">
                 <label class="compose-search-scope-wrap" title="Search scope">
                     <select class="compose-search-scope-select" aria-label="Search scope" value=${searchScope} onChange=${e => setSearchScope(e.currentTarget.value)}>
@@ -1010,14 +1024,6 @@ export function ComposeBox({
                     ${!searchMode && html`<${AgentCapabilities} agent=${defaultAgent} />`}
                     ${!searchMode && isCompacting && html`<div class="compose-inline-status" role="status" aria-live="polite"><span class="compose-session-status-pill compacting">Compacting context…</span></div>`}
                     ${speechState.kind !== 'idle' && html`<div class=${`compose-inline-status compose-speech-status compose-speech-status-${speechState.kind}`} role="status" aria-live="polite"><div class="compose-inline-status-row"><span class="compose-inline-status-dot" aria-hidden="true"></span><span class="compose-inline-status-title">${speechState.kind === 'listening' ? 'Listening…' : speechState.kind === 'requesting_permission' ? 'Requesting microphone permission…' : 'Speech input error'}</span></div>${speechState.detail && html`<div class="compose-inline-status-detail">${speechState.detail}</div>`}</div>`}
-                    ${!searchMode && html`
-                        <${FollowupQueue}
-                            items=${queuedFollowups}
-                            onRemove=${onQueueRemove}
-                            onSteer=${onQueueSteer}
-                            onReorder=${onQueueReorder}
-                        />
-                    `}
                     ${(folderRefs.length > 0 || fileRefs.length > 0 || mediaFiles.length > 0 || messageRefs.length > 0) && html`
                         <div class="compose-file-refs">
                             ${messageRefs.map(id => html`<${FilePill} key=${'message-' + id} prefix="compose" icon="message" label=${'msg:' + id} title=${'Message ' + id} removeTitle="Remove message reference" onRemove=${() => onRemoveMessageRef?.(id)} />`)}
@@ -1073,9 +1079,9 @@ export function ComposeBox({
                     ${showModelPopup && !searchMode && html`
                         <div class="compose-model-popup compose-model-catalogue" ref=${modelPopupRef} onKeyDown=${modelPickerKeys}>
                             <div class="compose-model-catalogue-header">
-                                <div class="compose-session-popup-header"><label class="compose-model-catalogue-search-label" for="compose-model-search">Search models</label><button type="button" class="compose-session-popup-close" aria-label="Close model picker" onClick=${() => { setShowModelPopup(false); requestAnimationFrame(() => modelHintRef.current?.focus()); }}>×</button></div>
+                                <label class="compose-model-catalogue-search-label" for="compose-model-search">Search models</label>
                                 <div class="compose-model-catalogue-search-row">
-                                    <input ref=${modelSearchRef} id="compose-model-search" class="compose-model-catalogue-search" type="search" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="compose-model-results" aria-activedescendant=${filteredModels.includes(highlightedModel) ? `model-option-${encodeURIComponent(highlightedModel)}` : undefined} aria-label="Search models" placeholder="Search models" value=${modelQuery} onInput=${event => setModelQuery(event.target.value)} />
+                                    <input ref=${modelSearchRef} id="compose-model-search" class="compose-model-catalogue-search" type="search" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="compose-model-results" aria-activedescendant=${filteredModels.includes(highlightedModel) ? `model-option-${encodeURIComponent(highlightedModel)}` : undefined} aria-label="Search models" placeholder="Search models…" value=${modelQuery} onInput=${event => setModelQuery(event.target.value)} />
                                     ${modelQuery && html`<button type="button" class="compose-model-catalogue-clear" aria-label="Clear model search" onClick=${() => { setModelQuery(''); modelSearchRef.current?.focus(); }}>×</button>`}
                                 </div>
                                 <div class="compose-model-catalogue-summary" role="status">${loadingModels ? 'Refreshing…' : modelCatalogError ? 'Catalog unavailable' : `${filteredModels.length} ${filteredModels.length === 1 ? 'model' : 'models'}`}</div>
@@ -1091,61 +1097,54 @@ export function ComposeBox({
                                 `}
                                 ${!loadingModels && modelOptions.length > 0 && filteredModels.length === 0 && html`<div class="compose-model-popup-empty" role="status">No matching models</div>`}
                             ${!loadingModels && modelGroups.map(group => html`<div role="group" aria-label=${group.label}>
-                                <div class="compose-session-section-heading">${group.label}</div>
+                                <div class="compose-model-catalogue-section-heading">${group.label}<span>${group.models.length}</span></div>
                                 ${group.providers.map(provider => html`<div class="compose-model-catalogue-group" role="group" aria-label=${provider.label}>
-                                <div class="compose-model-catalogue-group-heading">${provider.label}</div>
-                                ${provider.models.map((modelLabel) => html`<div class="compose-model-popup-item-row" key=${modelLabel}>
-                                    <button type="button" class="compose-session-row-pin" aria-label=${`${modelPins.includes(modelLabel) ? 'Unpin' : 'Pin'} model ${modelLabel}`} aria-pressed=${modelPins.includes(modelLabel)} aria-keyshortcuts="Alt+Enter" onClick=${() => toggleModelPin(modelLabel)}>${modelPins.includes(modelLabel) ? '★' : '☆'}</button>
-                                    <button
+                                ${group.providers.length > 1 && html`<div class="compose-model-catalogue-group-heading">${provider.label}</div>`}
+                                ${provider.models.map((modelLabel) => html`<button
                                         key=${modelLabel}
                                         type="button"
                                         role="option"
                                         id=${`model-option-${encodeURIComponent(modelLabel)}`}
                                         aria-selected=${activeModel === modelLabel}
                                         data-model-label=${modelLabel}
-                                        aria-label=${modelLabel}
-                                        class=${`compose-model-popup-item${activeModel === modelLabel ? ' active' : ''}${highlightedModel === modelLabel ? ' focused' : ''}`}
+                                        aria-label=${`${modelNames.get(modelLabel) || modelLabel}, ${modelPins.includes(modelLabel) ? 'pinned' : 'not pinned'}. Alt+Enter to ${modelPins.includes(modelLabel) ? 'unpin' : 'pin'}.`}
+                                        aria-keyshortcuts="Alt+Enter"
+                                        class=${`compose-model-catalogue-option${activeModel === modelLabel ? ' selected' : ''}${highlightedModel === modelLabel || (!highlightedModel && activeModel === modelLabel) ? ' focused' : ''}`}
                                         onClick=${() => { void handleSelectModel(modelLabel); }}
                                         disabled=${switchingModel}
                                     >
+                                        <span class=${`compose-model-catalogue-pin${modelPins.includes(modelLabel) ? ' pinned' : ''}`} aria-hidden="true" title=${modelPins.includes(modelLabel) ? 'Unpin model' : 'Pin model'}>${modelPins.includes(modelLabel) ? '★' : '☆'}</span>
                                         <span class="compose-model-catalogue-option-content">
                                             <span class="compose-model-catalogue-option-name">${modelNames.get(modelLabel) || modelLabel}</span>
                                             ${modelNames.get(modelLabel) !== modelLabel && html`<span class="compose-model-catalogue-option-key">${modelLabel}</span>`}
                                             <span class="compose-model-catalogue-option-badges">
-                                                ${modelMetadata.get(modelLabel)?.reasoning === true && html`<span class="compose-model-catalogue-badge">Reasoning</span>`}
-                                                ${Number.isInteger(modelMetadata.get(modelLabel)?.contextWindow) && modelMetadata.get(modelLabel).contextWindow > 0 && html`<span class="compose-model-catalogue-badge">${modelMetadata.get(modelLabel).contextWindow.toLocaleString('en-US')} context tokens</span>`}
+                                                ${Number.isInteger(modelMetadata.get(modelLabel)?.contextWindow) && modelMetadata.get(modelLabel).contextWindow > 0 && html`<span class="compose-model-catalogue-badge">${Math.round(modelMetadata.get(modelLabel).contextWindow/1000)}K context</span>`}
+                                                ${modelMetadata.get(modelLabel)?.reasoning === true && html`<span class="compose-model-catalogue-badge">reasoning</span>`}
                                             </span>
                                         </span>
-                                    </button></div>
+                                    </button>
                                 `)}
                                 </div>`)}
                             </div>`)}
                             </div>
-                            ${!loadingModels && sessionCatalog?.available && sessionCatalog.thinking_levels?.length > 0 && html`<label class="compose-session-row-meta">Thinking level
-                                <select aria-label="Select thinking level" value=${thinkingLevel || ''} disabled=${switchingModel} onChange=${event => handleCycleThinking(event.target.value)}>
-                                    ${!sessionCatalog.thinking_levels.includes(thinkingLevel) && html`<option value="" disabled>Unknown</option>`}
-                                    ${sessionCatalog.thinking_levels.map(level => html`<option value=${level}>${level}</option>`)}
-                                </select>
-                            </label>`}
                             <dialog key="model-settings" ref=${modelSettingsRef} onCancel=${() => setModelSettingsOpen(false)} onClose=${() => setModelSettingsOpen(false)} class="model-settings-dialog" aria-label="Models settings" onKeyDown=${event => event.stopPropagation()} onClick=${event => event.stopPropagation()}>
                                 <h2>Models settings</h2>
                                 <p>Browser pins: ${modelPins.length ? modelPins.join(', ') : 'None'}</p>
                                 <p>Provider credentials and model defaults are not managed here. Catalogue availability does not verify provider authentication.</p>
                                 <p>Pins are stored in this browser only. Tau does not provide instance-wide pin synchronization.</p>
                                 ${modelSettingsOpen && pinSyncStatus && html`<div role="status">${pinSyncStatus}</div>`}
+                                <button type="button" disabled=${loadingModels || switchingModel} onClick=${() => setModelRefresh(value => value + 1)}>Refresh model catalog</button>
+                                <button type="button" onClick=${() => { void handleCycleModel(); }} disabled=${switchingModel || loadingModels || (!sessionCatalog?.available || !modelOptions.length)}>Next model</button>
                                 <button type="button" onClick=${() => { setModelSettingsOpen(false); modelSettingsRef.current?.close(); }}>Close Models settings</button>
                             </dialog>
                             <div class="compose-model-catalogue-footer">
                                 <div class="compose-model-catalogue-footer-start">
-                                <button type="button" class="compose-model-popup-btn" disabled=${loadingModels || switchingModel} onClick=${() => setModelRefresh(value => value + 1)}>Refresh model catalog</button>
-                                <button
-                                    type="button"
-                                    class="compose-model-popup-btn"
-                                    onClick=${() => { void handleCycleModel(); }}
-                                    disabled=${switchingModel || loadingModels || (!sessionCatalog?.available || !modelOptions.length)}
-                                >
-                                    Next model
-                                </button>
+                                ${sessionCatalog?.available && sessionCatalog.thinking_levels?.length > 0 && html`<label class="compose-model-catalogue-thinking"><span>Thinking</span>
+                                    <select aria-label="Thinking level" value=${thinkingLevel || ''} disabled=${switchingModel} onChange=${event => handleCycleThinking(event.target.value)}>
+                                        ${!sessionCatalog.thinking_levels.includes(thinkingLevel) && html`<option value="" disabled>Unknown</option>`}
+                                        ${sessionCatalog.thinking_levels.map(level => html`<option value=${level}>${level}</option>`)}
+                                    </select>
+                                </label>`}
                                 </div>
                                 <button type="button" class="compose-model-popup-btn primary" onClick=${() => { setModelSettingsOpen(true); modelSettingsRef.current?.showModal(); }}>Open Models settings</button>
                             </div>
@@ -1164,11 +1163,12 @@ export function ComposeBox({
                                     onClick=${toggleModelPopup}
                                     disabled=${loading || switchingModel}
                                 >
-                                    ${switchingModel ? 'Switching…' : (modelHintLabel || 'Choose model')} ▾
+                                    ${switchingModel ? 'Switching…' : (modelHintLabel || 'Choose model')}
                                 </button>
                             `}
                             <div class="compose-model-meta-subline">
                             ${usageMeta.label && html`<span class="compose-model-usage-hint" title=${usageMeta.title} aria-label=${usageMeta.title}>${usageMeta.label}</span>`}
+                            ${!supportsThinking && thinkingLevel && html`<span class="compose-model-usage-hint" title="Configured thinking policy; model reasoning capability is unverified">${thinkingLevel}</span>`}
                             ${supportsThinking && html`
                                 <button type="button" class="compose-thinking-pill"
                                     aria-label="Cycle thinking level"
@@ -1215,11 +1215,11 @@ export function ComposeBox({
                             </svg>
                         </button>
                     `}
-                    ${speechAvailable && !searchMode && html`<button type="button" class=${`compose-icon-btn compose-mic-btn${speechActive ? ' active' : ''}`} title="Speech input (hold Space in an empty composer to talk; browser recognition may use a remote service)" aria-label=${speechActive ? 'Stop speech input' : 'Start speech input'} aria-pressed=${speechActive} disabled=${loading} onPointerDown=${handleSpeechPointerDown} onPointerUp=${releaseSpeechPointer} onPointerCancel=${releaseSpeechPointer} onLostPointerCapture=${releaseSpeechPointer} onClick=${event => {
+                    ${speechAvailable && !searchMode && html`<button type="button" class=${`icon-btn compose-mic-btn${speechActive ? ' active' : ''}`} title="Speech input (hold Space in an empty composer to talk; browser recognition may use a remote service)" aria-label=${speechActive ? 'Stop speech input' : 'Start speech input'} aria-pressed=${speechActive} disabled=${loading} onPointerDown=${handleSpeechPointerDown} onPointerUp=${releaseSpeechPointer} onPointerCancel=${releaseSpeechPointer} onLostPointerCapture=${releaseSpeechPointer} onClick=${event => {
                         if (suppressSpeechClick.current && event.detail !== 0) { suppressSpeechClick.current = false; return; }
                         suppressSpeechClick.current = false;
                         if (speechActive) speechRef.current?.stop(); else startSpeech();
-                    }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0014 0v-2M12 19v3M8 22h8"/></svg></button>`}
+                    }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg></button>`}
                     ${notificationsAvailable && !searchMode && html`
                         <button type="button" class=${`icon-btn notification-btn${notificationActive ? ' active' : ''}`}
                             onClick=${onToggleNotifications}
@@ -1241,6 +1241,7 @@ export function ComposeBox({
                         <button type="button" class="icon-btn send-btn"
                             onClick=${() => handleSubmit('auto')}
                             disabled=${!canSend}
+                            aria-label=${searchMode ? 'Search' : 'Send message'}
                             data-testid="send-button"
                             title="Send (Enter); steer with Ctrl/Cmd+Enter"
                         >

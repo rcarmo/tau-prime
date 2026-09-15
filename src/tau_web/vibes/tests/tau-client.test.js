@@ -26,9 +26,9 @@ test('catalogue deduplicates observed pairs and retains current model without in
         ? {source:'sessions',models:[{provider_name:'provider',model:'model'}]}
         : {...session,updated_at:'r1'})});
     const result=await client.models('one');
-    expect(result.models).toEqual([{id:'model',provider:'provider',name:'model'}]);
+    expect(result.models).toEqual([{id:'model',provider:'provider',name:'model',reasoning:false,contextWindow:null,thinkingLevels:[]}]);
     expect(result.source).toBe('sessions');
-    expect(result.thinking_levels).toEqual(['off','minimal','low','medium','high','xhigh']);
+    expect(result.thinking_levels).toEqual([]);
 });
 test('model change uses displayed revision and propagates conflict without retry', async () => {
     const calls=[];
@@ -173,7 +173,7 @@ test('thinking policy uses dedicated endpoint and loaded revision without assert
 });
 test('agent display identity uses actual Tau settings without invented capabilities',async()=>{
  const client=createTauClient({fetchImpl:async path=>{expect(path).toBe('/api/settings');return Response.json({agent_name:'Tau configured'});}});
- expect(await client.agentIdentity()).toEqual({agents:[{id:'default',name:'Tau configured'}]});
+ expect(await client.agentIdentity()).toEqual({agents:[{id:'default',name:'Tau configured',avatar_url:'/static/icon-192.png'}],user:{name:'You',avatar_url:null}});
 });
 test('persisted attachments retain stable media metadata only',async()=>{
  const {postFromTau}=await import('../static/js/tau-client.js');
@@ -226,4 +226,69 @@ test('widget document preserves UTF-8 split across response chunks at exact limi
 test('widget truncated stream propagates read failure',async()=>{
  const client=createTauClient({fetchImpl:async()=>new Response(new ReadableStream({start(c){c.enqueue(new TextEncoder().encode('<html>'));c.error(new Error('Fixture connection reset'));}}))});
  await expect(client.widgetDocument('ext','widget')).rejects.toThrow('Fixture connection reset');
+});
+test('assistant posts use the configured default agent identity',async()=>{
+ const {postFromTau}=await import('../static/js/tau-client.js');
+ expect(postFromTau({role:'assistant',content:'reply'}).data.agent_id).toBe('default');
+ expect(postFromTau({role:'user',content:'request'}).data.agent_id).toBeUndefined();
+});
+test('queue removal uses session-scoped Tau DELETE with CSRF',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({queue_id:'q'});}});
+ await client.removeQueueItem('one','q');
+ expect(calls[0].path).toBe('/api/sessions/one/queue/q');
+ expect(calls[0].method).toBe('DELETE');
+ expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
+ await expect(client.removeQueueItem('', 'q')).rejects.toThrow('identity');
+});
+test('queue reorder uses explicit session and validates direction',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({queue_id:'q'});}});
+ await client.moveQueueItem('one','q','up');
+ expect(calls[0].path).toBe('/api/sessions/one/queue/q/move');
+ expect(JSON.parse(calls[0].body)).toEqual({direction:'up'});
+ expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
+ await expect(client.moveQueueItem('one','q','sideways')).rejects.toThrow('Invalid queue move');
+});
+test('status preserves explicit native activity metadata',async()=>{
+ const client=createTauClient({fetchImpl:async()=>Response.json({runs:[{run_id:'r1',session_id:'one',status:'running',last_status:{type:'tool_use',title:'Running fixture tool',status:'Working'}}]})});
+ expect((await client.status('one')).active_turns).toEqual([{turn_id:'r1',session_id:'one',started_at:undefined,last_status:{type:'tool_call',title:'Running fixture tool',status:'Working'}}]);
+});
+test('steering existing queue requires explicit active run',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({});}});
+ await expect(client.steerQueueItem('one','q',null)).rejects.toThrow('active run');
+ expect(calls).toHaveLength(0);
+ await client.steerQueueItem('one','q','run-1');
+ expect(calls[0].path).toBe('/api/sessions/one/queue/q/steer');
+ expect(JSON.parse(calls[0].body)).toEqual({run_id:'run-1'});
+ expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
+});
+test('commands use the authoritative native catalogue',async()=>{
+ const client=createTauClient({fetchImpl:async path=>Response.json(path==='/api/commands'?{commands:[{name:'/model',description:'Choose model'}]}:{})});
+ expect(await client.commands()).toEqual({commands:[{name:'/model',description:'Choose model'}]});
+});
+test('context maps only explicitly labelled valid local estimates',async()=>{
+ let payload={estimated_tokens:16384,context_window:65536,token_usage_source:'local_estimate'};
+ const client=createTauClient({fetchImpl:async()=>Response.json(payload)});
+ const context=await client.context('one');expect(context.percent).toBe(25);expect(context.source).toBe('local_estimate');expect(context.compactCommand).toBeUndefined();
+ payload={estimated_tokens:0,context_window:65536,token_usage_source:'local_estimate'};
+ expect((await client.context('one')).percent).toBe(0);
+ payload={estimated_tokens:-1,context_window:65536,token_usage_source:'local_estimate'};
+ expect((await client.context('one')).percent).toBeUndefined();
+ payload={estimated_tokens:12,context_window:65536,token_usage_source:'unknown'};
+ expect((await client.context('one')).percent).toBeUndefined();
+});
+
+test('session picker handle formatter matches canonical display rules', async () => {
+ const {sessionHandle}=await import('../static/js/components/session-picker.js');
+ expect(sessionHandle('Fixture session')).toBe('@fixture-session');
+ expect(sessionHandle('  Research  ')).toBe('@research');
+ expect(sessionHandle('A / B')).toBe('@a-b');
+});
+
+test('model catalogue preserves explicit capability metadata', async () => {
+ const client=createTauClient({fetchImpl:async path=>Response.json(path==='/api/models'
+  ? {source:'configured',models:[{provider_name:'provider',model:'model',supports_thinking:true,context_window:65536,thinking_levels:['off','low','medium','high']}]}
+  : {...session,provider_name:'provider',model:'model',updated_at:'r1'})});
+ const result=await client.models('one');
+ expect(result.models).toEqual([{id:'model',provider:'provider',name:'model',reasoning:true,contextWindow:65536,thinkingLevels:['off','low','medium','high']}]);
+ expect(result.thinking_levels).toEqual(['off','low','medium','high']);
 });

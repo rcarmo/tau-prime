@@ -143,3 +143,41 @@ async def test_sqlite_plan_store_translates_revision_conflicts(tmp_path: Path) -
 
         assert exc.value.expected_revision == 0
         assert exc.value.actual_revision == 1
+
+
+@pytest.mark.anyio
+async def test_agent_plan_tool_and_browser_repository_share_revisions(tmp_path: Path) -> None:
+    from tau_coding.plan import create_plan_tool
+
+    database = SqliteDatabase(tmp_path / "tool-browser.sqlite3")
+    await database.open()
+    try:
+        await _seed_session(database)
+        repository = PlanRepository(database)
+        changes: list[PlanSnapshot] = []
+        tool = create_plan_tool(SqlitePlanStore(repository), "session", on_change=changes.append)
+        written = await tool.execute({"action": "write", "markdown": "- [ ] Tool task"})
+        assert written.ok
+        record = await repository.get("session")
+        assert record is not None
+        assert record.revision == 1
+        assert len(changes) == 1
+        assert changes[0].revision == record.revision
+        await repository.save(
+            "session",
+            markdown="- [x] Browser completed task",
+            explanation=None,
+            updated_by="browser",
+            expected_revision=record.revision,
+        )
+        read = await tool.execute({"action": "read"})
+        assert "Browser completed task" in read.content
+        assert read.data is not None
+        assert read.data["revision"] == 2
+        with pytest.raises(PlanConflictError):
+            await tool.execute(
+                {"action": "write", "markdown": "- [ ] stale", "expected_revision": 1}
+            )
+        assert len(changes) == 1
+    finally:
+        await database.close()

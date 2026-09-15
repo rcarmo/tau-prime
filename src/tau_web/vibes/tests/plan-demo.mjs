@@ -11,7 +11,7 @@ for(const engine of [chromium,webkit]){
   await page.getByRole('button',{name:'Open plan sidebar',exact:true}).click();
   await page.locator('.plan-sidebar-editor .cm-content').waitFor();
   await page.waitForFunction(()=>document.querySelector('.plan-sidebar-actions button:last-child')?.disabled===false);
-  await page.waitForFunction(()=>document.querySelector('.system-meters-row.rss .system-meters-value')?.textContent.includes('MiB'));
+  await page.waitForFunction(()=>document.querySelector('.system-meters-row.rss .system-meters-value')?.textContent.match(/^\d+(?:\.\d+)?[BK MGT]$/));
   await page.waitForTimeout(250);
   await page.screenshot({path:`/workspace/tmp/tau-demo-evidence/${engine.name()}-desktop.png`});
   await page.getByRole('button',{name:'Close plan sidebar',exact:true}).click();

@@ -27,7 +27,7 @@ localStorage.setItem('tau.plan.open','true');render(html\`<\${TauPlanSidebar} se
    await page.route('**/reference-fixture',r=>r.fulfill({contentType:'text/html',body:head+`<div class="plan-sidebar-root open has-checklist" style="--plan-sidebar-width:380px">${markup}</div><script>
 document.querySelector('.plan-sidebar-panel').style.width='380px';
 document.querySelector('.plan-sidebar-subtitle').textContent='fixture';
-document.querySelector('.plan-sidebar-progress-label').textContent='1/3 completed';
+document.querySelector('.plan-sidebar-progress-label').textContent='1/3 items complete';
 document.querySelector('.plan-sidebar-progress-percent').textContent='33%';
 document.querySelector('.plan-sidebar-progress-fill').style.width='33%';
 document.querySelector('.plan-sidebar-status').textContent='Ready.';

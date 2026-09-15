@@ -188,22 +188,16 @@ export async function getAgentQueue(agentId = null, threadId = null, sessionId =
     return tau.queue(sessionId);
 }
 
-export async function removeAgentQueueItem(rowId) {
-    return request('/agent/queue-remove', {
-        method: 'POST',
-        body: JSON.stringify({ row_id: rowId }),
-    });
+export async function removeAgentQueueItem(rowId, sessionId) {
+    return tau.removeQueueItem(sessionId, rowId);
 }
 
-export async function reorderAgentQueueItem(rowId, direction) {
-    return request('/agent/queue-reorder', { method: 'POST', body: JSON.stringify({ row_id: rowId, direction }) });
+export async function reorderAgentQueueItem(rowId, direction, sessionId) {
+    return tau.moveQueueItem(sessionId, rowId, direction);
 }
 
-export async function steerAgentQueueItem(rowId) {
-    return request('/agent/queue-steer', {
-        method: 'POST',
-        body: JSON.stringify({ row_id: rowId }),
-    });
+export async function steerAgentQueueItem(rowId, sessionId, runId) {
+    return tau.steerQueueItem(sessionId, rowId, runId);
 }
 
 /**
@@ -417,7 +411,7 @@ export function getWorkspaceDownloadUrl(path, showHidden = false) {
 }
 
 export async function getAgentCommands() {
-    return { commands: [{ name: '/thinking', description: 'Set Tau thinking policy: off|minimal|low|medium|high|xhigh' }] };
+    return tau.commands();
 }
 
 /**

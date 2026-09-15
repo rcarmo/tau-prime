@@ -8,7 +8,7 @@ export function planProgress(markdown) {
 export function createPlanState({read,write}) {
  const sessions=new Map();
  const get=id=>{
-  if(!sessions.has(id))sessions.set(id,{text:'',base:'',revision:null,loaded:false,busy:false,remotePending:false,error:'',edit:0,epoch:0});
+  if(!sessions.has(id))sessions.set(id,{text:'',base:'',revision:null,loaded:false,status:'Ready.',busy:false,remotePending:false,error:'',edit:0,epoch:0});
   return sessions.get(id);
  };
  const reconcile=async id=>{
@@ -34,6 +34,8 @@ export function createPlanState({read,write}) {
     if(epoch!==state.epoch)return false;
     if(edit!==state.edit){state.error='Plan changed while loading; your edits were retained.';return false;}
     state.text=result.markdown;state.base=result.markdown;state.revision=result.revision;state.loaded=true;
+    const updated=result.updated_at?new Date(result.updated_at):null;
+    state.status=updated&&!Number.isNaN(updated.getTime())?`Loaded ${updated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`:'Loaded default plan';
     return true;
    }catch(error){if(epoch===state.epoch)state.error=error.message;return false;}
    finally{if(epoch===state.epoch){state.busy=false;await reconcile(id);}}
@@ -47,6 +49,8 @@ export function createPlanState({read,write}) {
     const result=await write(id,text,state.revision);
     if(epoch!==state.epoch)return false;
     state.base=result.markdown;state.revision=result.revision;
+    const updated=result.updated_at?new Date(result.updated_at):null;
+    state.status=updated&&!Number.isNaN(updated.getTime())?`Saved ${updated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`:'Saved';
     if(edit===state.edit)state.text=result.markdown;
     return state.text===state.base;
    }catch(error){state.error=error.status===409?'Plan changed remotely. Refresh to reconcile; your draft is retained.':error.message;return false;}

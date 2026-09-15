@@ -40,6 +40,12 @@ try {
   const url=new URL(route.request().url());
   if (!['http:', 'https:'].includes(url.protocol)) return route.continue();
   if(url.pathname==='/'||url.pathname.startsWith('/static/')) return route.continue();
+  if(url.pathname==='/manifest.json')return route.fulfill({contentType:'application/manifest+json',body:JSON.stringify({name:'Tau smoke',start_url:'/'})});
+  if(url.pathname==='/offline-sw.js')return route.fulfill({status:404,contentType:'text/plain',body:'Offline worker intentionally unavailable in route-mocked smoke test'});
+  if(url.pathname==='/api/sessions/unavailable/timeline')return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({error:'Fixture session unavailable'})});
+  if(url.pathname==='/api/files')return route.fulfill({contentType:'application/json',body:JSON.stringify({path:'.',kind:'directory',entries:[]})});
+  if(url.pathname==='/api/sessions/smoke/context')return route.fulfill({contentType:'application/json',body:JSON.stringify({entry_count:0,message_count:0,compaction_count:0,active_leaf_entry_id:null,estimated_tokens:null,context_window:null,token_usage_source:null})});
+  if(url.pathname==='/api/commands')return route.fulfill({contentType:'application/json',body:JSON.stringify({source:'fixture',commands:[{name:'/thinking',description:'Set Tau thinking policy'}]})});
   if(url.pathname==='/api/media/image-fixture/content') {
    expect(route.request().headers().authorization).toBe('Bearer image-test-token');
    if(rejectImage)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Fixture image unavailable'})});
@@ -139,7 +145,7 @@ try {
   console.log('PASS literal user rendering');
   await browser.close();browser=null;await stopChild(server);process.exit(0);
  }
- await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible().catch(async error=>{console.error(JSON.stringify({errors,missing:[...missing],body:await page.locator('body').innerText()}));throw error;});
  if(process.env.TAU_REFERENCE_LAYOUT){
   // Pinned Vibes 4337868 has no utility accordions in the conversation column.
   await expect(page.locator('.app-shell > .container > details')).toHaveCount(0);
@@ -229,8 +235,9 @@ try {
  await expect(markdownPost.getByRole('link',{name:'Safe mail',exact:true})).toHaveAttribute('href','mailto:review@example.com');
  await expect(markdownPost.getByRole('link',{name:'Safe relative',exact:true})).toHaveAttribute('href','/review');
  const codePost=page.locator('#post-4');
- await expect(codePost).toHaveClass(/thread-reply/);
- expect(await codePost.evaluate(el=>parseFloat(getComputedStyle(el).marginLeft))).toBeGreaterThan(0);
+ // Consecutive assistant messages are not implicitly threaded.
+ await expect(codePost).not.toHaveClass(/thread-reply/);
+ expect(await codePost.evaluate(el=>parseFloat(getComputedStyle(el).marginLeft))).toBe(0);
  const codeBlock=codePost.locator('.post-code-block');
  const codeToggle=codeBlock.locator('.tau-code-toggle');
  await expect(codeBlock).toHaveClass(/post-code-block-collapsed/);
@@ -260,14 +267,24 @@ try {
  await codeCopy.click();
  await expect(codeCopy).toHaveAttribute('aria-label','Copied');
  await expect.poll(()=>page.evaluate(()=>window.copiedCode)).toBe(codeFixture+'\n');
- await expect(page.locator('.compose-queue-item')).toHaveCount(2);
- await expect(page.locator('.compose-queue-text')).toHaveText(['First FIFO message','Second FIFO message']);
- for(const actions of await page.locator('.compose-queue-actions').all()) await expect(actions).toBeHidden();
+ await expect(page.getByTestId('queue-item')).toHaveCount(2);
+ await expect(page.locator('.compose-queue-stack-text')).toHaveText(['First FIFO message','Second FIFO message']);
+ for(const row of await page.getByTestId('queue-item').all()) {
+  await expect(row.getByRole('button',{name:'Steer queued message',exact:true})).toBeDisabled();
+  await expect(row.getByRole('button',{name:'Return queued message to editor',exact:true})).toBeVisible();
+ }
  const openTools=async()=>{
   if(await page.getByRole('dialog',{name:'Session tools',exact:true}).count())return;
   await page.getByTestId('session-switcher').click();
+  const popout=page.getByRole('button',{name:/^Open .* in new window$/}).first();
+  await expect(popout).toBeVisible();
+  await popout.evaluate(button=>{window.__popoutCall=null;const original=window.open;window.open=(...args)=>{window.__popoutCall=args;return null;};button.click();window.open=original;});
+  expect(await page.evaluate(()=>window.__popoutCall)).toEqual(['/?session=smoke&chat_only=1','_blank','noopener,noreferrer']);
   const bounds=await page.locator('.compose-session-popup').boundingBox();
-  expect(bounds.width).toBeLessThanOrEqual(420);
+  const anchor=await page.locator('.compose-input-main').boundingBox();
+  expect(Math.abs(bounds.width-anchor.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.x-anchor.x)).toBeLessThanOrEqual(1);
+  expect(bounds.x+bounds.width).toBeLessThanOrEqual(viewport.width);
   expect(bounds.height).toBeLessThanOrEqual(viewport.height*0.61);
   await page.getByRole('button',{name:'Session tools…',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Session tools',exact:true})).toBeVisible();
@@ -279,9 +296,20 @@ try {
  };
  await openTools();
  const metrics=page.getByRole('button',{name:'Collapse system meters',exact:true});
- await expect(metrics).toContainText('12.5%');
- if(viewport.width<=600)await expect(metrics).toContainText('CPU 12.5% • RAM 44.0%');
- else{await expect(metrics).toContainText('100.0 MiB');await expect(metrics).toContainText('Unavailable');}
+ await expect(metrics).toContainText('13%');
+ if(viewport.width<=600)await expect(metrics).toContainText('CPU 13% • RAM 44%');
+ else await expect(metrics).toContainText('100M');
+ const modelContrast=await page.locator('.compose-model-hint').evaluate(el=>{
+  const parse=value=>(value.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
+  const effective=(rgb,background,opacity)=>rgb.map((value,index)=>Math.round(value*opacity+background[index]*(1-opacity)));
+  const linear=value=>{value/=255;return value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4;};
+  const luminance=rgb=>rgb.map(linear).reduce((sum,value,index)=>sum+value*[0.2126,0.7152,0.0722][index],0);
+  const style=getComputedStyle(el),background=getComputedStyle(el.closest('.compose-box')).backgroundColor;
+  const foreground=effective(parse(style.color),parse(background),Number(style.opacity));
+  const values=[luminance(foreground),luminance(parse(background))];
+  return (Math.max(...values)+0.05)/(Math.min(...values)+0.05);
+ });
+ expect(modelContrast).toBeGreaterThanOrEqual(4.5);
  await scan('body');
  await expect(page.locator('summary').filter({hasText:'Runtime metrics'})).toHaveCount(0);
  if(process.env.TAU_CAPTURE_DIR){
@@ -304,7 +332,7 @@ try {
  await page.getByRole('button',{name:'Close plan sidebar',exact:true}).click();
  const composer=page.locator('.compose-box textarea');
  await expect(page.getByRole('button',{name:'Open model picker',exact:true})).toBeVisible();
- await expect(page.getByRole('img',{name:'Context usage unavailable',exact:true})).toBeVisible();
+ await expect(page.getByRole('img',{name:'Context usage unavailable',exact:true})).toHaveCount(0);
  const beforeCompletion=submitted.length;
  await composer.fill('/thi');
  await expect(page.locator('.slash-autocomplete .slash-name')).toHaveText('/thinking');
@@ -548,7 +576,7 @@ try {
  await expect(page.getByRole('link',{name:'Open source session'})).toBeVisible();
  await Promise.all([page.waitForEvent('load'),page.getByRole('link',{name:'Open source session'}).click()]);
  await expect(page).toHaveURL('http://127.0.0.1:8893/?session=smoke');
- await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible().catch(async error=>{console.error(JSON.stringify({errors,missing:[...missing],body:await page.locator('body').innerText()}));throw error;});
  await expect(composer).toHaveValue('Keep rejected draft');
  await page.locator('.compose-box input[type="file"]').setInputFiles({name:'pending-navigation.txt',mimeType:'text/plain',buffer:Buffer.from('keep this file')});
  await expect.poll(()=>page.evaluate(()=>{
@@ -568,5 +596,5 @@ try {
  await expect(composer).toHaveValue('');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('vibes_compose_draft:smoke')).text)).toBe('Keep rejected draft');
  console.log(JSON.stringify({engine,size,theme:process.env.TAU_SMOKE_THEME||'light',errors,missing:[...missing],text:(await page.locator('body').innerText()).slice(0,1800)},null,2));
- if(errors.length || missing.has('/api/sessions/null')) process.exitCode=1;
+ if(errors.length || missing.size) process.exitCode=1;
 }finally{await browser?.close();await stopChild(server);}

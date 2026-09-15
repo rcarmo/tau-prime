@@ -841,3 +841,56 @@ reference code, but share Tau base CSS and editor vendor; they are not complete
 Piclaw-host comparisons. Human visual acceptance is not recorded. Goal remains
 open for this gap; do not count background queued-message/thinking/tool defects
 as completed by this sidebar deployment.
+
+## Full-host visual diff reopening — 2026-09-15
+
+`tests/full-host-visual.mjs` now routes each host's own app/CSS/editor vendor,
+uses fixed time/locale/timezone, explicit startup contracts, a held-open same-origin
+SSE stream, and fails unknown requests/network errors/unselected fixture sessions.
+It captures Plan-open and Plan-closed states separately, counts exact RGBA changes
+and perceptual changes without masks. Service-worker caching is disabled in fixtures.
+
+Confirmed source fixes (not deployed): progress label/stroke, block progress fill,
+editor text/background colors, load/save status, compact metric units, inactive-swap
+visibility, viewport HUD anchoring, full-height and min/max RSS sparklines.
+Tablet HUD attained 0 exact changed pixels; WebKit tablet sidebar attained 0.
+These statements apply to individual controlled states, not the whole matrix.
+
+Still missing in Tau: Piclaw timeline workspace/layout hamburger (`YC` in deployed
+classic bundle, `.timeline-menu-portal`, `.timeline-menu-btn`). Reference portal is
+body-mounted, z-index 2000; placement follows workspace sidebar right edge + 8px
+and safe-area top + 8px. Open menu supports workspace/explorer/chat-only, terminal,
+new/recent file, refresh/index/hidden-files, display scale. Must map actual Tau
+capabilities, not add a dead icon. Its absence accounts for phone panel-edge pixels;
+those are NOT accepted renderer limitations. Composer is also 1px taller in Tau.
+
+### Queue parity candidate evidence (not deployed)
+
+Backend commits `7d634e5`, `c29c82f`, `99822d4` implement session-scoped pending
+remove/move/steer with dispatch locks and identity/FIFO preservation. Tests cover
+cross-session rejection, consumed records, completed-run rejection, backlog and
+run-completion delivery race (pending item retained without duplication).
+
+Full-host queue fixture now covers two-item reorder, removal409 retention/retry,
+return-to-editor append confirmation, browser storage quota (no DELETE), duplicate
+click, concurrent edits and session switch. Active-steer branch injects real SSE
+agent-start/end frames; both Chromium/WebKit verify explicit run ID, rejected
+steer retention and successful removal. These use controlled browser responses,
+not an installed candidate or provider execution. Current unit suite:86 pass.
+
+Light-tablet queued screenshot reaches exact open-Plan parity in Chromium/WebKit;
+WebKit closed exact, Chromium closed small unresolved residual. Existing UI
+working changes are not in production bundle. Active tools, picker/workspace-open
+and full expanded-state visual matrix remain incomplete.
+
+### Installed candidate queue matrix
+
+Temporary candidate `/workspace/tmp/tau-visual-wheel` installed into isolated
+`/workspace/tmp/tau-plan-installed`; demo unchanged. `tests/plan-installed.mjs`
+now accepts TAU_INSTALLED_WIDTH/THEME. All12 Chromium/WebKit ×390/820/1440×light/dark
+journeys pass authenticated Plan save/conflict/SSE/offline recovery, real metrics,
+and persisted queue reorder/remove/return-to-existing-draft. No provider run.
+Active-steering browser tests currently use controlled SSE/backend responses;
+backend route/runtime tests cover actual fake-agent dispatch and completion races.
+Do not label this installed active-steering coverage. Shared reference model-label
+contrast defect and Chromium closed-state raster residual remain unwaived.

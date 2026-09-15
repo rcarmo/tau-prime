@@ -29,11 +29,11 @@ test('imported UI session/model functions use Tau transport and token', async()=
 test('advertised thinking command uses dedicated policy mutation, never an agent run',async()=>{
  const original=globalThis.fetch;const calls=[];
  try{
- globalThis.fetch=async(path,options)=>{calls.push({path,...options});return Response.json({session_id:'one',provider_name:'p',model:'m',thinking_level:'low',updated_at:'r1'});};
- // API singleton captured fetch on first import, so test transport independently
+ globalThis.fetch=async(path,options)=>{calls.push({path,...options});return Response.json(path==='/api/commands'?{commands:[{name:'/thinking',description:'Set policy'}]}:{session_id:'one',provider_name:'p',model:'m',thinking_level:'low',updated_at:'r1'});};
+ // API singleton may be captured by another test; verify the injectable native transport directly.
  const {createTauClient}=await import('../static/js/tau-client.js');
  const client=createTauClient();await client.modelState('one');await client.changeModel('one',{thinking_level:'low'});
- expect(calls.map(c=>c.path)).toEqual(['/api/sessions/one','/api/sessions/one/thinking']);
- const {getAgentCommands}=await import('../static/js/api.js');expect((await getAgentCommands()).commands.map(c=>c.name)).toEqual(['/thinking']);
+ expect((await client.commands()).commands.map(c=>c.name)).toEqual(['/thinking']);
+ expect(calls.map(c=>c.path)).toEqual(['/api/sessions/one','/api/sessions/one/thinking','/api/commands']);
  }finally{globalThis.fetch=original;}
 });

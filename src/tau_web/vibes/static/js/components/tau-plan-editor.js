@@ -1,5 +1,11 @@
 import {html,useLayoutEffect,useRef,useState} from '../vendor/preact-htm.js';
 
+function accentRgb(){
+ const value=getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim()||'#1d9bf0';
+ const hex=value.match(/^#([0-9a-f]{6})$/i)?.[1];
+ return hex?`${parseInt(hex.slice(0,2),16)}, ${parseInt(hex.slice(2,4),16)}, ${parseInt(hex.slice(4),16)}`:'29, 155, 240';
+}
+
 /** Lazily loaded editor; the owner remains the sole source of Plan draft state. */
 export function TauPlanEditor({value,onChange,disabled}) {
  const host=useRef(null),view=useRef(null),latest=useRef({value,onChange,disabled}),applying=useRef(false);
@@ -11,15 +17,17 @@ export function TauPlanEditor({value,onChange,disabled}) {
    if(disposed)return;
    const theme=new cm.Compartment(),editable=new cm.Compartment();
    media=window.matchMedia('(prefers-color-scheme: dark)');
-   const surfaceTheme=cm.EditorView.theme({
-    '&':{height:'100%',fontSize:'13px',backgroundColor:'var(--bg-primary, #0b1020)',color:'var(--text-primary, #e5e7eb)'},
-    '.cm-scroller':{overflow:'auto',fontFamily:'var(--font-mono, monospace)',lineHeight:'1.45'},
-    '.cm-content':{padding:'12px',caretColor:'var(--accent-color, #60a5fa)'},'.cm-gutters':{display:'none'},
-    '&.cm-focused':{outline:'none'},
-    '.cm-cursor':{borderLeftColor:'var(--accent-color, #60a5fa)',borderLeftWidth:'2px'},
-    '.cm-line':{padding:'1px 8px',borderLeft:'3px solid transparent',borderRadius:'6px',overflowWrap:'anywhere'},
-   });
-   const themes=()=>[(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&media.matches))?cm.githubDark:cm.githubLight,surfaceTheme];
+   const themes=()=>{const rgb=accentRgb(),accent=getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim()||'#1d9bf0';return [(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&media.matches))?cm.githubDark:cm.githubLight,cm.EditorView.theme({
+    '&':{height:'100%',fontSize:'13px',background:'var(--bg-primary,#0b1020)',color:'var(--text-primary,#e5e7eb)'},
+    '.cm-scroller':{overflow:'auto',fontFamily:'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)',lineHeight:'1.45',background:'var(--bg-primary,#0b1020)'},
+    '.cm-content':{padding:'12px',caretColor:accent},'.cm-gutters':{display:'none'},
+    '.cm-line':{color:'var(--text-primary,#e5e7eb)',padding:'1px 8px',borderLeft:'3px solid transparent',borderRadius:'6px'},
+    '.cm-lineWrapping .cm-line':{overflowWrap:'anywhere'},
+    '.cm-cursor, .cm-dropCursor':{borderLeftColor:accent,borderLeftWidth:'2px'},
+    '&.cm-focused .cm-cursor':{borderLeftColor:accent,borderLeftWidth:'2px'},
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground':{backgroundColor:`rgba(${rgb}, 0.22) !important`},
+    '.cm-activeLine':{backgroundColor:`rgba(${rgb}, 0.07)`},'.cm-selectionMatch':{backgroundColor:`rgba(${rgb}, 0.16)`},'.cm-focused':{outline:'none'},
+   })];};
    const decorations=editor=>{
     const ranges=[];
     for(let n=1;n<=editor.state.doc.lines;n++){

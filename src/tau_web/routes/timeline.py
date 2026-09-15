@@ -82,6 +82,9 @@ class ContextSummaryResponse(BaseModel):
     active_leaf_entry_id: str | None
     model: str
     thinking_level: str | None
+    estimated_tokens: int | None = None
+    context_window: int | None = None
+    token_usage_source: str | None = None
 
 
 async def get_entries(request: web.Request) -> web.Response:
@@ -209,6 +212,12 @@ async def get_context(request: web.Request) -> web.Response:
     session = await _require_session(services, session_id)
     storage = services.session_storage(session_id)
     active_leaf_entry_id = session.active_leaf_entry_id
+    estimate = services.runtime.context_estimate(session_id)
+    token_fields = {
+        "estimated_tokens": estimate[0] if estimate else None,
+        "context_window": estimate[1] if estimate else None,
+        "token_usage_source": "local_estimate" if estimate else None,
+    }
 
     if active_leaf_entry_id is None:
         return json_response(
@@ -219,6 +228,7 @@ async def get_context(request: web.Request) -> web.Response:
                 active_leaf_entry_id=None,
                 model=session.model,
                 thinking_level=session.thinking_level,
+                **token_fields,
             ).model_dump(mode="json")
         )
 
@@ -250,6 +260,7 @@ async def get_context(request: web.Request) -> web.Response:
             active_leaf_entry_id=active_leaf_entry_id,
             model=model,
             thinking_level=thinking_level,
+            **token_fields,
         ).model_dump(mode="json")
     )
 

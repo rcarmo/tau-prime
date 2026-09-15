@@ -200,6 +200,9 @@ async def test_timeline_routes_entries_messages_branches_select_and_context(
         "active_leaf_entry_id": "compact",
         "model": "branch-model",
         "thinking_level": "high",
+        "estimated_tokens": None,
+        "context_window": None,
+        "token_usage_source": None,
     }
 
     async with app_client.post(
@@ -284,6 +287,9 @@ async def test_timeline_routes_handle_empty_sessions(
         "active_leaf_entry_id": None,
         "model": "empty-model",
         "thinking_level": "minimal",
+        "estimated_tokens": None,
+        "context_window": None,
+        "token_usage_source": None,
     }
 
 
@@ -479,3 +485,24 @@ async def test_branch_selection_uses_runtime_coordination(
     ) as response:
         assert response.status == 409
     assert await services.session_storage(session_id).read_all() == before
+
+
+@pytest.mark.anyio
+async def test_context_route_labels_runtime_estimates(app_client, services, monkeypatch) -> None:
+    from tau_web.runtime import DurableAgentRuntime
+
+    await _create_durable_session(services, session_id="estimated")
+    requested = []
+
+    def estimate(self, session_id):
+        requested.append(session_id)
+        return (16384, 65536) if session_id == "estimated" else None
+
+    monkeypatch.setattr(DurableAgentRuntime, "context_estimate", estimate)
+    async with app_client.get("/api/sessions/estimated/context") as response:
+        assert response.status == 200
+        payload = await response.json()
+    assert payload["estimated_tokens"] == 16384
+    assert payload["context_window"] == 65536
+    assert payload["token_usage_source"] == "local_estimate"
+    assert requested == ["estimated"]

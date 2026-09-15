@@ -274,6 +274,26 @@ class AsyncAgentPool:
         """Return one immutable session snapshot."""
         return self._require_session(session_id).snapshot()
 
+    def context_estimate(self, session_id: str) -> tuple[int, int] | None:
+        """Read optional loaded-session estimates without instantiating an agent.
+
+        These are local estimates, not provider-reported usage. Sessions without
+        the optional accounting properties remain explicitly unavailable.
+        """
+        entry = self._require_session(session_id)
+        tokens = getattr(entry.session, "context_token_estimate", None)
+        window = getattr(entry.session, "context_window_tokens", None)
+        if (
+            isinstance(tokens, bool)
+            or not isinstance(tokens, int)
+            or tokens < 0
+            or isinstance(window, bool)
+            or not isinstance(window, int)
+            or window <= 0
+        ):
+            return None
+        return tokens, window
+
     def snapshots(self) -> tuple[PoolSessionSnapshot, ...]:
         """Return immutable snapshots for all registered sessions."""
         return tuple(entry.snapshot() for entry in self._sessions.values())

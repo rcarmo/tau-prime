@@ -34,6 +34,8 @@ class MeterSnapshot:
     process_rss_series_bytes: tuple[int | None, ...]
     sample_interval_ms: int
     platform: str
+    buffer_cache_bytes: int | None = None
+    buffer_cache_series_bytes: tuple[int | None, ...] = ()
 
     def to_payload(self) -> JSONObject:
         return cast(
@@ -49,6 +51,8 @@ class MeterSnapshot:
                 "process_rss_series_bytes": list(self.process_rss_series_bytes),
                 "sample_interval_ms": self.sample_interval_ms,
                 "platform": self.platform,
+                "buffer_cache_bytes": self.buffer_cache_bytes,
+                "buffer_cache_series_bytes": list(self.buffer_cache_series_bytes),
             },
         )
 
@@ -59,6 +63,7 @@ class _MeterSample:
     ram_percent: float | None
     swap_percent: float | None
     process_rss_bytes: int | None
+    buffer_cache_bytes: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +128,7 @@ class HostMetersSampler:
         self._ram_series: deque[float | None] = deque(maxlen=max_points)
         self._swap_series: deque[float | None] = deque(maxlen=max_points)
         self._rss_series: deque[int | None] = deque(maxlen=max_points)
+        self._buffer_cache_series: deque[int | None] = deque(maxlen=max_points)
         self._task: asyncio.Task[None] | None = None
         self._snapshot = MeterSnapshot(
             cpu_percent=None,
@@ -186,6 +192,7 @@ class HostMetersSampler:
             ram_percent=_suppress_sampling_error(self._sample_proc_ram_percent),
             swap_percent=_suppress_sampling_error(self._sample_proc_swap_percent),
             process_rss_bytes=_suppress_sampling_error(self._sample_proc_rss_bytes),
+            buffer_cache_bytes=_suppress_sampling_error(self._sample_proc_buffer_cache_bytes),
         )
 
     def _collect_fallback_sample(self) -> _MeterSample:
@@ -229,6 +236,12 @@ class HostMetersSampler:
     def _sample_proc_ram_percent(self) -> float | None:
         return _ram_percent(_parse_proc_meminfo(self._proc_reader(self._proc_root / "meminfo")))
 
+    def _sample_proc_buffer_cache_bytes(self) -> int | None:
+        memory = _parse_proc_meminfo(self._proc_reader(self._proc_root / "meminfo"))
+        if memory.buffers_bytes is None or memory.cached_bytes is None:
+            return None
+        return _normalize_bytes(memory.buffers_bytes + memory.cached_bytes)
+
     def _sample_proc_swap_percent(self) -> float | None:
         return _swap_percent(_parse_proc_meminfo(self._proc_reader(self._proc_root / "meminfo")))
 
@@ -255,6 +268,8 @@ class HostMetersSampler:
         self._ram_series.append(ram_percent)
         self._swap_series.append(swap_percent)
         self._rss_series.append(process_rss_bytes)
+        buffer_cache_bytes = _normalize_bytes(sample.buffer_cache_bytes)
+        self._buffer_cache_series.append(buffer_cache_bytes)
         return MeterSnapshot(
             cpu_percent=cpu_percent,
             ram_percent=ram_percent,
@@ -264,6 +279,8 @@ class HostMetersSampler:
             swap_series=tuple(self._swap_series),
             process_rss_bytes=process_rss_bytes,
             process_rss_series_bytes=tuple(self._rss_series),
+            buffer_cache_bytes=buffer_cache_bytes,
+            buffer_cache_series_bytes=tuple(self._buffer_cache_series),
             sample_interval_ms=self._sample_interval_ms,
             platform=self._platform,
         )

@@ -51,6 +51,10 @@ _DEFAULT_SEARCH_LIMIT: Final[int] = 20
 
 @dataclass(frozen=True, slots=True)
 class SettingsResource:
+    agent_name: str
+    user_name: str
+    agent_avatar: str | None
+    user_avatar: str | None
     host: str
     port: int
     cwd: str
@@ -120,6 +124,10 @@ async def get_settings(request: web.Request) -> web.Response:
         raise RuntimeError("WebConfig.database_path must not be None")
     return json_response(
         SettingsResource(
+            agent_name=config.agent_name,
+            user_name=config.user_name,
+            agent_avatar=config.agent_avatar,
+            user_avatar=config.user_avatar,
             host=config.host,
             port=config.port,
             cwd=str(config.cwd),

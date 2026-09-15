@@ -1,3 +1,6 @@
+import { tauStatus } from './tau-status.js';
+import { TauWorkspaceMenu } from './components/tau-workspace-menu.js';
+import { QuickActions } from './components/quick-actions.js';
 import { TauMeters } from './components/tau-meters.js';
 import { TauPlanSidebar } from './components/tau-plan-sidebar.js';
 import { TauSessionTools } from './components/tau-session-tools.js';
@@ -11,7 +14,7 @@ import { initialTauSession } from './tau-session-selection.js';
 import { SessionDeleteDialog } from './components/session-delete-dialog.js';
 import { SessionNameDialog } from './components/session-name-dialog.js';
 import { SessionPicker } from './components/session-picker.js';
-import { getSessions, getSessionTimeline, createSession, updateSession, deleteSession, getAgentQueue, getSessionModelState } from './api.js';
+import { getSessions, getSessionTimeline, createSession, updateSession, deleteSession, getAgentQueue, getSessionModelState, getAgentCommands } from './api.js';
 import { composeDrafts } from './components/compose-drafts.js';
 import { eventMatchesSession } from './components/session-events.js';
 import { html, render, useState, useEffect, useCallback, useRef, useMemo } from './vendor/preact-htm.js';
@@ -727,6 +730,7 @@ function App() {
     const searchGeneration = useRef(0);
     const modelGeneration = useRef(0);
     const [sessionOptions, setSessionOptions] = useState([]);
+    const [quickActionsRequest, setQuickActionsRequest] = useState(0);
     const [sessionRefreshError, setSessionRefreshError] = useState('');
     const [sessionPickerOpen, setSessionPickerOpen] = useState(false);
     const sessionTriggerRef = useRef(null);
@@ -1513,6 +1517,7 @@ function App() {
     }, []);
 
     const clearAgentRunState = useCallback(() => {
+        const hadActivity = isAgentRunningRef.current || currentTurnIdRef.current !== null;
         isAgentRunningRef.current = false;
         lastAgentEventRef.current = null;
         lastSilenceNoticeRef.current = 0;
@@ -1537,6 +1542,7 @@ function App() {
             const { last_activity, lastActivity, ...rest } = prev;
             return Object.keys(rest).length ? rest : null;
         });
+        if (!hadActivity) return;
         const token = Date.now();
         lastActivityTokenRef.current = token;
         setAgentStatus((prev) => {
@@ -1895,6 +1901,11 @@ function App() {
 
     const expandAgentPanel = useCallback(async (panelKey, turnId) => {
         if (!turnId || (panelKey !== 'draft' && panelKey !== 'thought')) return;
+        if (turnId === currentTurnIdRef.current) {
+            if (panelKey === 'thought') setAgentThought({text:thoughtBufferRef.current,totalLines:estimatePreviewLines(thoughtBufferRef.current)});
+            else setAgentDraft({text:draftBufferRef.current,totalLines:estimatePreviewLines(draftBufferRef.current)});
+            return;
+        }
         try {
             const data = await getAgentTurnPreview(turnId);
             if (panelKey === 'draft') {
@@ -1921,26 +1932,32 @@ function App() {
         if (panelKey !== 'draft' && panelKey !== 'thought') return;
         expandedPanelsRef.current = { ...expandedPanelsRef.current, [panelKey]: Boolean(expanded) };
         const activeTurn = turnId || currentTurnIdRef.current;
-        if (!activeTurn) return;
+        if (!activeTurn || activeTurn === currentTurnIdRef.current) return;
         setAgentTurnPanelExpanded(activeTurn, panelKey, expanded).catch((e) => {
             console.warn('Failed to set panel state:', e);
         });
     }, []);
 
-    const handleQueueRemove = useCallback(async (rowId) => {
+    const handleQueueRemove = useCallback(async (rowId, originSessionId = selectedSessionRef.current) => {
         if (rowId == null) return;
         try {
-            await removeAgentQueueItem(rowId);
-            await refreshSelectedQueue();
+            await removeAgentQueueItem(rowId, originSessionId);
+            try {
+                await refreshSelectedQueue();
+            } catch (refreshError) {
+                console.warn('Queue item removed, but refresh failed:', refreshError);
+            }
+            return true;
         } catch (error) {
             console.error('Failed to remove queued item:', error);
             alert('Failed to remove queued item: ' + error.message);
+            return false;
         }
     }, []);
 
     const handleQueueReorder = useCallback(async (rowId, direction) => {
         try {
-            const result = await reorderAgentQueueItem(rowId, direction);
+            const result = await reorderAgentQueueItem(rowId, direction, selectedSessionRef.current);
             await refreshSelectedQueue();
         } catch (err) { alert(err.message || 'Failed to reorder queue.'); }
     }, []);
@@ -1948,7 +1965,7 @@ function App() {
     const handleQueueSteer = useCallback(async (rowId) => {
         if (rowId == null) return;
         try {
-            await steerAgentQueueItem(rowId);
+            await steerAgentQueueItem(rowId, selectedSessionRef.current, currentTurnIdRef.current);
             await refreshSelectedQueue();
         } catch (error) {
             console.error('Failed to steer queued item:', error);
@@ -2342,12 +2359,32 @@ function App() {
                 if (event === 'tau.plan.updated') window.dispatchEvent(new CustomEvent('tau:plan-updated', {detail:data}));
                 if (data.session_id !== selectedSessionRef.current) return;
                 const payload = data.payload || {};
+                const projectedStatus = tauStatus(event, payload, data.run_id);
+                if (projectedStatus) {
+                    setAgentStatus(projectedStatus);
+                    if (data.run_id) { setCurrentTurnId(data.run_id); currentTurnIdRef.current = data.run_id; }
+                }
+                if (event === 'tau.agent.agent_start') {
+                    isAgentRunningRef.current = true;
+                    thoughtBufferRef.current = '';
+                    setAgentThought({text:'',totalLines:0});
+                }
+                if (event === 'tau.agent.thinking_delta' && typeof payload.delta === 'string') {
+                    thoughtBufferRef.current += payload.delta;
+                    const text = thoughtBufferRef.current;
+                    setAgentThought({text,totalLines:text.split('\n').length});
+                }
+                if (event === 'tau.agent.agent_end') {
+                    clearAgentRunState();
+                    setAgentStatus(null);
+                    refreshSelectedQueue().catch(error => console.warn('Queue refresh failed:', error));
+                }
                 if (event === 'tau.agent.message_start' && payload.role === 'assistant') {
                     setCurrentTurnId(data.run_id);
                 } else if (event === 'tau.agent.message_end') {
                     loadPosts();
                 } else if (event === 'tau.agent.error') {
-                    setAgentStatus(payload.error || 'Tau agent error');
+                    setAgentStatus(projectedStatus);
                 }
             },
         });
@@ -2584,6 +2621,13 @@ function App() {
     
     return html`
         <div class=${`app-shell${workspaceOpen ? '' : ' workspace-collapsed'}${editorOpen ? ' editor-open' : ''}${popoutMode ? ' popout-mode' : ''}${terminalPopout ? ' terminal-popout' : ''}`} ref=${appShellRef}>
+            ${!popoutMode && html`<${TauWorkspaceMenu} workspaceOpen=${workspaceOpen} onToggleWorkspace=${toggleWorkspace} onOpenTerminal=${terminalEnabled&&!terminalPopout?()=>{setTerminalVisible(true);setWorkspaceOpen(false);}:undefined}/>`}
+            ${!popoutMode && html`<${QuickActions}
+                sessions=${sessionOptions} sessionId=${selectedSession}
+                workspace=${[{id:'toggle-workspace',title:workspaceOpen?'Hide workspace':'Show workspace',subtitle:workspaceOpen?'Hide the workspace sidebar.':'Show the workspace sidebar.',run:toggleWorkspace}]}
+                openRequest=${quickActionsRequest} onRefreshSessions=${refreshSessions} onSwitchSession=${selectSession} loadCommands=${getAgentCommands}
+                onPrefill=${command=>document.dispatchEvent(new CustomEvent('tau:widget-submit',{detail:{mode:'prefill',text:command}}))}
+            />`}
             ${!popoutMode && html`<${WorkspaceExplorer} readOnly=${true} onFileSelect=${addFileRef} onFolderSelect=${path => setFolderRefs(prev => prev.includes(path) ? prev : [...prev, path])} visible=${workspaceOpen} active=${workspaceOpen || editorOpen} onOpenEditor=${undefined} onOpenTerminalTab=${terminalEnabled && !terminalPopout ? () => { setTerminalVisible(true); setWorkspaceOpen(false); } : undefined} renderMarkdown=${renderMarkdown} />`}
             ${workspaceOpen && !popoutMode && !terminalPopout && html`<div class="workspace-drawer-backdrop" aria-hidden="true" onPointerDown=${event => { event.preventDefault(); setWorkspaceOpen(false); }}></div>`}
             ${!popoutMode && html`<button
@@ -2694,6 +2738,7 @@ function App() {
                 />
                 ${sessionPickerOpen && html`<${SessionPicker} sessions=${sessionOptions} refreshError=${sessionRefreshError} currentId=${selectedSession} onSelect=${async id => { if (sessionOptions.find(item => item.id === id)?.archived) { await updateSession(id, { archived: false }); await refreshSessions(); } await selectSession(id); }} onClose=${closeSessionPicker}
                     onTools=${() => { setSessionPickerOpen(false); setSessionToolsOpen(true); }}
+                    onPopout=${id => window.open(`${window.location.pathname}?session=${encodeURIComponent(id)}&chat_only=1`, '_blank', 'noopener,noreferrer')}
                     onCreate=${() => { createdSessionRef.current = null; createParentRef.current = null; setCreatingSession(true); }}
                     onRename=${id => setRenamingSession(sessionOptions.find(item => item.id === id))}
                     onArchive=${async (id, archived) => {

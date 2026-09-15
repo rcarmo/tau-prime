@@ -24,3 +24,13 @@ test('drafts keep page-local files and session data isolated',()=>{
  expect(f.drafts.load('two').text).toBe('second');
  expect(f.data.get(draftKey('one'))).not.toContain('attachment.txt');
 });
+
+test('model hint opacity keeps light-theme contrast above 4.5:1', async () => {
+ const css=await Bun.file(new URL('../static/css/classic/base.css',import.meta.url)).text();
+ const opacity=Number(css.match(/--model-hint-opacity:\s*([\d.]+)/)?.[1]);
+ const linear=value=>{value/=255;return value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4;};
+ const luminance=rgb=>rgb.map(linear).reduce((sum,value,index)=>sum+value*[0.2126,0.7152,0.0722][index],0);
+ const blended=[83,100,113].map(value=>Math.round(value*opacity+255*(1-opacity)));
+ const ratio=(luminance([255,255,255])+0.05)/(luminance(blended)+0.05);
+ expect(ratio).toBeGreaterThanOrEqual(4.5);
+});

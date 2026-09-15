@@ -1,3 +1,4 @@
+import { TauReadAloud } from './tau-read-aloud.js';
 import { TauAttachment } from './tau-attachment.js';
 import { html, useCallback, useEffect, useRef, useState } from '../vendor/preact-htm.js';
 import { getMediaInfo, getMediaUrl, getThumbnailUrl } from '../api.js';
@@ -498,7 +499,7 @@ function Post({
         ? userAvatarBackground.trim().toLowerCase() : '';
     const clearUserBackground = !isAgent && avatarInfo.image
         && (normalizedUserBackground === 'clear' || normalizedUserBackground === 'transparent');
-    const avatarBgColor = avatarInfo.image ? 'transparent' : avatarInfo.color;
+    const avatarBgColor = clearUserBackground || (isAgent && avatarInfo.image) ? 'transparent' : avatarInfo.color;
     const formatTimeLabel = formatTime || ((value) => String(value || ''));
     const formatCountLabel = formatCount || ((value) => String(value ?? 0));
     const contentMeta = data.content_meta;
@@ -659,8 +660,11 @@ function Post({
                 ${avatarInfo.image ? html`<img src=${avatarInfo.image} alt=${displayName} />` : avatarInfo.letter}
             </div>
             <div class="post-body">
+                <div class="post-actions">
+                ${isAgent&&html`<${TauReadAloud} text=${String(data.content||'')}/>`}
+                <button class="post-action-btn post-copy-btn" type="button" title="Copy message" aria-label="Copy message" onClick=${async e=>{e.stopPropagation();const button=e.currentTarget;const ok=await copyCodeText(String(data.content||''));button.title=ok?'Copied':'Copy failed';}}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="9" width="10" height="10" rx="2"/><path d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"/></svg></button>
                 <button
-                    class="post-delete-btn"
+                    class="post-action-btn post-delete-btn"
                     type="button"
                     title="Delete message"
                     aria-label="Delete message"
@@ -670,6 +674,7 @@ function Post({
                         <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                 </button>
+                </div>
                 <div class="post-meta">
                     <span class="post-author">${data.type === 'search_result' ? 'Search result' : displayName}</span>
                     ${data.type === 'search_result' && data.session_id && html`<a href=${`?session=${encodeURIComponent(data.session_id)}`} class="post-action-btn">Open source session</a>`}
@@ -754,7 +759,7 @@ function Post({
                 ${(data.tau_attachments || []).map(attachment => html`<${TauAttachment} key=${attachment.media_id} attachment=${attachment} />`)}
                 ${data.tau_tool_result && html`<div class="post-content">Tool result: ${data.tau_tool_result.name || 'tool'}${data.tau_tool_result.ok === false ? ' (failed)' : ''}</div>`}
                 ${(data.tau_tool_calls || []).map(call => html`<details class="post-content"><summary>Tool call: ${call.name || 'tool'}</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${JSON.stringify(call.arguments, null, 2)}</pre></details>`)}
-                ${shouldRenderContent && data.type === 'user' && html`<div class="post-content" style="white-space:pre-wrap">${displayContent}</div>`}
+                ${shouldRenderContent && data.type === 'user' && html`<div class="post-content"><p style="white-space:pre-wrap">${displayContent}</p></div>`}
                 ${shouldRenderContent && data.type !== 'user' && html`
                     <div
                         ref=${contentRef}
@@ -950,8 +955,7 @@ export function Timeline({
             <div class="timeline-content">
                 <div class="timeline-sentinel" ref=${sentinelRef}></div>
                 ${displayPosts.map((post) => {
-                    const isThreadReply = post.data?.type === 'agent_response' || post.data?.type === 'tool'
-                        || Boolean(post.data?.thread_id && post.data.thread_id !== post.id);
+                    const isThreadReply = Boolean(post.data?.thread_id && post.data.thread_id !== post.id);
                     return html`
                     <${Post}
                         key=${post.id}

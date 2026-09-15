@@ -200,10 +200,9 @@ export function AgentStatus({
                 panelKey: 'draft',
             })}
             ${status && html`
-                <div class=${`agent-status${isLastActivity ? ' agent-status-last-activity' : ''}${status?.type === 'error' ? ' agent-status-error' : ''}`} style=${turnColor ? `--turn-color: ${turnColor};` : ''}>
-                    ${turnColor && html`<span class=${dotClass} aria-hidden="true"></span>`}
+                <div class=${`agent-status${isLastActivity ? ' agent-status-last-activity' : ''}${status?.type === 'error' ? ' agent-status-error' : ''}`}>
                     ${status?.type === 'error' ? html`<span class="agent-status-error-icon" aria-hidden="true">⚠</span>` : (!isLastActivity && html`<div class="agent-status-spinner"></div>`)}
-                    <span class="agent-status-text">${content}</span>
+                    <div class="agent-status-copy"><span class="agent-status-text">${content}</span></div>
                 </div>
             `}
         </div>

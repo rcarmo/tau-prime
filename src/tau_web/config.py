@@ -72,6 +72,10 @@ class WebConfig:
     cwd: Path = field(default_factory=Path.cwd)
     host: str = DEFAULT_WEB_HOST
     port: int = DEFAULT_WEB_PORT
+    agent_name: str = field(default_factory=lambda: environ.get("TAU_WEB_AGENT_NAME", "Tau"))
+    user_name: str = field(default_factory=lambda: environ.get("TAU_WEB_USER_NAME", "You"))
+    agent_avatar: str | None = field(default_factory=lambda: environ.get("TAU_WEB_AGENT_AVATAR"))
+    user_avatar: str | None = field(default_factory=lambda: environ.get("TAU_WEB_USER_AVATAR"))
     database_path: Path | None = None
     auth_token: str | None = field(
         default_factory=lambda: environ.get("TAU_WEB_AUTH_TOKEN"), repr=False

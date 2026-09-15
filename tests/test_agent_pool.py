@@ -769,3 +769,17 @@ async def test_agent_pool_shutdown_is_idempotent_and_respects_owned_sessions() -
 
     with pytest.raises(PoolClosedError):
         pool.submit_prompt("owned", "again")
+
+
+def test_context_estimate_is_optional_and_does_not_start_runs() -> None:
+    class EstimatedSession(_FakeSession):
+        context_token_estimate = 1234
+        context_window_tokens = 65536
+
+    pool = AsyncAgentPool(max_concurrency=1)
+    pool.register_session("plain", _FakeSession())
+    pool.register_session("estimated", EstimatedSession())
+    assert pool.context_estimate("plain") is None
+    assert pool.context_estimate("estimated") == (1234, 65536)
+    assert pool.snapshot("estimated").current_run_id is None
+    assert pool.snapshot("estimated").queued_runs == 0

@@ -36,6 +36,7 @@ export function postFromTau(record) {
         id: record.message_id, timestamp: record.created_at,
         data: { type: record.role === 'assistant' ? 'agent_response' : record.role,
             content: record.content, session_id: record.session_id,
+            ...(record.role === 'assistant' ? { agent_id: 'default' } : {}),
             tau_attachments: Array.isArray(message?.attachments) ? message.attachments.filter(item => typeof item?.media_id === 'string' && item.media_id) : [],
             tau_tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
             tau_tool_result: record.role === 'tool' ? { name: message?.name, callId: message?.tool_call_id, ok: message?.ok } : null },
@@ -108,7 +109,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         },
         async agentIdentity() {
             const settings = await request('/settings');
-            return { agents: [{ id: 'default', name: settings.agent_name || 'Tau' }] };
+            return { agents: [{ id: 'default', name: settings.agent_name || 'Tau', avatar_url: settings.agent_avatar || '/static/icon-192.png' }], user: {name:settings.user_name||'You',avatar_url:settings.user_avatar||null} };
         },
         async media(id) {
             if (!id) return [];
@@ -181,7 +182,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
                     if (entry.kind === 'directory' && remaining > 1) children.push(await read(entry.path, remaining - 1));
                     else children.push({ name: entry.name, path: entry.path, type: entry.kind === 'directory' ? 'dir' : 'file' });
                 }
-                return { name: current.split('/').pop() || 'Workspace', path: current || '.', type: 'dir', children };
+                return { name: current.split('/').pop() || 'workspace', path: current || '.', type: 'dir', children };
             };
             return { root: await read(path, Math.max(1, Math.min(3, depth))) };
         },
@@ -193,8 +194,13 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         async context(id) {
             if (!id) return null;
             const result = await request(`/sessions/${encodeURIComponent(id)}/context`);
+            const tokens = result.estimated_tokens, window = result.context_window;
+            const known = result.token_usage_source === 'local_estimate'
+                && Number.isInteger(tokens) && tokens >= 0
+                && Number.isInteger(window) && window > 0;
             return { entryCount: result.entry_count, messageCount: result.message_count,
-                compactionCount: result.compaction_count, activeLeafEntryId: result.active_leaf_entry_id };
+                compactionCount: result.compaction_count, activeLeafEntryId: result.active_leaf_entry_id,
+                ...(known ? {tokens,contextWindow:window,percent:tokens/window*100,source:'local_estimate'} : {}) };
         },
         async cancelRun(runId) {
             if (!runId) throw new Error('A Tau run ID is required');
@@ -203,11 +209,22 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
         async status(id) {
             if (!id) return { active_turns: [] };
             const result = await request(`/sessions/${encodeURIComponent(id)}/runs`);
-            return { active_turns: result.runs.filter(run => ['pending', 'running'].includes(run.status)).map(run => ({
-                turn_id: run.run_id, session_id: run.session_id,
-                type: run.status === 'pending' ? 'queued' : 'thinking',
-                started_at: run.started_at || run.created_at,
-            })) };
+            return { active_turns: result.runs.filter(run => ['pending', 'running'].includes(run.status)).map(run => {
+                const type=typeof run.last_status?.type === 'string' ? (run.last_status.type === 'tool_use' ? 'tool_call' : run.last_status.type) : run.status === 'pending' ? 'queued' : 'thinking';
+                return {turn_id:run.run_id,session_id:run.session_id,started_at:run.started_at||run.created_at,last_status:{...run.last_status,type}};
+            }) };
+        },
+        async steerQueueItem(sessionId, queueId, runId) {
+            if (!sessionId || queueId === null || queueId === undefined || !runId) throw new Error('An active run and queue identity are required');
+            return request(`/sessions/${encodeURIComponent(sessionId)}/queue/${encodeURIComponent(queueId)}/steer`, {method:'POST',body:{run_id:runId}});
+        },
+        async moveQueueItem(sessionId, queueId, direction) {
+            if (!sessionId || queueId === null || queueId === undefined || !['up','down'].includes(direction)) throw new Error('Invalid queue move');
+            return request(`/sessions/${encodeURIComponent(sessionId)}/queue/${encodeURIComponent(queueId)}/move`, { method: 'POST', body: {direction} });
+        },
+        async removeQueueItem(sessionId, queueId) {
+            if (!sessionId || queueId === null || queueId === undefined) throw new Error('Session and queue identity required');
+            return request(`/sessions/${encodeURIComponent(sessionId)}/queue/${encodeURIComponent(queueId)}`, { method: 'DELETE' });
         },
         async queue(id) {
             if (!id) return { items: [] };
@@ -216,7 +233,7 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
                 row_id: item.queue_id, session_id: item.session_id,
                 mode: item.queue_kind === 'steer' ? 'steer' : 'queued',
                 content: typeof item.content === 'string' ? item.content : JSON.stringify(item.content),
-                position: item.position, tau_readonly: true,
+                position: item.position, tau_readonly: true, tau_can_remove: true, tau_can_reorder: true, tau_can_steer: true,
             })) };
         },
         async send(id, content, { mode = 'auto', mediaIds = [], intent = null } = {}) {
@@ -269,14 +286,19 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             for (const item of [...catalogue.models, session]) {
                 const model = item.model;
                 const provider = item.provider_name;
-                models.set(JSON.stringify([provider, model]), { id: model, provider, name: model });
+                const key=JSON.stringify([provider, model]),previous=models.get(key);
+                models.set(key, {
+                    id: model, provider, name: model,
+                    reasoning: previous?.reasoning === true || item.reasoning === true || item.supports_thinking === true,
+                    contextWindow: Number.isInteger(item.context_window) && item.context_window > 0 ? item.context_window : previous?.contextWindow ?? null,
+                    thinkingLevels: Array.isArray(item.thinking_levels) ? item.thinking_levels.filter(level=>typeof level==='string') : previous?.thinkingLevels ?? [],
+                });
             }
             return {
                 available: true, source: catalogue.source,
                 models: [...models.values()],
                 current_model: { provider: session.provider_name, id: session.model },
-                // Configurable Tau policy values, not discovered model capabilities.
-                thinking_levels: ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'],
+                thinking_levels: models.get(JSON.stringify([session.provider_name,session.model]))?.thinkingLevels || [],
             };
         },
         async changeModel(id, changes) {
@@ -298,6 +320,10 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             });
             revisions.set(id, session.updated_at);
             return { available: true, model: { provider: session.provider_name, id: session.model, name: session.model }, thinking_level: session.thinking_level };
+        },
+        async commands() {
+            const result=await request('/commands');
+            return {commands:Array.isArray(result.commands)?result.commands:[]};
         },
         async sessions(includeArchived = false) {
             const result = await request(`/sessions?include_archived=${includeArchived}`);
