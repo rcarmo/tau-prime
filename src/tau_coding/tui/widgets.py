@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import TimeoutExpired, run
-from typing import Any, ClassVar, Protocol
+from typing import Any, ClassVar, Literal, Protocol
 
 from pygments.lexers import get_lexer_by_name  # type: ignore[import-untyped]
 from pygments.util import ClassNotFound  # type: ignore[import-untyped]
@@ -21,10 +21,10 @@ from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
 from textual.containers import Horizontal, VerticalScroll
-from textual.content import Style as TextualStyle
 from textual.events import Resize
 from textual.geometry import Offset
 from textual.selection import Selection
+from textual.style import Style as TextualStyle
 from textual.widgets import Markdown as TextualMarkdown
 from textual.widgets import Static
 from textual.widgets.markdown import MarkdownBlock, MarkdownStream
@@ -270,6 +270,7 @@ class TranscriptMessageWidget(Horizontal):
         yield self._body_widget()
 
     def _body_widget(self) -> Static | ThemedMarkdownWidget:
+        body: Static | ThemedMarkdownWidget
         if _use_plain_transcript_body(self.item):
             body = Static(
                 _transcript_plain_body_text(
@@ -1210,7 +1211,7 @@ class ThemedCodeBlock(CodeBlock):
 class LeftAlignedMarkdownHeading(Heading):
     """Rich Markdown heading that keeps all heading levels left-aligned."""
 
-    LEVEL_ALIGN: ClassVar[dict[str, str]] = {
+    LEVEL_ALIGN: ClassVar[dict[str, Literal["default", "left", "center", "right", "full"]]] = {
         "h1": "left",
         "h2": "left",
         "h3": "left",

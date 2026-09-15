@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
-from hashlib import sha1
 from json import loads
 from typing import Any
 
@@ -23,6 +22,7 @@ from tau_ai.events import (
     ProviderToolCallEvent,
 )
 from tau_ai.http import create_async_client
+from tau_ai.multimodal import anthropic_content
 from tau_ai.observability import (
     LLMObserver,
     observe_llm_error,
@@ -36,6 +36,8 @@ from tau_ai.retry import (
     retry_delay_seconds,
     wait_for_retry,
 )
+from tau_ai.tool_call_ids import portable_tool_call_id
+from tau_ai.usage import ProviderUsage
 
 ANTHROPIC_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 4096
@@ -175,6 +177,7 @@ class AnthropicProvider:
                         content_parts: list[str] = []
                         tool_builders: dict[int, _AnthropicToolBuilder] = {}
                         finish_reason: str | None = None
+                        usage_data: dict[str, JSONValue] = {}
                         retry_stream = False
 
                         async for line in response.aiter_lines():
@@ -192,7 +195,13 @@ class AnthropicProvider:
                                 return
 
                             event_type = chunk.get("type")
-                            if event_type == "content_block_start":
+                            if event_type == "message_start":
+                                message = chunk.get("message")
+                                if isinstance(message, Mapping):
+                                    usage = message.get("usage")
+                                    if isinstance(usage, Mapping):
+                                        usage_data.update(usage)
+                            elif event_type == "content_block_start":
                                 block = chunk.get("content_block")
                                 if isinstance(block, Mapping) and block.get("type") == "tool_use":
                                     index = int(chunk.get("index", 0))
@@ -228,6 +237,9 @@ class AnthropicProvider:
                                     )
                                     emitted_content = True
                             elif event_type == "message_delta":
+                                usage = chunk.get("usage")
+                                if isinstance(usage, Mapping):
+                                    usage_data.update(usage)
                                 delta = chunk.get("delta")
                                 if isinstance(delta, Mapping):
                                     finish_reason = (
@@ -239,15 +251,12 @@ class AnthropicProvider:
                                 if isinstance(error, Mapping):
                                     message = _string_or_empty(error.get("message")) or message
                                 error_type = _anthropic_error_type(chunk)
-                                if (
-                                    not emitted_content
-                                    and self._should_retry(attempt, error_type=error_type)
+                                if not emitted_content and self._should_retry(
+                                    attempt, error_type=error_type
                                 ):
                                     delay = retry_delay_seconds(
                                         attempt,
-                                        max_delay_seconds=(
-                                            self._config.max_retry_delay_seconds
-                                        ),
+                                        max_delay_seconds=(self._config.max_retry_delay_seconds),
                                     )
                                     yield provider_retry_event(
                                         attempt=attempt,
@@ -285,6 +294,7 @@ class AnthropicProvider:
                                 tool_calls=tool_calls,
                             ),
                             finish_reason=finish_reason,
+                            usage=_anthropic_usage(usage_data),
                         )
                         return
                 except httpx.HTTPError as exc:
@@ -388,7 +398,7 @@ def _build_messages_payload(
         "max_tokens": max_tokens,
         "stream": True,
         "system": system,
-        "messages": _anthropic_messages(messages),
+        "messages": [item for item in _anthropic_messages(messages)],
     }
     if thinking_type is not None:
         payload["thinking"] = {"type": thinking_type}
@@ -419,7 +429,7 @@ def _anthropic_message(
 ) -> dict[str, JSONValue] | None:
     invalid_tool_call_ids = invalid_tool_call_ids or set()
     if isinstance(message, UserMessage):
-        return {"role": "user", "content": message.content}
+        return {"role": "user", "content": anthropic_content(message)}
     if isinstance(message, AssistantMessage):
         content: list[JSONValue] = []
         if message.content:
@@ -430,7 +440,7 @@ def _anthropic_message(
             content.append(
                 {
                     "type": "tool_use",
-                    "id": _anthropic_tool_id(tool_call.id),
+                    "id": portable_tool_call_id(tool_call.id),
                     "name": tool_call.name,
                     "input": tool_call.arguments,
                 }
@@ -446,7 +456,7 @@ def _anthropic_message(
             "content": [
                 {
                     "type": "tool_result",
-                    "tool_use_id": _anthropic_tool_id(message.tool_call_id),
+                    "tool_use_id": portable_tool_call_id(message.tool_call_id),
                     "content": message.content,
                     "is_error": not message.ok,
                 }
@@ -463,17 +473,6 @@ def _invalid_tool_call_ids(messages: list[AgentMessage]) -> set[str]:
         for tool_call in message.tool_calls
         if not tool_call.name.strip()
     }
-
-
-def _anthropic_tool_id(value: str) -> str:
-    """Return a tool-use id accepted by Anthropic's Messages API."""
-    cleaned = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value)
-    cleaned = cleaned.strip("_") or "tool_call"
-    if len(cleaned) <= 64:
-        return cleaned
-    suffix = "_" + sha1(value.encode("utf-8")).hexdigest()[:10]
-    return (cleaned[: 64 - len(suffix)].rstrip("_") or "tool_call") + suffix
-
 
 
 def _sanitize_anthropic_payload_tool_ids(payload: dict[str, JSONValue]) -> None:
@@ -494,14 +493,13 @@ def _sanitize_anthropic_payload_tool_ids(payload: dict[str, JSONValue]) -> None:
             if block.get("type") == "tool_use":
                 raw = block.get("id")
                 if isinstance(raw, str):
-                    clean = _anthropic_tool_id(raw)
+                    clean = portable_tool_call_id(raw)
                     id_map[raw] = clean
                     block["id"] = clean
             elif block.get("type") == "tool_result":
                 raw = block.get("tool_use_id")
                 if isinstance(raw, str):
-                    block["tool_use_id"] = id_map.get(raw, _anthropic_tool_id(raw))
-
+                    block["tool_use_id"] = id_map.get(raw, portable_tool_call_id(raw))
 
 
 def _anthropic_tool(tool: AgentTool) -> dict[str, JSONValue]:
@@ -513,9 +511,11 @@ def _anthropic_tool(tool: AgentTool) -> dict[str, JSONValue]:
 
 
 def _parse_sse_line(line: str) -> str | None:
-    if not line.startswith("data:"):
+    stripped = line.strip()
+    if not stripped.startswith("data:"):
         return None
-    return line.removeprefix("data:").strip()
+    data = stripped.removeprefix("data:").strip()
+    return data or None
 
 
 def _loads_object(text: str) -> dict[str, Any] | None:
@@ -542,6 +542,29 @@ def _is_transient_anthropic_error(error_type: str | None) -> bool:
         "rate_limit_error",
         "timeout_error",
     }
+
+
+def _anthropic_usage(data: Mapping[str, object]) -> ProviderUsage | None:
+    if not data:
+        return None
+    cache_write = _non_negative_int(data.get("cache_creation_input_tokens"))
+    breakdown = data.get("cache_creation")
+    one_hour = 0
+    if isinstance(breakdown, Mapping):
+        one_hour = _non_negative_int(breakdown.get("ephemeral_1h_input_tokens"))
+    return ProviderUsage(
+        input_tokens=_non_negative_int(data.get("input_tokens")),
+        output_tokens=_non_negative_int(data.get("output_tokens")),
+        cache_read_tokens=_non_negative_int(data.get("cache_read_input_tokens")),
+        cache_write_tokens=cache_write,
+        cache_write_1h_tokens=min(one_hour, cache_write),
+    )
+
+
+def _non_negative_int(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return max(value, 0)
 
 
 def _string_or_empty(value: object) -> str:

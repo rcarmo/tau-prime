@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "tau.diagnostic",
+  "name": "Tau Diagnostic",
+  "version": "1.0.0",
+  "api_version": "^1.0",
+  "entrypoint": "tau_extensions.builtin.diagnostic:create_extension",
+  "permissions": [
+    "storage",
+    "background_tasks",
+    "assets",
+    "commands",
+    "tools",
+    "routes",
+    "events",
+    "views",
+    "actions",
+    "sandboxed_widgets"
+  ],
+  "dependencies": [],
+  "contributions": {
+    "views": [
+      {
+        "id": "diagnostic-view"
+      }
+    ],
+    "actions": [
+      {
+        "id": "refresh-status"
+      }
+    ],
+    "file_renderers": [
+      {
+        "id": "diagnostic-file"
+      }
+    ],
+    "editor_annotations": [
+      {
+        "id": "diagnostic-annotations"
+      }
+    ],
+    "widgets": [
+      {
+        "id": "diagnostic-widget"
+      }
+    ],
+    "commands": [
+      {
+        "name": "diagnostic.command"
+      }
+    ],
+    "tools": [
+      {
+        "name": "diagnostic.tool"
+      }
+    ],
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/status"
+      }
+    ],
+    "assets": [
+      {
+        "path": "diagnostic/state.json"
+      },
+      {
+        "path": "diagnostic/widget.js"
+      }
+    ],
+    "events": [
+      {
+        "name": "diagnostic.ping"
+      }
+    ]
+  }
+}

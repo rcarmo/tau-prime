@@ -11,11 +11,12 @@ those locations and file formats.
 
 ```text
 ~/.tau/
+├── tau.sqlite3         # live sessions, workspaces, and session metadata
 ├── providers.json      # configured providers
 ├── credentials.json    # saved API keys / OAuth tokens (private permissions)
 ├── settings.json       # general settings (e.g. shell command prefix)
 ├── tui.json            # TUI theme + keybindings
-├── sessions/           # saved sessions, per project
+├── sessions/           # legacy JSONL session files from older releases, if present
 ├── skills/             # user-level skills
 ├── prompts/            # user-level prompt templates
 ├── AGENTS.md           # global project instructions
@@ -141,14 +142,29 @@ in [Keyboard shortcuts](./keybindings.md).
 
 ## Sessions
 
+Live sessions are stored in one SQLite database by default:
+
 ```text
-~/.tau/sessions/<cleaned-path>-<short-hash>/
+~/.tau/tau.sqlite3
 ```
 
-Each working directory gets its own subdirectory; transcripts are append-only
-JSONL preserving messages, model changes, and the active leaf of the session
-tree. Metadata is indexed per project. See the
-[Sessions guide](../guides/sessions.md).
+The TUI, print mode, `tau sessions`, `tau --resume`, and `tau web` all use this
+shared store. Commands that expose `--database` can point at a different SQLite
+file when needed.
+
+Session history is still an append-only tree of entries -- messages, model
+changes, compaction markers, and leaf pointers -- but that tree now lives in
+SQLite rather than per-project JSONL files.
+
+JSONL remains Tau's interchange format:
+
+- `/export` and `tau export` can write HTML or JSONL artefacts.
+- `tau import-session` imports a Tau JSONL file into SQLite.
+- `tau export-session` exports one SQLite-backed session as Tau JSONL.
+- Older `~/.tau/sessions/` trees may still exist after upgrading, and
+  `tau export <path-to-jsonl>` can still read one of those files directly.
+
+See the [Sessions guide](../guides/sessions.md).
 
 ## Skills, prompts & project context
 

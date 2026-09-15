@@ -30,12 +30,14 @@ from tau_ai.events import (
 )
 from tau_ai.http import create_async_client
 from tau_ai.model_limits import RuntimeModelLimits
+from tau_ai.multimodal import openai_responses_blocks
 from tau_ai.observability import (
     LLMObserver,
     observe_llm_error,
     observe_llm_request,
     observe_llm_response,
 )
+from tau_ai.openai_cache import openai_prompt_cache_key
 from tau_ai.provider import CancellationToken
 from tau_ai.remote_compaction import REMOTE_COMPACTION_SENTINEL, RemoteCompactionState
 from tau_ai.retry import (
@@ -90,6 +92,7 @@ class OpenAICodexProvider:
         self._owns_client = client is None
         self._observer = observer
         self._remote_compaction_state: RemoteCompactionState | None = None
+        self._session_id: str | None = None
         self._model_limits_cache: dict[str, RuntimeModelLimits] | None = None
 
     async def discover_model_limits(self, model: str) -> RuntimeModelLimits | None:
@@ -118,6 +121,10 @@ class OpenAICodexProvider:
             return _parse_codex_model_limits(data)
         except Exception:
             return {}
+
+    def set_session_id(self, session_id: str | None) -> None:
+        """Set the stable session identity used for Codex cache affinity."""
+        self._session_id = session_id
 
     def set_remote_compaction_state(self, state: RemoteCompactionState | None) -> None:
         """Configure canonical state to inject into subsequent Codex requests."""
@@ -149,6 +156,7 @@ class OpenAICodexProvider:
                 tools=tools,
                 reasoning_effort=self._config.reasoning_effort,
                 reasoning_summary=self._config.reasoning_summary,
+                prompt_cache_key=openai_prompt_cache_key(self._session_id),
             )
             state = self._remote_compaction_state
             if state is not None:
@@ -175,6 +183,7 @@ class OpenAICodexProvider:
                         access_token=credentials.access_token,
                         account_id=credentials.account_id,
                         originator=self._config.originator,
+                        session_id=openai_prompt_cache_key(self._session_id),
                     )
                     observe_llm_request(
                         self._observer,
@@ -276,9 +285,7 @@ class OpenAICodexProvider:
                             ):
                                 delay = retry_delay_seconds(
                                     attempt,
-                                    max_delay_seconds=(
-                                        self._config.max_retry_delay_seconds
-                                    ),
+                                    max_delay_seconds=(self._config.max_retry_delay_seconds),
                                 )
                                 stream_error = _stream_error_event_data(event) or {}
                                 details = _stream_error_details(stream_error)
@@ -286,9 +293,7 @@ class OpenAICodexProvider:
                                     attempt=attempt,
                                     max_retries=self._config.max_retries,
                                     delay_seconds=delay,
-                                    reason=(
-                                        f"stream error ({details['code'] or 'unknown'})"
-                                    ),
+                                    reason=(f"stream error ({details['code'] or 'unknown'})"),
                                     data={"event": stream_error},
                                 )
                                 attempt += 1
@@ -512,6 +517,7 @@ def _build_codex_payload(
     tools: list[AgentTool],
     reasoning_effort: str | None = None,
     reasoning_summary: str = "auto",
+    prompt_cache_key: str | None = None,
 ) -> dict[str, JSONValue]:
     payload: dict[str, JSONValue] = {
         "model": model,
@@ -524,6 +530,8 @@ def _build_codex_payload(
         "tool_choice": "auto",
         "parallel_tool_calls": True,
     }
+    if prompt_cache_key is not None:
+        payload["prompt_cache_key"] = prompt_cache_key
     if reasoning_effort is not None:
         payload["reasoning"] = {
             "effort": reasoning_effort,
@@ -545,7 +553,7 @@ def _messages_to_responses_input(messages: list[AgentMessage]) -> list[JSONValue
             items.append(
                 {
                     "role": "user",
-                    "content": [{"type": "input_text", "text": message.content}],
+                    "content": openai_responses_blocks(message),
                 }
             )
         elif isinstance(message, AssistantMessage):
@@ -614,15 +622,12 @@ def _codex_identifier(value: str, *, fallback: str) -> str:
     return (cleaned[: 64 - len(suffix)].rstrip("_") or fallback) + suffix
 
 
-
 def _codex_call_id(value: str) -> str:
     return _codex_identifier(value, fallback="call")
 
 
-
 def _codex_item_id(value: str) -> str:
     return _codex_identifier(value, fallback="item")
-
 
 
 def _tool_to_codex(tool: AgentTool) -> dict[str, JSONValue]:
@@ -1056,6 +1061,7 @@ def _build_codex_headers(
     access_token: str,
     account_id: str,
     originator: str,
+    session_id: str | None = None,
 ) -> dict[str, str]:
     headers = {
         **dict(configured_headers or {}),
@@ -1067,6 +1073,8 @@ def _build_codex_headers(
         "accept": "text/event-stream",
         "content-type": "application/json",
     }
+    if session_id is not None:
+        headers["session-id"] = session_id
     return headers
 
 

@@ -14,8 +14,9 @@ tau -p "summarize the changes in the last commit"
 ```
 
 The `-p` / `--prompt` flag is what switches Tau into print mode. It still uses
-the full coding-session environment — the same tools, project context, and
-session storage as the TUI — so its turns are saved under `~/.tau/sessions/` too.
+the full coding-session environment -- the same tools, project context, and
+session storage as the TUI -- so its turns are saved in the same SQLite store,
+`~/.tau/tau.sqlite3`.
 
 ## Output formats
 
@@ -27,9 +28,12 @@ tau -p "list the public functions in src/app.py" -o json        # JSON, for pars
 tau -p "list the public functions in src/app.py" -o transcript  # structured transcript
 ```
 
-- **text** — plain text with ANSI styling, for reading.
-- **json** — machine-readable, for piping into other tools.
-- **transcript** — a structured record of the turn.
+- **text** -- plain text with ANSI styling, for reading.
+- **json** -- machine-readable, for piping into other tools.
+- **transcript** -- a structured record of the turn.
+
+These output modes only change what Tau writes to stdout. They do not change
+how the session is stored durably; print mode still records the turn in SQLite.
 
 ## Choosing provider, model, and directory
 

@@ -1,0 +1,33 @@
+import { expect, test } from '@playwright/test';
+
+test('timeline uses Piclaw message, tool, and attachment component mapping', async ({ page }) => {
+  // This spec injects component state; prevent live server events from replacing it.
+  // API/SSE behavior is exercised separately by the integration tests.
+  await page.route('**/api/events*', route => route.fulfill({
+    status: 200, contentType: 'text/event-stream', body: ': fixture stream\n\n',
+  }));
+  await page.goto('/');
+  await expect(page.locator('#compose-input')).toBeAttached();
+  await expect.poll(async () => (await page.locator('#app-status').textContent())?.trim() ?? '').not.toMatch(/Loading Tau shell/i);
+  const cancelOnboarding = page.getByRole('button', { name: 'Cancel' });
+  await cancelOnboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+  if (await cancelOnboarding.isVisible()) await cancelOnboarding.click();
+
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:timeline-render', { detail: {
+    selected: true,
+    items: [
+      { id: 'user-1', role: 'user', content: 'Inspect this file', meta: 'Entry user', attachments: [{ mediaId: 'media-1', filename: 'notes.txt', mediaType: 'text/plain' }] },
+      { id: 'assistant-1', role: 'assistant', content: 'I will inspect it.', meta: 'Entry assistant', toolCalls: [{ id: 'call-1', name: 'read', arguments: { path: 'notes.txt' } }] },
+      { id: 'tool-1', role: 'tool', content: 'file contents', meta: 'Entry tool', toolCallId: 'call-1', toolName: 'read', toolOk: true },
+    ],
+  } })));
+
+  const timeline = page.locator('#timeline-list');
+  await expect(timeline.locator('.post')).toHaveCount(2);
+  await expect(timeline.locator('.post-file-name')).toHaveText('notes.txt');
+  const tool = timeline.locator('.agent-thinking');
+  await expect(tool.locator('.agent-thinking-title')).toContainText('done');
+  await tool.locator('.agent-thinking-title button').click();
+  await expect(tool.locator('pre')).toHaveCount(2);
+  await expect(tool).toContainText('file contents');
+});

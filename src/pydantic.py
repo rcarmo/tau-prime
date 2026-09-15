@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import json
 from types import UnionType
-from typing import Any, get_args, get_origin, get_type_hints
+from typing import Any, cast, get_args, get_origin, get_type_hints
 
 
 class ValidationError(ValueError):
@@ -19,9 +19,10 @@ class ValidationError(ValueError):
 
 class _FieldInfo:
     def __init__(self, default: Any = ..., *, default_factory: Any = None, **kwargs: Any) -> None:
-        del kwargs
         self.default = default
         self.default_factory = default_factory
+        self.exclude = bool(kwargs.get("exclude", False))
+        self.exclude_if = kwargs.get("exclude_if")
 
     def value(self) -> Any:
         if self.default_factory is not None:
@@ -150,10 +151,7 @@ class BaseModel:
                 raw = remaining.pop(name)
             elif hasattr(self.__class__, name):
                 default = getattr(self.__class__, name)
-                if isinstance(default, _FieldInfo):
-                    raw = default.value()
-                else:
-                    raw = copy.deepcopy(default)
+                raw = default.value() if isinstance(default, _FieldInfo) else copy.deepcopy(default)
             else:
                 raise ValidationError(f"Missing required field: {name}")
             setattr(self, name, _coerce_value(annotation, raw))
@@ -186,7 +184,12 @@ class BaseModel:
         for name in annotations:
             if name == "model_config":
                 continue
+            field = getattr(self.__class__, name, None)
             value = getattr(self, name)
+            if isinstance(field, _FieldInfo) and (
+                field.exclude or (field.exclude_if is not None and field.exclude_if(value))
+            ):
+                continue
             if exclude_none and value is None:
                 continue
             output[name] = _to_plain(value)
@@ -199,7 +202,11 @@ class BaseModel:
         )
 
     def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Any:
-        data = copy.deepcopy(self.model_dump()) if deep else dict(self.model_dump())
+        data = {
+            name: copy.deepcopy(getattr(self, name)) if deep else getattr(self, name)
+            for name in _all_annotations(self.__class__)
+            if name != "model_config"
+        }
         if update:
             data.update(update)
         return self.__class__.model_validate(data)
@@ -212,15 +219,11 @@ class BaseModel:
         return f"{self.__class__.__name__}({args})"
 
 
-class TypeAdapter:
-    def __class_getitem__(cls, item: Any) -> type[TypeAdapter]:
-        del item
-        return cls
-
+class TypeAdapter[AdapterValue]:
     def __init__(self, annotation: Any) -> None:
         self.annotation = annotation
 
-    def validate_json(self, value: str | bytes) -> Any:
+    def validate_json(self, value: str | bytes) -> AdapterValue:
         try:
             data = json.loads(value)
         except Exception as exc:  # noqa: BLE001
@@ -228,8 +231,10 @@ class TypeAdapter:
         result = _coerce_value(self.annotation, data)
         if isinstance(result, dict):
             raise ValidationError("Could not match union type")
-        return result
+        return cast(AdapterValue, result)
 
-    def dump_json(self, value: Any, **kwargs: Any) -> bytes:
+    def dump_json(self, value: AdapterValue, **kwargs: Any) -> bytes:
         indent = kwargs.get("indent")
-        return json.dumps(_to_plain(value), separators=None if indent else (",", ":"), indent=indent).encode("utf-8")
+        return json.dumps(
+            _to_plain(value), separators=None if indent else (",", ":"), indent=indent
+        ).encode("utf-8")

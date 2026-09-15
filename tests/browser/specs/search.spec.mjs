@@ -1,0 +1,24 @@
+import { expect, test } from '@playwright/test';
+import { installLiveStream } from '../fixtures/live-stream.mjs';
+
+test('search results render through Piclaw search cards', async ({ page }) => {
+  await installLiveStream(page,'tau');
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('#compose-input')).toBeAttached();
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready','true');
+  const cancel = page.getByRole('button', { name: 'Cancel' });
+  await cancel.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+  if (await cancel.isVisible()) await cancel.click();
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('tau:search-render', { detail: { items: [
+    { entityType: 'message', entityId: 'entry-1', meta: 'Session abc123 · Rank 1.25', text: 'Matching content', sessionId: 'session-1' },
+  ] } })));
+  await page.getByRole('button',{name:'Open sessions',exact:true}).click();
+  await page.getByRole('group',{name:'Navigation',exact:true}).getByRole('button',{name:'Search',exact:true}).click();
+  const result = page.locator('#search-results .tau-search-result');
+  await expect(result).toHaveCount(1);
+  await expect(result.locator('.post-author')).toHaveText('message · entry-1');
+  await expect(result.locator('.post-content')).toHaveText('Matching content');
+  const snippet = result.locator('.post-content');
+  expect(await snippet.evaluate(el => ({tag:el.tagName,top:getComputedStyle(el).marginTop,bottom:getComputedStyle(el).marginBottom}))).toEqual({tag:'SPAN',top:'0px',bottom:'0px'});
+  await expect(result.getByRole('button', { name: 'Open session' })).toBeVisible();
+});

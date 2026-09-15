@@ -26,11 +26,18 @@ Current API includes:
 
 Extensions receive legacy Tau agent events plus Pi-shaped `message_update` events. Assistant sub-events include text/thinking start/delta/end, tool-call start/delta/end, done, and error.
 
+## Portable web runtime
+
+`tau_extensions` also provides manifest discovery and resolution plus typed services for storage, background tasks, assets, commands, tools, routes, events, declarative views/actions, file renderers, annotations, sandboxed widgets, and trusted frontend modules. Tau Web exposes their HTTP and browser adapters.
+
+The stock web server starts with an empty extension directory. An embedding host must choose discovery roots, resolve policy and approvals, load code, and register service bundles. Workspace extensions cannot request trusted frontend access.
+
 ## Safety boundaries
 
 - Extension failures must not crash session startup or rendering.
 - Tool and renderer hooks are isolation boundaries.
-- Extension UI component hosting, main views, and pre-dispatch key interceptors are deferred until mobile/a-Shell review.
+- Sandboxed widgets use an opaque-origin iframe and a narrow bridge.
+- Trusted frontend modules are limited to built-in and administrator-installed extensions and run with same-origin page privileges.
 - Do not let extension APIs bypass macOS sandbox assumptions.
 
 ## Documentation

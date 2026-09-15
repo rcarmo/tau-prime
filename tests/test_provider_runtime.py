@@ -23,7 +23,9 @@ def test_create_model_provider_returns_openai_codex_provider(tmp_path) -> None:
 
 
 @pytest.mark.anyio
-async def test_create_model_provider_keeps_github_copilot_claude_openai_compatible(tmp_path) -> None:
+async def test_create_model_provider_keeps_github_copilot_claude_openai_compatible(
+    tmp_path,
+) -> None:
     store = FileCredentialStore(tmp_path / "credentials.json")
     store.set_oauth(
         "github-copilot",

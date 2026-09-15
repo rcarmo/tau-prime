@@ -150,6 +150,7 @@ async def test_openai_compatible_provider_formats_request_and_streams_text() -> 
                 api_key="test-key",
                 base_url="https://example.test/v1",
                 headers={"X-HF-Bill-To": "my-org"},
+                model_aliases={"test-model": "test-model:provider-a"},
             ),
             client=client,
         )
@@ -179,13 +180,89 @@ async def test_openai_compatible_provider_formats_request_and_streams_text() -> 
     assert request.headers["x-hf-bill-to"] == "my-org"
 
     payload = loads(request.content)
-    assert payload["model"] == "test-model"
+    assert payload["model"] == "test-model:provider-a"
     assert payload["stream"] is True
     assert "reasoning_effort" not in payload
     assert payload["messages"] == [
         {"role": "system", "content": "You are Tau."},
         {"role": "user", "content": "Say hello"},
     ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("base_url", "override", "expected_key"),
+    [
+        ("https://api.openai.com/v1", None, "session-alpha"),
+        ("https://gateway.example/v1", None, None),
+        ("https://gateway.example/v1", True, "session-alpha"),
+        ("https://api.openai.com/v1", False, None),
+    ],
+)
+async def test_openai_prompt_cache_affinity_respects_endpoint_and_override(
+    base_url: str,
+    override: bool | None,
+    expected_key: str | None,
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, text="data: [DONE]\n\n")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = OpenAICompatibleProvider(
+            OpenAICompatibleConfig(
+                api_key="test-key",
+                base_url=base_url,
+                prompt_cache_affinity=override,
+            ),
+            client=client,
+        )
+        provider.set_session_id("session-alpha")
+        await _collect(
+            provider.stream_response(
+                model="test-model",
+                system="You are Tau.",
+                messages=[UserMessage(content="Hello")],
+                tools=[],
+            )
+        )
+
+    payload = loads(requests[0].content)
+    if expected_key is None:
+        assert "prompt_cache_key" not in payload
+    else:
+        assert payload["prompt_cache_key"] == expected_key
+
+
+@pytest.mark.anyio
+async def test_openai_responses_affinity_is_stable_and_bounded() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, text="data: [DONE]\n\n")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = OpenAICompatibleProvider(
+            OpenAICompatibleConfig(api_key="test-key", base_url="https://api.openai.com/v1"),
+            client=client,
+        )
+        provider.set_session_id("s" * 80)
+        for _ in range(2):
+            await _collect(
+                provider.stream_response(
+                    model="gpt-5.4",
+                    system="You are Tau.",
+                    messages=[UserMessage(content="Hello")],
+                    tools=[],
+                )
+            )
+
+    payloads = [loads(request.content) for request in requests]
+    assert [payload["prompt_cache_key"] for payload in payloads] == ["s" * 64, "s" * 64]
+    assert [payload["session_id"] for payload in payloads] == ["s" * 64, "s" * 64]
 
 
 @pytest.mark.anyio
@@ -660,6 +737,7 @@ async def test_openai_codex_provider_formats_request_and_streams_text() -> None:
             ),
             client=client,
         )
+        provider.set_session_id("codex-session")
 
         events = await _collect(
             provider.stream_response(
@@ -687,6 +765,8 @@ async def test_openai_codex_provider_formats_request_and_streams_text() -> None:
     assert request.headers["originator"] == "tau"
     assert request.headers["openai-beta"] == "responses=experimental"
     assert request.headers["x-test"] == "enabled"
+    assert request.headers["session-id"] == "codex-session"
+    assert loads(request.content)["prompt_cache_key"] == "codex-session"
 
 
 @pytest.mark.anyio
@@ -2327,3 +2407,143 @@ async def test_openai_chat_completions_drops_empty_tool_name_pairs() -> None:
     payload = loads(requests[0].content)
     assert not [message for message in payload["messages"] if message["role"] == "assistant"]
     assert not [message for message in payload["messages"] if message["role"] == "tool"]
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_surfaces_stream_error_after_retry_exhaustion() -> None:
+    requests: list[httpx.Request] = []
+    error_event = {
+        "type": "error",
+        "error": {"type": "overloaded_error", "message": "Overloaded"},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"error","error":{"type":"overloaded_error",'
+                '"message":"Overloaded"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                max_retries=2,
+                max_retry_delay_seconds=0,
+            ),
+            client=client,
+        )
+        events = await _collect(
+            provider.stream_response(
+                model="claude-test",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+            )
+        )
+
+    assert len(requests) == 3
+    assert isinstance(events[-1], ProviderErrorEvent)
+    assert events[-1].message == "Overloaded"
+    assert events[-1].retryable is True
+    assert events[-1].data == {"event": error_event, "attempts": 3}
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_does_not_retry_stream_error_after_content() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"content_block_delta","index":0,'
+                '"delta":{"type":"text_delta","text":"partial"}}\n\n'
+                'data: {"type":"error","error":{"type":"overloaded_error",'
+                '"message":"Overloaded"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                max_retries=2,
+                max_retry_delay_seconds=0,
+            ),
+            client=client,
+        )
+        events = await _collect(
+            provider.stream_response(
+                model="claude-test",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+            )
+        )
+
+    assert len(requests) == 1
+    assert isinstance(events[-2], ProviderTextDeltaEvent)
+    assert events[-2].delta == "partial"
+    assert isinstance(events[-1], ProviderErrorEvent)
+    assert events[-1].message == "Overloaded"
+    assert events[-1].retryable is True
+
+
+@pytest.mark.anyio
+async def test_anthropic_provider_cancellation_stops_stream_error_retry_backoff() -> None:
+    requests: list[httpx.Request] = []
+
+    class CancelDuringBackoff(SimpleCancellationToken):
+        def __init__(self) -> None:
+            super().__init__()
+            self.checks = 0
+
+        def is_cancelled(self) -> bool:
+            self.checks += 1
+            return self.checks >= 2
+
+    signal = CancelDuringBackoff()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            text=(
+                'data: {"type":"error","error":{"type":"overloaded_error",'
+                '"message":"Overloaded"}}\n\n'
+            ),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = AnthropicProvider(
+            AnthropicConfig(
+                api_key="test-key",
+                base_url="https://api.anthropic.test/v1",
+                max_retries=2,
+                max_retry_delay_seconds=1,
+            ),
+            client=client,
+        )
+        events = await _collect(
+            provider.stream_response(
+                model="claude-test",
+                system="You are Tau.",
+                messages=[UserMessage(content="Say ok")],
+                tools=[],
+                signal=signal,
+            )
+        )
+
+    assert len(requests) == 1
+    assert len(events) == 2
+    assert isinstance(events[-1], ProviderRetryEvent)

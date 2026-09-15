@@ -3,6 +3,7 @@ import json
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -52,6 +53,10 @@ from tau_coding import (
 )
 from tau_coding import session as coding_session_module
 from tau_coding.session import _ordered_tree_entries, parse_terminal_command
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
+from tau_web.sqlite.connection import SqliteDatabase
+from tau_web.sqlite.session_storage import SqliteSessionStorage
+from tau_web.sqlite.sessions import SessionRepository
 
 
 async def _collect_session_events(session_stream: object) -> list[object]:
@@ -68,6 +73,19 @@ def _config(
         storage=storage,
         cwd=tmp_path,
     )
+
+
+def _sqlite_paths(tmp_path: Path) -> TauPaths:
+    return TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
+
+
+class RoutingFakeProvider(FakeProvider):
+    def __init__(self) -> None:
+        super().__init__([])
+        self.aliases: dict[str, str] = {}
+
+    def set_model_alias(self, model: str, alias: str) -> None:
+        self.aliases[model] = alias
 
 
 class SwitchableFakeProvider:
@@ -424,6 +442,50 @@ async def test_load_persists_repair_for_historical_interrupted_tool_call(
 
 
 @pytest.mark.anyio
+async def test_load_preserves_tool_approval_callback_when_repair_reconstructs_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    user_entry = MessageEntry(message=UserMessage(content="Read README.md"))
+    await storage.append(user_entry)
+    tool_call = ToolCall(id="call-1", name="read", arguments={"path": "README.md"})
+    assistant_entry = MessageEntry(
+        parent_id=user_entry.id,
+        message=AssistantMessage(content="I'll read it.", tool_calls=[tool_call]),
+    )
+    await storage.append(assistant_entry)
+    await storage.append(LeafEntry(parent_id=assistant_entry.id, entry_id=assistant_entry.id))
+
+    original = CodingSession._persist_loaded_interrupted_tool_repairs
+    observed: list[object] = []
+
+    async def wrapped(self: CodingSession) -> None:
+        async def approve(*_: object, **__: object) -> bool:
+            return True
+
+        self.set_tool_approval_callback(approve)
+        await original(self)
+        observed.append(self._harness.config.approve_tool)
+
+    monkeypatch.setattr(CodingSession, "_persist_loaded_interrupted_tool_repairs", wrapped)
+
+    session = await CodingSession.load(
+        CodingSessionConfig(
+            provider=FakeProvider([]),
+            model="fake",
+            system="You are Tau.",
+            storage=storage,
+            cwd=tmp_path,
+        )
+    )
+
+    assert len(observed) == 1
+    assert observed[0] is session._harness.config.approve_tool
+    assert observed[0] is not None
+
+
+@pytest.mark.anyio
 async def test_prompt_persists_user_assistant_and_leaf_entries(tmp_path: Path) -> None:
     storage = JsonlSessionStorage(tmp_path / "session.jsonl")
     provider = FakeProvider(
@@ -576,6 +638,120 @@ def test_parse_terminal_command_prefixes() -> None:
     assert hidden_request.command == "pwd"
     assert hidden_request.add_to_context is False
     assert parse_terminal_command("hello") is None
+
+
+@pytest.mark.anyio
+async def test_queue_message_rejects_idle_session(tmp_path: Path) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    session = await CodingSession.load(_config(tmp_path, FakeProvider([]), storage))
+
+    with pytest.raises(RuntimeError, match="idle"):
+        await session.queue_message("Queued steering", behavior="steer")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("behavior", "expected_event", "expected_steering", "expected_follow_up"),
+    [
+        pytest.param(
+            "steer",
+            QueueUpdateEvent(steering=("expanded::transformed::Queued note",)),
+            ("expanded::transformed::Queued note",),
+            (),
+            id="steer",
+        ),
+        pytest.param(
+            "follow_up",
+            QueueUpdateEvent(follow_up=("expanded::transformed::Queued note",)),
+            (),
+            ("expanded::transformed::Queued note",),
+            id="follow-up",
+        ),
+    ],
+)
+async def test_queue_message_transforms_and_expands_once_for_active_run(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    behavior: Literal["steer", "follow_up"],
+    expected_event: QueueUpdateEvent,
+    expected_steering: tuple[str, ...],
+    expected_follow_up: tuple[str, ...],
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    provider = WaitingProvider()
+    session = await CodingSession.load(_config(tmp_path, provider, storage))
+    transform_calls: list[str] = []
+    expand_calls: list[str] = []
+
+    def transform_input(_context: object, text: str) -> str:
+        transform_calls.append(text)
+        return f"transformed::{text}"
+
+    def expand_prompt_text(text: str) -> str:
+        expand_calls.append(text)
+        return f"expanded::{text}"
+
+    async def run_prompt() -> None:
+        async for _event in session.prompt("Hello"):
+            pass
+
+    task = asyncio.create_task(run_prompt())
+    await provider.started.wait()
+    monkeypatch.setattr(session.extension_runtime, "transform_input", transform_input)
+    monkeypatch.setattr(session, "expand_prompt_text", expand_prompt_text)
+
+    queue_event = await session.queue_message("Queued note", behavior=behavior)
+
+    assert queue_event == expected_event
+    assert transform_calls == ["Queued note"]
+    assert expand_calls == ["transformed::Queued note"]
+    assert session.queued_steering_messages == expected_steering
+    assert session.queued_follow_up_messages == expected_follow_up
+
+    provider.release.set()
+    await task
+
+    assert session.messages == (
+        UserMessage(content="Hello"),
+        AssistantMessage(content="First"),
+        UserMessage(content="expanded::transformed::Queued note"),
+        AssistantMessage(content="Second"),
+    )
+    assert provider.calls[1] == list(session.messages[:3])
+
+
+@pytest.mark.anyio
+async def test_queue_message_rejects_if_active_run_changes_during_preparation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    provider = WaitingProvider()
+    session = await CodingSession.load(_config(tmp_path, provider, storage))
+    original_prepare_prompt_content = session._prepare_prompt_content
+
+    async def run_prompt() -> None:
+        async for _event in session.prompt("Hello"):
+            pass
+
+    async def prepare_prompt_content(content: str) -> tuple[object, str]:
+        prepared = await original_prepare_prompt_content(content)
+        active_run_token = session._harness.active_run_token
+        assert active_run_token is not None
+        session._harness._active_run_token = active_run_token + 1
+        return prepared
+
+    task = asyncio.create_task(run_prompt())
+    await provider.started.wait()
+    monkeypatch.setattr(session, "_prepare_prompt_content", prepare_prompt_content)
+
+    with pytest.raises(RuntimeError, match="active run changed"):
+        await session.queue_message("Queued follow-up", behavior="follow_up")
+
+    assert session.queue_update_event() == QueueUpdateEvent()
+
+    provider.release.set()
+    await task
 
 
 @pytest.mark.anyio
@@ -2510,6 +2686,122 @@ async def test_session_resumes_indexed_session(tmp_path: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_session_resumes_sqlite_indexed_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    paths = _sqlite_paths(tmp_path)
+    first_cwd = tmp_path / "first"
+    second_cwd = tmp_path / "second"
+    first_cwd.mkdir()
+    second_cwd.mkdir()
+    settings = ProviderSettings(
+        default_provider="sqlite-fake",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="sqlite-fake",
+                models=("fake",),
+                default_model="fake",
+            ),
+        ),
+    )
+    created: list[tuple[str, str | None]] = []
+
+    def create_provider(
+        provider_config: object,
+        *,
+        credential_store: FileCredentialStore | None = None,
+        model: str | None = None,
+        thinking_level: str | None = None,
+        llm_observer: object | None = None,
+    ) -> SwitchableFakeProvider:
+        del credential_store, thinking_level, llm_observer
+        created.append((provider_config.name, model))  # type: ignore[attr-defined]
+        return SwitchableFakeProvider(provider_config)
+
+    monkeypatch.setattr(coding_session_module, "create_model_provider", create_provider)
+
+    async with (
+        SqliteDatabase(paths.home / "tau.sqlite3") as database,
+        SqliteCodingSessionManager(
+            paths=paths,
+            database=database,
+            manage_database_lifecycle=False,
+        ) as manager,
+    ):
+        repository = SessionRepository(database)
+        first_record = await manager.create_session(
+            cwd=first_cwd,
+            model="fake",
+            provider_name="sqlite-fake",
+            title="Current",
+            session_id="current-sqlite-session",
+        )
+        second_record = await manager.create_session(
+            cwd=second_cwd,
+            model="fake",
+            provider_name="sqlite-fake",
+            title="Resumed",
+            session_id="resumed-sqlite-session",
+        )
+        resumed_storage = SqliteSessionStorage(database, second_record.id)
+        info = SessionInfoEntry(cwd=str(second_record.cwd), title="Resumed")
+        model = ModelChangeEntry(parent_id=info.id, model="fake")
+        thinking = ThinkingLevelChangeEntry(
+            parent_id=model.id,
+            thinking_level="medium",
+        )
+        user = MessageEntry(
+            parent_id=thinking.id,
+            message=UserMessage(content="Earlier"),
+        )
+        assistant = MessageEntry(
+            parent_id=user.id,
+            message=AssistantMessage(content="Restored"),
+        )
+        leaf = LeafEntry(parent_id=assistant.id, entry_id=assistant.id)
+        await resumed_storage.append_many([info, model, thinking, user, assistant, leaf])
+        created.clear()
+
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=FakeProvider([]),
+                model="fake",
+                system="You are Tau.",
+                storage=manager.session_storage(first_record.id),
+                cwd=first_record.cwd,
+                session_id=first_record.id,
+                session_manager=manager,
+                provider_name="sqlite-fake",
+                provider_settings=settings,
+                runtime_provider_config=settings.get_provider("sqlite-fake"),
+            )
+        )
+        created.clear()
+
+        message = await session.resume(second_record.id)
+        record = await repository.get(second_record.id)
+        stored_entries = await resumed_storage.read_all()
+
+    assert message == f"Resumed session: {second_record.id}"
+    assert session.session_id == second_record.id
+    assert session.cwd == second_record.cwd
+    assert session.model == "fake"
+    assert session.thinking_level == "medium"
+    assert session.state.active_leaf_id == assistant.id
+    assert session.messages == (
+        UserMessage(content="Earlier"),
+        AssistantMessage(content="Restored"),
+    )
+    assert record is not None
+    assert record.title == "Resumed"
+    assert record.provider_name == "sqlite-fake"
+    assert record.model == "fake"
+    assert record.active_leaf_entry_id == assistant.id
+    assert stored_entries == [info, model, thinking, user, assistant, leaf]
+    assert created == [("sqlite-fake", "fake")]
+
+
+@pytest.mark.anyio
 async def test_session_toggle_scoped_model_preserves_newer_provider_file_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2912,6 +3204,79 @@ async def test_session_new_session_is_indexed_after_first_message(
 
 
 @pytest.mark.anyio
+async def test_session_new_sqlite_session_is_indexed_after_first_prompt(tmp_path: Path) -> None:
+    paths = _sqlite_paths(tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    provider = FakeProvider(
+        [
+            [
+                ProviderResponseStartEvent(model="fake"),
+                ProviderResponseEndEvent(message=AssistantMessage(content="Done")),
+            ]
+        ]
+    )
+
+    async with (
+        SqliteDatabase(paths.home / "tau.sqlite3") as database,
+        SqliteCodingSessionManager(
+            paths=paths,
+            database=database,
+            manage_database_lifecycle=False,
+        ) as manager,
+    ):
+        repository = SessionRepository(database)
+        current_record = await manager.create_session(
+            cwd=project,
+            model="fake",
+            provider_name="sqlite-fake",
+            session_id="current-sqlite-session",
+        )
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model="fake",
+                system="You are Tau.",
+                storage=manager.session_storage(current_record.id),
+                cwd=current_record.cwd,
+                session_id=current_record.id,
+                session_manager=manager,
+                provider_name="sqlite-fake",
+            )
+        )
+
+        message = await session.new_session()
+        pending_id = session.session_id
+
+        assert pending_id is not None
+        assert await manager.get_session(pending_id) is None
+        assert not paths.sessions_dir.exists()
+
+        _events = await _collect_session_events(session.prompt("Hello"))
+
+        record = await repository.get(pending_id)
+        storage = SqliteSessionStorage(database, pending_id)
+        entries = await storage.read_all()
+
+    assert message == f"Started new session: {pending_id}"
+    assert record is not None
+    assert record.provider_name == "sqlite-fake"
+    assert record.model == "fake"
+    assert len(entries) == 7
+    assert isinstance(entries[0], SessionInfoEntry)
+    assert isinstance(entries[1], ModelChangeEntry)
+    assert isinstance(entries[2], ThinkingLevelChangeEntry)
+    assert [entry.message for entry in entries if isinstance(entry, MessageEntry)] == [
+        UserMessage(content="Hello"),
+        AssistantMessage(content="Done"),
+    ]
+    assert isinstance(entries[-2], MessageEntry)
+    assert record.active_leaf_entry_id == entries[-2].id
+    assert session.state.active_leaf_id == entries[-2].id
+    assert list(paths.sessions_dir.rglob("*.jsonl")) == []
+
+
+@pytest.mark.anyio
 async def test_session_resume_uses_target_session_provider_model(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -3138,3 +3503,151 @@ def test_branch_summary_hides_raw_argument_fallbacks() -> None:
     assert "{not valid json" not in summary
     assert "read()" in summary
     assert 'custom(path="README.md")' in summary
+
+
+@pytest.mark.anyio
+async def test_huggingface_route_is_pinned_in_session_history_on_resume(tmp_path: Path) -> None:
+    storage = JsonlSessionStorage(tmp_path / "session.jsonl")
+    provider = RoutingFakeProvider()
+    settings = ProviderSettings(
+        default_provider="huggingface",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="huggingface",
+                models=("org/model",),
+                default_model="org/model",
+                inference_providers={"org/model": "provider-a"},
+            ),
+        ),
+    )
+    session = await CodingSession.load(
+        CodingSessionConfig(
+            provider=provider,
+            model="org/model",
+            storage=storage,
+            cwd=tmp_path,
+            provider_name="huggingface",
+            provider_settings=settings,
+        )
+    )
+    await session._ensure_session_initialized()
+    assert provider.aliases == {"org/model": "org/model:provider-a"}
+
+    resumed_provider = RoutingFakeProvider()
+    changed_settings = ProviderSettings(
+        default_provider="huggingface",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="huggingface",
+                models=("org/model",),
+                default_model="org/model",
+                inference_providers={"org/model": "provider-b"},
+            ),
+        ),
+    )
+    await CodingSession.load(
+        CodingSessionConfig(
+            provider=resumed_provider,
+            model="org/model",
+            storage=storage,
+            cwd=tmp_path,
+            provider_name="huggingface",
+            provider_settings=changed_settings,
+        )
+    )
+    assert resumed_provider.aliases == {"org/model": "org/model:provider-a"}
+
+
+@pytest.mark.anyio
+async def test_huggingface_route_round_trips_through_sqlite_entries(tmp_path: Path) -> None:
+    paths = _sqlite_paths(tmp_path)
+    settings = ProviderSettings(
+        default_provider="huggingface",
+        providers=(
+            OpenAICompatibleProviderConfig(
+                name="huggingface",
+                models=("org/model",),
+                default_model="org/model",
+                inference_providers={"org/model": "provider-a"},
+            ),
+        ),
+    )
+    async with (
+        SqliteDatabase(paths.home / "tau.sqlite3") as database,
+        SqliteCodingSessionManager(
+            paths=paths,
+            database=database,
+            manage_database_lifecycle=False,
+        ) as manager,
+    ):
+        record = await manager.create_session(
+            cwd=tmp_path,
+            model="org/model",
+            provider_name="huggingface",
+            session_id="hf-sqlite",
+        )
+        storage = SqliteSessionStorage(database, record.id)
+        provider = RoutingFakeProvider()
+        session = await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model="org/model",
+                storage=storage,
+                cwd=tmp_path,
+                provider_name="huggingface",
+                provider_settings=settings,
+            )
+        )
+        await session._ensure_session_initialized()
+        resumed_provider = RoutingFakeProvider()
+        await CodingSession.load(
+            CodingSessionConfig(
+                provider=resumed_provider,
+                model="org/model",
+                storage=storage,
+                cwd=tmp_path,
+                provider_name="huggingface",
+                provider_settings=None,
+            )
+        )
+    assert resumed_provider.aliases == {"org/model": "org/model:provider-a"}
+
+
+@pytest.mark.anyio
+async def test_huggingface_routes_are_isolated_and_unpinned_models_fall_back(
+    tmp_path: Path,
+) -> None:
+    async def load(name: str, route: str | None) -> RoutingFakeProvider:
+        model = "org/model"
+        provider = RoutingFakeProvider()
+        settings = ProviderSettings(
+            default_provider="huggingface",
+            providers=(
+                OpenAICompatibleProviderConfig(
+                    name="huggingface",
+                    models=(model,),
+                    default_model=model,
+                    inference_providers={model: route} if route is not None else {},
+                ),
+            ),
+        )
+        await CodingSession.load(
+            CodingSessionConfig(
+                provider=provider,
+                model=model,
+                storage=JsonlSessionStorage(tmp_path / f"{name}.jsonl"),
+                cwd=tmp_path,
+                provider_name="huggingface",
+                provider_settings=settings,
+            )
+        )
+        return provider
+
+    first, second, fallback = await asyncio.gather(
+        load("first", "provider-a"),
+        load("second", "provider-b"),
+        load("fallback", None),
+    )
+    assert first.aliases == {"org/model": "org/model:provider-a"}
+    assert second.aliases == {"org/model": "org/model:provider-b"}
+    assert fallback.aliases == {}

@@ -10,22 +10,11 @@ Tau Prime has adaptive local compaction plus verified provider-native compaction
 - Do not summarize or expose opaque provider-native sentinels as human-readable context.
 - `/compaction` controls provider-native enablement and local strategy in the TUI.
 
-## Extension runtime
+## Extension runtimes
 
-Tau Prime supports a safe Python extension seam from `.tau/extensions` and `.agents/extensions`.
+Tau Prime retains the Python `setup(tau)` compatibility seam from `.tau/extensions` and `.agents/extensions`. It supports tools, slash commands, prompt guidelines, input hooks, agent/lifecycle/tool listeners, and custom message/tool renderers.
 
-Current extension features:
-
-- tools
-- slash commands
-- prompt guidelines
-- input hooks
-- agent event listeners
-- lifecycle listeners
-- tool call/result hooks
-- custom message, tool call, and tool result renderer seams
-
-Full Textual component slots, main views, and key interceptors are deliberately deferred until mobile/a-Shell behavior is reviewed.
+The separate portable `tau_extensions` runtime provides manifests, trust resolution, lifecycle ownership, scoped services, declarative views/actions, file renderers, annotations, sandboxed widgets, and administrator-trusted frontend modules. Tau Web ships HTTP and browser adapters for those services, but its stock server does not discover or import portable extensions automatically; an embedding host registers approved service bundles.
 
 ## Event protocol
 

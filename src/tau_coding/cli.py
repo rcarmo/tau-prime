@@ -6,10 +6,12 @@ import shutil
 import sys
 from os import environ
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Protocol
 
 import anyio
 import typer
+from typer import _click
+from typer.core import TyperGroup
 
 from tau_agent.session import JsonlSessionStorage, SessionEntry, SessionStorage
 from tau_ai import (
@@ -21,6 +23,11 @@ from tau_ai import (
 )
 from tau_ai.env import DEFAULT_OPENAI_COMPATIBLE_BASE_URL
 from tau_coding import __version__
+from tau_coding.coding_session_factory import (
+    CodingSessionFactory,
+    CodingSessionFactoryConfig,
+    CodingSessionFactoryRequest,
+)
 from tau_coding.credentials import FileCredentialStore
 from tau_coding.diagnostics import llm_observer_from_env
 from tau_coding.linux_sandbox import (
@@ -28,11 +35,20 @@ from tau_coding.linux_sandbox import (
     enter_linux_sandbox,
     should_enter_linux_sandbox,
 )
+from tau_coding.live_session_manager import (
+    CodingSessionManager,
+    CodingSessionRecordLike,
+    live_session_manager_context,
+    manager_create_session_exclusive,
+    manager_get_session,
+    manager_session_storage,
+)
 from tau_coding.macos_sandbox import (
     MacOSSandboxError,
     enter_macos_sandbox,
     should_enter_macos_sandbox,
 )
+from tau_coding.paths import TauPaths
 from tau_coding.provider_config import (
     DEFAULT_MODEL,
     DEFAULT_PROVIDER_NAME,
@@ -51,20 +67,15 @@ from tau_coding.provider_config import (
 from tau_coding.provider_runtime import create_model_provider
 from tau_coding.rendering import PrintOutputMode, create_event_renderer
 from tau_coding.resources import TauResourcePaths
-from tau_coding.session import (
-    CodingSession,
-    CodingSessionConfig,
-    TerminalCommandResult,
-    jsonl_session_storage,
-    parse_terminal_command,
-)
+from tau_coding.session import TerminalCommandResult, parse_terminal_command
 from tau_coding.session_export import (
     default_session_export_artifact_path,
     export_session_artifact,
     normalize_export_format,
 )
-from tau_coding.session_manager import CodingSessionRecord, SessionManager, validate_session_id
+from tau_coding.session_manager import validate_session_id
 from tau_coding.shell_config import load_shell_settings
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 from tau_coding.tui import run_tui_app
 from tau_coding.update_check import (
     UpdateNotice,
@@ -72,17 +83,72 @@ from tau_coding.update_check import (
     tau_prime_update_instructions,
 )
 
+
+class PromptCompatibleTyperGroup(TyperGroup):
+    """Allow legacy positional prompts alongside registered subcommands."""
+
+    def parse_args(self, ctx: _click.Context, args: list[str]) -> list[str]:
+        if not args and self.no_args_is_help and not ctx.resilient_parsing:
+            raise _click.exceptions.NoArgsIsHelpError(ctx)
+
+        rest = _click.core.Command.parse_args(self, ctx, args)
+        if not rest:
+            return ctx.args
+
+        command = self.get_command(ctx, rest[0])
+        if command is None:
+            ctx._protected_args = []
+            ctx.args = rest
+            return ctx.args
+
+        ctx._protected_args, ctx.args = rest[:1], rest[1:]
+        return ctx.args
+
+
 app = typer.Typer(
     name="tau",
+    cls=PromptCompatibleTyperGroup,
     help="Terminal coding agent.",
     add_completion=False,
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 
 
+class _RenderableSessionRecord(Protocol):
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def title(self) -> str | None: ...
+
+    @property
+    def model(self) -> str: ...
+
+    @property
+    def cwd(self) -> Path: ...
+
+
+async def _list_live_sessions() -> list[_RenderableSessionRecord]:
+    """Load stored sessions through the default live session manager."""
+    from tau_coding.live_session_manager import live_session_manager_context, manager_list_sessions
+
+    async with live_session_manager_context(None) as manager:
+        return [record for record in await manager_list_sessions(manager)]
+
+
 def providers_command() -> None:
     """List configured model providers."""
     render_provider_settings(load_provider_settings(), credential_reader=FileCredentialStore())
+
+
+def run_tau_web_server(
+    *, cwd: Path, host: str, port: int, database_path: Path | None = None
+) -> None:
+    """Load and run the optional Tau Web server."""
+    from tau_web.app import run
+    from tau_web.config import WebConfig
+
+    run(WebConfig(cwd=cwd, host=host, port=port, database_path=database_path))
 
 
 def setup_command(
@@ -115,13 +181,123 @@ def setup_command(
         typer.echo(f"Set {provider.api_key_env} before running Tau with this provider.", err=True)
 
 
+@app.command("import-session")
+def import_session_cli(
+    source_path: Annotated[
+        Path,
+        typer.Argument(help="Tau JSONL session file to import into the SQLite session store."),
+    ],
+    workspace_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--workspace",
+            "--cwd",
+            help="Workspace root to record for the imported SQLite session.",
+        ),
+    ] = None,
+    provider: Annotated[
+        str | None,
+        typer.Option("--provider", help="Configured provider name to record for the import."),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Model name to record for the import."),
+    ] = None,
+    database_path: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database path for session import/export."),
+    ] = None,
+    session_id: Annotated[
+        str | None,
+        typer.Option("--session-id", help="Exact SQLite session id to assign."),
+    ] = None,
+    agent_name: Annotated[
+        str | None,
+        typer.Option("--agent-name", "--name", help="Agent name to assign to the import."),
+    ] = None,
+    title: Annotated[
+        str | None,
+        typer.Option("--title", help="Session title to record for the import."),
+    ] = None,
+    thinking_level: Annotated[
+        str | None,
+        typer.Option("--thinking-level", help="Thinking level metadata to record."),
+    ] = None,
+) -> None:
+    """Import a JSONL session into Tau's SQLite session store."""
+    if session_id is not None:
+        try:
+            validate_session_id(session_id)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
+    selected_workspace_root = workspace_root or Path.cwd()
+    try:
+        imported_session_id, imported_agent_name, imported_entry_count, selected_database = (
+            anyio.run(
+                import_sqlite_session_command,
+                source_path,
+                selected_workspace_root,
+                provider,
+                model,
+                database_path,
+                session_id,
+                agent_name,
+                title,
+                thinking_level,
+            )
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(
+        f"Imported session {imported_session_id} as @{imported_agent_name} "
+        f"({imported_entry_count} entries) into {selected_database}"
+    )
+
+
+@app.command("export-session")
+def export_session_cli(
+    session_ref: Annotated[
+        str,
+        typer.Argument(help="SQLite session id or local address to export as Tau JSONL."),
+    ],
+    export_format: Annotated[
+        str,
+        typer.Option("--format", help="Export format (only jsonl is currently supported)."),
+    ] = "jsonl",
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", help="Destination path for the exported JSONL file."),
+    ] = None,
+    overwrite: Annotated[
+        bool,
+        typer.Option(
+            "--overwrite/--no-overwrite",
+            help="Allow overwriting an existing JSONL export file.",
+        ),
+    ] = False,
+    database_path: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database path for session import/export."),
+    ] = None,
+) -> None:
+    """Export one SQLite-backed session as Tau JSONL."""
+    try:
+        exported_path = anyio.run(
+            export_sqlite_session_command,
+            session_ref,
+            output_path,
+            export_format,
+            overwrite,
+            database_path,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"Exported session to {exported_path}")
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    prompt_args: Annotated[
-        list[str] | None,
-        typer.Argument(help="Initial prompt to run in interactive TUI mode."),
-    ] = None,
     prompt_option: Annotated[
         str | None,
         typer.Option("--prompt", "-p", help="Prompt to run in non-interactive print mode."),
@@ -203,13 +379,22 @@ def main(
         typer.Option(
             "--web-host",
             "--web-address",
-            help="Host/address for Textual web server mode.",
+            "--host",
+            help="Host/address for Textual or Tau web server mode.",
         ),
     ] = "127.0.0.1",
     web_port: Annotated[
         int,
         typer.Option("--web-port", help="Port for Textual web server mode."),
     ] = 8000,
+    tau_web_port: Annotated[
+        int,
+        typer.Option("--port", help="Port for `tau web`."),
+    ] = 8080,
+    web_database: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database path for `tau web`."),
+    ] = None,
     no_sandbox: Annotated[
         bool,
         typer.Option(
@@ -252,18 +437,41 @@ def main(
     if ctx.invoked_subcommand is not None:
         return
 
+    if resume is not None and new_session:
+        raise typer.BadParameter("--resume and --new-session cannot be used together")
+
     if session_id is not None:
         try:
             validate_session_id(session_id)
         except ValueError as exc:
             raise typer.BadParameter(str(exc)) from exc
 
-    positional_args = prompt_args or []
+    positional_args = list(ctx.args)
     command = positional_args[0] if positional_args else None
     initial_prompt = " ".join(positional_args) if positional_args else None
 
+    if prompt_option is None and command == "web":
+        try:
+            web_cwd, host, port, database_path = _parse_web_cli_args(
+                positional_args[1:],
+                cwd=cwd or Path.cwd(),
+                host=web_host,
+                port=tau_web_port,
+                database_path=web_database,
+            )
+            run_tau_web_server(
+                cwd=web_cwd,
+                host=host,
+                port=port,
+                database_path=database_path,
+            )
+        except (RuntimeError, ValueError) as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=1) from exc
+        raise typer.Exit()
+
     if prompt_option is None and command == "sessions" and len(positional_args) == 1:
-        render_session_list(SessionManager().list_sessions())
+        render_session_list(anyio.run(_list_live_sessions))
         raise typer.Exit()
 
     if prompt_option is None and command == "export":
@@ -537,7 +745,7 @@ def run_basic_repl(
         run_one(prompt)
 
 
-def render_session_list(records: list[CodingSessionRecord]) -> None:
+def render_session_list(records: list[_RenderableSessionRecord]) -> None:
     """Render indexed sessions for the CLI."""
     if not records:
         typer.echo("No sessions found.")
@@ -552,26 +760,155 @@ async def export_session_command(
     session_ref: str,
     output_path: Path | None = None,
     export_format: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
 ) -> Path:
-    """Export an indexed session id or JSONL file path."""
-    session_path, title = _resolve_export_source(session_ref, session_manager)
-    entries = await JsonlSessionStorage(session_path).read_all()
+    """Export a live session id or explicit JSONL file path."""
+    entries, title, source, artifact_name = await _read_export_source(
+        session_ref,
+        session_manager=session_manager,
+    )
     normalized_format = normalize_export_format(
         export_format or (output_path.suffix.removeprefix(".") if output_path else "html")
     )
     destination = _resolve_export_destination(
         output_path,
-        session_path=session_path,
+        artifact_name=artifact_name,
         format=normalized_format,
     )
     return export_session_artifact(
         entries,
         destination,
         title=title,
-        source=str(session_path),
+        source=source,
         format=normalized_format,
     )
+
+
+async def import_sqlite_session_command(
+    source_path: Path,
+    workspace_root: Path,
+    provider_name: str | None,
+    model: str | None,
+    database_path: Path | None,
+    session_id: str | None,
+    agent_name: str | None,
+    title: str | None,
+    thinking_level: str | None,
+) -> tuple[str, str, int, Path]:
+    try:
+        from tau_web.sqlite.connection import SqliteDatabase
+        from tau_web.sqlite.interchange import JsonlImportOptions, SessionInterchange
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("Install 'tau-prime[web]' to use SQLite session import/export") from exc
+
+    resolved_source = source_path.expanduser().resolve()
+    if not resolved_source.exists():
+        raise ValueError(f"Session import source does not exist: {resolved_source}")
+    if not resolved_source.is_file():
+        raise ValueError(f"Session import source is not a file: {resolved_source}")
+
+    settings = load_provider_settings()
+    selection = resolve_provider_selection(settings, provider_name=provider_name, model=model)
+    selected_database = _resolve_sqlite_database_path(database_path)
+    selected_thinking_level = thinking_level or provider_default_thinking_level(
+        selection.provider,
+        model=selection.model,
+    )
+    async with SqliteDatabase(selected_database) as database:
+        result = await SessionInterchange(database).import_jsonl_file(
+            resolved_source,
+            options=JsonlImportOptions(
+                workspace_root=workspace_root,
+                provider_name=selection.provider.name,
+                model=selection.model,
+                session_id=session_id,
+                agent_name=agent_name,
+                title=title,
+                thinking_level=selected_thinking_level,
+                metadata={"imported_via": "tau import-session"},
+            ),
+        )
+    return result.session_id, result.agent_name, result.entry_count, selected_database
+
+
+async def export_sqlite_session_command(
+    session_ref: str,
+    output_path: Path | None,
+    export_format: str,
+    overwrite: bool,
+    database_path: Path | None,
+) -> Path:
+    if export_format.strip().casefold() != "jsonl":
+        raise ValueError("`tau export-session` only supports --format jsonl")
+
+    try:
+        from tau_web.sqlite.connection import SqliteDatabase
+        from tau_web.sqlite.interchange import SessionInterchange
+        from tau_web.sqlite.sessions import SessionRepository
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("Install 'tau-prime[web]' to use SQLite session import/export") from exc
+
+    selected_database = _resolve_sqlite_database_path(database_path)
+    async with SqliteDatabase(selected_database) as database:
+        record = await SessionRepository(database).resolve(session_ref)
+        if record is None:
+            raise RuntimeError(f"Unknown session: {session_ref}")
+        destination = _resolve_sqlite_session_export_destination(
+            output_path,
+            session_id=record.session_id,
+        )
+        return await SessionInterchange(database).export_jsonl_file(
+            record.session_id,
+            destination,
+            overwrite=overwrite,
+        )
+
+
+def _resolve_sqlite_database_path(database_path: Path | None) -> Path:
+    return (database_path or TauPaths().home / "tau.sqlite3").expanduser().resolve()
+
+
+def _resolve_sqlite_session_export_destination(
+    output_path: Path | None,
+    *,
+    session_id: str,
+) -> Path:
+    if output_path is None:
+        return Path.cwd() / f"{session_id}.jsonl"
+    candidate = output_path.expanduser()
+    if candidate.exists() and candidate.is_dir():
+        return candidate / f"{session_id}.jsonl"
+    return candidate
+
+
+def _parse_web_cli_args(
+    args: list[str],
+    *,
+    cwd: Path,
+    host: str,
+    port: int,
+    database_path: Path | None,
+) -> tuple[Path, str, int, Path | None]:
+    """Parse options following the callback-style ``tau web`` command token."""
+    values: dict[str, str] = {}
+    index = 0
+    option_names = {"--cwd", "--host", "--port", "--database"}
+    while index < len(args):
+        option = args[index]
+        if option not in option_names:
+            raise RuntimeError(f"Unknown `tau web` argument: {option}")
+        if index + 1 >= len(args):
+            raise RuntimeError(f"Missing value for `tau web` option: {option}")
+        values[option] = args[index + 1]
+        index += 2
+
+    selected_cwd = Path(values["--cwd"]) if "--cwd" in values else cwd
+    selected_database = Path(values["--database"]) if "--database" in values else database_path
+    try:
+        selected_port = int(values["--port"]) if "--port" in values else port
+    except ValueError as exc:
+        raise RuntimeError("`tau web --port` must be an integer") from exc
+    return selected_cwd, values.get("--host", host), selected_port, selected_database
 
 
 def _parse_export_cli_args(args: list[str]) -> tuple[str, Path | None, str | None]:
@@ -607,41 +944,61 @@ def _parse_export_cli_args(args: list[str]) -> tuple[str, Path | None, str | Non
 def _resolve_export_destination(
     output_path: Path | None,
     *,
-    session_path: Path,
+    artifact_name: str,
     format: str,
 ) -> Path:
+    export_name = Path(artifact_name)
     if output_path is None:
         return default_session_export_artifact_path(
-            session_path,
+            export_name,
             destination_dir=Path.cwd(),
             format=format,
         )
     if output_path.suffix:
         return output_path
     return default_session_export_artifact_path(
-        session_path,
+        export_name,
         destination_dir=output_path,
         format=format,
     )
 
 
-def _resolve_export_source(
+async def _read_export_source(
     session_ref: str,
-    session_manager: SessionManager | None = None,
-) -> tuple[Path, str]:
+    *,
+    session_manager: CodingSessionManager | None = None,
+) -> tuple[list[SessionEntry], str, str, str]:
+    session_path = _resolve_explicit_export_source_path(session_ref)
+    if session_path is not None:
+        return (
+            await JsonlSessionStorage(session_path).read_all(),
+            f"Tau session {session_path.stem}",
+            str(session_path),
+            session_path.stem,
+        )
+
+    async with live_session_manager_context(session_manager) as manager:
+        record = await manager_get_session(manager, session_ref)
+        if record is None:
+            raise RuntimeError(f"Unknown session: {session_ref}")
+        record_path = getattr(record, "path", None)
+        source = str(record_path) if record_path is not None else record.id
+        artifact_name = Path(record_path).stem if record_path is not None else record.id
+        return (
+            await manager_session_storage(manager, record).read_all(),
+            record.title or f"Tau session {record.id}",
+            source,
+            artifact_name,
+        )
+
+
+def _resolve_explicit_export_source_path(session_ref: str) -> Path | None:
     candidate_path = Path(session_ref).expanduser()
-    if candidate_path.exists():
-        if candidate_path.is_dir():
-            raise RuntimeError(f"Session export source is a directory: {candidate_path}")
-        return candidate_path, f"Tau session {candidate_path.stem}"
-
-    manager = session_manager or SessionManager()
-    record = manager.get_session(session_ref)
-    if record is None:
-        raise RuntimeError(f"Unknown session or file: {session_ref}")
-
-    title = record.title or f"Tau session {record.id}"
-    return record.path, title
+    if not candidate_path.exists():
+        return None
+    if candidate_path.is_dir():
+        raise RuntimeError(f"Session export source is a directory: {candidate_path}")
+    return candidate_path
 
 
 def render_provider_settings(
@@ -687,7 +1044,7 @@ async def run_openai_print_mode(
     output: PrintOutputMode = PrintOutputMode.text,
     provider_name: str | None = None,
     session_id: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
 ) -> bool:
     """Run print mode with the OpenAI-compatible provider configured from the environment."""
     settings = load_provider_settings()
@@ -702,37 +1059,50 @@ async def run_openai_print_mode(
         thinking_level=provider_default_thinking_level(selection.provider, model=selection.model),
         llm_observer=llm_observer,
     )
-    manager = session_manager or SessionManager()
-    record = _create_print_session(manager, cwd=cwd, model=selection.model, session_id=session_id)
     try:
-        return await run_print_mode(
-            prompt=prompt,
-            model=selection.model,
-            cwd=record.cwd,
-            provider=provider,
-            output=output,
-            storage=jsonl_session_storage(record.path),
-            session_id=record.id,
-            session_manager=manager,
-            provider_name=selection.provider.name,
-            provider_settings=settings,
-            runtime_provider_config=selection.provider,
-            shell_command_prefix=shell_settings.shell_command_prefix,
-            llm_observer=llm_observer,
-        )
+        async with live_session_manager_context(session_manager) as manager:
+            record = await _create_print_session(
+                manager,
+                cwd=cwd,
+                model=selection.model,
+                provider_name=selection.provider.name,
+                session_id=session_id,
+            )
+            return await run_print_mode(
+                prompt=prompt,
+                model=selection.model,
+                cwd=record.cwd,
+                provider=provider,
+                output=output,
+                storage=manager_session_storage(manager, record),
+                session_id=record.id,
+                session_manager=manager,
+                provider_name=selection.provider.name,
+                provider_settings=settings,
+                runtime_provider_config=selection.provider,
+                shell_command_prefix=shell_settings.shell_command_prefix,
+                llm_observer=llm_observer,
+            )
     finally:
         await provider.aclose()
 
 
-def _create_print_session(
-    manager: SessionManager,
+async def _create_print_session(
+    manager: CodingSessionManager,
     *,
     cwd: Path,
     model: str,
+    provider_name: str,
     session_id: str | None,
-) -> CodingSessionRecord:
-    """Create a print-mode session without risking transcript collisions."""
-    return manager.create_session_exclusive(cwd=cwd, model=model, session_id=session_id)
+) -> CodingSessionRecordLike:
+    """Create a durable print-mode session without risking transcript collisions."""
+    return await manager_create_session_exclusive(
+        manager,
+        cwd=cwd,
+        model=model,
+        provider_name=provider_name,
+        session_id=session_id,
+    )
 
 
 async def run_print_mode(
@@ -745,7 +1115,7 @@ async def run_print_mode(
     resource_paths: TauResourcePaths | None = None,
     storage: SessionStorage | None = None,
     session_id: str | None = None,
-    session_manager: SessionManager | None = None,
+    session_manager: CodingSessionManager | None = None,
     provider_name: str = DEFAULT_PROVIDER_NAME,
     provider_settings: ProviderSettings | None = None,
     runtime_provider_config: ProviderConfig | None = None,
@@ -757,20 +1127,30 @@ async def run_print_mode(
     Returns False when the agent emits a non-recoverable error so CLI callers
     can fail non-interactive runs while still rendering the error message.
     """
-    session = await CodingSession.load(
-        CodingSessionConfig(
-            provider=provider,
-            model=model,
-            cwd=cwd,
-            storage=storage or _MemorySessionStorage(),
+    plan_hooks = (
+        session_manager.plan_factory_hooks()
+        if isinstance(session_manager, SqliteCodingSessionManager)
+        else (None, None)
+    )
+    session = await CodingSessionFactory(
+        CodingSessionFactoryConfig(
             resource_paths=resource_paths,
-            session_id=session_id,
-            session_manager=session_manager,
-            provider_name=provider_name,
-            provider_settings=provider_settings,
-            runtime_provider_config=runtime_provider_config,
             shell_command_prefix=shell_command_prefix,
             llm_observer=llm_observer,
+            extra_tools_factory=plan_hooks[0],
+            turn_context_provider_factory=plan_hooks[1],
+        ),
+        provider_settings=provider_settings,
+    ).load(
+        CodingSessionFactoryRequest(
+            cwd=cwd,
+            storage=storage or _MemorySessionStorage(),
+            session_id=session_id,
+            session_manager=session_manager,
+            provider=provider,
+            provider_name=provider_name,
+            model=model,
+            provider_config=runtime_provider_config,
         )
     )
     renderer = create_event_renderer(output)

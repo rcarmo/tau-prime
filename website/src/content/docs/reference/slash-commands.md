@@ -13,7 +13,7 @@ command palette with **Ctrl+K**.
 | `/session` | Show session info and stats (model, cwd, tools, skills, context) |
 | `/system` | Show the active system prompt without adding it to context or session history |
 | `/compact [instructions]` | Summarize and compact the active context |
-| `/export [--format html\|jsonl] [dest]` | Export the current session |
+| `/export [--format html\|jsonl] [dest]` | Export the current SQLite-backed session as HTML or JSONL |
 | `/resume [session-id]` | Resume a previous session, or open the picker |
 | `/tree` | Branch from an earlier point in the session tree |
 | `/name <new name>` | Rename the current session |
@@ -27,10 +27,15 @@ command palette with **Ctrl+K**.
 | `/skill:<name> [request]` | Expand a loaded skill into your prompt |
 
 :::note[`/skill:` is special]
-`/skill:<name>` is a *prompt-expansion* path, not a normal command — Tau expands
+`/skill:<name>` is a *prompt-expansion* path, not a normal command -- Tau expands
 the named skill into your prompt and runs it as a turn. See
 [Skills & prompt templates](../guides/skills-and-prompts.md).
 :::
+
+`/export` writes a user-facing artefact from the current live session. HTML is
+for reading or sharing; JSONL is Tau's interchange format for import/export,
+not the live on-disk store. With no destination, live SQLite sessions export to
+`tau-session.html` or `tau-session.jsonl` in the current working directory.
 
 Related:
 

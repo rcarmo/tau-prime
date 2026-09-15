@@ -76,12 +76,17 @@ show reference/status output *outside* the durable conversation. If
 Initialize the visible transcript from `session.messages` (the built-in
 `TuiState.load_messages()` is a reference). `ToolResultMessage` preserves
 structured metadata (e.g. edit patches), so you can render restored tool results
-without reading JSONL directly.
+without querying the live store directly.
 
-For session switching, use `tau_coding.session_manager.SessionManager` —
-`list_sessions(session.cwd)`, then `await session.resume(session_id)` (or load a
-fresh `CodingSession` with `storage=jsonl_session_storage(record.path)`), then
-rebuild the transcript from `session.messages`.
+For session switching, prefer `await session.resume(session_id)` for the common
+path. If you need to list or open sessions outside an existing
+`CodingSession`, use `tau_coding.live_session_manager` -- for example
+`live_session_manager_context(...)`, `manager_list_sessions(...)`,
+`manager_get_session(...)`, and `manager_session_storage(...)`. The default
+live manager is SQLite-backed, so a fresh `CodingSession` should be built from
+manager-owned storage rather than a hand-built JSONL path. You can still inject
+`jsonl_session_storage(...)` deliberately for compatibility or tests, but it is
+not Tau's live default.
 
 ## Cancellation, pickers, keybindings
 
@@ -98,9 +103,9 @@ rebuild the transcript from `session.messages`.
 ## What not to depend on
 
 Avoid coupling to private `CodingSession` attributes, provider-specific response
-chunks, Textual internals, or the raw JSONL structure (use `SessionManager` /
-`CodingSession`). Stick to the event, message, tool, harness, and session
-primitives.
+chunks, Textual internals, or the raw SQLite schema / legacy JSONL structure
+(use the live session manager and `CodingSession`). Stick to the event,
+message, tool, harness, and session primitives.
 
 :::note
 The full per-phase build journals for these systems live in the repo under

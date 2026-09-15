@@ -93,14 +93,20 @@ def collect_prompt_guidelines(
     has_file_tools = bool({"read", "edit", "write"} & names)
     has_exploration_tools = bool({"grep", "find", "ls"} & names)
     if has_file_tools:
-        add("Use read/edit/write tools for file inspection and edits; do not use shell commands for routine file changes.")
+        add(
+            "Use read/edit/write tools for file inspection and edits; do not use "
+            "shell commands for routine file changes."
+        )
     if has_shell:
         add(
-            "Treat sh as a single non-interactive POSIX sh command runner. Assume only basic sh is available (for example a-Shell on iOS), avoid non-POSIX shell syntax, and do not assume a persistent shell."
+            "Treat sh as a single non-interactive POSIX sh command runner. Assume "
+            "only basic sh is available (for example a-Shell on iOS), avoid "
+            "non-POSIX shell syntax, and do not assume a persistent shell."
         )
     if has_shell and has_exploration_tools:
         add(
-            "Prefer grep/find/ls tools over shell commands for file exploration (faster, respects .gitignore)."
+            "Prefer grep/find/ls tools over shell commands for file exploration "
+            "(faster, respects .gitignore)."
         )
 
     for tool in tools:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
@@ -21,6 +21,7 @@ from tau_agent.messages import AgentMessage, AssistantMessage, ToolResultMessage
 from tau_agent.session import (
     BranchSummaryEntry,
     CompactionEntry,
+    CustomEntry,
     JsonlSessionStorage,
     LeafEntry,
     MessageEntry,
@@ -32,7 +33,7 @@ from tau_agent.session import (
 )
 from tau_agent.session.entries import SessionEntry
 from tau_agent.session.tree import SessionTreeError, path_to_entry
-from tau_agent.tools import AgentTool
+from tau_agent.tools import AgentTool, ToolApprovalCallback
 from tau_agent.types import JSONValue
 from tau_ai import (
     REMOTE_COMPACTION_SENTINEL,
@@ -44,6 +45,7 @@ from tau_ai import (
 )
 from tau_ai.events import ProviderErrorEvent, ProviderResponseEndEvent, ProviderTextDeltaEvent
 from tau_ai.model_limits import RuntimeModelLimits
+from tau_ai.usage import ProviderUsage
 from tau_coding.branch_summary import summarize_branch_messages_with_model
 from tau_coding.commands import (
     CommandContext,
@@ -71,6 +73,14 @@ from tau_coding.diagnostics import (
 )
 from tau_coding.extensions.api import ExtensionContext
 from tau_coding.extensions.runtime import ExtensionRuntime
+from tau_coding.live_session_manager import CodingSessionManager
+from tau_coding.live_session_manager import manager_create_session as _manager_create_session
+from tau_coding.live_session_manager import manager_get_session as _manager_get_session
+from tau_coding.live_session_manager import manager_prepare_session as _manager_prepare_session
+from tau_coding.live_session_manager import manager_touch_session as _manager_touch_session
+from tau_coding.live_session_manager import (
+    session_storage_for_record as _session_storage_for_record,
+)
 from tau_coding.paths import TauPaths
 from tau_coding.pipelined_compaction import build_pipelined_compaction_prompt
 from tau_coding.prompt_templates import (
@@ -111,6 +121,7 @@ from tau_coding.session_export import (
 from tau_coding.session_manager import SessionManager
 from tau_coding.skills import Skill, expand_skill_command, load_skills_with_diagnostics
 from tau_coding.smart_compaction import compaction_budget
+from tau_coding.sqlite_session_manager import SqliteCodingSessionManager
 from tau_coding.system_prompt import (
     BuildSystemPromptOptions,
     ProjectContextFile,
@@ -205,9 +216,11 @@ class CodingSessionConfig:
     append_system_prompt: str | None = None
     context_files: tuple[ProjectContextFile, ...] = ()
     tools: list[AgentTool] | None = None
+    extra_tools: tuple[AgentTool, ...] = ()
+    turn_context_provider: Callable[[], Awaitable[str | None]] | None = None
     resource_paths: TauResourcePaths | None = None
     session_id: str | None = None
-    session_manager: SessionManager | None = None
+    session_manager: CodingSessionManager | None = None
     command_registry: CommandRegistry | None = None
     provider_name: str = "openai"
     provider_settings: ProviderSettings | None = None
@@ -247,6 +260,9 @@ class CodingSession:
         self._config = config
         self._state = state
         self._harness = harness
+        harness_config = getattr(harness, "config", None)
+        self._base_system_prompt = getattr(harness_config, "system", "")
+        self._turn_context: str | None = None
         self._last_parent_id = last_parent_id
         self._pending_initial_entries = pending_initial_entries
         self._session_initialization_lock = asyncio.Lock()
@@ -266,6 +282,7 @@ class CodingSession:
         self._provider_compaction_enabled = config.provider_compaction_enabled
         self._compaction_strategy = config.compaction_strategy
         self._runtime_model_limits: RuntimeModelLimits | None = None
+        self._pending_manager_metadata_sync = False
         self._thinking_level = _state_thinking_level(state, config.thinking_level)
         self._apply_remote_compaction_state(self._latest_remote_compaction_state())
         self._owned_providers: list[ClosableModelProvider] = []
@@ -274,12 +291,14 @@ class CodingSession:
             credentials_path(self._resource_paths.paths) if self._resource_paths.paths else None
         )
         self._last_diagnostic_log_path: Path | None = None
+        self._provider_usage = ProviderUsage()
 
     @classmethod
     async def load(cls, config: CodingSessionConfig) -> CodingSession:
         """Load a coding session from append-only storage."""
         entries = await config.storage.read_all()
         pending_initial_entries: tuple[SessionEntry, ...] = ()
+        inference_provider = _session_inference_provider(config, entries)
         if not entries:
             info = SessionInfoEntry(cwd=str(config.cwd))
             model = ModelChangeEntry(parent_id=info.id, model=config.model)
@@ -287,10 +306,27 @@ class CodingSession:
                 parent_id=model.id,
                 thinking_level=config.thinking_level,
             )
-            entries = [info, model, thinking]
-            pending_initial_entries = (info, model, thinking)
+            initial_entries: list[SessionEntry] = [info, model, thinking]
+            if inference_provider is not None:
+                initial_entries.append(
+                    CustomEntry(
+                        parent_id=thinking.id,
+                        namespace="tau.huggingface-routing",
+                        data={
+                            "model": config.model,
+                            "inference_provider": inference_provider,
+                        },
+                    )
+                )
+            entries = initial_entries
+            pending_initial_entries = tuple(initial_entries)
         else:
             entries = _detach_missing_parents(entries)
+
+        if inference_provider is not None:
+            alias_setter = getattr(config.provider, "set_model_alias", None)
+            if callable(alias_setter):
+                alias_setter(config.model, f"{config.model}:{inference_provider}")
 
         linear_state = SessionState.from_entries(entries)
         latest_leaf = _latest_leaf_entry(entries)
@@ -299,7 +335,7 @@ class CodingSession:
             if latest_leaf is not None
             else linear_state
         )
-        tools = (
+        tools = list(
             config.tools
             if config.tools is not None
             else create_coding_tools(
@@ -307,6 +343,7 @@ class CodingSession:
                 shell_command_prefix=config.shell_command_prefix,
             )
         )
+        tools.extend(config.extra_tools)
         resource_paths = resource_paths_with_cwd(config.resource_paths, config.cwd)
         extension_runtime = ExtensionRuntime()
         extension_runtime.load(resource_paths)
@@ -346,6 +383,9 @@ class CodingSession:
                 )
             )
         )
+        session_affinity_setter = getattr(config.provider, "set_session_id", None)
+        if callable(session_affinity_setter):
+            session_affinity_setter(config.session_id)
         harness = AgentHarness(
             AgentHarnessConfig(
                 provider=config.provider,
@@ -439,6 +479,10 @@ class CodingSession:
     def tools(self) -> tuple[AgentTool, ...]:
         """Return the tools available to the agent."""
         return tuple(self._harness.config.tools)
+
+    def set_tool_approval_callback(self, callback: ToolApprovalCallback | None) -> None:
+        """Install a host-owned approval policy for subsequent tool calls."""
+        self._harness.config.approve_tool = callback
 
     @property
     def messages(self) -> tuple[AgentMessage, ...]:
@@ -611,6 +655,7 @@ class CodingSession:
             title=_session_export_title(self),
             source=str(session_path) if session_path is not None else self.session_id,
             format=export_format,
+            usage=self._provider_usage,
         )
 
     @property
@@ -627,6 +672,11 @@ class CodingSession:
     def context_files(self) -> tuple[ProjectContextFile, ...]:
         """Return active project context files."""
         return self._context_files
+
+    @property
+    def provider_usage(self) -> ProviderUsage:
+        """Return provider-reported usage accumulated during this process."""
+        return self._provider_usage
 
     @property
     def context_token_estimate(self) -> int:
@@ -713,16 +763,25 @@ class CodingSession:
     @property
     def session_title(self) -> str | None:
         """Return this session's indexed human-friendly title, if named."""
-        if self._config.session_id is None or self._config.session_manager is None:
+        if self._config.session_id is None:
             return None
-        record = self._config.session_manager.get_session(self._config.session_id)
+        manager = self._config.session_manager
+        if not isinstance(manager, SessionManager):
+            return None
+        record = manager.get_session(self._config.session_id)
         if record is None:
             return None
         return record.title
 
     @property
     def session_manager(self) -> SessionManager | None:
-        """Return the session manager, if available."""
+        """Return the legacy session manager, if available."""
+        manager = self._config.session_manager
+        return manager if isinstance(manager, SessionManager) else None
+
+    @property
+    def live_session_manager(self) -> CodingSessionManager | None:
+        """Return the configured live session manager, if available."""
         return self._config.session_manager
 
     @property
@@ -773,12 +832,7 @@ class CodingSession:
         self._sync_thinking_level_to_active_model()
         self._refresh_runtime_provider()
         self._persist_default_model_choice()
-        if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(
-                self._config.session_id,
-                model=model,
-                provider_name=self.provider_name,
-            )
+        self._touch_session_manager_for_active_model()
 
     def set_model_choice(self, choice: ModelChoice) -> None:
         """Switch provider/model as one operation."""
@@ -878,12 +932,7 @@ class CodingSession:
         self._thinking_level = thinking_level
         if persist_default:
             self._persist_default_model_choice()
-        if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(
-                self._config.session_id,
-                model=model,
-                provider_name=self.provider_name,
-            )
+        self._touch_session_manager_for_active_model()
 
     async def set_thinking_level(self, level: str) -> str:
         """Persist and activate a thinking mode for future turns."""
@@ -965,6 +1014,33 @@ class CodingSession:
         )
         self._sync_thinking_level_to_active_model()
 
+    def _touch_session_manager_for_active_model(self) -> None:
+        session_id = self._config.session_id
+        manager = self._config.session_manager
+        if session_id is None or manager is None:
+            return
+        if isinstance(manager, SessionManager):
+            manager.touch_session(
+                session_id,
+                model=self.model,
+                provider_name=self.provider_name,
+            )
+            return
+        self._pending_manager_metadata_sync = True
+
+    async def _flush_pending_session_manager_metadata(self) -> None:
+        if not self._pending_manager_metadata_sync:
+            return
+        self._pending_manager_metadata_sync = False
+        if self._config.session_id is None or self._config.session_manager is None:
+            return
+        await _manager_touch_session(
+            self._config.session_manager,
+            self._config.session_id,
+            model=self.model,
+            provider_name=self.provider_name,
+        )
+
     def _refresh_runtime_provider(self) -> None:
         if self._runtime_provider_config is None:
             return
@@ -1043,7 +1119,8 @@ class CodingSession:
         self._context_files = resources.context_files
         self._resource_diagnostics = resources.diagnostics
         if rebuilt_system_prompt is not None:
-            self._harness.config.system = rebuilt_system_prompt
+            self._base_system_prompt = rebuilt_system_prompt
+            self._apply_turn_context()
 
         return CodingReloadSummary(
             skills=_category_summary(before_skills, after_skills),
@@ -1076,7 +1153,8 @@ class CodingSession:
         manager = self._config.session_manager
         if manager is None:
             raise ValueError("Session manager is not available")
-        record = manager.get_session(session_id)
+        await self._flush_pending_session_manager_metadata()
+        record = await _manager_get_session(manager, session_id)
         if record is None:
             raise ValueError(f"Unknown session: {session_id}")
 
@@ -1112,7 +1190,7 @@ class CodingSession:
                 provider=self._harness.config.provider,
                 model=restored_model,
                 cwd=record.cwd,
-                storage=jsonl_session_storage(record.path),
+                storage=_session_storage_for_record(manager, record),
                 system=self._config.system,
                 custom_system_prompt=self._config.custom_system_prompt,
                 append_system_prompt=self._config.append_system_prompt,
@@ -1137,11 +1215,14 @@ class CodingSession:
         self._state = replacement._state
         self._harness = replacement._harness
         self._last_parent_id = replacement._last_parent_id
+        self._pending_initial_entries = replacement._pending_initial_entries
+        self._session_initialization_lock = replacement._session_initialization_lock
         self._skills = replacement._skills
         self._prompt_templates = replacement._prompt_templates
         self._context_files = replacement._context_files
         self._resource_diagnostics = replacement._resource_diagnostics
         self._command_registry = replacement._command_registry
+        self._extension_runtime = replacement._extension_runtime
         self._provider_name = replacement._provider_name
         self._provider_settings = replacement._provider_settings
         self._runtime_provider_config = replacement._runtime_provider_config
@@ -1151,7 +1232,11 @@ class CodingSession:
         self._auto_compact_enabled = replacement._auto_compact_enabled
         self._provider_compaction_enabled = replacement._provider_compaction_enabled
         self._compaction_strategy = replacement._compaction_strategy
+        self._runtime_model_limits = replacement._runtime_model_limits
+        self._pending_manager_metadata_sync = replacement._pending_manager_metadata_sync
         self._thinking_level = replacement._thinking_level
+        self._diagnostic_logger = replacement._diagnostic_logger
+        self._credential_store = replacement._credential_store
         return f"Resumed session: {record.id}"
 
     async def new_session(self) -> str:
@@ -1159,6 +1244,7 @@ class CodingSession:
         manager = self._config.session_manager
         if manager is None:
             raise ValueError("Session manager is not available")
+        await self._flush_pending_session_manager_metadata()
 
         provider_name = self._provider_name
         model = self.model
@@ -1175,7 +1261,8 @@ class CodingSession:
                 current=self._thinking_level,
             )
 
-        record = manager.prepare_session(
+        record = await _manager_prepare_session(
+            manager,
             cwd=self.cwd,
             model=model,
             provider_name=provider_name,
@@ -1186,7 +1273,7 @@ class CodingSession:
                 provider=self._harness.config.provider,
                 model=record.model or model,
                 cwd=record.cwd,
-                storage=jsonl_session_storage(record.path),
+                storage=_session_storage_for_record(manager, record),
                 session_id=record.id,
                 provider_name=provider_name,
                 provider_settings=self._provider_settings,
@@ -1199,11 +1286,14 @@ class CodingSession:
         self._state = replacement._state
         self._harness = replacement._harness
         self._last_parent_id = replacement._last_parent_id
+        self._pending_initial_entries = replacement._pending_initial_entries
+        self._session_initialization_lock = replacement._session_initialization_lock
         self._skills = replacement._skills
         self._prompt_templates = replacement._prompt_templates
         self._context_files = replacement._context_files
         self._resource_diagnostics = replacement._resource_diagnostics
         self._command_registry = replacement._command_registry
+        self._extension_runtime = replacement._extension_runtime
         self._provider_name = replacement._provider_name
         self._provider_settings = replacement._provider_settings
         self._runtime_provider_config = replacement._runtime_provider_config
@@ -1213,7 +1303,11 @@ class CodingSession:
         self._auto_compact_enabled = replacement._auto_compact_enabled
         self._provider_compaction_enabled = replacement._provider_compaction_enabled
         self._compaction_strategy = replacement._compaction_strategy
+        self._runtime_model_limits = replacement._runtime_model_limits
+        self._pending_manager_metadata_sync = replacement._pending_manager_metadata_sync
         self._thinking_level = replacement._thinking_level
+        self._diagnostic_logger = replacement._diagnostic_logger
+        self._credential_store = replacement._credential_store
         return f"Started new session: {record.id}"
 
     async def compact(self, instructions: str | None = None) -> str:
@@ -1243,10 +1337,13 @@ class CodingSession:
 
     async def aclose(self) -> None:
         """Close runtime providers created by this coding session."""
-        self._dispatch_extension_lifecycle("shutdown")
-        for provider in self._owned_providers:
-            await provider.aclose()
-        self._owned_providers.clear()
+        try:
+            await self._flush_pending_session_manager_metadata()
+        finally:
+            self._dispatch_extension_lifecycle("shutdown")
+            for provider in self._owned_providers:
+                await provider.aclose()
+            self._owned_providers.clear()
 
     def handle_command(self, text: str) -> CommandResult:
         """Handle coding-session slash commands.
@@ -1265,6 +1362,65 @@ class CodingSession:
             return expanded_prompt
         expanded_skill = expand_skill_command(text, self._skills)
         return expanded_skill if expanded_skill is not None else text
+
+    async def _prepare_prompt_content(self, content: str) -> tuple[AgentCallDiagnosticContext, str]:
+        context = self._diagnostic_context()
+        try:
+            extension_context = self._extension_runtime.extension_context(
+                CommandContext(
+                    session=self,
+                    registry=self._command_registry,
+                    text=content,
+                    name="prompt",
+                    args="",
+                )
+            )
+            content = self._extension_runtime.transform_input(extension_context, content)
+            expanded_content = self.expand_prompt_text(content)
+        except ResourceError:
+            raise
+        except Exception as exc:
+            self._last_diagnostic_log_path = self._diagnostic_logger.log_exception(
+                context=context,
+                phase="expand_prompt",
+                exc=exc,
+            )
+            raise
+
+        await self._flush_pending_session_manager_metadata()
+        await self._refresh_runtime_model_limits()
+        return context, expanded_content
+
+    def _queue_active_run_message(
+        self,
+        content: str | UserMessage,
+        *,
+        behavior: StreamingBehavior,
+        expected_run_token: int | None = None,
+    ) -> QueueUpdateEvent:
+        active_run_token = self._harness.active_run_token
+        if active_run_token is None:
+            raise RuntimeError(
+                "CodingSession is idle; cannot queue a message because no run is active."
+            )
+        if expected_run_token is not None and active_run_token != expected_run_token:
+            raise RuntimeError(
+                "CodingSession active run changed while queueing a message; "
+                "refusing to queue on a different run."
+            )
+        if behavior == "steer":
+            return (
+                self._harness.steer_message(content)
+                if isinstance(content, UserMessage)
+                else self._harness.steer(content)
+            )
+        if behavior == "follow_up":
+            return (
+                self._harness.follow_up_message(content)
+                if isinstance(content, UserMessage)
+                else self._harness.follow_up(content)
+            )
+        raise AssertionError(f"Unsupported streaming behavior: {behavior!r}")
 
     async def run_terminal_command(
         self,
@@ -1307,53 +1463,73 @@ class CodingSession:
             added_to_context=add_to_context,
         )
 
+    def _apply_turn_context(self) -> None:
+        context = self._turn_context
+        self._harness.config.system = (
+            f"{self._base_system_prompt}\n\n{context}" if context else self._base_system_prompt
+        )
+
+    async def _refresh_turn_context(self) -> None:
+        provider = self._config.turn_context_provider
+        if provider is None:
+            return
+        context = await provider()
+        self._turn_context = context.strip() if context and context.strip() else None
+        self._apply_turn_context()
+
+    async def queue_message(
+        self,
+        content: str | UserMessage,
+        *,
+        behavior: StreamingBehavior,
+    ) -> QueueUpdateEvent:
+        """Queue one message for the active run without ever starting a new prompt."""
+        active_run_token = self._harness.active_run_token
+        if active_run_token is None:
+            raise RuntimeError(
+                "CodingSession is idle; cannot queue a message because no run is active."
+            )
+        raw_content = content.content if isinstance(content, UserMessage) else content
+        _context, expanded_content = await self._prepare_prompt_content(raw_content)
+        expanded_message = (
+            content.model_copy(update={"content": expanded_content})
+            if isinstance(content, UserMessage)
+            else expanded_content
+        )
+        return self._queue_active_run_message(
+            expanded_message,
+            behavior=behavior,
+            expected_run_token=active_run_token,
+        )
+
     async def prompt(
         self,
-        content: str,
+        content: str | UserMessage,
         *,
         streaming_behavior: StreamingBehavior | None = None,
     ) -> AsyncIterator[AgentEvent]:
         """Append a user prompt, run the agent, and persist new messages."""
-        context = self._diagnostic_context()
-        try:
-            extension_context = self._extension_runtime.extension_context(
-                CommandContext(
-                    session=self,
-                    registry=self._command_registry,
-                    text=content,
-                    name="prompt",
-                    args="",
-                )
-            )
-            content = self._extension_runtime.transform_input(extension_context, content)
-            expanded_content = self.expand_prompt_text(content)
-        except ResourceError:
-            raise
-        except Exception as exc:
-            self._last_diagnostic_log_path = self._diagnostic_logger.log_exception(
-                context=context,
-                phase="expand_prompt",
-                exc=exc,
-            )
-            raise
-
-        await self._refresh_runtime_model_limits()
+        raw_content = content.content if isinstance(content, UserMessage) else content
+        context, expanded_content = await self._prepare_prompt_content(raw_content)
+        expanded_message = (
+            content.model_copy(update={"content": expanded_content})
+            if isinstance(content, UserMessage)
+            else expanded_content
+        )
         if self._harness.is_running:
-            if streaming_behavior == "steer":
-                yield self._harness.steer(expanded_content)
-                return
-            if streaming_behavior == "follow_up":
-                yield self._harness.follow_up(expanded_content)
+            if streaming_behavior is not None:
+                yield self._queue_active_run_message(expanded_message, behavior=streaming_behavior)
                 return
             raise RuntimeError(
                 "CodingSession is already running; pass streaming_behavior to queue a message."
             )
 
+        await self._refresh_turn_context()
         await self._try_auto_compact(context=context, phase="auto_compact_before_prompt")
         persisted_count = len(self._harness.messages)
         overflow_event: ErrorEvent | None = None
         try:
-            async for event in self._harness.prompt(expanded_content):
+            async for event in self._harness.prompt(expanded_message):
                 if isinstance(event, ErrorEvent) and not event.recoverable:
                     self._last_diagnostic_log_path = self._diagnostic_logger.log_error_event(
                         context=context,
@@ -1365,6 +1541,7 @@ class CodingSession:
                 self._dispatch_extension_event(event)
                 yield event
                 if isinstance(event, MessageEndEvent):
+                    self._accumulate_provider_usage(event)
                     persisted_count = await self._persist_messages_since(persisted_count)
             persisted_count = await self._persist_messages_since(persisted_count)
             if overflow_event is not None:
@@ -1383,6 +1560,7 @@ class CodingSession:
                         self._dispatch_extension_event(retry_event)
                         yield retry_event
                         if isinstance(retry_event, MessageEndEvent):
+                            self._accumulate_provider_usage(retry_event)
                             retry_persisted_count = await self._persist_messages_since(
                                 retry_persisted_count
                             )
@@ -1400,6 +1578,7 @@ class CodingSession:
     async def continue_(self) -> AsyncIterator[AgentEvent]:
         """Continue the agent from restored state and persist new messages."""
         context = self._diagnostic_context()
+        await self._flush_pending_session_manager_metadata()
         await self._refresh_runtime_model_limits()
         persisted_count = len(self._harness.messages)
         try:
@@ -1413,6 +1592,7 @@ class CodingSession:
                 self._dispatch_extension_event(event)
                 yield event
                 if isinstance(event, MessageEndEvent):
+                    self._accumulate_provider_usage(event)
                     persisted_count = await self._persist_messages_since(persisted_count)
             await self._persist_messages_since(persisted_count)
             await self._try_auto_compact(context=context, phase="auto_compact_after_continue")
@@ -1423,6 +1603,10 @@ class CodingSession:
                 exc=exc,
             )
             raise
+
+    def _accumulate_provider_usage(self, event: MessageEndEvent) -> None:
+        if event.usage is not None:
+            self._provider_usage = self._provider_usage + event.usage
 
     async def _refresh_runtime_model_limits(self) -> None:
         provider = self._harness.config.provider
@@ -1494,6 +1678,7 @@ class CodingSession:
                 tools=self._harness.config.tools,
                 max_turns=self._harness.config.max_turns,
                 queue_mode=self._harness.config.queue_mode,
+                approve_tool=self._harness.config.approve_tool,
             ),
             messages=self._state.messages,
         )
@@ -1523,7 +1708,8 @@ class CodingSession:
         entries = await self._read_session_entries()
         self._state = SessionState.from_entries(entries, leaf_id=leaf_id)
         if self._config.session_id is not None and self._config.session_manager is not None:
-            self._config.session_manager.touch_session(
+            await _manager_touch_session(
+                self._config.session_manager,
                 self._config.session_id,
                 model=self.model,
                 provider_name=self.provider_name,
@@ -1543,20 +1729,29 @@ class CodingSession:
             return
         async with self._session_initialization_lock:
             initialized = bool(self._pending_initial_entries)
+            if not initialized:
+                return
+            if self._config.index_on_first_persist and isinstance(
+                self._config.session_manager, SqliteCodingSessionManager
+            ):
+                await self._index_current_session()
             while self._pending_initial_entries:
                 entry = self._pending_initial_entries[0]
                 await self._config.storage.append(entry)
                 self._pending_initial_entries = self._pending_initial_entries[1:]
-            if initialized and self._config.index_on_first_persist:
-                self._index_current_session()
+            if self._config.index_on_first_persist and not isinstance(
+                self._config.session_manager, SqliteCodingSessionManager
+            ):
+                await self._index_current_session()
 
-    def _index_current_session(self) -> None:
+    async def _index_current_session(self) -> None:
         if self._config.session_id is None or self._config.session_manager is None:
             return
-        existing = self._config.session_manager.get_session(self._config.session_id)
+        existing = await _manager_get_session(self._config.session_manager, self._config.session_id)
         if existing is not None:
             return
-        self._config.session_manager.create_session(
+        await _manager_create_session(
+            self._config.session_manager,
             cwd=self.cwd,
             model=self.model,
             provider_name=self.provider_name,
@@ -1741,9 +1936,7 @@ class CodingSession:
                     final_text = event.message.content
                 elif isinstance(event, ProviderErrorEvent):
                     details = f": {event.data}" if event.data is not None else ""
-                    raise RuntimeError(
-                        f"Compaction summarization failed: {event.message}{details}"
-                    )
+                    raise RuntimeError(f"Compaction summarization failed: {event.message}{details}")
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -2139,6 +2332,32 @@ def _infer_provider_for_model(
     if len(matches) == 1:
         return matches[0]
     return None
+
+
+def _session_inference_provider(
+    config: CodingSessionConfig,
+    entries: list[SessionEntry],
+) -> str | None:
+    """Resolve a session-local Hugging Face route, preferring durable history."""
+    if config.provider_name != "huggingface":
+        return None
+    for entry in reversed(entries):
+        if not isinstance(entry, CustomEntry) or entry.namespace != "tau.huggingface-routing":
+            continue
+        model = entry.data.get("model")
+        inference_provider = entry.data.get("inference_provider")
+        if model == config.model and isinstance(inference_provider, str):
+            return inference_provider
+    settings = config.provider_settings
+    if settings is None:
+        return None
+    try:
+        provider = settings.get_provider("huggingface")
+    except KeyError:
+        return None
+    inference_providers = getattr(provider, "inference_providers", {})
+    inference_provider = inference_providers.get(config.model)
+    return inference_provider if isinstance(inference_provider, str) else None
 
 
 def _state_thinking_level(

@@ -1,6 +1,6 @@
 # Context compaction
 
-Tau Prime uses two compaction paths. Both preserve the append-only session tree: old entries remain in JSONL history while the active branch receives a `CompactionEntry` that replaces selected context during replay.
+Tau Prime uses two compaction paths. Both preserve the append-only SQLite entry tree: old entries remain in the live session history while the active branch receives a `CompactionEntry` that replaces selected context during replay. JSONL export serialises the same tree for interchange; compaction does not rewrite or discard earlier entries.
 
 Use `/compaction` in the TUI to choose whether provider-native compaction is enabled and whether the local strategy is `summary` or `pipelined`. The choice is stored in `~/.tau/tui.json`. Provider compaction is enabled by default and the default local strategy is `pipelined`.
 
@@ -43,4 +43,4 @@ OpenAI and OpenAI Codex are now dynamic catalogue entries. GitHub Copilot and LM
 
 Provider-native state is intentionally opaque and cannot be converted into a trustworthy human-readable summary. Switching away from the exact provider/model after native compaction therefore requires returning to an earlier branch point or performing a supported migration; Tau will not guess.
 
-Local deterministic fallback is deliberately lossy but keeps a session usable when summarization itself exceeds a provider limit or fails. Very large tool output is represented by bounded evidence rather than copied wholesale.
+Local deterministic fallback is deliberately lossy but keeps a session usable when summarisation itself exceeds a provider limit or fails. Very large tool output is represented by bounded evidence rather than copied wholesale.

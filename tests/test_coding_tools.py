@@ -37,7 +37,10 @@ async def test_create_coding_tools_returns_initial_tool_set(tmp_path: Path) -> N
     assert [tool.name for tool in tools] == ["read", "write", "edit", "python", "sh", "pytest"]
     edit_tool = tools[2]
     assert edit_tool.prompt_snippet is not None
-    assert "Use edit for precise file changes instead of shell commands" in edit_tool.prompt_guidelines[0]
+    assert (
+        "Use edit for precise file changes instead of shell commands"
+        in edit_tool.prompt_guidelines[0]
+    )
 
 
 def test_tool_definitions_expose_pi_style_prompt_metadata(tmp_path: Path) -> None:
@@ -368,9 +371,7 @@ async def test_bash_tool_timeout_kills_shell_children(tmp_path: Path) -> None:
     marker = tmp_path / "marker"
 
     start = monotonic()
-    result = await tool.execute(
-        {"command": "(sleep 0.25; touch marker) & wait", "timeout": 0.01}
-    )
+    result = await tool.execute({"command": "(sleep 0.25; touch marker) & wait", "timeout": 0.01})
     duration = monotonic() - start
     await asyncio.sleep(0.35)
 
@@ -404,7 +405,14 @@ async def test_bash_tool_cancellation_kills_shell_children(tmp_path: Path) -> No
 async def test_bash_tool_does_not_read_parent_stdin(tmp_path: Path) -> None:
     tool = create_bash_tool(cwd=tmp_path)
 
-    result = await tool.execute({"command": "python - <<'EOF'\nimport sys\ndata = sys.stdin.read()\nprint('stdin-bytes', len(data))\nEOF"})
+    result = await tool.execute(
+        {
+            "command": (
+                "python - <<'EOF'\nimport sys\ndata = "
+                "sys.stdin.read()\nprint('stdin-bytes', len(data))\nEOF"
+            )
+        }
+    )
 
     assert result.ok is True
     assert "stdin-bytes 0" in result.content

@@ -1,9 +1,14 @@
-"""Linux bubblewrap filesystem sandbox for Tau's command-line process."""
+"""Linux Landlock write confinement, applied before Tau starts worker threads.
+
+Reads, execution and networking remain unrestricted. Existing open descriptors
+are not revoked. This is filesystem write confinement, not namespace isolation.
+"""
 
 from __future__ import annotations
 
+import ctypes
 import os
-import shutil
+import platform as host_platform
 import sys
 import tempfile
 from collections.abc import Sequence
@@ -15,100 +20,64 @@ _SANDBOXED_ENV = "TAU_LINUX_SANDBOXED"
 _SANDBOX_MODE_ENV = "TAU_LINUX_SANDBOX"
 _EXTRA_WRITABLE_ENV = "TAU_SANDBOX_WRITABLE_PATHS"
 _DEFAULT_ON_ENV = "TAU_LINUX_SANDBOX_DEFAULT_ON"
-_BWRAP_EXECUTABLE = "bwrap"
 _TRUE_VALUES = {"1", "true", "yes", "on", "auto"}
 _REQUIRED_VALUES = {"required", "force", "fail-closed"}
 _FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
+# ABI 3 is required to mediate truncation as well as cross-directory rename.
+_WRITE = (1 << 1) | sum(1 << bit for bit in range(4, 15))
+_entered = False
 
 
 class LinuxSandboxError(RuntimeError):
-    """Raised when Tau cannot establish the requested Linux sandbox."""
+    """The requested Landlock policy could not be installed."""
 
 
-def should_enter_linux_sandbox(
-    *,
-    disabled: bool,
-    platform: str | None = None,
-    bwrap_path: str | None = None,
-) -> bool:
-    """Return whether the current process should re-exec under bubblewrap.
+class _Ruleset(ctypes.Structure):
+    _fields_ = [("handled_access_fs", ctypes.c_uint64)]
 
-    By default the Linux sandbox is opt-in with ``TAU_LINUX_SANDBOX=1``.
-    Phase-3 default-on behavior is available behind
-    ``TAU_LINUX_SANDBOX_DEFAULT_ON=1``: use bubblewrap when it is present, but do
-    not break systems that lack it unless the user explicitly requests the
-    sandbox with ``TAU_LINUX_SANDBOX=1`` or ``required``. ``--no-sandbox`` and
-    false-like ``TAU_LINUX_SANDBOX`` values always disable it.
-    """
-    if disabled or os.environ.get(_SANDBOXED_ENV) == "1":
+
+class _PathRule(ctypes.Structure):
+    _fields_ = [("allowed_access", ctypes.c_uint64), ("parent_fd", ctypes.c_int32)]
+
+
+def _libc() -> ctypes.CDLL:
+    if sys.platform != "linux" or host_platform.machine() not in {
+        "x86_64",
+        "aarch64",
+        "riscv64",
+        "i386",
+        "i686",
+        "armv7l",
+    }:
+        raise LinuxSandboxError("Landlock syscall numbers unavailable on this platform")
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.syscall.restype = ctypes.c_long
+    return libc
+
+
+def _call(number: int, *args: object) -> int:
+    result = int(_libc().syscall(ctypes.c_long(number), *args))
+    if result < 0:
+        error = ctypes.get_errno()
+        raise LinuxSandboxError(f"Landlock syscall {number}: {os.strerror(error)}")
+    return result
+
+
+def landlock_abi() -> int:
+    """Probe kernel support without applying any restrictions."""
+    try:
+        return _call(444, ctypes.c_void_p(), ctypes.c_size_t(0), ctypes.c_uint(1))
+    except LinuxSandboxError:
+        return 0
+
+
+def should_enter_linux_sandbox(*, disabled: bool, platform: str | None = None) -> bool:
+    if disabled or _entered or (platform or sys.platform) != "linux":
         return False
-    if (platform or sys.platform) != "linux":
-        return False
-
     mode = _sandbox_mode()
-    if mode == "disabled":
-        return False
     if mode in {"enabled", "required"}:
         return True
-    if mode == "auto":
-        return bwrap_path is not None or shutil.which(_BWRAP_EXECUTABLE) is not None
-    return False
-
-
-def build_linux_bwrap_args(
-    *,
-    executable: Path,
-    argv: Sequence[str],
-    project_dir: Path,
-    tau_paths: TauPaths | None = None,
-    temp_dir: Path | None = None,
-    extra_writable_paths: Sequence[Path] = (),
-) -> list[str]:
-    """Build bubblewrap arguments for Tau's filesystem sandbox."""
-    paths = tau_paths or TauPaths()
-    resolved_project = project_dir.resolve()
-    if not resolved_project.is_dir():
-        raise LinuxSandboxError(f"Project directory does not exist: {resolved_project}")
-
-    temp_root = (temp_dir or Path(tempfile.gettempdir())).expanduser().resolve()
-    writable_roots = _dedupe_paths(
-        [
-            resolved_project,
-            paths.home.expanduser().resolve(),
-            paths.logs_dir.expanduser().resolve(),
-            temp_root,
-            *[path.expanduser().resolve() for path in extra_writable_paths],
-        ]
-    )
-
-    args = [
-        "--die-with-parent",
-        "--ro-bind",
-        "/",
-        "/",
-        "--dev-bind",
-        "/dev",
-        "/dev",
-        "--proc",
-        "/proc",
-    ]
-    for root in writable_roots:
-        args.extend(["--bind", str(root), str(root)])
-    args.extend(
-        [
-            "--setenv",
-            _SANDBOXED_ENV,
-            "1",
-            "--setenv",
-            "PYTHONDONTWRITEBYTECODE",
-            "1",
-            "--chdir",
-            str(resolved_project),
-            str(executable),
-            *list(argv[1:]),
-        ]
-    )
-    return args
+    return mode == "auto" and landlock_abi() >= 3
 
 
 def enter_linux_sandbox(
@@ -116,37 +85,54 @@ def enter_linux_sandbox(
     argv: Sequence[str] | None = None,
     project_dir: Path,
     tau_paths: TauPaths | None = None,
-    bwrap_executable: str | Path = _BWRAP_EXECUTABLE,
     temp_dir: Path | None = None,
     extra_writable_paths: Sequence[Path] | None = None,
 ) -> None:
-    """Re-execute Tau inside a Linux bubblewrap sandbox."""
-    current_argv = list(argv or sys.argv)
-    if not current_argv:
-        raise LinuxSandboxError("Cannot enter Linux sandbox without argv")
-
-    bwrap_path = _resolve_bwrap(bwrap_executable)
-    executable = _resolve_executable(current_argv[0])
+    """Restrict this thread and its future children; never re-exec or fail open."""
+    global _entered
+    if landlock_abi() < 3:
+        raise LinuxSandboxError("Linux sandbox requires Landlock ABI 3 or newer")
+    project = project_dir.resolve()
+    if not project.is_dir():
+        raise LinuxSandboxError(f"Project directory does not exist: {project}")
     paths = tau_paths or TauPaths()
-    paths.home.mkdir(parents=True, exist_ok=True)
-    paths.logs_dir.mkdir(parents=True, exist_ok=True)
-    temp_root = temp_dir or Path(tempfile.gettempdir())
-    temp_root.mkdir(parents=True, exist_ok=True)
-    extra_paths = tuple(extra_writable_paths or extra_writable_paths_from_env())
-    for path in extra_paths:
-        resolved = path.expanduser().resolve()
-        if not resolved.is_dir():
-            raise LinuxSandboxError(f"Extra writable sandbox path is not a directory: {resolved}")
-
-    bwrap_args = build_linux_bwrap_args(
-        executable=executable,
-        argv=current_argv,
-        project_dir=project_dir,
-        tau_paths=paths,
-        temp_dir=temp_root,
-        extra_writable_paths=extra_paths,
+    extras = (
+        extra_writable_paths_from_env() if extra_writable_paths is None else extra_writable_paths
     )
-    os.execv(str(bwrap_path), [str(bwrap_path), *bwrap_args])
+    roots = [project, paths.home, paths.logs_dir, temp_dir or Path(tempfile.gettempdir())]
+    for path in extras:
+        if not path.expanduser().resolve().is_dir():
+            raise LinuxSandboxError(f"Extra writable sandbox path is not a directory: {path}")
+    try:
+        for path in roots[1:]:
+            path.expanduser().mkdir(parents=True, exist_ok=True)
+        roots = _dedupe_paths([p.expanduser().resolve() for p in [*roots, *extras]])
+        ruleset = _Ruleset(_WRITE)
+        fd = _call(
+            444, ctypes.byref(ruleset), ctypes.c_size_t(ctypes.sizeof(ruleset)), ctypes.c_uint(0)
+        )
+        try:
+            # Device writes were allowed by the former /dev bind mount.
+            for root in [*roots, Path("/dev")]:
+                parent = os.open(root, os.O_PATH | os.O_CLOEXEC)
+                try:
+                    rule = _PathRule(_WRITE, parent)
+                    _call(
+                        445, ctypes.c_int(fd), ctypes.c_int(1), ctypes.byref(rule), ctypes.c_uint(0)
+                    )
+                finally:
+                    os.close(parent)
+            if _libc().prctl(38, 1, 0, 0, 0) != 0:
+                raise LinuxSandboxError("Cannot set no_new_privs for Landlock")
+            _call(446, ctypes.c_int(fd), ctypes.c_uint(0))
+        finally:
+            os.close(fd)
+    except OSError as exc:
+        raise LinuxSandboxError(f"Cannot configure Landlock: {exc}") from exc
+    _entered = True
+    os.environ[_SANDBOXED_ENV] = "1"  # informational, never trusted to bypass policy
+    os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+    sys.dont_write_bytecode = True
 
 
 def extra_writable_paths_from_env(value: str | None = None) -> tuple[Path, ...]:
@@ -170,33 +156,6 @@ def _sandbox_mode() -> str:
     if normalized in _TRUE_VALUES:
         return "enabled"
     return "enabled"
-
-
-def _resolve_bwrap(value: str | Path) -> Path:
-    candidate = Path(value)
-    if candidate.is_absolute() or candidate.parent != Path("."):
-        path = candidate
-    else:
-        resolved = shutil.which(str(value))
-        if resolved is None:
-            raise LinuxSandboxError(
-                "bubblewrap (bwrap) is required for the Linux sandbox; "
-                "install it or use --no-sandbox"
-            )
-        path = Path(resolved)
-    if not path.is_file() or not os.access(path, os.X_OK):
-        raise LinuxSandboxError(f"bubblewrap executable is not available: {path}")
-    return path
-
-
-def _resolve_executable(value: str) -> Path:
-    candidate = Path(value)
-    if candidate.is_absolute() or candidate.parent != Path("."):
-        return candidate
-    resolved = shutil.which(value)
-    if resolved is None:
-        raise LinuxSandboxError(f"Cannot resolve Tau executable for Linux sandbox: {value}")
-    return Path(resolved)
 
 
 def _dedupe_paths(paths: Sequence[Path]) -> list[Path]:

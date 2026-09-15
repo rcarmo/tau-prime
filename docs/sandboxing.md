@@ -2,11 +2,13 @@
 
 Tau Prime sandboxes the `tau` command by default on macOS. The CLI re-executes itself through `/usr/bin/sandbox-exec`, which applies one Seatbelt profile to Tau and every process it launches.
 
+Because that re-exec happens in Tau's shared CLI entrypoint, the same macOS sandbox is entered before normal startup for the TUI, one-shot print mode (`tau -p ...`), `tau web`, and `tau --web`.
+
 The implementation is deliberately filesystem-focused: reads, network access and process execution continue to work, while writes are limited to the project and the small set of directories Tau needs for its own state.
 
 ## Startup flow
 
-The sandbox is established before Tau constructs a provider, opens a session or starts the TUI:
+The sandbox is established before Tau constructs a provider, opens a session, dispatches `tau web`, or starts the TUI/Textual web path. One-shot print mode goes through the same bootstrap:
 
 1. The CLI parses enough of the command line to determine `--cwd` and `--no-sandbox`.
 2. On macOS, `should_enter_macos_sandbox()` checks that sandboxing is enabled and that this is not already the re-executed process.
@@ -22,6 +24,8 @@ The resulting command is equivalent to:
 ```
 
 There is no wrapper process left behind. The sandboxed invocation replaces the original Tau process.
+
+By the time Tau reaches interactive mode, print mode, `tau web`, or `tau --web`, the process is already running inside Seatbelt unless `--no-sandbox` was given.
 
 ## Filesystem policy
 
@@ -78,6 +82,12 @@ tau --cwd ~/Projects/example
 
 The selected directory must already exist. Symlinks are resolved before the path is placed in the profile.
 
+## Tau Web confinement versus Seatbelt
+
+`tau web` uses the same macOS sandbox bootstrap as the TUI and print mode because the CLI decides whether to re-exec before it dispatches subcommands. If you start Tau Web with `tau web --cwd /path/to/worktree`, that path becomes both `WebConfig.cwd` and the Seatbelt project root.
+
+Tau Web also applies an application-level workspace boundary: `/api/files` only serves paths inside `WebConfig.cwd` and rejects traversal or symlink escapes. That boundary is useful, but it is not a replacement for the macOS sandbox. Seatbelt constrains the whole Tau process tree; the `/api/files` restriction only governs that HTTP endpoint.
+
 ## Failure behaviour
 
 Sandboxing is mandatory by default on macOS. Tau exits with status 1 rather than continuing without protection when:
@@ -98,7 +108,11 @@ Use `--no-sandbox` only when unrestricted filesystem writes are intentional:
 tau --no-sandbox
 ```
 
-The option has no practical effect on a-Shell, Linux or other non-macOS platforms because they do not enter this sandbox path.
+On macOS, this skips the `sandbox-exec` re-exec entirely. Tau then runs with the ordinary permissions of the current user, and its tools and child processes can write wherever that user can write.
+
+That matters for `tau web` as well. Its `/api/files` route remains confined to `WebConfig.cwd`, but that application-level workspace check does not replace Seatbelt and does not restrict other code paths, tools, or subprocesses from modifying files outside that directory once the macOS sandbox is disabled.
+
+This page documents the macOS path. On a-Shell and other non-macOS platforms the Seatbelt bootstrap is skipped; Linux uses Tau's separate Landlock sandbox when enabled.
 
 ## Apple API status
 
@@ -118,9 +132,31 @@ The implementation is split across:
 Run the automated checks with:
 
 ```sh
-python -m pytest -q tests/test_macos_sandbox.py tests/test_cli.py
+PYTHONPATH=.:src python -m pytest -q tests/test_macos_sandbox.py tests/test_cli.py
 python -m compileall -q src tests
 git diff --check
 ```
 
 The profile generator and CLI integration are covered on non-macOS test hosts. Actual Seatbelt enforcement still requires a smoke test on macOS; the project does not claim that Linux tests exercise Apple's sandbox runtime.
+
+## Linux: Landlock
+
+Linux uses in-process Landlock filesystem write confinement, not bubblewrap.
+Enable it with `TAU_LINUX_SANDBOX=1` (or `required`). Explicit enablement fails
+closed if Landlock ABI 3 or newer is unavailable (normally Linux 6.2+, with the
+Landlock LSM enabled). `TAU_LINUX_SANDBOX_DEFAULT_ON=1` enables it automatically
+only on supported kernels. `--no-sandbox` and false-like mode values disable it.
+No external sandbox executable or user namespace support is required.
+
+Writes are allowed to the project, Tau state/log directories, temporary directory,
+`/dev`, and directories in `TAU_SANDBOX_WRITABLE_PATHS` (colon-separated).
+Reads, execution and network access are unrestricted. Rename/link and truncation
+are mediated. Restrictions are inherited by future subprocesses and cannot be
+removed. The environment marker is informational, not a security bypass.
+
+This is not namespace, process, network, or device isolation. Already-open file
+descriptors are not revoked; restrictions apply to the calling thread and future
+children, so entry must happen before starting worker threads. Allowing a broad
+writable root (including a broad temporary directory) grants that whole subtree.
+Unlike the former mount-based sandbox, this does not create a separate proc mount
+or provide bubblewrap's parent-death handling.

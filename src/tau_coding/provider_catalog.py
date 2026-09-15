@@ -6,9 +6,20 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
+from tau_ai.usage import UsagePricing
 from tau_coding.thinking import ThinkingLevel, ThinkingParameter
 
 ProviderKind = Literal["openai-compatible", "anthropic", "openai-codex"]
+
+
+_MODEL_PRICING: dict[tuple[str, str], UsagePricing] = {
+    ("anthropic", "claude-haiku-4-5"): UsagePricing.from_rates(
+        input="1", output="5", cache_read="0.1", cache_write="1.25", cache_write_1h="2"
+    ),
+    ("anthropic", "claude-sonnet-4-6"): UsagePricing.from_rates(
+        input="3", output="15", cache_read="0.3", cache_write="3.75", cache_write_1h="6"
+    ),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,10 +234,25 @@ BUILTIN_PROVIDER_CATALOG: tuple[ProviderCatalogEntry, ...] = (
             "kimi-k2-thinking": 262_144,
         },
         headers={"User-Agent": "KimiCLI/1.5"},
-        thinking_levels=("low", "medium", "high"),
+        thinking_levels=("low", "medium", "high", "xhigh"),
         thinking_models=("kimi-k3", "kimi-for-coding", "kimi-k2-thinking"),
-        thinking_default="medium",
+        thinking_default="xhigh",
         thinking_parameter="anthropic.thinking",
+        model_overrides={
+            "kimi-k3": ProviderModelOverride(
+                thinking_modes={
+                    "low": ThinkingMode(api_value="low"),
+                    "high": ThinkingMode(api_value="high"),
+                    "xhigh": ThinkingMode(api_value="max", label="max"),
+                },
+                thinking_default="xhigh",
+            ),
+            "kimi-for-coding": ProviderModelOverride(
+                thinking_modes={"medium": ThinkingMode()},
+                thinking_default="medium",
+            ),
+            "kimi-k2-thinking": ProviderModelOverride(always_thinking=True),
+        },
     ),
     ProviderCatalogEntry(
         name="zai",
@@ -703,6 +729,11 @@ def builtin_provider_entry(name: str) -> ProviderCatalogEntry | None:
         if entry.name == name:
             return entry
     return None
+
+
+def catalog_model_pricing(provider_name: str, model: str) -> UsagePricing | None:
+    """Return exact built-in pricing for a provider/model pair when known."""
+    return _MODEL_PRICING.get((provider_name, model))
 
 
 def catalog_model_override(provider_name: str, model: str | None) -> ProviderModelOverride | None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
 from json import dumps, loads
@@ -83,6 +84,7 @@ class OpenAICompatibleProviderConfig:
     thinking_default: ThinkingLevel | None = None
     thinking_parameter: ThinkingParameter | None = None
     dynamic_models: bool = False
+    inference_providers: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         _validate_provider_numbers(
@@ -97,6 +99,7 @@ class OpenAICompatibleProviderConfig:
             thinking_default=self.thinking_default,
             thinking_parameter=self.thinking_parameter,
         )
+        _validate_inference_providers(self.name, self.models, self.inference_providers)
 
     def to_json(self) -> dict[str, Any]:
         """Serialize this provider config to JSON-compatible data."""
@@ -120,6 +123,7 @@ class OpenAICompatibleProviderConfig:
             "thinking_default": self.thinking_default,
             "thinking_parameter": self.thinking_parameter,
             "dynamic_models": self.dynamic_models,
+            "inference_providers": dict(self.inference_providers),
         }
 
 
@@ -608,6 +612,10 @@ def _merge_provider_config(existing: ProviderConfig, incoming: ProviderConfig) -
         if existing.thinking_levels is not None
         else incoming.thinking_parameter
     )
+    if isinstance(existing, OpenAICompatibleProviderConfig) and isinstance(
+        incoming, OpenAICompatibleProviderConfig
+    ):
+        incoming = replace(incoming, inference_providers=dict(existing.inference_providers))
     return replace(
         incoming,
         base_url=existing.base_url if incoming.name == "lmstudio" else incoming.base_url,
@@ -833,6 +841,10 @@ def openai_compatible_config_from_provider(
         reasoning_effort=reasoning_effort,
         reasoning_effort_parameter=provider.thinking_parameter or "reasoning_effort",
         force_chat_completions=provider.name == "lmstudio",
+        model_aliases={
+            routed_model: f"{routed_model}:{inference_provider}"
+            for routed_model, inference_provider in provider.inference_providers.items()
+        },
     )
 
 
@@ -1141,6 +1153,9 @@ def _provider_from_json(data: object) -> ProviderConfig:
         data.get("context_windows", {}), f"providers[{name}].context_windows"
     )
     headers = _string_dict(data.get("headers", {}), f"providers[{name}].headers")
+    inference_providers = _string_dict(
+        data.get("inference_providers", {}), f"providers[{name}].inference_providers"
+    )
     timeout_seconds = _positive_float(
         data.get("timeout_seconds", DEFAULT_OPENAI_COMPATIBLE_TIMEOUT_SECONDS),
         f"providers[{name}].timeout_seconds",
@@ -1223,7 +1238,33 @@ def _provider_from_json(data: object) -> ProviderConfig:
         thinking_default=thinking_default,
         thinking_parameter=thinking_parameter,
         dynamic_models=dynamic_models,
+        inference_providers=inference_providers,
     )
+
+
+def validate_huggingface_inference_provider(value: str) -> str:
+    """Validate and normalize one explicit Hugging Face inference provider."""
+    normalized = value.strip()
+    if not normalized or not all(
+        character.isalnum() or character in "._-" for character in normalized
+    ):
+        raise ProviderConfigError(f"Invalid Hugging Face inference provider: {value!r}")
+    if normalized in {"fastest", "cheapest", "preferred"}:
+        raise ProviderConfigError("Hugging Face routing requires an explicit inference provider")
+    return normalized
+
+
+def _validate_inference_providers(
+    provider_name: str,
+    models: tuple[str, ...],
+    inference_providers: Mapping[str, str],
+) -> None:
+    if inference_providers and provider_name != "huggingface":
+        raise ProviderConfigError("Inference-provider pinning is only available for Hugging Face")
+    for model, inference_provider in inference_providers.items():
+        if model not in models:
+            raise ProviderConfigError(f"Inference provider configured for unknown model: {model}")
+        validate_huggingface_inference_provider(inference_provider)
 
 
 def _api_key_from_provider(

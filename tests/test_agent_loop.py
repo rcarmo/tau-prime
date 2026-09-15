@@ -198,6 +198,94 @@ async def test_agent_loop_executes_tools_and_continues_until_no_tool_calls() -> 
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("decision", "expected_ok", "expected_content"),
+    [
+        (True, True, "contents of README.md"),
+        (False, False, "Tool call denied by user"),
+        (None, False, "Tool call denied by user"),
+    ],
+)
+async def test_agent_loop_uses_tool_approval_callback_at_execution_seam(
+    decision: bool | None,
+    expected_ok: bool,
+    expected_content: str,
+) -> None:
+    approvals: list[tuple[ToolCall, str]] = []
+    executed = False
+
+    async def executor(
+        arguments: Mapping[str, JSONValue],
+        signal: object | None = None,
+    ) -> AgentToolResult:
+        nonlocal executed
+        del signal
+        executed = True
+        return AgentToolResult(
+            tool_call_id="call-1",
+            name="read",
+            ok=True,
+            content=f"contents of {arguments['path']}",
+        )
+
+    async def approve(tool_call: ToolCall, tool: AgentTool, signal: object | None = None) -> bool:
+        del signal
+        approvals.append((tool_call, tool.name))
+        if decision is None:
+            raise RuntimeError("approval backend unavailable")
+        return decision
+
+    tool = AgentTool(
+        name="read",
+        description="Read a file.",
+        input_schema={"type": "object"},
+        executor=executor,
+    )
+    tool_call = ToolCall(id="call-1", name="read", arguments={"path": "README.md"})
+    first_assistant = AssistantMessage(content="I'll read it.", tool_calls=[tool_call])
+    final_assistant = AssistantMessage(content="Done.")
+    messages = [UserMessage(content="Read README.md")]
+    provider = FakeProvider(
+        [
+            [
+                ProviderResponseStartEvent(model="fake"),
+                ProviderResponseEndEvent(message=first_assistant, finish_reason="tool_calls"),
+            ],
+            [
+                ProviderResponseStartEvent(model="fake"),
+                ProviderResponseEndEvent(message=final_assistant, finish_reason="stop"),
+            ],
+        ]
+    )
+
+    await _collect(
+        run_agent_loop(
+            provider=provider,
+            model="fake",
+            system="You are Tau.",
+            messages=messages,
+            tools=[tool],
+            approve_tool=approve,
+        )
+    )
+
+    assert approvals == [(tool_call, "read")]
+    assert executed is (decision is True)
+    assert messages == [
+        UserMessage(content="Read README.md"),
+        first_assistant,
+        ToolResultMessage(
+            tool_call_id="call-1",
+            name="read",
+            ok=expected_ok,
+            content=expected_content,
+            error=None if decision else expected_content,
+        ),
+        final_assistant,
+    ]
+
+
+@pytest.mark.anyio
 async def test_agent_loop_passes_cancellation_signal_to_tools() -> None:
     observed: list[CancellationToken | None] = []
 

@@ -1,0 +1,27 @@
+import { expect, test } from '@playwright/test';
+
+test('model and thinking options are Preact-owned', async ({ page }) => {
+  await page.route('**/api/events*', route => route.fulfill({contentType:'text/event-stream',body:': fixture\n\n'}));
+  await page.goto('/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#compose-input')).toBeAttached();
+  await expect(page.locator('html')).toHaveAttribute('data-tau-shell-ready', 'true');
+  const cancel = page.getByRole('button', { name: 'Cancel' });
+  await cancel.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+  if (await cancel.isVisible()) await cancel.click();
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('tau:model-options-render', { detail: {
+      providers: [{ value: 'anthropic', label: 'Anthropic' }],
+      models: [{ value: 'claude', label: 'Claude' }],
+    } }));
+    window.dispatchEvent(new CustomEvent('tau:thinking-options-render', { detail: { items: [
+      { value: '', label: 'Default' }, { value: 'high', label: 'High' },
+    ] } }));
+  });
+  await expect(page.locator('#compose-provider-select option')).toHaveCount(1);
+  await expect(page.locator('#compose-model-select option')).toHaveText(['Claude']);
+  await expect(page.locator('#compose-thinking-select option')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Open sessions', exact: true }).click();
+  await page.getByRole('group', { name: 'Navigation', exact: true }).getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.locator('#provider-options option')).toHaveAttribute('value', 'anthropic');
+  await expect(page.locator('#thinking-level-select option')).toHaveCount(7);
+});

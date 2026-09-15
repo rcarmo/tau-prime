@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from tau_ai.usage import ProviderUsage
 from tau_coding.commands import CommandRegistry, SlashCommand, create_default_command_registry
 from tau_coding.paths import TauPaths
 from tau_coding.reload import CodingReloadSummary, ReloadCategorySummary
@@ -38,6 +39,13 @@ class FakeSession:
         self.context_token_estimate = 123
         self.auto_compact_token_threshold = 200
         self.context_window_tokens = 584
+        self.provider_usage = ProviderUsage(
+            input_tokens=12,
+            output_tokens=3,
+            cache_read_tokens=4,
+            cache_write_tokens=5,
+            cache_write_1h_tokens=2,
+        )
         self.thinking_level = "medium"
         self.available_thinking_levels = ("off", "minimal", "low", "medium", "high", "xhigh")
         self.thinking_unavailable_reason: str | None = None
@@ -198,6 +206,10 @@ def test_session_command_includes_session_details(tmp_path: Path) -> None:
     assert "Context files: 1" in result.message
     assert "Estimated context tokens: 123" in result.message
     assert "Context window: 584" in result.message
+    assert (
+        "Provider usage: input=12, output=3, cache_read=4, "
+        "cache_write=5, cache_write_1h=2"
+    ) in result.message
     assert "Thinking mode: medium" in result.message
     assert "Auto compact threshold: 200" in result.message
     assert "Resource diagnostics: 0" in result.message

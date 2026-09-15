@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from tau_web.config import DEFAULT_WEB_HOST, DEFAULT_WEB_PORT, WebConfig
+
+
+def test_web_config_resolves_paths(tmp_path: Path) -> None:
+    config = WebConfig(cwd=tmp_path / "..", database_path=tmp_path / "data" / "tau.sqlite3")
+
+    assert config.cwd == (tmp_path / "..").resolve()
+    assert config.database_path == (tmp_path / "data" / "tau.sqlite3").resolve()
+    assert config.host == DEFAULT_WEB_HOST
+    assert config.port == DEFAULT_WEB_PORT
+    assert config.auth_token is None
+    assert config.allowed_origins == ()
+
+
+def test_web_config_normalizes_auth_token_and_allowed_origins(tmp_path: Path) -> None:
+    config = WebConfig(
+        cwd=tmp_path,
+        auth_token="  secret-token  ",
+        allowed_origins=(
+            " HTTPS://Example.com:443/ ",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8080/",
+        ),
+    )
+
+    assert config.auth_token == "secret-token"
+    assert config.allowed_origins == ("https://example.com", "http://127.0.0.1:8080")
+    assert "secret-token" not in repr(config)
+
+
+def test_web_config_reads_env_defaults_for_auth_and_allowed_origins(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TAU_WEB_AUTH_TOKEN", " env-secret ")
+    monkeypatch.setenv(
+        "TAU_WEB_ALLOWED_ORIGINS",
+        " https://example.com/, http://127.0.0.1:8080 , ",
+    )
+
+    config = WebConfig(cwd=tmp_path)
+
+    assert config.auth_token == "env-secret"
+    assert config.allowed_origins == ("https://example.com", "http://127.0.0.1:8080")
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "example.com"])
+def test_web_config_requires_auth_token_for_non_loopback_hosts(
+    tmp_path: Path,
+    host: str,
+) -> None:
+    with pytest.raises(ValueError, match="Non-loopback Tau Web hosts require"):
+        WebConfig(cwd=tmp_path, host=host)
+
+    config = WebConfig(cwd=tmp_path, host=host, auth_token="secret-token")
+
+    assert config.host == host
+    assert config.auth_token == "secret-token"
+
+
+@pytest.mark.parametrize("port", [0, 65536])
+def test_web_config_rejects_invalid_port(tmp_path: Path, port: int) -> None:
+    with pytest.raises(ValueError, match="port"):
+        WebConfig(cwd=tmp_path, port=port)
+
+
+def test_web_config_rejects_empty_host(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="host"):
+        WebConfig(cwd=tmp_path, host="  ")
+
+
+@pytest.mark.parametrize("auth_token", ["", "   "])
+def test_web_config_rejects_blank_auth_token(tmp_path: Path, auth_token: str) -> None:
+    with pytest.raises(ValueError, match="auth token"):
+        WebConfig(cwd=tmp_path, auth_token=auth_token)
+
+
+@pytest.mark.parametrize(
+    ("origin", "message"),
+    [
+        ("", "blank"),
+        ("ftp://example.com", "http or https"),
+        ("/relative", "absolute"),
+        ("https://example.com/path", "path"),
+        ("https://example.com?query=1", "query strings or fragments"),
+    ],
+)
+def test_web_config_rejects_invalid_allowed_origin(
+    tmp_path: Path,
+    origin: str,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        WebConfig(cwd=tmp_path, allowed_origins=(origin,))
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["sse_replay_capacity", "sse_client_capacity", "sse_heartbeat_seconds"],
+)
+@pytest.mark.parametrize("value", [0, float("inf")])
+def test_web_config_rejects_non_finite_or_non_positive_sse_limits(
+    tmp_path: Path,
+    field: str,
+    value: float,
+) -> None:
+    with pytest.raises(ValueError, match="positive and finite"):
+        WebConfig(cwd=tmp_path, **{field: value})
+
+
+@pytest.mark.parametrize("value", [0, float("inf")])
+def test_web_config_rejects_invalid_tool_approval_timeout(
+    tmp_path: Path, value: float
+) -> None:
+    with pytest.raises(ValueError, match="Tool approval timeout must be positive and finite"):
+        WebConfig(cwd=tmp_path, tool_approval_timeout_seconds=value)
+
+
+def test_web_package_import_does_not_load_optional_dependencies() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import tau_web; "
+                "print('aiohttp' in sys.modules, 'aiosqlite' in sys.modules, "
+                "'PIL' in sys.modules, 'pi_client' in sys.modules, "
+                "'acp_client' in sys.modules)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout.strip() == "False False False False False"

@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import zipfile
+from pathlib import Path
+
+import build_backend
+
+
+def test_wheel_metadata_includes_core_and_web_dependencies() -> None:
+    metadata = build_backend._metadata_text()
+
+    assert "Provides-Extra: web" in metadata
+    assert "Requires-Dist: aiosqlite>=0.22,<1" in metadata
+    assert 'Requires-Dist: aiosqlite>=0.22,<1; extra == "web"' not in metadata
+    assert 'Requires-Dist: aiohttp>=3.13,<4; extra == "web"' in metadata
+    assert 'Requires-Dist: pillow>=12,<13; extra == "web"' in metadata
+    assert 'Requires-Dist: watchfiles>=1.1,<2; extra == "web"' in metadata
+
+
+def test_wheel_includes_optional_runtime_packages() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    diagnostic_root = build_backend.ROOT / "src" / "tau_extensions" / "builtin" / "diagnostic"
+    included_suffixes = {
+        ".py",
+        ".md",
+        ".html",
+        ".css",
+        ".js",
+        ".json",
+        ".webmanifest",
+        ".svg",
+        ".png",
+    }
+    expected_diagnostic = {
+        f"tau_extensions/builtin/diagnostic/{path.relative_to(diagnostic_root).as_posix()}"
+        for path in diagnostic_root.rglob("*")
+        if path.is_file() and path.suffix in included_suffixes
+    }
+
+    assert "tau_extensions/__init__.py" in archive_names
+    assert "tau_extensions/web/__init__.py" in archive_names
+    assert expected_diagnostic <= archive_names
+    assert "tau_extensions/builtin/diagnostic/tau-extension.json" in archive_names
+    assert "tau_web/__init__.py" in archive_names
+    assert "tau_web/app.py" in archive_names
+    assert "tau_web/config.py" in archive_names
+    assert "tau_web/middleware.py" in archive_names
+
+
+def test_wheel_includes_frontend_static_assets() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    static_root = build_backend.ROOT / "src" / "tau_web" / "static"
+    expected_assets = {
+        f"tau_web/static/{path.relative_to(static_root).as_posix()}"
+        for path in static_root.rglob("*")
+        if path.is_file()
+    }
+
+    assert expected_assets <= archive_names
+    assert "tau_web/static/widget-bridge.js" in archive_names
+    assert "tau_web/static/frontend-sdk.js" in archive_names
+    assert "tau_web/vibes/static/dist/app.js" in archive_names
+
+
+def test_replacement_excludes_superseded_chat_frontend():
+    names = {name for _, name in build_backend._package_files()}
+    assert "tau_web/vibes/static/dist/app.js" in names
+    assert not any(name.startswith("tau_web/frontend/") for name in names)
+    assert "tau_web/static/app.js" not in names
+    assert "tau_web/static/preact-shell.js" not in names
+
+
+def test_wheel_excludes_dependency_and_cache_trees() -> None:
+    archive_names = {archive_name for _, archive_name in build_backend._package_files()}
+
+    forbidden_parts = {
+        ".cache",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__",
+        "node_modules",
+    }
+    assert not any(forbidden_parts.intersection(Path(name).parts) for name in archive_names)
+
+
+def test_wheel_declares_tau_console_script(tmp_path: Path) -> None:
+    wheel_name = build_backend.build_wheel(str(tmp_path))
+    dist_info = build_backend._dist_info_name()
+
+    with zipfile.ZipFile(tmp_path / wheel_name, "r") as archive:
+        entry_points = archive.read(f"{dist_info}/entry_points.txt").decode("utf-8")
+
+    assert "[console_scripts]" in entry_points
+    assert "tau = tau_coding.cli:app" in entry_points
+
+
+def test_wheel_excludes_rejected_visual_assets() -> None:
+    names = {name for _, name in build_backend._package_files()}
+    forbidden = [
+        "piclaw-reference.css",
+        "piclaw-parity.css",
+        "JetBrainsMonoNFM-Medium-hh38vnv1.woff2",
+        "JetBrainsMonoNFM-Regular-rhdb9m6d.woff2",
+    ]
+    for name in forbidden:
+        assert f"tau_web/static/{name}" not in names
+
+
+def test_imported_vibes_runtime_assets_and_licenses_are_packaged():
+    names = {name for _, name in build_backend._package_files()}
+    root = "tau_web/vibes/"
+    assert root + "LICENSE" in names
+    assert root + "source-revision.txt" in names
+    assert root + "static/js/app.js" in names
+    source = Path(__file__).resolve().parents[2] / "src" / root
+    for path in (source / "static").rglob("*"):
+        if path.is_file() and (path.suffix == ".mjs" or "LICENSE" in path.name):
+            assert root + path.relative_to(source).as_posix() in names
+    assert not any(name.startswith(root + "tests/") for name in names)
+    assert root + "dev-server.js" not in names
+    assert root + "build.js" not in names
+    assert not any("node_modules" in name for name in names)
+    assert not any(name.startswith(root) and name.endswith(".map") for name in names)
+
+
+def test_imported_runtime_bundle_is_available_without_bun():
+    files = dict((name, path) for path, name in build_backend._package_files())
+    for name in ("app.js", "app.css"):
+        path = files["tau_web/vibes/static/dist/" + name]
+        assert path.stat().st_size > 1000
+
+
+def test_offline_worker_runtime_and_build_inputs_are_packaged() -> None:
+    package_paths = {relative for _, relative in build_backend._package_files()}
+    assert "tau_web/vibes/static/offline-sw.js" in package_paths
+    assert "tau_web/vibes/offline-worker.js" not in package_paths
+    source_paths = {
+        path.relative_to(build_backend.ROOT).as_posix() for path in build_backend._source_files()
+    }
+    assert "src/tau_web/vibes/offline-worker.js" in source_paths
+    assert "src/tau_web/vibes/build.js" in source_paths

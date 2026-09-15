@@ -11,7 +11,6 @@ the original chat-completions path unchanged.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Mapping
-from hashlib import sha1
 from json import JSONDecodeError, dumps, loads
 from typing import Any, Protocol
 
@@ -31,12 +30,14 @@ from tau_ai.events import (
     ProviderToolCallEvent,
 )
 from tau_ai.http import create_async_client
+from tau_ai.multimodal import openai_chat_content, openai_responses_content
 from tau_ai.observability import (
     LLMObserver,
     observe_llm_error,
     observe_llm_request,
     observe_llm_response,
 )
+from tau_ai.openai_cache import is_direct_openai_url, openai_prompt_cache_key
 from tau_ai.provider import CancellationToken
 from tau_ai.remote_compaction import REMOTE_COMPACTION_SENTINEL, RemoteCompactionState
 from tau_ai.retry import (
@@ -45,6 +46,7 @@ from tau_ai.retry import (
     retry_delay_seconds,
     wait_for_retry,
 )
+from tau_ai.tool_call_ids import portable_tool_call_id
 
 # Models that reject function tools + reasoning_effort on /chat/completions and
 # must use the /v1/responses endpoint instead.
@@ -77,6 +79,22 @@ class OpenAICompatibleProvider:
         self._owns_client = client is None
         self._observer = observer
         self._remote_compaction_state: RemoteCompactionState | None = None
+        self._session_id: str | None = None
+        self._model_aliases = dict(config.model_aliases or {})
+
+    def set_model_alias(self, model: str, alias: str) -> None:
+        """Pin one canonical model identity to a provider-specific request alias."""
+        self._model_aliases[model] = alias
+
+    def set_session_id(self, session_id: str | None) -> None:
+        """Set the stable session identity used for first-party OpenAI cache affinity."""
+        self._session_id = session_id
+
+    def _prompt_cache_key(self) -> str | None:
+        enabled = self._config.prompt_cache_affinity
+        if enabled is None:
+            enabled = is_direct_openai_url(self._config.base_url)
+        return openai_prompt_cache_key(self._session_id) if enabled else None
 
     def set_remote_compaction_state(self, state: RemoteCompactionState | None) -> None:
         """Configure canonical state to inject into subsequent Responses requests."""
@@ -124,13 +142,15 @@ class OpenAICompatibleProvider:
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
         """Stream one chat completion response as provider-neutral events."""
+        request_model = self._model_aliases.get(model, model)
         payload = _build_chat_payload(
-            model=model,
+            model=request_model,
             system=system,
             messages=messages,
             tools=tools,
             reasoning_effort=self._config.reasoning_effort,
             reasoning_effort_parameter=self._config.reasoning_effort_parameter,
+            prompt_cache_key=self._prompt_cache_key(),
         )
         return self._stream(
             model=model,
@@ -150,12 +170,14 @@ class OpenAICompatibleProvider:
         signal: CancellationToken | None = None,
     ) -> AsyncIterator[ProviderEvent]:
         """Stream one `/v1/responses` response as provider-neutral events."""
+        request_model = self._model_aliases.get(model, model)
         payload = _build_responses_payload(
-            model=model,
+            model=request_model,
             system=system,
             messages=messages,
             tools=tools,
             reasoning_effort=self._config.reasoning_effort,
+            prompt_cache_key=self._prompt_cache_key(),
         )
         state = self._remote_compaction_state
         if state is not None:
@@ -547,18 +569,14 @@ class _ResponsesStreamParser:
         elif chunk_type == "response.function_call_arguments.delta":
             item_id = chunk.get("item_id")
             if isinstance(item_id, str):
-                builder = self._tool_call_builders.setdefault(
-                    item_id, _ResponsesToolCallBuilder()
-                )
+                builder = self._tool_call_builders.setdefault(item_id, _ResponsesToolCallBuilder())
                 builder.add_arguments_delta(chunk.get("delta"))
                 self.emitted_content = True
 
         elif chunk_type == "response.function_call_arguments.done":
             item_id = chunk.get("item_id")
             if isinstance(item_id, str):
-                builder = self._tool_call_builders.setdefault(
-                    item_id, _ResponsesToolCallBuilder()
-                )
+                builder = self._tool_call_builders.setdefault(item_id, _ResponsesToolCallBuilder())
                 builder.set_final(arguments=chunk.get("arguments"))
 
         elif chunk_type == "response.output_item.done":
@@ -579,9 +597,7 @@ class _ResponsesStreamParser:
         elif chunk_type == "error":
             self.fatal = True
             return [
-                ProviderErrorEvent(
-                    message=_responses_error_message(chunk), data={"event": chunk}
-                )
+                ProviderErrorEvent(message=_responses_error_message(chunk), data={"event": chunk})
             ], True
 
         return [], False
@@ -595,9 +611,7 @@ class _ResponsesStreamParser:
         events: list[ProviderEvent] = [
             ProviderToolCallEvent(tool_call=tool_call) for tool_call in tool_calls
         ]
-        finish_reason = _normalize_finish_reason(
-            self._status, has_tool_calls=bool(tool_calls)
-        )
+        finish_reason = _normalize_finish_reason(self._status, has_tool_calls=bool(tool_calls))
         events.append(
             ProviderResponseEndEvent(
                 message=AssistantMessage(
@@ -715,6 +729,7 @@ def _build_chat_payload(
     tools: list[AgentTool],
     reasoning_effort: str | None = None,
     reasoning_effort_parameter: str = "reasoning_effort",
+    prompt_cache_key: str | None = None,
 ) -> dict[str, JSONValue]:
     payload: dict[str, JSONValue] = {
         "model": model,
@@ -724,6 +739,8 @@ def _build_chat_payload(
             *_messages_to_openai(messages),
         ],
     }
+    if prompt_cache_key is not None:
+        payload["prompt_cache_key"] = prompt_cache_key
     if reasoning_effort is not None:
         if reasoning_effort_parameter == "reasoning.effort":
             payload["reasoning"] = {"effort": reasoning_effort}
@@ -741,6 +758,7 @@ def _build_responses_payload(
     messages: list[AgentMessage],
     tools: list[AgentTool],
     reasoning_effort: str | None = None,
+    prompt_cache_key: str | None = None,
 ) -> dict[str, JSONValue]:
     payload: dict[str, JSONValue] = {
         "model": model,
@@ -752,6 +770,9 @@ def _build_responses_payload(
         "instructions": system,
         "input": _messages_to_responses_input(messages),
     }
+    if prompt_cache_key is not None:
+        payload["prompt_cache_key"] = prompt_cache_key
+        payload["session_id"] = prompt_cache_key
     effort = _normalize_responses_effort(reasoning_effort)
     if effort is not None:
         # ``summary: auto`` streams ``response.reasoning_summary_text.delta``
@@ -782,7 +803,7 @@ def _messages_to_responses_input(
         if isinstance(message, UserMessage):
             if message.content == f"Previous conversation summary:\n{REMOTE_COMPACTION_SENTINEL}":
                 continue
-            items.append({"role": "user", "content": message.content})
+            items.append({"role": "user", "content": openai_responses_content(message)})
         elif isinstance(message, AssistantMessage):
             if message.content:
                 items.append({"role": "assistant", "content": message.content})
@@ -792,7 +813,7 @@ def _messages_to_responses_input(
                 items.append(
                     {
                         "type": "function_call",
-                        "call_id": _responses_call_id(tool_call.id),
+                        "call_id": portable_tool_call_id(tool_call.id),
                         "name": tool_call.name,
                         "arguments": dumps(tool_call.arguments),
                     }
@@ -803,27 +824,11 @@ def _messages_to_responses_input(
             items.append(
                 {
                     "type": "function_call_output",
-                    "call_id": _responses_call_id(message.tool_call_id),
+                    "call_id": portable_tool_call_id(message.tool_call_id),
                     "output": message.content,
                 }
             )
     return items
-
-
-def _responses_call_id(value: str) -> str:
-    """Return a Responses API call_id accepted by OpenAI-compatible backends.
-
-    Provider transcripts can persist foreign tool-call IDs with separators or
-    long opaque suffixes. Normalize separators and add a short hash suffix when
-    truncating so function_call/function_call_output pairs remain stable.
-    """
-    cleaned = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value)
-    cleaned = cleaned.strip("_") or "call"
-    if len(cleaned) <= 64:
-        return cleaned
-    suffix = "_" + sha1(value.encode("utf-8")).hexdigest()[:10]
-    return (cleaned[: 64 - len(suffix)].rstrip("_") or "call") + suffix
-
 
 
 def _tool_to_responses(tool: AgentTool) -> dict[str, JSONValue]:
@@ -880,10 +885,7 @@ def _ordered_builders(
     builders: dict[str, _ResponsesToolCallBuilder],
 ) -> list[_ResponsesToolCallBuilder]:
     return [
-        builder
-        for _, builder in sorted(
-            builders.items(), key=lambda pair: pair[1].output_index
-        )
+        builder for _, builder in sorted(builders.items(), key=lambda pair: pair[1].output_index)
     ]
 
 
@@ -958,7 +960,7 @@ def _message_to_openai(
 ) -> dict[str, JSONValue] | None:
     invalid_tool_call_ids = invalid_tool_call_ids or set()
     if isinstance(message, UserMessage):
-        return {"role": "user", "content": message.content}
+        return {"role": "user", "content": openai_chat_content(message)}
 
     if isinstance(message, AssistantMessage):
         valid_tool_calls = [
@@ -978,7 +980,7 @@ def _message_to_openai(
             return None
         return {
             "role": "tool",
-            "tool_call_id": message.tool_call_id,
+            "tool_call_id": portable_tool_call_id(message.tool_call_id),
             "name": message.name or "tool",
             "content": message.content,
         }
@@ -1007,7 +1009,7 @@ def _tool_to_openai(tool: AgentTool) -> dict[str, JSONValue]:
 
 def _tool_call_to_openai(tool_call: ToolCall) -> dict[str, JSONValue]:
     return {
-        "id": tool_call.id,
+        "id": portable_tool_call_id(tool_call.id),
         "type": "function",
         "function": {
             "name": tool_call.name or "tool",

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from tau_agent.types import JSONValue
 
 
@@ -73,3 +72,15 @@ class AgentTool:
     ) -> AgentToolResult:
         """Execute the tool with provider-neutral JSON-like arguments."""
         return await self.executor(arguments, signal=signal)
+
+
+class ToolApprovalCallback(Protocol):
+    """Async policy hook invoked immediately before a known tool executes."""
+
+    async def __call__(
+        self,
+        tool_call: ToolCall,
+        tool: AgentTool,
+        signal: ToolCancellationToken | None = None,
+    ) -> bool:
+        """Return ``True`` to execute or ``False`` to produce a denied result."""

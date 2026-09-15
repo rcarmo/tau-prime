@@ -1,0 +1,11 @@
+{
+  "reference": {"repository": "rcarmo/vibes", "revision": "4337868"},
+  "clock": "2026-09-14T12:00:00.000Z",
+  "states": [
+    {"id":"session-picker-populated","required":["bounded popup anchored to session trigger","active session indicator","session names and grouped rows","keyboard selection and Escape"],"sessions":[{"id":"alpha","name":"Alpha","active":true},{"id":"beta","name":"Beta","active":false}]},
+    {"id":"composer-ready","required":["model picker trigger","thinking control where supported","context indicator with honest unavailable state","attachment and send controls"]},
+    {"id":"thinking-stream","sessionId":"alpha","runId":"run-1","delta":"Inspecting the fixture before choosing a tool.","required":["reference thought pane","incremental text","expand/collapse without legacy HTTP request"]},
+    {"id":"tool-running","sessionId":"alpha","runId":"run-1","toolCall":{"id":"call-1","name":"read","arguments":{"path":"README.md"}},"required":["reference running tool/status presentation","cancel inside composer"]},
+    {"id":"tool-completed","sessionId":"alpha","runId":"run-1","result":"# Deterministic fixture\n","required":["reference persisted tool presentation","expandable output","no duplicate call after replay"]}
+  ]
+}

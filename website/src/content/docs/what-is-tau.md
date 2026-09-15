@@ -26,16 +26,17 @@ The name is a small joke about picking the *right* foundation. See
 
 - Hold a conversation while **reading, writing, and editing files** and
   **running shell commands** in your project.
-- Work in an **interactive TUI** or as a **one-shot command** for scripts and
-  pipes.
+- Work in an **interactive TUI**, a **browser UI**, or as a **one-shot command**
+  for scripts and pipes.
 - Talk to **OpenAI, Anthropic, OpenAI Codex, OpenRouter, Hugging Face**, or any
   OpenAI-compatible endpoint (including local models).
 - **Remember** every session, let you **resume** it later, and **branch** from
   any earlier point to explore a different path.
 - Stay usable in long sessions by **compacting** context automatically, and
   expose **thinking modes** on models that support them.
-- Extend itself with your own **skills**, **prompt templates**, and per-project
-  **instructions** (`AGENTS.md`).
+- Extend itself with your own **skills**, **prompt templates**, per-project
+  **instructions** (`AGENTS.md`), and portable extension services for the web
+  runtime.
 
 ## Who is it for?
 

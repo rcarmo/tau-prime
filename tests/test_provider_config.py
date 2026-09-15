@@ -6,6 +6,7 @@ import pytest
 
 from tau_coding.credentials import FileCredentialStore, OAuthCredential
 from tau_coding.paths import TauPaths
+from tau_coding.provider_catalog import catalog_model_override
 from tau_coding.provider_config import (
     DEFAULT_MODEL,
     AnthropicProviderConfig,
@@ -1146,6 +1147,20 @@ def test_kimi_and_zai_catalog_match_pi_ai_runtime_metadata() -> None:
     assert kimi.default_model == "kimi-k3"
     assert kimi.context_windows["kimi-k3"] == 262_144
     assert kimi.context_windows["kimi-for-coding"] == 262_144
+    assert provider_thinking_levels(kimi, model="kimi-k3") == ("low", "high", "xhigh")
+    assert provider_default_thinking_level(kimi, model="kimi-k3") == "xhigh"
+    assert provider_thinking_level_from_label(kimi, "max", model="kimi-k3") == "xhigh"
+    assert provider_thinking_level_label(kimi, "xhigh", model="kimi-k3") == "max"
+    assert provider_thinking_levels(kimi, model="kimi-for-coding") == ("medium",)
+    assert provider_default_thinking_level(kimi, model="kimi-for-coding") == "medium"
+    assert provider_thinking_levels(kimi, model="kimi-k2-thinking") == ()
+
+    kimi_k3 = catalog_model_override("kimi-coding", "kimi-k3")
+    assert kimi_k3 is not None
+    assert kimi_k3.thinking_modes is not None
+    assert {
+        level: mode.api_value for level, mode in kimi_k3.thinking_modes.items()
+    } == {"low": "low", "high": "high", "xhigh": "max"}
 
     zai = provider_config_from_catalog_entry("zai")
     assert zai.base_url == "https://api.z.ai/api/coding/paas/v4"
@@ -1284,3 +1299,36 @@ def test_github_copilot_provider_uses_stored_oauth_access_token(
     )
 
     assert config.api_key == "copilot-token"
+
+
+def test_huggingface_inference_provider_round_trip_and_runtime_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    provider = OpenAICompatibleProviderConfig(
+        name="huggingface",
+        base_url="https://router.huggingface.co/v1",
+        models=("org/model",),
+        default_model="org/model",
+        inference_providers={"org/model": "provider-a"},
+    )
+    restored = provider_settings_from_json(
+        ProviderSettings(default_provider="huggingface", providers=(provider,)).to_json()
+    ).get_provider("huggingface")
+    assert isinstance(restored, OpenAICompatibleProviderConfig)
+    assert restored.inference_providers == {"org/model": "provider-a"}
+    runtime = openai_compatible_config_from_provider(restored, model="org/model")
+    assert runtime.model_aliases == {"org/model": "org/model:provider-a"}
+
+
+@pytest.mark.parametrize("inference_provider", ["fastest", "bad provider", "a/b"])
+def test_huggingface_inference_provider_rejects_invalid_routes(
+    inference_provider: str,
+) -> None:
+    with pytest.raises(ProviderConfigError):
+        OpenAICompatibleProviderConfig(
+            name="huggingface",
+            models=("org/model",),
+            default_model="org/model",
+            inference_providers={"org/model": inference_provider},
+        )

@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 
 import pytest
-from pydantic import ValidationError
 
+from pydantic import ValidationError
 from tau_agent import (
     AgentTool,
     AgentToolResult,

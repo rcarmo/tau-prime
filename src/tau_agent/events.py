@@ -9,6 +9,7 @@ from tau_agent.messages import AgentMessage
 from tau_agent.provider_events import AssistantMessageEvent
 from tau_agent.tools import AgentToolResult, ToolCall
 from tau_agent.types import JSONValue
+from tau_ai.usage import ProviderUsage
 
 
 class AgentStartEvent(BaseModel):
@@ -90,6 +91,7 @@ class MessageEndEvent(BaseModel):
 
     type: Literal["message_end"] = "message_end"
     message: AgentMessage
+    usage: ProviderUsage | None = None
 
 
 class ToolExecutionStartEvent(BaseModel):
