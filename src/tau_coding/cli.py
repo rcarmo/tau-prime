@@ -437,6 +437,9 @@ def main(
     if ctx.invoked_subcommand is not None:
         return
 
+    if resume is not None and new_session:
+        raise typer.BadParameter("--resume and --new-session cannot be used together")
+
     if session_id is not None:
         try:
             validate_session_id(session_id)
