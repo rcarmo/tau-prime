@@ -16,6 +16,7 @@ from tau_coding.coding_session_factory import (
     CodingSessionFactoryBinding,
     CodingSessionFactoryConfig,
     CodingSessionFactoryRequest,
+    CodingSessionPromptConfig,
 )
 from tau_coding.provider_config import load_provider_settings
 from tau_coding.thinking import normalize_thinking_level
@@ -167,6 +168,13 @@ class TauWebServices:
 
                 return await CodingSessionFactory(
                     config=CodingSessionFactoryConfig(
+                        prompts=CodingSessionPromptConfig(
+                            append_system_prompt=(
+                                "In the web UI, use a fenced `svg` code block for model-generated "
+                                "vector graphics that should render safely inline. Raw HTML "
+                                "remains escaped."
+                            )
+                        ),
                         thinking_level=normalize_thinking_level(record.thinking_level)
                         if record.thinking_level
                         else None,

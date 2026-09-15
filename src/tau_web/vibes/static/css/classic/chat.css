@@ -2318,6 +2318,16 @@
     gap: 12px;
 }
 
+.model-svg {
+    margin: 0.75rem 0;
+}
+
+.model-svg img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
 .timeline-quick-actions-input {
     width: 100%;
     height: 40px;

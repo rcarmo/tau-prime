@@ -101,6 +101,7 @@
   "js/marked.min.js",
   "js/panes/editor-popout-transfer.js",
   "js/panes/terminal-pane.js",
+  "js/safe-svg.js",
   "js/tau-client.js",
   "js/tau-draft.js",
   "js/tau-events.js",

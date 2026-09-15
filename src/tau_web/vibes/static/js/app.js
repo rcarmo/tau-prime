@@ -30,6 +30,7 @@ import { stashEditorPopoutState, consumeEditorPopoutState } from './panes/editor
 import katex from 'katex';
 import { marked } from 'marked';
 import { renderMermaid, THEMES as MERMAID_THEMES } from 'beautiful-mermaid';
+import { sanitizeModelSvg, svgDataUrl } from './safe-svg.js';
 
 // URL regex for linkifying text
 const URL_REGEX = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
@@ -162,6 +163,32 @@ function extractMermaidBlocks(text) {
     }
 
     return { text: output.join('\n'), blocks };
+}
+
+function extractSvgBlocks(text) {
+    if (!text) return { text: '', blocks: [] };
+    const blocks = [];
+    const output = [];
+    let current = null;
+    for (const line of text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')) {
+        if (current === null && /^```svg\s*$/i.test(line.trim())) { current = []; continue; }
+        if (current !== null && /^```\s*$/.test(line.trim())) {
+            output.push(`@@SVG_BLOCK_${blocks.length}@@`); blocks.push(current.join('\n')); current = null; continue;
+        }
+        if (current !== null) current.push(line); else output.push(line);
+    }
+    if (current !== null) output.push('```svg', ...current);
+    return { text: output.join('\n'), blocks };
+}
+
+function injectSvgBlocks(markup, blocks) {
+    if (!markup || !blocks.length) return markup;
+    return markup.replace(/@@SVG_BLOCK_(\d+)@@/g, (match, index) => {
+        const source = blocks[Number(index)] || '';
+        const sanitized = sanitizeModelSvg(source);
+        if (!sanitized) return `<pre><code class="language-svg">${source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
+        return `<figure class="model-svg"><img src="${svgDataUrl(sanitized)}" alt="Model-generated SVG"></figure>`;
+    });
 }
 
 function decodeMermaidBlock(text) {
@@ -352,7 +379,8 @@ function renderMarkdown(text, onHashtagClick) {
     if (!text) return '';
 
     const normalizedMath = normalizeMathFences(text);
-    const { text: stripped, blocks: mermaidBlocks } = extractMermaidBlocks(normalizedMath);
+    const { text: withoutSvg, blocks: svgBlocks } = extractSvgBlocks(normalizedMath);
+    const { text: stripped, blocks: mermaidBlocks } = extractMermaidBlocks(withoutSvg);
 
     // Decode HTML entities first (in case content has encoded entities)
     const decoded = decodeEntitiesDeep(stripped, 2);
@@ -374,6 +402,7 @@ function renderMarkdown(text, onHashtagClick) {
 
     // Inject Mermaid blocks after markdown processing to avoid double-encoding
     html_content = injectMermaidBlocks(html_content, mermaidBlocks);
+    html_content = injectSvgBlocks(html_content, svgBlocks);
 
     return html_content;
 }
