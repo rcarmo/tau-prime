@@ -623,3 +623,22 @@ async def test_move_pending_queue_preserves_identity_kind_and_history(tmp_path: 
         assert unchanged.queue_id == one.queue_id
         with pytest.raises(ValueError):
             await queue.move_pending(one.queue_id, session_id=first, direction="sideways")
+
+
+@pytest.mark.anyio
+async def test_retarget_pending_preserves_id_and_appends_to_target_fifo(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "retarget.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        queue = QueueRepository(database)
+        head = await queue.enqueue(first, queue_kind="steer", content="head")
+        item = await queue.enqueue(first, queue_kind="follow_up", content="move")
+        with pytest.raises(RecordNotFoundError):
+            await queue.retarget_pending(item.queue_id, session_id=second, queue_kind="steer")
+        moved = await queue.retarget_pending(item.queue_id, session_id=first, queue_kind="steer")
+        assert moved.queue_id == item.queue_id and moved.content == item.content
+        assert moved.queue_kind == "steer"
+        assert [row.queue_id for row in await queue.list(session_id=first)] == [
+            head.queue_id,
+            item.queue_id,
+        ]
+        assert await queue.list(session_id=first, queue_kind="follow_up") == []

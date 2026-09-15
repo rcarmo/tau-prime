@@ -632,6 +632,44 @@ class QueueRepository(SqliteRepository):
 
         return await self.database.write(write)
 
+    async def retarget_pending(
+        self, queue_id: str, *, session_id: str, queue_kind: QueueKind
+    ) -> QueueMessageRecord:
+        """Move existing pending input to the tail of another queue, retaining its ID."""
+        record_id = _require_identifier(queue_id, field="Queue id")
+        session_key = _require_identifier(session_id, field="Session id")
+        selected_kind = _validate_queue_kind(queue_kind)
+
+        async def write(transaction: SqliteTransaction) -> QueueMessageRecord:
+            row = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ? AND session_id = ?",
+                (record_id, session_key),
+            )
+            if row is None:
+                raise RecordNotFoundError(f"Unknown queued message: {record_id}")
+            record = _queue_from_row(row)
+            if record.consumed_at is not None:
+                raise RepositoryError("Queued message has already been consumed")
+            if record.queue_kind == selected_kind:
+                return record
+            maximum = await transaction.fetch_one(
+                "SELECT COALESCE(MAX(position), -1) + 1 AS position FROM queued_messages "
+                "WHERE session_id = ? AND queue_kind = ?",
+                (session_key, selected_kind),
+            )
+            assert maximum is not None
+            await transaction.execute(
+                "UPDATE queued_messages SET queue_kind = ?, position = ? WHERE queue_id = ?",
+                (selected_kind, maximum["position"], record_id),
+            )
+            updated = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ?", (record_id,)
+            )
+            assert updated is not None
+            return _queue_from_row(updated)
+
+        return await self.database.write(write)
+
     async def move_pending(
         self, queue_id: str, *, session_id: str, direction: str
     ) -> QueueMessageRecord:

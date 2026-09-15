@@ -657,3 +657,72 @@ async def test_move_queue_route_validates_direction_and_order(web_config: WebCon
         assert [item.queue_id for item in queued] == [second.queue_id, first.queue_id]
     finally:
         await client.close()
+
+
+@pytest.mark.anyio
+async def test_steer_queue_route_rejects_missing_run_without_mutating(
+    web_config: WebConfig,
+) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+    services = _services(app)
+    try:
+        await _register_session(services, session_id="steer", session=_FakeSession())
+        item = await services.runtime.enqueue("steer", "pending")
+        url = f"/api/sessions/steer/queue/{item.queue_id}/steer"
+        async with client.post(url, json={}) as response:
+            assert response.status == 400
+        async with client.post(url, json={"run_id": "missing"}) as response:
+            assert response.status == 404
+        await services.runs.create("steer", run_id="finished", status="completed")
+        async with client.post(url, json={"run_id": "finished"}) as response:
+            assert response.status == 409
+        await _register_session(services, session_id="other", session=_FakeSession())
+        await services.runs.create("other", run_id="other-run", status="running")
+        async with client.post(url, json={"run_id": "other-run"}) as response:
+            assert response.status == 404
+        assert await services.queues.get(item.queue_id) == item
+    finally:
+        await client.close()
+
+
+@pytest.mark.anyio
+async def test_steer_queue_route_dispatches_existing_item_once(web_config: WebConfig) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+    services = _services(app)
+    started, release = asyncio.Event(), asyncio.Event()
+    session = _FakeSession(
+        prompt_scripts=(
+            _Script(
+                events=(AgentStartEvent(), AgentEndEvent()),
+                started=started,
+                release=release,
+            ),
+        )
+    )
+    try:
+        await _register_session(services, session_id="steer-live", session=session)
+        async with client.post(
+            "/api/sessions/steer-live/runs",
+            json={
+                "content": "work",
+                "run_id": "steer-live-run",
+            },
+        ) as response:
+            assert response.status == 202
+        await asyncio.wait_for(started.wait(), timeout=1)
+        item = await services.runtime.enqueue("steer-live", "existing input")
+        async with client.post(
+            f"/api/sessions/steer-live/queue/{item.queue_id}/steer",
+            json={"run_id": "steer-live-run"},
+        ) as response:
+            assert response.status == 200
+            result = await response.json()
+        assert result["queue_id"] == item.queue_id
+        assert result["consumed_at"] is not None
+        assert session.queue_message_calls == [("existing input", "steer")]
+        assert await services.queues.list(session_id="steer-live") == []
+    finally:
+        release.set()
+        await client.close()

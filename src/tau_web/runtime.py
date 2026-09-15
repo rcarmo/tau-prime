@@ -193,6 +193,24 @@ class DurableAgentRuntime:
         )
         return handle
 
+    async def steer_queued(self, session_id: str, queue_id: str, run_id: str) -> QueueMessageRecord:
+        """Retarget existing input to steering without duplicating or bypassing FIFO."""
+        async with self._queue_lock(session_id):
+            run = await self._require_run(run_id)
+            if run.session_id != session_id:
+                raise RecordNotFoundError("Run does not belong to the requested session")
+            self._require_queueable_run(run)
+            if self._pool.snapshot(session_id).current_run_id != run_id:
+                raise RuntimeError("Active run changed before steering")
+            queued = await self._queues.retarget_pending(
+                queue_id, session_id=session_id, queue_kind="steer"
+            )
+            await self._append_queue_audit("queue.steer", queued, run_id=run_id)
+            pending = await self._queues.list(session_id=session_id, queue_kind="steer")
+            if pending and pending[0].queue_id == queued.queue_id:
+                return await self._dispatch_locked(run, queued)
+            return queued
+
     async def move_queued(
         self, session_id: str, queue_id: str, direction: str
     ) -> QueueMessageRecord:

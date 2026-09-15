@@ -47,6 +47,7 @@ def setup_routes(app: web.Application) -> None:
     app.router.add_get("/api/sessions/{session_id}/queue", list_queue)
     app.router.add_delete("/api/sessions/{session_id}/queue/{queue_id}", remove_queue_item)
     app.router.add_post("/api/sessions/{session_id}/queue/{queue_id}/move", move_queue_item)
+    app.router.add_post("/api/sessions/{session_id}/queue/{queue_id}/steer", steer_queue_item)
     app.router.add_post("/api/sessions/{session_id}/queue", enqueue_message)
     app.router.add_post("/api/runs/{run_id}/messages", queue_run_message)
     app.router.add_post("/api/runs/{run_id}/queue/{kind}/dispatch", dispatch_next)
@@ -133,6 +134,23 @@ async def retry_run(request: web.Request) -> web.Response:
     except Exception as exc:
         _raise_for_runtime_error(exc)
     return json_response({"retry_of": run_id, "run": record_json(record)}, status=202)
+
+
+async def steer_queue_item(request: web.Request) -> web.Response:
+    services = services_for(request)
+    session_id = request.match_info["session_id"]
+    await _require_session(services, session_id)
+    payload = await require_json_body(request, required_fields=("run_id",))
+    run_id = require_non_empty_text(payload, "run_id")
+    try:
+        record = await services.runtime.steer_queued(
+            session_id, request.match_info["queue_id"], run_id
+        )
+    except RecordNotFoundError as exc:
+        raise web.HTTPNotFound(reason="Queue item or run not found.") from exc
+    except (RepositoryError, ValueError, RuntimeError) as exc:
+        raise web.HTTPConflict(reason=str(exc)) from exc
+    return json_response(record_json(record))
 
 
 async def move_queue_item(request: web.Request) -> web.Response:

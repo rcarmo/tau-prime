@@ -1083,3 +1083,95 @@ async def test_move_queue_waits_for_dispatch_lock(tmp_path: Path) -> None:
         assert any(record.event_type == "queue.reorder" for record in audit)
     finally:
         await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_steer_existing_queue_preserves_id_and_dispatches_once(tmp_path: Path) -> None:
+    started, release = asyncio.Event(), asyncio.Event()
+    session = _FakeSession(prompt_scripts=(_Script(started=started, release=release),))
+    harness = await _open_runtime(tmp_path, session)
+    try:
+        handle = await harness.runtime.submit_prompt(harness.session_id, "work")
+        await asyncio.wait_for(started.wait(), timeout=1)
+        item = await harness.runtime.enqueue(harness.session_id, "steer this")
+        result = await harness.runtime.steer_queued(
+            harness.session_id, item.queue_id, handle.run_id
+        )
+        assert result.queue_id == item.queue_id
+        assert result.consumed_at is not None
+        assert session.queue_message_calls == [("steer this", "steer")]
+        assert await harness.queues.list(session_id=harness.session_id) == []
+        assert (
+            len(await harness.queues.list(session_id=harness.session_id, include_consumed=True))
+            == 1
+        )
+    finally:
+        release.set()
+        await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_steer_existing_queue_respects_backlog_and_completed_run(tmp_path: Path) -> None:
+    started, release = asyncio.Event(), asyncio.Event()
+    session = _FakeSession(prompt_scripts=(_Script(started=started, release=release),))
+    harness = await _open_runtime(tmp_path, session)
+    try:
+        handle = await harness.runtime.submit_prompt(harness.session_id, "work")
+        await asyncio.wait_for(started.wait(), timeout=1)
+        head = await harness.runtime.enqueue(harness.session_id, "head", queue_kind="steer")
+        item = await harness.runtime.enqueue(harness.session_id, "tail")
+        result = await harness.runtime.steer_queued(
+            harness.session_id, item.queue_id, handle.run_id
+        )
+        assert result.consumed_at is None
+        assert session.queue_message_calls == []
+        pending = await harness.queues.list(session_id=harness.session_id, queue_kind="steer")
+        assert [row.queue_id for row in pending] == [head.queue_id, item.queue_id]
+        release.set()
+        await handle.wait()
+        untouched = await harness.runtime.enqueue(harness.session_id, "after completion")
+        with pytest.raises(ValueError, match="Only pending or running"):
+            await harness.runtime.steer_queued(
+                harness.session_id, untouched.queue_id, handle.run_id
+            )
+        assert await harness.queues.get(untouched.queue_id) == untouched
+    finally:
+        release.set()
+        await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_steer_existing_input_survives_run_completion_race(tmp_path: Path) -> None:
+    started, release = asyncio.Event(), asyncio.Event()
+    queue_started, queue_release = asyncio.Event(), asyncio.Event()
+    session = _FakeSession(
+        prompt_scripts=(_Script(started=started, release=release),),
+        queue_message_scripts=(_Script(started=queue_started, release=queue_release),),
+    )
+    harness = await _open_runtime(tmp_path, session)
+    task = None
+    try:
+        handle = await harness.runtime.submit_prompt(harness.session_id, "work")
+        await asyncio.wait_for(started.wait(), timeout=1)
+        item = await harness.runtime.enqueue(harness.session_id, "retain me")
+        task = asyncio.create_task(
+            harness.runtime.steer_queued(harness.session_id, item.queue_id, handle.run_id)
+        )
+        await asyncio.wait_for(queue_started.wait(), timeout=1)
+        release.set()
+        assert (await handle.wait()).status == "completed"
+        queue_release.set()
+        result = await asyncio.wait_for(task, timeout=1)
+        assert result.queue_id == item.queue_id
+        assert result.consumed_at is None
+        pending = await harness.queues.list(session_id=harness.session_id)
+        assert len(pending) == 1 and pending[0].queue_id == item.queue_id
+        assert pending[0].content == "retain me"
+        audit = await harness.audit.list(session_id=harness.session_id)
+        assert any(record.event_type == "queue.defer" for record in audit)
+    finally:
+        release.set()
+        queue_release.set()
+        if task is not None:
+            await asyncio.gather(task, return_exceptions=True)
+        await harness.aclose()
