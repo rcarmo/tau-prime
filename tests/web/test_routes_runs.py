@@ -52,6 +52,7 @@ class _FakeSession:
         self.prompt_calls: list[str] = []
         self.continue_calls = 0
         self.queue_message_calls: list[tuple[str, str]] = []
+        self.compact_calls: list[str | None] = []
         self.queued_steering: tuple[str, ...] = ()
         self.queued_follow_up: tuple[str, ...] = ()
         self.cancel_calls = 0
@@ -95,6 +96,10 @@ class _FakeSession:
             steering=self.queued_steering,
             follow_up=self.queued_follow_up,
         )
+
+    async def compact(self, instructions: str | None = None) -> str:
+        self.compact_calls.append(instructions)
+        return "Compacted web fixture"
 
     def cancel(self) -> None:
         self.cancel_calls += 1
@@ -725,4 +730,33 @@ async def test_steer_queue_route_dispatches_existing_item_once(web_config: WebCo
         assert await services.queues.list(session_id="steer-live") == []
     finally:
         release.set()
+        await client.close()
+
+@pytest.mark.anyio
+async def test_compact_session_route_is_scoped_and_rejects_active_runs(tmp_path: Path) -> None:
+    app = create_app(WebConfig(cwd=tmp_path, database_path=tmp_path / "web.sqlite3"))
+    client = await _start_client(app)
+    try:
+        services = _services(app)
+        idle = _FakeSession()
+        await _register_session(services, session_id="idle", session=idle)
+        response = await client.post(
+            "/api/sessions/idle/compact", json={"instructions": "keep decisions"}
+        )
+        assert response.status == 200
+        assert await response.json() == {"session_id": "idle", "summary": "Compacted web fixture"}
+        assert idle.compact_calls == ["keep decisions"]
+
+        started = asyncio.Event()
+        release = asyncio.Event()
+        active = _FakeSession(prompt_scripts=[_Script(started=started, release=release)])
+        await _register_session(services, session_id="active", session=active)
+        run = await services.runtime.submit_prompt("active", "run")
+        await started.wait()
+        response = await client.post("/api/sessions/active/compact", json={})
+        assert response.status == 409
+        assert "active or queued" in await response.text()
+        release.set()
+        await run.wait()
+    finally:
         await client.close()

@@ -203,6 +203,7 @@ async def test_timeline_routes_entries_messages_branches_select_and_context(
         "estimated_tokens": None,
         "context_window": None,
         "token_usage_source": None,
+        "compact_command": "/compact",
     }
 
     async with app_client.post(
@@ -290,6 +291,7 @@ async def test_timeline_routes_handle_empty_sessions(
         "estimated_tokens": None,
         "context_window": None,
         "token_usage_source": None,
+        "compact_command": "/compact",
     }
 
 

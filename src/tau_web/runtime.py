@@ -109,6 +109,20 @@ class DurableAgentRuntime:
                 setter(self._approvals.callback_for(session_id))
         return self._pool.register_session(session_id, session, owned=owned)
 
+    async def compact(self, session_id: str, instructions: str | None = None) -> str:
+        """Load and compact one idle session through the pool-owned session."""
+        if self._shutdown_started:
+            raise AgentPoolError("Runtime is shutting down")
+        async with self._session_load_lock:
+            try:
+                self._pool.snapshot(session_id)
+            except UnknownSessionError:
+                if self._session_loader is None:
+                    raise
+                session = await self._session_loader(session_id)
+                self.register_session(session_id, session, owned=True)
+        return await self._pool.compact_session(session_id, instructions)
+
     async def submit_prompt(
         self,
         session_id: str,

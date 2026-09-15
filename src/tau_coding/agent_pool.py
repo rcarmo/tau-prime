@@ -62,6 +62,9 @@ class CodingSessionLike(Protocol):
     ) -> QueueUpdateEvent:
         """Queue one message for the currently active run."""
 
+    async def compact(self, instructions: str | None = None) -> str:
+        """Compact one idle session and return its summary."""
+
     def cancel(self) -> None:
         """Request cooperative cancellation of the current run."""
 
@@ -341,6 +344,20 @@ class AsyncAgentPool:
             behavior="follow_up",
             current_run_id=current_run_id,
         )
+
+    async def compact_session(self, session_id: str, instructions: str | None = None) -> str:
+        """Compact one idle registered session under the pool concurrency bound."""
+        if not self._accepting_new_work:
+            raise PoolClosedError("AsyncAgentPool is shut down.")
+        entry = self._require_session(session_id)
+        if entry.disposed or not entry.accepting_new_work:
+            raise SessionClosedError(f"Session {session_id!r} is closed.")
+        if entry.current_run_id is not None or entry.pending_runs or entry.run_tasks:
+            raise AgentPoolError("Cannot compact a session with active or queued runs")
+        async with self._semaphore:
+            if entry.current_run_id is not None or entry.pending_runs or entry.run_tasks:
+                raise AgentPoolError("Cannot compact a session with active or queued runs")
+            return await entry.session.compact(instructions)
 
     def cancel_current_run(self, session_id: str) -> bool:
         """Request cooperative cancellation for the active run, if any."""

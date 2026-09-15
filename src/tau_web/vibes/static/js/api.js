@@ -93,6 +93,7 @@ export async function deletePost(postId, cascade = false) {
  * Send message to agent
  */
 export async function sendAgentMessage(agentId, content, threadId = null, mediaIds = [], mode = null, sessionId = 'default', intent = null) {
+    if (intent === 'compact' && content.trim() === '/compact') return tau.compact(sessionId);
     if (threadId) throw new Error('Tau thread submission is not integrated yet');
     if (/^\/thinking(?:\s|$)/.test(content.trim())) {
         if (mediaIds.length) throw new Error('Thinking commands cannot include attachments');

@@ -265,10 +265,17 @@ test('commands use the authoritative native catalogue',async()=>{
  const client=createTauClient({fetchImpl:async path=>Response.json(path==='/api/commands'?{commands:[{name:'/model',description:'Choose model'}]}:{})});
  expect(await client.commands()).toEqual({commands:[{name:'/model',description:'Choose model'}]});
 });
+test('manual compaction uses the dedicated scoped endpoint',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({session_id:'one',summary:'done'});}});
+ expect(await client.compact('one',' keep decisions ')).toEqual({session_id:'one',summary:'done'});
+ expect(calls[0].path).toBe('/api/sessions/one/compact');
+ expect(JSON.parse(calls[0].body)).toEqual({instructions:'keep decisions'});
+ expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
+});
 test('context maps only explicitly labelled valid local estimates',async()=>{
- let payload={estimated_tokens:16384,context_window:65536,token_usage_source:'local_estimate'};
+ let payload={estimated_tokens:16384,context_window:65536,token_usage_source:'local_estimate',compact_command:'/compact'};
  const client=createTauClient({fetchImpl:async()=>Response.json(payload)});
- const context=await client.context('one');expect(context.percent).toBe(25);expect(context.source).toBe('local_estimate');expect(context.compactCommand).toBeUndefined();
+ const context=await client.context('one');expect(context.percent).toBe(25);expect(context.source).toBe('local_estimate');expect(context.compactCommand).toBe('/compact');
  payload={estimated_tokens:0,context_window:65536,token_usage_source:'local_estimate'};
  expect((await client.context('one')).percent).toBe(0);
  payload={estimated_tokens:-1,context_window:65536,token_usage_source:'local_estimate'};

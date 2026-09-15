@@ -40,6 +40,7 @@ _QUEUE_KIND_MAP: Final[dict[str, QueueKind]] = {
 def setup_routes(app: web.Application) -> None:
     app.router.add_get("/api/sessions/{session_id}/runs", list_runs)
     app.router.add_post("/api/sessions/{session_id}/runs", submit_run)
+    app.router.add_post("/api/sessions/{session_id}/compact", compact_session)
     app.router.add_get("/api/runs/{run_id}", get_run)
     app.router.add_post("/api/runs/{run_id}/cancel", cancel_run)
     app.router.add_post("/api/runs/{run_id}/abort", abort_run)
@@ -93,6 +94,19 @@ async def submit_run(request: web.Request) -> web.Response:
     except Exception as exc:
         _raise_for_runtime_error(exc)
     return json_response(record_json(record), status=202)
+
+
+async def compact_session(request: web.Request) -> web.Response:
+    services = services_for(request)
+    session_id = request.match_info["session_id"]
+    await _require_session(services, session_id)
+    body = await require_json_body(request, optional_fields=("instructions",))
+    instructions = optional_non_empty_text(body, "instructions")
+    try:
+        summary = await services.runtime.compact(session_id, instructions)
+    except Exception as exc:
+        _raise_for_runtime_error(exc)
+    return json_response({"session_id": session_id, "summary": summary})
 
 
 async def get_run(request: web.Request) -> web.Response:

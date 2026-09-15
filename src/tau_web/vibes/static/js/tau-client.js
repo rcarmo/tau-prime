@@ -200,7 +200,12 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
                 && Number.isInteger(window) && window > 0;
             return { entryCount: result.entry_count, messageCount: result.message_count,
                 compactionCount: result.compaction_count, activeLeafEntryId: result.active_leaf_entry_id,
-                ...(known ? {tokens,contextWindow:window,percent:tokens/window*100,source:'local_estimate'} : {}) };
+                ...(known ? {tokens,contextWindow:window,percent:tokens/window*100,source:'local_estimate',compactCommand:result.compact_command === '/compact' ? '/compact' : undefined} : {}) };
+        },
+        async compact(id, instructions = null) {
+            if (!id) throw new Error('A Tau session ID is required');
+            const body=instructions?.trim()?{instructions:instructions.trim()}:{};
+            return request(`/sessions/${encodeURIComponent(id)}/compact`,{method:'POST',body});
         },
         async cancelRun(runId) {
             if (!runId) throw new Error('A Tau run ID is required');

@@ -63,6 +63,7 @@ class _FakeSession:
         self.prompt_calls: list[str] = []
         self.continue_calls = 0
         self.queue_message_calls: list[tuple[str, str]] = []
+        self.compact_calls: list[str | None] = []
         self.cancel_calls = 0
         self.close_calls = 0
         self.queued_steering: tuple[str, ...] = ()
@@ -111,6 +112,10 @@ class _FakeSession:
             steering=self.queued_steering,
             follow_up=self.queued_follow_up,
         )
+
+    async def compact(self, instructions: str | None = None) -> str:
+        self.compact_calls.append(instructions)
+        return "Compacted fixture"
 
     def cancel(self) -> None:
         self.cancel_calls += 1
@@ -783,3 +788,23 @@ def test_context_estimate_is_optional_and_does_not_start_runs() -> None:
     assert pool.context_estimate("estimated") == (1234, 65536)
     assert pool.snapshot("estimated").current_run_id is None
     assert pool.snapshot("estimated").queued_runs == 0
+
+@pytest.mark.anyio
+async def test_compact_session_runs_only_while_idle() -> None:
+    pool = AsyncAgentPool(max_concurrency=1)
+    idle = _FakeSession()
+    pool.register_session("idle", idle)
+    assert await pool.compact_session("idle", "keep decisions") == "Compacted fixture"
+    assert idle.compact_calls == ["keep decisions"]
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+    active = _FakeSession(prompt_scripts=[_Script(started=started, release=release)])
+    pool.register_session("active", active)
+    handle = pool.submit_prompt("active", "run")
+    await started.wait()
+    with pytest.raises(Exception, match="active or queued"):
+        await pool.compact_session("active")
+    release.set()
+    await handle.wait()
+    await pool.shutdown()

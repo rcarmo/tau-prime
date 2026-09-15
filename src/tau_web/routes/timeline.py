@@ -85,6 +85,7 @@ class ContextSummaryResponse(BaseModel):
     estimated_tokens: int | None = None
     context_window: int | None = None
     token_usage_source: str | None = None
+    compact_command: str = "/compact"
 
 
 async def get_entries(request: web.Request) -> web.Response:
