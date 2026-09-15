@@ -600,3 +600,26 @@ async def test_remove_pending_queue_is_session_scoped_and_preserves_consumed(
         with pytest.raises(RepositoryError, match="already been consumed"):
             await queue.remove_pending(consumed.queue_id, session_id=first)
         assert await queue.get(consumed.queue_id) is not None
+
+
+@pytest.mark.anyio
+async def test_move_pending_queue_preserves_identity_kind_and_history(tmp_path: Path) -> None:
+    async with SqliteDatabase(tmp_path / "move.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        queue = QueueRepository(database)
+        one = await queue.enqueue(first, queue_kind="follow_up", content="one")
+        two = await queue.enqueue(first, queue_kind="follow_up", content="two")
+        steer = await queue.enqueue(first, queue_kind="steer", content="steer")
+        with pytest.raises(RecordNotFoundError):
+            await queue.move_pending(two.queue_id, session_id=second, direction="up")
+        await queue.move_pending(two.queue_id, session_id=first, direction="up")
+        pending = await queue.list(session_id=first, queue_kind="follow_up")
+        assert [item.queue_id for item in pending] == [two.queue_id, one.queue_id]
+        assert await queue.get(steer.queue_id) == steer
+        await queue.consume_next(first, "follow_up")
+        with pytest.raises(RepositoryError, match="consumed"):
+            await queue.move_pending(two.queue_id, session_id=first, direction="down")
+        unchanged = await queue.move_pending(one.queue_id, session_id=first, direction="up")
+        assert unchanged.queue_id == one.queue_id
+        with pytest.raises(ValueError):
+            await queue.move_pending(one.queue_id, session_id=first, direction="sideways")

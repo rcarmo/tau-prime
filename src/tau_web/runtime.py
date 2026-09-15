@@ -193,6 +193,22 @@ class DurableAgentRuntime:
         )
         return handle
 
+    async def move_queued(
+        self, session_id: str, queue_id: str, direction: str
+    ) -> QueueMessageRecord:
+        """Reorder pending input while serialized against dispatch."""
+        async with self._queue_lock(session_id):
+            record = await self._queues.move_pending(
+                queue_id, session_id=session_id, direction=direction
+            )
+            await self._audit.append(
+                event_type="queue.reorder",
+                actor_type="runtime",
+                session_id=session_id,
+                details={"queue_id": record.queue_id, "direction": direction},
+            )
+            return record
+
     async def remove_queued(self, session_id: str, queue_id: str) -> QueueMessageRecord:
         """Remove pending input while serialized against enqueue and dispatch."""
         async with self._queue_lock(session_id):

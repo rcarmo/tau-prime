@@ -1060,3 +1060,26 @@ async def test_remove_queue_waits_for_dispatch_lock(tmp_path: Path) -> None:
         assert await harness.queues.get(item.queue_id) is None
     finally:
         await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_move_queue_waits_for_dispatch_lock(tmp_path: Path) -> None:
+    harness = await _open_runtime(tmp_path, _FakeSession())
+    try:
+        first = await harness.runtime.enqueue(harness.session_id, "first")
+        second = await harness.runtime.enqueue(harness.session_id, "second")
+        async with harness.runtime._queue_lock(harness.session_id):
+            move = asyncio.create_task(
+                harness.runtime.move_queued(harness.session_id, second.queue_id, "up")
+            )
+            await asyncio.sleep(0)
+            assert not move.done()
+            pending = await harness.queues.list(session_id=harness.session_id)
+            assert [item.queue_id for item in pending] == [first.queue_id, second.queue_id]
+        await asyncio.wait_for(move, timeout=1)
+        pending = await harness.queues.list(session_id=harness.session_id)
+        assert [item.queue_id for item in pending] == [second.queue_id, first.queue_id]
+        audit = await harness.audit.list(session_id=harness.session_id)
+        assert any(record.event_type == "queue.reorder" for record in audit)
+    finally:
+        await harness.aclose()

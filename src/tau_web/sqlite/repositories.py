@@ -632,6 +632,59 @@ class QueueRepository(SqliteRepository):
 
         return await self.database.write(write)
 
+    async def move_pending(
+        self, queue_id: str, *, session_id: str, direction: str
+    ) -> QueueMessageRecord:
+        """Swap adjacent pending items without changing consumed queue history."""
+        if direction not in {"up", "down"}:
+            raise ValueError("Queue direction must be up or down")
+        record_id = _require_identifier(queue_id, field="Queue id")
+        session_key = _require_identifier(session_id, field="Session id")
+
+        async def write(transaction: SqliteTransaction) -> QueueMessageRecord:
+            row = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ? AND session_id = ?",
+                (record_id, session_key),
+            )
+            if row is None:
+                raise RecordNotFoundError(f"Unknown queued message: {record_id}")
+            current = _queue_from_row(row)
+            if current.consumed_at is not None:
+                raise RepositoryError("Queued message has already been consumed")
+            comparison, order = ("<", "DESC") if direction == "up" else (">", "ASC")
+            peer_row = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE session_id = ? AND queue_kind = ? "
+                f"AND consumed_at IS NULL AND position {comparison} ? "
+                f"ORDER BY position {order} LIMIT 1",
+                (session_key, current.queue_kind, current.position),
+            )
+            if peer_row is None:
+                return current
+            peer = _queue_from_row(peer_row)
+            maximum = await transaction.fetch_one(
+                "SELECT MAX(position) AS maximum FROM queued_messages "
+                "WHERE session_id = ? AND queue_kind = ?",
+                (session_key, current.queue_kind),
+            )
+            assert maximum is not None
+            temporary = int(maximum["maximum"]) + 1
+            for identity, position in (
+                (current.queue_id, temporary),
+                (peer.queue_id, current.position),
+                (current.queue_id, peer.position),
+            ):
+                await transaction.execute(
+                    "UPDATE queued_messages SET position = ? WHERE queue_id = ?",
+                    (position, identity),
+                )
+            updated = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ?", (record_id,)
+            )
+            assert updated is not None
+            return _queue_from_row(updated)
+
+        return await self.database.write(write)
+
     async def consume_next(
         self,
         session_id: str,

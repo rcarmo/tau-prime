@@ -637,3 +637,23 @@ async def test_remove_queue_route_is_session_scoped(web_config: WebConfig) -> No
         assert await services.queues.get(consumed.queue_id) is not None
     finally:
         await client.close()
+
+
+@pytest.mark.anyio
+async def test_move_queue_route_validates_direction_and_order(web_config: WebConfig) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+    services = _services(app)
+    try:
+        await _register_session(services, session_id="move", session=_FakeSession())
+        first = await services.runtime.enqueue("move", "first")
+        second = await services.runtime.enqueue("move", "second")
+        url = f"/api/sessions/move/queue/{second.queue_id}/move"
+        async with client.post(url, json={"direction": "sideways"}) as response:
+            assert response.status == 400
+        async with client.post(url, json={"direction": "up"}) as response:
+            assert response.status == 200
+        queued = await services.queues.list(session_id="move")
+        assert [item.queue_id for item in queued] == [second.queue_id, first.queue_id]
+    finally:
+        await client.close()
