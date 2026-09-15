@@ -22,7 +22,13 @@ export class ComposeDrafts {
 
     save(sessionId, draft) {
         const strings = values => Array.isArray(values) ? values.filter(x => typeof x === 'string').slice(0, 100) : [];
+        let queueRecoveries = [];
+        try {
+            const previous = JSON.parse(this.storage.getItem(draftKey(sessionId)) || '{}');
+            if (Array.isArray(previous.queueRecoveries)) queueRecoveries = previous.queueRecoveries.filter(key => typeof key === 'string' && this.storage.getItem(key) !== null);
+        } catch { /* Recovery records remain separate if storage cannot be read. */ }
         const data = {
+            ...(queueRecoveries.length ? { queueRecoveries } : {}),
             text: typeof draft.text === 'string' ? draft.text.slice(0, 100000) : '',
             fileRefs: strings(draft.fileRefs), folderRefs: strings(draft.folderRefs), messageRefs: strings(draft.messageRefs),
         };
