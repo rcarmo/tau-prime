@@ -608,6 +608,30 @@ class QueueRepository(SqliteRepository):
 
         return await self.database.read(read)
 
+    async def remove_pending(self, queue_id: str, *, session_id: str) -> QueueMessageRecord:
+        """Atomically remove only an unconsumed item owned by this session."""
+        record_id = _require_identifier(queue_id, field="Queue id")
+        session_key = _require_identifier(session_id, field="Session id")
+
+        async def write(transaction: SqliteTransaction) -> QueueMessageRecord:
+            row = await transaction.fetch_one(
+                "SELECT * FROM queued_messages WHERE queue_id = ? AND session_id = ?",
+                (record_id, session_key),
+            )
+            if row is None:
+                raise RecordNotFoundError(f"Unknown queued message: {record_id}")
+            record = _queue_from_row(row)
+            if record.consumed_at is not None:
+                raise RepositoryError("Queued message has already been consumed")
+            await transaction.execute(
+                "DELETE FROM queued_messages "
+                "WHERE queue_id = ? AND session_id = ? AND consumed_at IS NULL",
+                (record_id, session_key),
+            )
+            return record
+
+        return await self.database.write(write)
+
     async def consume_next(
         self,
         session_id: str,

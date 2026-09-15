@@ -1026,3 +1026,37 @@ async def test_metadata_change_after_shutdown_does_not_write(tmp_path: Path) -> 
         assert not changed
     finally:
         await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_runtime_removes_pending_input_with_audit(tmp_path: Path) -> None:
+    harness = await _open_runtime(tmp_path, _FakeSession())
+    try:
+        queued = await harness.runtime.enqueue(harness.session_id, "remove me")
+        removed = await harness.runtime.remove_queued(harness.session_id, queued.queue_id)
+        assert removed.queue_id == queued.queue_id
+        assert await harness.queues.list(session_id=harness.session_id) == []
+        audit = await harness.audit.list(session_id=harness.session_id)
+        assert any(record.event_type == "queue.remove" for record in audit)
+    finally:
+        await harness.aclose()
+
+
+@pytest.mark.anyio
+async def test_remove_queue_waits_for_dispatch_lock(tmp_path: Path) -> None:
+    harness = await _open_runtime(tmp_path, _FakeSession())
+    try:
+        item = await harness.runtime.enqueue(harness.session_id, "pending")
+        lock = harness.runtime._queue_lock(harness.session_id)
+        async with lock:
+            removal = asyncio.create_task(
+                harness.runtime.remove_queued(harness.session_id, item.queue_id)
+            )
+            await asyncio.sleep(0)
+            assert not removal.done()
+            assert await harness.queues.get(item.queue_id) is not None
+        removed = await asyncio.wait_for(removal, timeout=1)
+        assert removed.queue_id == item.queue_id
+        assert await harness.queues.get(item.queue_id) is None
+    finally:
+        await harness.aclose()

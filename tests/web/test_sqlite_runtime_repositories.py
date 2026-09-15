@@ -580,3 +580,23 @@ async def test_search_repository_updates_filters_and_removes_stale_rows(tmp_path
 
         await database.write(remove_session)
         assert await search.purge_missing_sessions() == 1
+
+
+@pytest.mark.anyio
+async def test_remove_pending_queue_is_session_scoped_and_preserves_consumed(
+    tmp_path: Path,
+) -> None:
+    async with SqliteDatabase(tmp_path / "remove.sqlite3") as database:
+        first, second = await _seed_sessions(database)
+        queue = QueueRepository(database)
+        item = await queue.enqueue(first, queue_kind="follow_up", content="pending")
+        with pytest.raises(RecordNotFoundError):
+            await queue.remove_pending(item.queue_id, session_id=second)
+        assert await queue.list(session_id=first) == [item]
+        assert await queue.remove_pending(item.queue_id, session_id=first) == item
+        assert await queue.list(session_id=first) == []
+        consumed = await queue.enqueue(first, queue_kind="follow_up", content="consumed")
+        await queue.consume_next(first, "follow_up")
+        with pytest.raises(RepositoryError, match="already been consumed"):
+            await queue.remove_pending(consumed.queue_id, session_id=first)
+        assert await queue.get(consumed.queue_id) is not None

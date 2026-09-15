@@ -609,3 +609,31 @@ async def test_run_routes_validate_requests_and_report_missing_or_unregistered_r
         run_release.set()
         await _wait_for_run(services, "validation-run")
         await client.close()
+
+
+@pytest.mark.anyio
+async def test_remove_queue_route_is_session_scoped(web_config: WebConfig) -> None:
+    app = create_app(web_config)
+    client = await _start_client(app)
+    services = _services(app)
+    try:
+        for session_id in ("remove-a", "remove-b"):
+            await _register_session(
+                services,
+                session_id=session_id,
+                session=_FakeSession(),
+            )
+        item = await services.runtime.enqueue("remove-a", "pending")
+        async with client.delete(f"/api/sessions/remove-b/queue/{item.queue_id}") as response:
+            assert response.status == 404
+        assert await services.queues.get(item.queue_id) is not None
+        async with client.delete(f"/api/sessions/remove-a/queue/{item.queue_id}") as response:
+            assert response.status == 200
+        assert await services.queues.get(item.queue_id) is None
+        consumed = await services.runtime.enqueue("remove-a", "already dispatched")
+        await services.queues.consume_next("remove-a", "follow_up")
+        async with client.delete(f"/api/sessions/remove-a/queue/{consumed.queue_id}") as response:
+            assert response.status == 409
+        assert await services.queues.get(consumed.queue_id) is not None
+    finally:
+        await client.close()

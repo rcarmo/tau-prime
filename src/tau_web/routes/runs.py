@@ -20,7 +20,7 @@ from tau_web.routes.common import (
     services_for,
 )
 from tau_web.services import TauWebServices
-from tau_web.sqlite.repositories import QueueKind, RunStatus
+from tau_web.sqlite.repositories import QueueKind, RecordNotFoundError, RepositoryError, RunStatus
 from tau_web.sqlite.sessions import SessionRecord
 
 _RUN_STATUS_MAP: Final[dict[str, RunStatus]] = {
@@ -45,6 +45,7 @@ def setup_routes(app: web.Application) -> None:
     app.router.add_post("/api/runs/{run_id}/abort", abort_run)
     app.router.add_post("/api/runs/{run_id}/retry", retry_run)
     app.router.add_get("/api/sessions/{session_id}/queue", list_queue)
+    app.router.add_delete("/api/sessions/{session_id}/queue/{queue_id}", remove_queue_item)
     app.router.add_post("/api/sessions/{session_id}/queue", enqueue_message)
     app.router.add_post("/api/runs/{run_id}/messages", queue_run_message)
     app.router.add_post("/api/runs/{run_id}/queue/{kind}/dispatch", dispatch_next)
@@ -131,6 +132,19 @@ async def retry_run(request: web.Request) -> web.Response:
     except Exception as exc:
         _raise_for_runtime_error(exc)
     return json_response({"retry_of": run_id, "run": record_json(record)}, status=202)
+
+
+async def remove_queue_item(request: web.Request) -> web.Response:
+    services = services_for(request)
+    session_id = request.match_info["session_id"]
+    await _require_session(services, session_id)
+    try:
+        record = await services.runtime.remove_queued(session_id, request.match_info["queue_id"])
+    except RecordNotFoundError as exc:
+        raise web.HTTPNotFound(reason="Queue item not found.") from exc
+    except RepositoryError as exc:
+        raise web.HTTPConflict(reason=str(exc)) from exc
+    return json_response(record_json(record))
 
 
 async def list_queue(request: web.Request) -> web.Response:

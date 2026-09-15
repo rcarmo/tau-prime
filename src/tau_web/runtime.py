@@ -193,6 +193,18 @@ class DurableAgentRuntime:
         )
         return handle
 
+    async def remove_queued(self, session_id: str, queue_id: str) -> QueueMessageRecord:
+        """Remove pending input while serialized against enqueue and dispatch."""
+        async with self._queue_lock(session_id):
+            record = await self._queues.remove_pending(queue_id, session_id=session_id)
+            await self._audit.append(
+                event_type="queue.remove",
+                actor_type="runtime",
+                session_id=session_id,
+                details={"queue_id": record.queue_id, "queue_kind": record.queue_kind},
+            )
+            return record
+
     async def enqueue(
         self,
         session_id: str,
