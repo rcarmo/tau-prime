@@ -3,7 +3,7 @@
 import { html, useEffect, useLayoutEffect, useMemo, useRef, useState } from '../vendor/preact-htm.js';
 
 export function shouldPopoutQuickAction(event, item, onPopoutSession) {
-    return event.key === 'Enter' && event.altKey && item?.kind === 'agent' && typeof onPopoutSession === 'function';
+    return Boolean(event.key === 'Enter' && event.altKey && item?.kind === 'agent' && typeof onPopoutSession === 'function');
 }
 
 export function shouldOpenQuickActions(event) {

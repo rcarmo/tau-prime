@@ -623,7 +623,7 @@ export function ComposeBox({
 
     const usageMeta = usagePresentation(contextUsage);
     const compact = async () => {
-        if (loading || agentBusy || isCompacting || contextUsage?.compactCommand !== '/compact') return;
+        if (loading || isCompacting || contextUsage?.compactCommand !== '/compact') return;
         setLoading(true);
         setSubmitError('');
         try {
@@ -1182,7 +1182,7 @@ export function ComposeBox({
                             </div>
                             </div>`}
                             ${html`
-                                <${ContextPie} usage=${contextUsage} onCompact=${compact} disabled=${loading || agentBusy || isCompacting} compacting=${isCompacting} />
+                                <${ContextPie} usage=${contextUsage} onCompact=${compact} disabled=${loading || isCompacting} compacting=${isCompacting} />
                             `}
                         </div>
                     `}
