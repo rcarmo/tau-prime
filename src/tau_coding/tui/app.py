@@ -2559,6 +2559,7 @@ class TauTuiApp(App[None]):
                     add_to_context=terminal_command.add_to_context,
                 ),
                 exclusive=True,
+                group="terminal-command",
             )
             return
 

@@ -4499,6 +4499,43 @@ async def test_tui_app_runs_terminal_command_without_context() -> None:
 
 
 @pytest.mark.anyio
+async def test_tui_app_terminal_command_does_not_cancel_active_agent() -> None:
+    session = FakeSession()
+    started = asyncio.Event()
+    release = asyncio.Event()
+    completed = asyncio.Event()
+
+    async def running_prompt(text: str):  # type: ignore[no-untyped-def]
+        session.prompt_texts.append(text)
+        started.set()
+        await release.wait()
+        completed.set()
+        if False:
+            yield None
+
+    session.prompt = running_prompt  # type: ignore[method-assign]
+    app = TauTuiApp(session)
+
+    async with app.run_test() as pilot:
+        prompt = app.query_one("#prompt")
+        prompt.value = "keep working"
+        await pilot.press("enter")
+        await started.wait()
+
+        prompt.value = "!! code ."
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert session.terminal_commands == [("code .", False)]
+        assert completed.is_set() is False
+
+        release.set()
+        await completed.wait()
+        await pilot.pause()
+        assert app.state.running is False
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("add_to_context", [True, False])
 async def test_tui_app_renders_terminal_command_while_running(add_to_context: bool) -> None:
     session = FakeSession()
