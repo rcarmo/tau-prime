@@ -127,6 +127,26 @@ function decodeEntitiesDeep(text, maxDepth = 2) {
     return current;
 }
 
+function extractSvgBlocks(text) {
+    if (!text) return {text:'',blocks:[]};
+    const blocks=[], output=[];let current=null;
+    for(const line of text.replace(/\r\n?/g,'\n').split('\n')){
+        if(current===null&&/^```svg\s*$/i.test(line.trim())){current=[];continue;}
+        if(current!==null&&/^```\s*$/.test(line.trim())){output.push(`@@SVG_BLOCK_${blocks.length}@@`);blocks.push(current.join('\n'));current=null;continue;}
+        if(current!==null)current.push(line);else output.push(line);
+    }
+    if(current!==null)output.push('```svg',...current);
+    return {text:output.join('\n'),blocks};
+}
+const escapeCode = source => source.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function injectSvgBlocks(markup,blocks){
+    return markup.replace(/@@SVG_BLOCK_(\d+)@@/g,(_match,index)=>{
+        const source=blocks[Number(index)]||'',sanitized=sanitizeModelSvg(source),code=`<pre><code class="language-svg">${escapeCode(source)}</code></pre>`;
+        if(!sanitized)return code;
+        return `<figure class="model-svg"><img src="${svgDataUrl(sanitized)}" alt="Model-generated SVG preview"><figcaption>SVG preview</figcaption></figure>${code}`;
+    });
+}
+
 function extractMermaidBlocks(text) {
     if (!text) return { text: '', blocks: [] };
     const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -163,32 +183,6 @@ function extractMermaidBlocks(text) {
     }
 
     return { text: output.join('\n'), blocks };
-}
-
-function extractSvgBlocks(text) {
-    if (!text) return { text: '', blocks: [] };
-    const blocks = [];
-    const output = [];
-    let current = null;
-    for (const line of text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')) {
-        if (current === null && /^```svg\s*$/i.test(line.trim())) { current = []; continue; }
-        if (current !== null && /^```\s*$/.test(line.trim())) {
-            output.push(`@@SVG_BLOCK_${blocks.length}@@`); blocks.push(current.join('\n')); current = null; continue;
-        }
-        if (current !== null) current.push(line); else output.push(line);
-    }
-    if (current !== null) output.push('```svg', ...current);
-    return { text: output.join('\n'), blocks };
-}
-
-function injectSvgBlocks(markup, blocks) {
-    if (!markup || !blocks.length) return markup;
-    return markup.replace(/@@SVG_BLOCK_(\d+)@@/g, (match, index) => {
-        const source = blocks[Number(index)] || '';
-        const sanitized = sanitizeModelSvg(source);
-        if (!sanitized) return `<pre><code class="language-svg">${source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
-        return `<figure class="model-svg"><img src="${svgDataUrl(sanitized)}" alt="Model-generated SVG"></figure>`;
-    });
 }
 
 function decodeMermaidBlock(text) {
@@ -379,7 +373,7 @@ function renderMarkdown(text, onHashtagClick) {
     if (!text) return '';
 
     const normalizedMath = normalizeMathFences(text);
-    const { text: withoutSvg, blocks: svgBlocks } = extractSvgBlocks(normalizedMath);
+    const {text:withoutSvg,blocks:svgBlocks}=extractSvgBlocks(normalizedMath);
     const { text: stripped, blocks: mermaidBlocks } = extractMermaidBlocks(withoutSvg);
 
     // Decode HTML entities first (in case content has encoded entities)

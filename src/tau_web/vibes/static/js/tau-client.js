@@ -39,6 +39,7 @@ export function postFromTau(record) {
             ...(record.role === 'assistant' ? { agent_id: 'default' } : {}),
             tau_attachments: Array.isArray(message?.attachments) ? message.attachments.filter(item => typeof item?.media_id === 'string' && item.media_id) : [],
             tau_tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
+            tau_outcome: typeof message?.outcome === 'string' && message.outcome.trim() ? message.outcome.trim() : null,
             tau_tool_result: record.role === 'tool' ? { name: message?.name, callId: message?.tool_call_id, ok: message?.ok } : null },
     };
 }
@@ -246,7 +247,13 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             if (!content?.trim()) throw new Error('Message is empty');
             if (mediaIds.some(id => typeof id !== 'string' || !id || /[\r\n\[\]]/.test(id))) throw new Error('Invalid Tau attachment reference');
             if (mediaIds.length) content += '\n\nAttachments (uploaded separately; references only, not inline media):\n' + mediaIds.map(id => `- [media:${id}]`).join('\n');
-            if (intent || content.trimStart().startsWith('/')) throw new Error('Tau command submission is not integrated yet');
+            const modelCommand = content.trim().match(/^\/model\s+([^\s/]+)\/([^\s]+)$/);
+            if (modelCommand) {
+                await this.modelState(id);
+                const changed = await this.changeModel(id, {provider:modelCommand[1], model_id:modelCommand[2]});
+                return {accepted:true, command:'model', model:changed.model};
+            }
+            if (intent || content.trimStart().startsWith('/')) throw new Error('Unsupported Tau command');
             if (!['auto', 'run', 'steer', 'follow_up', 'queue'].includes(mode)) throw new Error('Unsupported Tau delivery mode');
             if (mode === 'auto') {
                 const result = await request(`/sessions/${encodeURIComponent(id)}/runs`);

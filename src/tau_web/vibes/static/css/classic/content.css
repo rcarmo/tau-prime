@@ -359,6 +359,14 @@
     gap: var(--spacing-sm);
 }
 
+.post-outcome-chip {
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
 .post-author {
     font-weight: 700;
 }
@@ -912,6 +920,12 @@
 .post-content li input[type="checkbox"]:checked + * {
     opacity: 0.65;
 }
+.model-svg img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
 .post-content table {
     display: table;
     border-collapse: collapse;

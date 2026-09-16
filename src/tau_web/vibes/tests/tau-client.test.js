@@ -79,6 +79,12 @@ test('unsupported attachments and commands fail before transport; rejection is n
     await expect(client.send('one','/compact')).rejects.toThrow('command');
     await expect(client.send('one','hello',{mode:'steer'})).rejects.toThrow('rejected');
 });
+test('model command resolves through the authoritative session mutation path',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options={})=>{calls.push({path,...options});return Response.json(options.method==='PATCH'?{provider_name:'provider',model:'model',updated_at:'r2'}:{provider_name:'old',model:'old',updated_at:'r1'});}});
+ expect(await client.send('one','/model provider/model')).toEqual({accepted:true,command:'model',model:{provider:'provider',id:'model',name:'model'}});
+ expect(calls.map(call=>call.path)).toEqual(['/api/sessions/one','/api/sessions/one/model']);
+ expect(JSON.parse(calls[1].body)).toEqual({provider_name:'provider',model:'model',expected_updated_at:'r1'});
+});
 test('run status excludes finished runs; queue preserves FIFO and marks unsupported actions',async()=>{
  const client=createTauClient({fetchImpl:async path=>Response.json(path.endsWith('/runs')
  ? {runs:[{run_id:'active',session_id:'one',status:'running'},{run_id:'done',status:'completed'}]}
@@ -180,6 +186,11 @@ test('thinking policy uses dedicated endpoint and loaded revision without assert
 test('agent display identity uses actual Tau settings without invented capabilities',async()=>{
  const client=createTauClient({fetchImpl:async path=>{expect(path).toBe('/api/settings');return Response.json({agent_name:'Tau configured'});}});
  expect(await client.agentIdentity()).toEqual({agents:[{id:'default',name:'Tau configured',avatar_url:'/static/icon-192.png'}],user:{name:'You',avatar_url:null}});
+});
+test('persisted outcome metadata is normalized for timeline chips',async()=>{
+ const {postFromTau}=await import('../static/js/tau-client.js');
+ expect(postFromTau({role:'assistant',content_blocks_json:{outcome:' completed '}}).data.tau_outcome).toBe('completed');
+ expect(postFromTau({role:'assistant',content_blocks_json:{outcome:''}}).data.tau_outcome).toBe(null);
 });
 test('persisted attachments retain stable media metadata only',async()=>{
  const {postFromTau}=await import('../static/js/tau-client.js');
