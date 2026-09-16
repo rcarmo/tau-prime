@@ -26,9 +26,12 @@ try {
  const codeBoundaries=[['x\n'.repeat(39),false],['x\n'.repeat(40),true],['x'.repeat(24575)+'\n',false],['x'.repeat(24576)+'\n',true],['日'.repeat(8192)+'\n',true]];
  let codeFixture=Array.from({length:65},(_,i)=>`line ${i}: café 日本語`).join('\n');
  await context.addInitScript(()=>{window.copiedCode=null;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedCode=text;}}});});
- const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); for(const [label,action] of [['Extension submit',()=>api.submit({text:'Extension message',mode:'run'})],['Extension navigate',()=>api.navigate('smoke')]]) { const button=document.createElement('button'); button.textContent=label; button.className='compose-queue-btn'; button.onclick=async()=>{try{await action();text.textContent=label+' accepted';}catch(error){text.textContent=error.message;}};container.append(button); } }); }`;
+ const extensionSource = `export async function activate(api) { const settings=await api.request('/api/settings'); api.mountSlot('compose_above', container=>{ const text=document.createElement('p'); text.textContent='Extension mounted: '+settings.agent_name; container.append(text); for(const [label,action] of [['Extension submit',()=>api.submit({text:'Extension message',mode:'run'})],['Extension navigate',()=>api.navigate('smoke')],['Extension race slow',()=>api.navigate('slow')],['Extension race fast',()=>api.navigate('search-other')]]) { const button=document.createElement('button'); button.textContent=label; button.className='compose-queue-btn'; button.onclick=async()=>{try{await action();text.textContent=label+' accepted';}catch(error){text.textContent=error.message;}};container.append(button); } }); }`;
  const extensionIntegrity='sha256-'+createHash('sha256').update(extensionSource).digest('base64');
- let uploads=0;let snapshots=0;let selectedLeaf='leaf-a';const leafChanges=[];
+ let uploads=0;let rejectUpload=false;let snapshots=0;let selectedLeaf='leaf-a';const leafChanges=[];
+ let rejectQueueMove=false,rejectQueueRemove=false,releaseQueueMutation=null,releaseSlowTimeline=null,rejectArchive=false;
+ let currentProvider='test',currentModel='fixture',rejectModel=false,holdModels=false,releaseModels=null;const modelChanges=[];
+ const deletedMessages=[];
  const approvalDecision=process.env.TAU_SMOKE_APPROVAL||'deny';
  if(!['allow','deny'].includes(approvalDecision))throw new Error('Invalid TAU_SMOKE_APPROVAL');
  const approvalLabel=approvalDecision==='allow'?'Allow bash':'Deny bash';
@@ -46,16 +49,39 @@ try {
   if(url.pathname==='/api/files')return route.fulfill({contentType:'application/json',body:JSON.stringify({path:'.',kind:'directory',entries:[]})});
   if(url.pathname==='/api/sessions/smoke/context')return route.fulfill({contentType:'application/json',body:JSON.stringify({entry_count:0,message_count:0,compaction_count:0,active_leaf_entry_id:null,estimated_tokens:null,context_window:null,token_usage_source:null})});
   if(url.pathname==='/api/commands')return route.fulfill({contentType:'application/json',body:JSON.stringify({source:'fixture',commands:[{name:'/thinking',description:'Set Tau thinking policy'}]})});
+  if(url.pathname==='/api/models'){
+   if(holdModels)await new Promise(resolve=>{releaseModels=resolve;});
+   return route.fulfill({contentType:'application/json',body:JSON.stringify({source:'configured',models:[
+    {provider_name:'test',model:'fixture'},
+    {provider_name:'test',model:'capable',supports_thinking:true,context_window:65536,thinking_levels:['off','high']},
+    {provider_name:'other',model:'plain'},
+    {provider_name:'other',model:'session-model'},
+   ]})});
+  }
   if(url.pathname==='/api/media/image-fixture/content') {
    expect(route.request().headers().authorization).toBe('Bearer image-test-token');
    if(rejectImage)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Fixture image unavailable'})});
    return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAEDAQAIicLsAAAAAElFTkSuQmCC','base64')});
   }
   if(url.pathname==='/api/events') return route.fulfill({contentType:'text/event-stream',body: snapshots++ === 0 ? 'id: 1\nevent: tau.snapshot\ndata: {}\n\n' : ': fixture heartbeat\n\n'});
-  const session={session_id:'smoke',title:'Tau smoke session',provider_name:'test',model:'fixture',updated_at:'r1'};
+  const session={session_id:'smoke',title:'Tau smoke session',provider_name:currentProvider,model:currentModel,updated_at:`r${modelChanges.length+1}`};
   let data;
-  if(url.pathname.startsWith('/api/sessions/search-other')){
-   const other={...session,session_id:'search-other',title:'Search destination'};
+  if(url.pathname==='/api/sessions/slow/timeline') {
+   await new Promise(resolve=>{releaseSlowTimeline=resolve;});
+   return route.fulfill({contentType:'application/json',body:JSON.stringify({timeline:[{message_id:100,session_id:'slow',role:'assistant',content:'Stale slow timeline',created_at:'2026-09-13T19:00:00Z'}]})});
+  }
+  if(url.pathname.startsWith('/api/sessions/slow')) {
+   const slow={...session,session_id:'slow',title:'Slow destination'};
+   const suffix=url.pathname.slice('/api/sessions/slow'.length);
+   const resources={'':slow,'/runs':{runs:[]},'/queue':{items:[{queue_id:99,session_id:'slow',queue_kind:'follow_up',position:0,content:'Stale slow queue'}]},'/approvals':{approvals:[]},'/context':{entry_count:1,message_count:1}};
+   if(Object.hasOwn(resources,suffix))return route.fulfill({contentType:'application/json',body:JSON.stringify(resources[suffix])});
+  }
+  if(url.pathname==='/api/sessions/search-other'&&route.request().method()==='DELETE') {
+   if(rejectArchive)return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture archive conflict'})});
+   data={...session,session_id:'search-other',title:'Search destination',archived_at:'now'};
+  }
+  else if(url.pathname.startsWith('/api/sessions/search-other')){
+   const other={...session,session_id:'search-other',title:'Search destination',provider_name:'other',model:'session-model'};
    const suffix=url.pathname.slice('/api/sessions/search-other'.length);
    const resources={'':other,'/timeline':{timeline:[{message_id:99,session_id:'search-other',role:'assistant',content:'Other session timeline',created_at:'2026-09-13T19:00:00Z'}]},'/runs':{runs:[]},'/queue':{items:[]},'/approvals':{approvals:[]},'/context':{entry_count:1,message_count:1}};
    if(Object.hasOwn(resources,suffix))return route.fulfill({contentType:'application/json',body:JSON.stringify(resources[suffix])});
@@ -81,6 +107,7 @@ try {
    uploads++;
    expect(route.request().headers()['x-tau-csrf']).toBe('1');
    expect(route.request().postDataBuffer().toString()).toContain('attachment-fixture.txt');
+   if(rejectUpload)return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'Fixture upload failed'})});
    data={media_id:'uploaded-fixture',filename:'attachment-fixture.txt'};
   }
   else if(url.pathname==='/api/sessions/smoke/approvals') data={approvals:approvalPending?[{approval_id:'approval-fixture',session_id:'smoke',tool_name:'bash',description:'Run fixture command',arguments:{command:'echo fixture'}}]:[]};
@@ -118,16 +145,33 @@ try {
     data={run_id:'accepted-fixture',status:'pending'};
    } else data={runs:activeRun?[{run_id:'cancel-fixture',session_id:'smoke',status:'running'}]:[]};
   }
+  else if(/^\/api\/sessions\/smoke\/queue\/\d+\/move$/.test(url.pathname)) {
+   if(rejectQueueMove){await new Promise(resolve=>{releaseQueueMutation=resolve;});return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture reorder conflict'})});}
+   data={queue_id:Number(url.pathname.split('/').at(-2))};
+  }
+  else if(/^\/api\/sessions\/smoke\/queue\/\d+$/.test(url.pathname)&&route.request().method()==='DELETE') {
+   if(rejectQueueRemove){await new Promise(resolve=>{releaseQueueMutation=resolve;});return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture remove conflict'})});}
+   data={queue_id:Number(url.pathname.split('/').at(-1))};
+  }
   else if(url.pathname==='/api/sessions/smoke/queue') data={queue:[
    {queue_id:11,session_id:'smoke',queue_kind:'follow_up',position:0,content:'First FIFO message'},
    {queue_id:12,session_id:'smoke',queue_kind:'follow_up',position:1,content:'Second FIFO message'},
   ]};
-  else if(url.pathname==='/api/sessions') data={sessions:[session,{...session,session_id:'search-other',title:'Search destination'}]};
-  else if(url.pathname==='/api/sessions/smoke') data=session;
+  else if(url.pathname==='/api/sessions') data={sessions:[session,{...session,session_id:'search-other',title:'Search destination'},{...session,session_id:'slow',title:'Slow destination'}]};
+  else if(url.pathname==='/api/sessions/smoke/model'&&route.request().method()==='PATCH') {
+   const body=route.request().postDataJSON();modelChanges.push(body);
+   if(rejectModel)return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Fixture model conflict'})});
+   currentProvider=body.provider_name;currentModel=body.model;data={...session,provider_name:currentProvider,model:currentModel,updated_at:`r${modelChanges.length+1}`};
+  }
+  else if(url.pathname==='/api/sessions/smoke') data={...session,model:currentModel};
+  else if(/^\/api\/sessions\/smoke\/timeline\/\d+$/.test(url.pathname)&&route.request().method()==='DELETE') {
+   const id=Number(url.pathname.split('/').at(-1));const cascade=url.searchParams.get('cascade')==='true';
+   expect(id).toBe(5);expect(cascade).toBe(true);deletedMessages.push(5,3);data={ids:[5,3]};
+  }
   else if(url.pathname==='/api/sessions/smoke/timeline') data={timeline:[
    {message_id:1,session_id:'smoke',role:'assistant',content:'Tau persisted smoke message',created_at:'2026-09-13T19:00:00Z',content_blocks_json:JSON.stringify({attachments:[{media_id:'image-fixture',filename:'fixture.png',media_type:'image/png'}]})},
    {message_id:2,session_id:'smoke',role:'assistant',content:'',created_at:'2026-09-13T19:00:01Z',content_blocks_json:JSON.stringify({tool_calls:[{id:'call-fixture',name:'bash',arguments:{command:'<img src=x onerror="window.toolInjected=true">'}}]})},
-   {message_id:3,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
+   {message_id:3,thread_id:5,session_id:'smoke',role:'tool',content:'Fixture command failed safely',created_at:'2026-09-13T19:00:02Z',content_blocks_json:JSON.stringify({name:'bash',tool_call_id:'call-fixture',ok:false})},
    {message_id:4,session_id:'smoke',role:'assistant',content:'```text\n'+codeFixture+'\n```',created_at:'2026-09-13T19:00:03Z'},
    {message_id:5,session_id:'smoke',role:'assistant',content:'# Review\n\n**Ready** and `inline code`.\n\n- First\n- Second\n\n[Unsafe](javascript:alert(1)) [Mixed unsafe](JaVaScRiPt:alert(1)) [Data unsafe](data:text/html,hello) [Encoded unsafe](jav&#x61;script:alert(1)) [Whitespace unsafe](java&#x09;script:alert(1)) [Safe HTTPS](https://example.com/review) [Safe mail](mailto:review@example.com) [Safe relative](/review) <img src="x" onerror="window.markdownInjected=true"><script>window.markdownInjected=true</script>',created_at:'2026-09-13T19:00:04Z'},
    ...codeBoundaries.map(([text],i)=>({message_id:10+i,session_id:'smoke',role:'assistant',content:'```text\n'+text+'```',created_at:'2026-09-13T19:00:04Z'})),
@@ -167,7 +211,49 @@ try {
   console.log('PASS reference conversation structure, utility access and retained Plan draft');
   await browser.close();browser=null;await stopChild(server);process.exit(0);
  }
+ const sessionTrigger=page.getByTestId('session-switcher');
+ await sessionTrigger.click();
+ const sessionPopup=page.getByTestId('session-popup');
+ await expect(sessionPopup).toBeVisible();
+ await expect(sessionPopup.getByRole('combobox',{name:'Search sessions'})).toBeFocused();
+ await expect(sessionPopup.getByRole('group',{name:'Current'})).toContainText('@tau-smoke-session');
+ await expect(sessionPopup.getByRole('group',{name:'Other'})).toContainText('@search-destination');
+ await expect(sessionPopup.getByRole('button',{name:'Pin @search-destination'})).toBeDisabled();
+ await expect(sessionPopup.getByRole('button',{name:'Delete Search destination'})).toBeDisabled();
+ rejectArchive=true;
+ await sessionPopup.getByRole('button',{name:'Archive Search destination'}).click();
+ await expect(sessionPopup.getByRole('alert')).toHaveText('Fixture archive conflict');
+ await expect(sessionPopup.getByRole('option',{name:/@search-destination/})).toBeVisible();
+ rejectArchive=false;
+ await sessionPopup.getByRole('combobox',{name:'Search sessions'}).press('Escape');
+ await expect(sessionPopup).toHaveCount(0);
+ await expect(sessionTrigger).toBeFocused();
+ await expect(sessionTrigger).toContainText('@Tau smoke session');
+ await expect(page).toHaveURL('http://127.0.0.1:8893/?session=smoke');
+ await sessionTrigger.click();
+ await page.getByTestId('session-popup').getByRole('option',{name:/@search-destination/}).click();
+ await expect(page).toHaveURL('http://127.0.0.1:8893/?session=search-other');
+ await expect(page.getByText('Other session timeline',{exact:true})).toBeVisible();
+ await expect(sessionTrigger).toContainText('@Search destination');
+ await expect(page.getByTestId('queue-item')).toHaveCount(0);
+ await page.goto('http://127.0.0.1:8893/?session=smoke');
+ await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('queue-item')).toHaveCount(2);
  await expect(page.locator('[data-extension-slot="compose_above"]')).toContainText('Extension mounted: Tau');
+ await page.getByRole('button',{name:'Extension race slow',exact:true}).click();
+ await expect.poll(()=>typeof releaseSlowTimeline).toBe('function');
+ await page.getByRole('button',{name:'Extension race fast',exact:true}).click();
+ await expect(page).toHaveURL('http://127.0.0.1:8893/?session=search-other');
+ await expect(page.getByText('Other session timeline',{exact:true})).toBeVisible();
+ releaseSlowTimeline();releaseSlowTimeline=null;
+ await page.waitForTimeout(100);
+ await expect(page).toHaveURL('http://127.0.0.1:8893/?session=search-other');
+ await expect(page.getByText('Other session timeline',{exact:true})).toBeVisible();
+ await expect(page.getByText('Stale slow timeline',{exact:true})).toHaveCount(0);
+ await expect(page.getByTestId('queue-item')).toHaveCount(0);
+ await page.getByTestId('session-switcher').click();
+ await page.getByTestId('session-popup').getByRole('option',{name:/@tau-smoke-session/}).click();
+ await expect(page.getByText('Tau persisted smoke message',{exact:true})).toBeVisible();
  await page.evaluate(()=>{
   const target=document.querySelector('[data-extension-slot="timeline_before"]');
   window.tauExtensionUI.mountWidget(target,{extension_id:'fixture',id:'widget',title:'Widget bridge fixture',height:120,url:'/fixture'},`<body><script>addEventListener('message',e=>{if(e.data.source==='tau-host')document.body.textContent=JSON.stringify(e.data);});parent.postMessage({source:'tau-widget',version:1,extension_id:'fixture',widget_id:'widget',request_id:'check-1',kind:'action',name:'check',payload:{}},'*');<\/script>`);
@@ -234,6 +320,16 @@ try {
  await expect(markdownPost.getByRole('link',{name:'Safe HTTPS',exact:true})).toHaveAttribute('href','https://example.com/review');
  await expect(markdownPost.getByRole('link',{name:'Safe mail',exact:true})).toHaveAttribute('href','mailto:review@example.com');
  await expect(markdownPost.getByRole('link',{name:'Safe relative',exact:true})).toHaveAttribute('href','/review');
+ await page.locator('#post-5').getByRole('button',{name:'Copy message',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>window.copiedCode)).toBe('# Review\n\n**Ready** and `inline code`.\n\n- First\n- Second\n\n[Unsafe](javascript:alert(1)) [Mixed unsafe](JaVaScRiPt:alert(1)) [Data unsafe](data:text/html,hello) [Encoded unsafe](jav&#x61;script:alert(1)) [Whitespace unsafe](java&#x09;script:alert(1)) [Safe HTTPS](https://example.com/review) [Safe mail](mailto:review@example.com) [Safe relative](/review) <img src="x" onerror="window.markdownInjected=true"><script>window.markdownInjected=true</script>');
+ page.once('dialog',dialog=>dialog.dismiss());
+ await page.locator('#post-5').getByRole('button',{name:'Delete message',exact:true}).click();
+ await expect(page.locator('#post-5')).toBeVisible();await expect(page.locator('#post-3')).toBeVisible();
+ expect(deletedMessages).toEqual([]);
+ page.once('dialog',dialog=>dialog.accept());
+ await page.locator('#post-5').getByRole('button',{name:'Delete message',exact:true}).click();
+ await expect(page.locator('#post-5')).toHaveCount(0);await expect(page.locator('#post-3')).toHaveCount(0);
+ expect(deletedMessages).toEqual([5,3]);
  const codePost=page.locator('#post-4');
  // Consecutive assistant messages are not implicitly threaded.
  await expect(codePost).not.toHaveClass(/thread-reply/);
@@ -273,6 +369,22 @@ try {
   await expect(row.getByRole('button',{name:'Steer queued message',exact:true})).toBeDisabled();
   await expect(row.getByRole('button',{name:'Return queued message to editor',exact:true})).toBeVisible();
  }
+ rejectQueueMove=true;
+ const secondQueue=page.getByTestId('queue-item').filter({hasText:'Second FIFO message'});await secondQueue.hover();
+ const reorderDialog=new Promise(resolve=>page.once('dialog',async dialog=>{expect(dialog.message()).toContain('Fixture reorder conflict');await dialog.accept();resolve();}));
+ await secondQueue.getByRole('button',{name:'Move up in queue',exact:true}).click();
+ await expect(page.locator('.compose-queue-stack-text')).toHaveText(['Second FIFO message','First FIFO message']);
+ await expect.poll(()=>typeof releaseQueueMutation).toBe('function');releaseQueueMutation();releaseQueueMutation=null;
+ await reorderDialog;rejectQueueMove=false;
+ await expect(page.locator('.compose-queue-stack-text')).toHaveText(['First FIFO message','Second FIFO message']);
+ rejectQueueRemove=true;
+ const firstQueue=page.getByTestId('queue-item').filter({hasText:'First FIFO message'});await firstQueue.hover();
+ const removeDialog=new Promise(resolve=>page.once('dialog',async dialog=>{expect(dialog.message()).toContain('Fixture remove conflict');await dialog.accept();resolve();}));
+ await firstQueue.getByRole('button',{name:'Remove queued message',exact:true}).click();
+ await expect(firstQueue).toHaveCount(0);
+ await expect.poll(()=>typeof releaseQueueMutation).toBe('function');releaseQueueMutation();releaseQueueMutation=null;
+ await removeDialog;rejectQueueRemove=false;
+ await expect(page.locator('.compose-queue-stack-text')).toHaveText(['First FIFO message','Second FIFO message']);
  const openTools=async()=>{
   if(await page.getByRole('dialog',{name:'Session tools',exact:true}).count())return;
   await page.getByTestId('session-switcher').click();
@@ -331,8 +443,43 @@ try {
  if(process.env.TAU_CAPTURE_DIR)await page.screenshot({path:`${process.env.TAU_CAPTURE_DIR}/${engine}-${size}-${process.env.TAU_SMOKE_THEME||'light'}-plan.png`,fullPage:true});
  await page.getByRole('button',{name:'Close plan sidebar',exact:true}).click();
  const composer=page.locator('.compose-box textarea');
- await expect(page.getByRole('button',{name:'Open model picker',exact:true})).toBeVisible();
+ const modelTrigger=page.getByRole('button',{name:'Open model picker',exact:true});
+ await expect(modelTrigger).toBeVisible();
  await expect(page.getByRole('img',{name:'Context usage unavailable',exact:true})).toHaveCount(0);
+ await composer.fill('Model selection keeps this draft');
+ const submittedBeforeModels=submitted.length;
+ await modelTrigger.click();
+ const modelSearch=page.getByRole('combobox',{name:'Search models'});await expect(modelSearch).toBeFocused();
+ await expect(page.getByRole('option',{name:/fixture, not pinned/})).not.toContainText('context');
+ await expect(page.getByRole('option',{name:/capable, not pinned/})).toContainText('66K context');
+ await expect(page.getByRole('option',{name:/capable, not pinned/})).toContainText('reasoning');
+ await modelSearch.press('Control+End');
+ await expect(modelSearch).toHaveAttribute('aria-activedescendant',/other%2Fsession-model/);
+ await modelSearch.fill('cap');
+ await expect(page.getByRole('listbox',{name:'Models'}).getByRole('option')).toHaveCount(1);
+ await modelSearch.press('ArrowDown');await modelSearch.press('Enter');
+ await expect(modelTrigger).toContainText('test/capable');
+ await expect(composer).toHaveValue('Model selection keeps this draft');expect(submitted.length).toBe(submittedBeforeModels);
+ await modelTrigger.click();rejectModel=true;
+ await modelSearch.fill('plain');
+ const rejectedModel=page.getByRole('option',{name:/plain, not pinned/});
+ await expect(rejectedModel).toBeEnabled();await rejectedModel.click();
+ await expect(page.getByText('Fixture model conflict',{exact:true})).toBeVisible();
+ await expect(modelTrigger).toContainText('test/capable');
+ await expect(composer).toHaveValue('Model selection keeps this draft');expect(submitted.length).toBe(submittedBeforeModels);
+ rejectModel=false;await modelSearch.press('Escape');await expect(modelTrigger).toBeFocused();
+ holdModels=true;await modelTrigger.click();await expect.poll(()=>typeof releaseModels).toBe('function');
+ await modelSearch.press('Escape');await expect(modelTrigger).toBeFocused();
+ await page.getByRole('button',{name:'Extension race fast',exact:true}).click();
+ await expect(page).toHaveURL('http://127.0.0.1:8893/?session=search-other');
+ await expect(modelTrigger).toContainText('other/session-model');
+ releaseModels();releaseModels=null;holdModels=false;await page.waitForTimeout(100);
+ await expect(modelTrigger).toContainText('other/session-model');
+ await expect(page.getByText('66K context',{exact:true})).toHaveCount(0);
+ await page.getByTestId('session-switcher').click();
+ await page.getByTestId('session-popup').getByRole('option',{name:/@tau-smoke-session/}).click();
+ await expect(modelTrigger).toContainText('test/capable');
+ await composer.fill('');
  const beforeCompletion=submitted.length;
  await composer.fill('/thi');
  await expect(page.locator('.slash-autocomplete .slash-name')).toHaveText('/thinking');
@@ -346,6 +493,9 @@ try {
  await expect(composer).toBeFocused();
  await expect(page.locator('.slash-autocomplete')).toHaveCount(0);
  expect(submitted.length).toBe(beforeCompletion);
+ // Make the second interaction a real value transition; same-value programmatic fill can be
+ // coalesced by browser input dispatch and is not representative of user retyping.
+ await composer.fill('');
  await composer.fill('/thi');
  await expect(page.locator('.slash-autocomplete')).toBeVisible();
  await composer.press('Escape');
@@ -413,16 +563,21 @@ try {
  await expect(composer).toHaveValue('Keep rejected draft');
  expect(submitted[1]).toEqual({content:'Keep rejected draft'});
  await page.locator('.compose-box input[type="file"]').setInputFiles({name:'attachment-fixture.txt',mimeType:'text/plain',buffer:Buffer.from('fixture bytes')});
+ rejectUpload=true;
+ await composer.press('Enter');
+ await expect(page.getByText('Tau upload failed (500)',{exact:true})).toBeVisible();
+ expect(submitted.length).toBe(2);
+ rejectUpload=false;
  await composer.press('Enter');
  await expect.poll(()=>submitted.length).toBe(3);
  await expect(composer).toBeEnabled();
- expect(uploads).toBe(1);
+ expect(uploads).toBe(2);
  expect(submitted[2].content).toContain('[media:uploaded-fixture]');
  await expect(composer).toHaveValue('Keep rejected draft');
  rejectSend=false;
  await composer.press('Enter');
  await expect(composer).toHaveValue('');
- expect(uploads).toBe(1);
+ expect(uploads).toBe(2);
  expect(submitted[3].content).toContain('[media:uploaded-fixture]');
  await composer.fill('Keep rejected draft');
  await expect(page.getByTestId('stop-button')).toHaveCount(0);

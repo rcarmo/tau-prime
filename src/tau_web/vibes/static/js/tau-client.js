@@ -35,7 +35,7 @@ export function postFromTau(record) {
     return {
         id: record.message_id, timestamp: record.created_at,
         data: { type: record.role === 'assistant' ? 'agent_response' : record.role,
-            content: record.content, session_id: record.session_id,
+            content: record.content, session_id: record.session_id, thread_id: record.thread_id ?? null,
             ...(record.role === 'assistant' ? { agent_id: 'default' } : {}),
             tau_attachments: Array.isArray(message?.attachments) ? message.attachments.filter(item => typeof item?.media_id === 'string' && item.media_id) : [],
             tau_tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
@@ -44,14 +44,14 @@ export function postFromTau(record) {
 }
 
 export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () => '' } = {}) {
-    async function request(path, { method = 'GET', body } = {}) {
+    async function request(path, { method = 'GET', body, signal } = {}) {
         const headers = { Accept: 'application/json' };
         if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) headers['X-Tau-CSRF'] = '1';
         const token = getToken();
         if (token) headers.Authorization = `Bearer ${token}`;
         if (body !== undefined) headers['Content-Type'] = 'application/json';
         const response = await fetchImpl(`/api${path}`, {
-            method, headers, credentials: 'same-origin',
+            method, headers, credentials: 'same-origin', signal,
             ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         });
         if (!response.ok) {
@@ -132,9 +132,9 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             const media = await response.json();
             return { ...media, id: media.media_id };
         },
-        async approvals(id) {
+        async approvals(id, { signal } = {}) {
             if (!id) return [];
-            const result = await request(`/sessions/${encodeURIComponent(id)}/approvals`);
+            const result = await request(`/sessions/${encodeURIComponent(id)}/approvals`, { signal });
             return result.approvals;
         },
         async resolveApproval(id, decision) {
@@ -261,6 +261,10 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             });
             return { accepted: true, queued: true, queue_id: item.queue_id };
         },
+        async deleteTimelineMessage(sessionId, messageId, cascade = false) {
+            if (!sessionId || !Number.isInteger(Number(messageId)) || Number(messageId) < 1) throw new Error('Session and message identity required');
+            return request(`/sessions/${encodeURIComponent(sessionId)}/timeline/${encodeURIComponent(messageId)}?cascade=${cascade ? 'true' : 'false'}`, { method: 'DELETE' });
+        },
         async timeline(id, limit = 10, before = null) {
             if (!id || id === 'default') throw new Error('Select a real Tau session before loading messages');
             if (!Number.isInteger(limit) || limit < 1) throw new Error('Invalid timeline page size');
@@ -326,8 +330,9 @@ export function createTauClient({ fetchImpl = globalThis.fetch, getToken = () =>
             revisions.set(id, session.updated_at);
             return { available: true, model: { provider: session.provider_name, id: session.model, name: session.model }, thinking_level: session.thinking_level };
         },
-        async commands() {
-            const result=await request('/commands');
+        async commands(sessionId = '') {
+            const query = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+            const result=await request(`/commands${query}`);
             return {commands:Array.isArray(result.commands)?result.commands:[]};
         },
         async sessions(includeArchived = false) {

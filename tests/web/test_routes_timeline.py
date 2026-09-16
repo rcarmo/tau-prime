@@ -248,6 +248,55 @@ async def test_timeline_routes_entries_messages_branches_select_and_context(
 
 
 @pytest.mark.anyio
+async def test_timeline_delete_requires_cascade_and_stays_session_scoped(
+    app_client: TestClient,
+    services: TauWebServices,
+) -> None:
+    session_id = await _create_durable_session(services, session_id="delete-timeline")
+    other_id = await _create_durable_session(services, session_id="other-timeline")
+    parent = await services.timeline.project_message_end(
+        session_id,
+        run_id="run",
+        sequence=1,
+        message=UserMessage(content="parent"),
+        created_at="2026-09-16T00:00:00Z",
+    )
+    reply = await services.timeline.project_message_end(
+        session_id,
+        run_id="run",
+        sequence=2,
+        message=AssistantMessage(content="reply"),
+        created_at="2026-09-16T00:00:01Z",
+        thread_id=parent.message_id,
+    )
+
+    async with app_client.get(f"/api/sessions/{session_id}/timeline") as response:
+        assert response.status == 200
+        payload = await response.json()
+    assert payload["timeline"][1]["thread_id"] == parent.message_id
+
+    async with app_client.delete(
+        f"/api/sessions/{session_id}/timeline/{parent.message_id}"
+    ) as response:
+        assert response.status == 409
+    remaining = await services.timeline.list(session_id=session_id)
+    assert [record.message_id for record in remaining] == [parent.message_id, reply.message_id]
+
+    async with app_client.delete(
+        f"/api/sessions/{other_id}/timeline/{parent.message_id}?cascade=true"
+    ) as response:
+        assert response.status == 404
+
+    async with app_client.delete(
+        f"/api/sessions/{session_id}/timeline/{parent.message_id}?cascade=true"
+    ) as response:
+        assert response.status == 200
+        payload = await response.json()
+    assert payload == {"ids": [parent.message_id, reply.message_id]}
+    assert await services.timeline.list(session_id=session_id) == []
+
+
+@pytest.mark.anyio
 async def test_timeline_routes_handle_empty_sessions(
     app_client: TestClient,
     services: TauWebServices,

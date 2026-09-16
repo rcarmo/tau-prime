@@ -10,7 +10,7 @@ export function shouldOpenQuickActions(event) {
     if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return false;
     if (typeof event.key !== 'string' || [...event.key].length !== 1 || !/\S/u.test(event.key)) return false;
     const target = event.target;
-    if (target?.isContentEditable || target?.closest?.('input, textarea, select, button, a, [contenteditable="true"], .compose-box, .workspace-sidebar, .workspace-explorer, .editor-pane-container, .dock-panel, dialog, [role="dialog"], .rename-branch-overlay, .agent-request-modal, .attachment-preview-modal, .model-settings-dialog')) return false;
+    if (target?.isContentEditable || target?.closest?.('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="listbox"], [aria-haspopup][aria-expanded="true"], .compose-box, .workspace-sidebar, .workspace-explorer, .editor-pane-container, .dock-panel, dialog, [role="dialog"], .rename-branch-overlay, .agent-request-modal, .attachment-preview-modal, .model-settings-dialog')) return false;
     return !target || ['BODY', 'HTML'].includes(target.tagName)
         || Boolean(target.closest?.('.container, .timeline, .post, .post-body, .post-content, .agent-status-panel'));
 }
@@ -42,7 +42,7 @@ export function quickActionItems({ sessions = [], commands = [], workspace = [],
     return items;
 }
 
-function preferredIndex(items, query) {
+export function preferredIndex(items, query) {
     const term = normalise(query);
     if (!term || !items.length) return 0;
     const exact = items.findIndex(item => normalise(item.title) === term);

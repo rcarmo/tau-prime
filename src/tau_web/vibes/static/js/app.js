@@ -1,4 +1,4 @@
-import { tauStatus } from './tau-status.js';
+import { mergeTauStatus, tauStatus } from './tau-status.js';
 import { TauWorkspaceMenu } from './components/tau-workspace-menu.js';
 import { QuickActions } from './components/quick-actions.js';
 import { TauMeters } from './components/tau-meters.js';
@@ -1864,7 +1864,7 @@ function App() {
             if (!confirmed) return;
         }
         try {
-            const result = await deletePost(postId, replyCount > 0);
+            const result = await deletePost(postId, replyCount > 0, selectedSessionRef.current);
             if (result?.ids?.length) {
                 animateAndRemovePosts(result.ids);
                 if (hasMore) {
@@ -1876,7 +1876,7 @@ function App() {
             if (replyCount === 0 && errorMessage.includes('Replies exist')) {
                 const confirmed = window.confirm('Delete this message and its replies?');
                 if (!confirmed) return;
-                const result = await deletePost(postId, true);
+                const result = await deletePost(postId, true, selectedSessionRef.current);
                 if (result?.ids?.length) {
                     animateAndRemovePosts(result.ids);
                     if (hasMore) {
@@ -1968,27 +1968,37 @@ function App() {
     }, []);
 
     const handleQueueRemove = useCallback(async (rowId, originSessionId = selectedSessionRef.current) => {
-        if (rowId == null) return;
+        if (rowId == null) return false;
+        setQueuedFollowups(items => items.filter(item => item.row_id !== rowId));
         try {
             await removeAgentQueueItem(rowId, originSessionId);
-            try {
-                await refreshSelectedQueue();
-            } catch (refreshError) {
-                console.warn('Queue item removed, but refresh failed:', refreshError);
-            }
             return true;
         } catch (error) {
             console.error('Failed to remove queued item:', error);
             alert('Failed to remove queued item: ' + error.message);
+            try { await refreshSelectedQueue(); }
+            catch (refreshError) { console.warn('Queue reconciliation failed:', refreshError); }
             return false;
         }
     }, []);
 
     const handleQueueReorder = useCallback(async (rowId, direction) => {
+        const originSessionId = selectedSessionRef.current;
+        setQueuedFollowups(items => {
+            const index = items.findIndex(item => item.row_id === rowId);
+            const target = index + (direction === 'up' ? -1 : 1);
+            if (index < 0 || target < 0 || target >= items.length) return items;
+            const next = [...items];
+            [next[index], next[target]] = [next[target], next[index]];
+            return next;
+        });
         try {
-            const result = await reorderAgentQueueItem(rowId, direction, selectedSessionRef.current);
-            await refreshSelectedQueue();
-        } catch (err) { alert(err.message || 'Failed to reorder queue.'); }
+            await reorderAgentQueueItem(rowId, direction, originSessionId);
+        } catch (error) {
+            alert(error.message || 'Failed to reorder queue.');
+            try { await refreshSelectedQueue(); }
+            catch (refreshError) { console.warn('Queue reconciliation failed:', refreshError); }
+        }
     }, []);
 
     const handleQueueSteer = useCallback(async (rowId) => {
@@ -2390,7 +2400,7 @@ function App() {
                 const payload = data.payload || {};
                 const projectedStatus = tauStatus(event, payload, data.run_id);
                 if (projectedStatus) {
-                    setAgentStatus(projectedStatus);
+                    setAgentStatus(current => mergeTauStatus(current, projectedStatus));
                     if (data.run_id) { setCurrentTurnId(data.run_id); currentTurnIdRef.current = data.run_id; }
                 }
                 if (event === 'tau.agent.agent_start') {
@@ -2823,6 +2833,11 @@ function App() {
                     onQueueRemove=${handleQueueRemove}
                     onQueueSteer=${handleQueueSteer}
                     onQueueReorder=${handleQueueReorder}
+                    onRestoreQueueRefs=${refs => {
+                        setFileRefs(refs.filter(ref => ref.kind === 'file').map(ref => ref.title));
+                        setFolderRefs(refs.filter(ref => ref.kind === 'folder').map(ref => ref.title));
+                        setMessageRefs(refs.filter(ref => ref.kind === 'message').map(ref => ref.title.replace(/^message:/, '')));
+                    }}
                     onModelChange=${setActiveModel}
                     onModelStateChange=${applyModelState}
                     notificationsEnabled=${notificationsEnabled}

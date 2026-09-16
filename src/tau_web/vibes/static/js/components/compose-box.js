@@ -3,7 +3,6 @@ import { loadModelPins, saveModelPins, modelPinStorage } from './model-pins.js';
 import { createSpeechInput, speechInputConstructor, shouldStartSpeechPushToTalk } from './compose-speech.js';
 import { sessionMentionQuery, sessionMentionMatches, insertSessionMention } from './session-mentions.js';
 import { composeDrafts } from './compose-drafts.js';
-import { preserveQueuedRecovery, recoverQueuedDraft, returnQueuedText } from '../tau-queue-return.js';
 import { resolveMessageReferences } from '../tau-message-references.js';
 import { TauRunControl } from './tau-run-control.js';
 import { usagePresentation } from './usage.js';
@@ -133,6 +132,7 @@ export function ComposeBox({
     onQueueRemove,
     onQueueSteer,
     onQueueReorder,
+    onRestoreQueueRefs,
     onModelChange,
     onModelStateChange,
     notificationsEnabled = false,
@@ -233,36 +233,28 @@ export function ComposeBox({
     const uploadController = useRef(null);
     useEffect(() => () => uploadController.current?.abort(), []);
     const [mediaFiles, setMediaFiles] = useState(() => composeDrafts.load(sessionId).files);
-    const latestQueueDraft = useRef(null), returningQueue = useRef(false), queueMounted = useRef(true);
-    latestQueueDraft.current = { sessionId, text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs };
+    const returningQueue = useRef(false), queueMounted = useRef(true);
     useEffect(() => { queueMounted.current = true; return () => { queueMounted.current = false; }; }, []);
-    const returnQueueToEditor = async item => {
+    const returnQueueToEditor = item => {
         if (returningQueue.current || !onQueueRemove) return;
         const origin = sessionId;
-        const text = typeof item.content === 'string' ? item.content : '';
-        if (!text.trim()) return;
-        if (content.trim() && !confirm('Append this queued message to your existing draft?')) return;
+        const parsed = parseQueuedContent(item.content);
+        if (!parsed.text.trim() && parsed.refs.length === 0) return;
         returningQueue.current = true;
-        let recoveryKey;
-        try {
-            const outcome = await returnQueuedText({
-                text,
-                preserve: async value => {
-                    recoveryKey = preserveQueuedRecovery(localStorage, {sessionId: origin, queueId: item.row_id, text: value});
-                },
-                remove: () => onQueueRemove(item.row_id, origin),
-            });
-            if (!outcome.removed) return;
-            const current = latestQueueDraft.current;
-            if (queueMounted.current && current.sessionId === origin) composeDrafts.save(origin, current);
-            const restored = recoverQueuedDraft(localStorage, recoveryKey, origin);
-            if (queueMounted.current && latestQueueDraft.current.sessionId === origin) {
-                setContent(restored);
-                requestAnimationFrame(() => textareaRef.current?.focus());
-            }
-        } catch (error) {
-            alert(`Could not return queued message: ${error.message}. Any preserved recovery copy is retained.`);
-        } finally { returningQueue.current = false; }
+        setContent(parsed.text);
+        setMediaFiles([]);
+        uploadedFiles.current = new WeakMap();
+        setSubmitError('');
+        setUploadProgress(null);
+        onRestoreQueueRefs?.(parsed.refs);
+        requestAnimationFrame(() => {
+            if (!queueMounted.current || sessionId !== origin) return;
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(parsed.text.length, parsed.text.length);
+            Promise.resolve(onQueueRemove(item.row_id, origin))
+                .catch(error => alert(`Could not remove queued message: ${error.message}`))
+                .finally(() => { returningQueue.current = false; });
+        });
     };
     useEffect(() => {
         composeDrafts.save(sessionId, { text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs });
@@ -570,9 +562,18 @@ export function ComposeBox({
         if (event.target === modelSearchRef.current) {
             const choices = Array.from(modelPopupRef.current?.querySelectorAll('[role="option"]:not(:disabled)') || []);
             const index = choices.findIndex(node => node.dataset.modelLabel === highlightedModel);
-            if (['ArrowDown', 'ArrowUp'].includes(event.key) && choices.length) {
+            if ((event.ctrlKey || event.metaKey) && ['Home', 'End'].includes(event.key) && choices.length) {
                 event.preventDefault();
-                const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : choices.length - 1) : (index + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length;
+                const next = event.key === 'Home' ? 0 : choices.length - 1;
+                setHighlightedModel(choices[next].dataset.modelLabel);
+                choices[next].scrollIntoView({ block: 'nearest' });
+                return;
+            }
+            if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key) && choices.length) {
+                event.preventDefault();
+                const step = event.key === 'PageDown' ? 8 : event.key === 'PageUp' ? -8 : event.key === 'ArrowDown' ? 1 : -1;
+                const next = index < 0 ? (step > 0 ? 0 : choices.length - 1)
+                    : Math.max(0, Math.min(choices.length - 1, index + step));
                 setHighlightedModel(choices[next].dataset.modelLabel);
                 choices[next].scrollIntoView({ block: 'nearest' });
                 return;

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import cast
 
 import pytest
@@ -43,6 +44,24 @@ async def _session(client: TestClient, session_id: str = "meta") -> dict[str, ob
     response = await client.get(f"/api/sessions/{record.session_id}")
     assert response.status == 200
     return await response.json()
+
+
+@pytest.mark.anyio
+async def test_session_commands_include_loaded_skills(
+    app_client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    skill_dir = home / ".tau" / "skills" / "demo"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("---\ndescription: Demonstration skill\n---\nUse it.\n")
+    monkeypatch.setenv("HOME", str(home))
+    await _session(app_client)
+
+    response = await app_client.get("/api/commands?session_id=meta")
+    assert response.status == 200
+    commands = (await response.json())["commands"]
+    descriptions = {item["name"]: item["description"] for item in commands}
+    assert descriptions["/skill:demo"] == "Demonstration skill"
 
 
 @pytest.mark.anyio

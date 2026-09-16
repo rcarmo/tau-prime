@@ -53,10 +53,11 @@ try{
    const first=rows.filter({hasText:'First installed queue item'});await first.hover();
    await first.getByRole('button',{name:'Remove queued message',exact:true}).click();await first.waitFor({state:'detached'});
    const composer=page.locator('.compose-box textarea');await composer.fill('Existing installed draft');
-   page.once('dialog',dialog=>dialog.accept());await rows.first().hover();
+   await rows.first().hover();
    await rows.first().getByRole('button',{name:'Return queued message to editor',exact:true}).click();
    await rows.waitFor({state:'detached'});
-   await page.waitForFunction(()=>document.querySelector('.compose-box textarea')?.value==='Existing installed draft\n\nSecond installed queue item');
+   await page.waitForFunction(()=>document.querySelector('.compose-box textarea')?.value==='Second installed queue item');
+   assert.equal(await composer.evaluate(element=>element.selectionStart),'Second installed queue item'.length);
    queue=(await (await request(`/api/sessions/${session.session_id}/queue`)).json()).queue;assert.equal(queue.length,0);
    console.log(`${engine.name()}: installed Plan/SSE/meters and persistent queue reorder/remove/return passed`);
   }finally{await browser.close();}

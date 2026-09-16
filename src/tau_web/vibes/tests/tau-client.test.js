@@ -144,6 +144,12 @@ test('plan save sends caller revision and exposes current plan on conflict witho
  expect(calls.length).toBe(1);expect(JSON.parse(calls[0].body)).toEqual({markdown:draft,expected_revision:2});
  expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
 });
+test('approval reads forward cancellation for session-change and unmount cleanup',async()=>{
+ const controller=new AbortController();let received;
+ const client=createTauClient({fetchImpl:async(_path,options)=>{received=options.signal;return Response.json({approvals:[]});}});
+ expect(await client.approvals('one',{signal:controller.signal})).toEqual([]);
+ expect(received).toBe(controller.signal);
+});
 test('approval decisions are explicit, authenticated mutations and reject invalid choices',async()=>{
  const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({approval_id:'a',decision:'deny'});}});
  await client.resolveApproval('a','deny');
@@ -261,9 +267,10 @@ test('steering existing queue requires explicit active run',async()=>{
  expect(JSON.parse(calls[0].body)).toEqual({run_id:'run-1'});
  expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
 });
-test('commands use the authoritative native catalogue',async()=>{
- const client=createTauClient({fetchImpl:async path=>Response.json(path==='/api/commands'?{commands:[{name:'/model',description:'Choose model'}]}:{})});
- expect(await client.commands()).toEqual({commands:[{name:'/model',description:'Choose model'}]});
+test('commands use the authoritative session-scoped native catalogue',async()=>{
+ const paths=[];const client=createTauClient({fetchImpl:async path=>{paths.push(path);return Response.json({commands:[{name:'/skill:demo',description:'Demo'}]});}});
+ expect(await client.commands('session a')).toEqual({commands:[{name:'/skill:demo',description:'Demo'}]});
+ expect(paths).toEqual(['/api/commands?session_id=session%20a']);
 });
 test('manual compaction uses the dedicated scoped endpoint',async()=>{
  const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({session_id:'one',summary:'done'});}});

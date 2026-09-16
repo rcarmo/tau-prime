@@ -28,6 +28,7 @@ from tau_web.routes.common import (
 )
 from tau_web.routes.sessions import session_resource
 from tau_web.services import TauWebServices
+from tau_web.sqlite.repositories import RecordNotFoundError, RepositoryError
 from tau_web.sqlite.session_storage import SqliteSessionStorageError
 from tau_web.sqlite.sessions import SessionRecord
 
@@ -150,6 +151,28 @@ async def get_timeline(request: web.Request) -> web.Response:
             timeline=[record_json(record) for record in timeline]
         ).model_dump(mode="json")
     )
+
+
+async def delete_timeline_message(request: web.Request) -> web.Response:
+    services = services_for(request)
+    session_id = request.match_info["session_id"]
+    await _require_session(services, session_id)
+    try:
+        message_id = int(request.match_info["message_id"])
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason="Message id must be an integer") from exc
+    cascade = request.query.get("cascade", "false").lower() == "true"
+    try:
+        ids = await services.timeline.soft_delete(
+            session_id=session_id, message_id=message_id, cascade=cascade
+        )
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason=str(exc)) from exc
+    except RecordNotFoundError as exc:
+        raise web.HTTPNotFound(reason=str(exc)) from exc
+    except RepositoryError as exc:
+        raise web.HTTPConflict(reason=str(exc)) from exc
+    return json_response({"ids": ids})
 
 
 async def get_branches(request: web.Request) -> web.Response:
@@ -367,6 +390,9 @@ def setup_routes(app: web.Application) -> None:
     app.router.add_get("/api/sessions/{session_id}/entries", get_entries)
     app.router.add_get("/api/sessions/{session_id}/messages", get_messages)
     app.router.add_get("/api/sessions/{session_id}/timeline", get_timeline)
+    app.router.add_delete(
+        "/api/sessions/{session_id}/timeline/{message_id}", delete_timeline_message
+    )
     app.router.add_get("/api/sessions/{session_id}/branches", get_branches)
     app.router.add_post("/api/sessions/{session_id}/branches/select", select_branch)
     app.router.add_get("/api/sessions/{session_id}/context", get_context)

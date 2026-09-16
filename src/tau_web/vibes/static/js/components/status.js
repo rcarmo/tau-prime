@@ -70,6 +70,14 @@ export function AgentStatus({
     const hasDraft = Boolean(draftInfo.text) || draftInfo.totalLines > 0;
 
     const [expandedPanels, setExpandedPanels] = useState(new Set());
+    const [clock, setClock] = useState(() => Date.now());
+    const timingActive = Boolean(status?.started_at && !status?.completed_at);
+    useEffect(() => {
+        if (!timingActive) return undefined;
+        setClock(Date.now());
+        const timer = window.setInterval(() => setClock(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [timingActive, status?.tool_call_id, status?.started_at]);
     const toggleExpand = (key) => {
         setExpandedPanels((prev) => {
             const next = new Set(prev);
@@ -108,6 +116,14 @@ export function AgentStatus({
         content = 'Last activity just now';
     }
 
+    const startedAt = typeof status?.started_at === 'number'
+        ? status.started_at : Date.parse(status?.started_at || '');
+    const completedAt = typeof status?.completed_at === 'number'
+        ? status.completed_at : Date.parse(status?.completed_at || '');
+    const elapsedMs = Number.isFinite(startedAt)
+        ? Math.max(0, (Number.isFinite(completedAt) ? completedAt : clock) - startedAt)
+        : null;
+    const elapsed = elapsedMs === null ? '' : `${(elapsedMs / 1000).toFixed(1)}s`;
     const activeTurn = status?.turn_id || turnId;
     const turnColor = getTurnColor ? getTurnColor(activeTurn) : null;
     const dotClass = steerQueued ? 'turn-dot turn-dot-queued' : 'turn-dot';
@@ -202,7 +218,7 @@ export function AgentStatus({
             ${status && html`
                 <div class=${`agent-status${isLastActivity ? ' agent-status-last-activity' : ''}${status?.type === 'error' ? ' agent-status-error' : ''}`}>
                     ${status?.type === 'error' ? html`<span class="agent-status-error-icon" aria-hidden="true">⚠</span>` : (!isLastActivity && html`<div class="agent-status-spinner"></div>`)}
-                    <div class="agent-status-copy"><span class="agent-status-text">${content}</span></div>
+                    <div class="agent-status-copy"><span class="agent-status-text">${content}</span>${elapsed && html`<span class="agent-status-elapsed" aria-label=${`Elapsed ${elapsed}`}>${elapsed}</span>`}</div>
                 </div>
             `}
         </div>
