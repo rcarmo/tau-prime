@@ -149,6 +149,7 @@ class TimelineMessageRecord:
     message_id: int
     public_id: str
     session_id: str
+    thread_id: int | None
     role: str
     content: str
     content_blocks_json: JSONObject | None
@@ -1122,12 +1123,15 @@ class TimelineMessageRepository(SqliteRepository):
         sequence: int,
         message: AgentMessage,
         created_at: str,
+        thread_id: int | None = None,
     ) -> TimelineMessageRecord:
         session_key = _require_identifier(session_id, field="Session id")
         run_key = _require_identifier(run_id, field="Run id")
         if sequence <= 0:
             raise ValueError("Sequence must be positive")
         timestamp = _require_non_empty_text(created_at, field="Created at")
+        if thread_id is not None and thread_id < 1:
+            raise ValueError("Thread id must be positive")
         public_id = _timeline_public_id(session_key, run_key, sequence)
         message_json = _message_json(message)
 
@@ -1135,13 +1139,14 @@ class TimelineMessageRepository(SqliteRepository):
             await transaction.execute(
                 """
                 INSERT OR IGNORE INTO timeline_messages(
-                    public_id, session_id, role, content, content_blocks_json,
+                    public_id, session_id, thread_id, role, content, content_blocks_json,
                     created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     public_id,
                     session_key,
+                    thread_id,
                     message.role,
                     message.content,
                     _dump_json(message_json),
@@ -1181,16 +1186,98 @@ class TimelineMessageRepository(SqliteRepository):
 
         return await self.database.read(read)
 
+    async def soft_delete(
+        self, *, session_id: str, message_id: int, cascade: bool = False
+    ) -> list[int]:
+        """Soft-delete one visible message and, when confirmed, its direct replies atomically."""
+        session_key = _require_identifier(session_id, field="Session id")
+        if message_id < 1:
+            raise ValueError("Message id must be positive")
+
+        async def write(transaction: SqliteTransaction) -> list[int]:
+            row = await transaction.fetch_one(
+                "SELECT message_id FROM timeline_messages "
+                "WHERE message_id = ? AND session_id = ? AND deleted_at IS NULL",
+                (message_id, session_key),
+            )
+            if row is None:
+                raise RecordNotFoundError(f"Unknown timeline message: {message_id}")
+            replies = await transaction.fetch_all(
+                "SELECT message_id FROM timeline_messages "
+                "WHERE thread_id = ? AND session_id = ? AND deleted_at IS NULL "
+                "ORDER BY message_id",
+                (message_id, session_key),
+            )
+            if replies and not cascade:
+                raise RepositoryError("Replies exist; cascade confirmation is required")
+            ids = [message_id, *(int(reply["message_id"]) for reply in replies)]
+            placeholders = ", ".join("?" for _ in ids)
+            await transaction.execute(
+                f"UPDATE timeline_messages SET deleted_at = ?, updated_at = ? "
+                f"WHERE session_id = ? AND message_id IN ({placeholders})",  # noqa: S608
+                (_timestamp(), _timestamp(), session_key, *ids),
+            )
+            return ids
+
+        return await self.database.write(write)
+
+    async def get_with_context(
+        self,
+        *,
+        session_id: str,
+        message_ids: Sequence[int],
+        context_before: int = 0,
+        context_after: int = 0,
+    ) -> list[TimelineMessageRecord]:
+        """Return selected visible messages and bounded surrounding rows in timeline order."""
+        session_key = _require_identifier(session_id, field="Session id")
+        selected = tuple(dict.fromkeys(message_ids))
+        if not selected or len(selected) > 50 or any(value < 1 for value in selected):
+            raise ValueError("Message ids must contain between 1 and 50 positive integers")
+        if not 0 <= context_before <= 20 or not 0 <= context_after <= 20:
+            raise ValueError("Message context must be between 0 and 20 rows")
+        placeholders = ", ".join("?" for _ in selected)
+
+        async def read(reader: SqliteReader) -> list[TimelineMessageRecord]:
+            rows = await reader.fetch_all(
+                f"""
+                WITH visible AS (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY message_id) AS row_number
+                    FROM timeline_messages
+                    WHERE session_id = ? AND deleted_at IS NULL
+                ), selected AS (
+                    SELECT row_number FROM visible WHERE message_id IN ({placeholders})
+                )
+                SELECT visible.* FROM visible
+                WHERE EXISTS (
+                    SELECT 1 FROM selected
+                    WHERE visible.row_number BETWEEN
+                        selected.row_number - ? AND selected.row_number + ?
+                )
+                ORDER BY visible.message_id
+                """,
+                (session_key, *selected, context_before, context_after),
+            )
+            return [_timeline_message_from_row(row) for row in rows]
+
+        return await self.database.read(read)
+
     async def list(
         self,
         *,
         session_id: str,
         after: int | None = None,
+        before: int | None = None,
         limit: int = 100,
+        descending: bool = False,
     ) -> list[TimelineMessageRecord]:
         session_key = _require_identifier(session_id, field="Session id")
         if after is not None and after < 0:
             raise ValueError("After cursor must not be negative")
+        if before is not None and before < 1:
+            raise ValueError("Before cursor must be positive")
+        if after is not None and before is not None and after >= before:
+            raise ValueError("After cursor must precede before cursor")
         if limit <= 0:
             raise ValueError("Limit must be positive")
 
@@ -1199,14 +1286,18 @@ class TimelineMessageRepository(SqliteRepository):
         if after is not None:
             clauses.append("message_id > ?")
             parameters.append(after)
+        if before is not None:
+            clauses.append("message_id < ?")
+            parameters.append(before)
         parameters.append(limit)
         where = f"WHERE {' AND '.join(clauses)}"
+        order = "DESC" if descending else "ASC"
 
         async def read(reader: SqliteReader) -> list[TimelineMessageRecord]:
             rows = await reader.fetch_all(
                 f"""
                 SELECT * FROM timeline_messages {where}
-                ORDER BY message_id
+                ORDER BY message_id {order}
                 LIMIT ?
                 """,
                 parameters,
@@ -2298,6 +2389,7 @@ def _timeline_message_from_row(row: Row) -> TimelineMessageRecord:
         message_id=int(row["message_id"]),
         public_id=str(row["public_id"]),
         session_id=str(row["session_id"]),
+        thread_id=int(row["thread_id"]) if row["thread_id"] is not None else None,
         role=str(row["role"]),
         content=str(row["content"]),
         content_blocks_json=(

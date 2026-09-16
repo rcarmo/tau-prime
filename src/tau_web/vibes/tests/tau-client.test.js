@@ -79,6 +79,12 @@ test('unsupported attachments and commands fail before transport; rejection is n
     await expect(client.send('one','/compact')).rejects.toThrow('command');
     await expect(client.send('one','hello',{mode:'steer'})).rejects.toThrow('rejected');
 });
+test('model command resolves through the authoritative session mutation path',async()=>{
+ const calls=[];const client=createTauClient({fetchImpl:async(path,options={})=>{calls.push({path,...options});return Response.json(options.method==='PATCH'?{provider_name:'provider',model:'model',updated_at:'r2'}:{provider_name:'old',model:'old',updated_at:'r1'});}});
+ expect(await client.send('one','/model provider/model')).toEqual({accepted:true,command:'model',model:{provider:'provider',id:'model',name:'model'}});
+ expect(calls.map(call=>call.path)).toEqual(['/api/sessions/one','/api/sessions/one/model']);
+ expect(JSON.parse(calls[1].body)).toEqual({provider_name:'provider',model:'model',expected_updated_at:'r1'});
+});
 test('run status excludes finished runs; queue preserves FIFO and marks unsupported actions',async()=>{
  const client=createTauClient({fetchImpl:async path=>Response.json(path.endsWith('/runs')
  ? {runs:[{run_id:'active',session_id:'one',status:'running'},{run_id:'done',status:'completed'}]}
@@ -144,6 +150,12 @@ test('plan save sends caller revision and exposes current plan on conflict witho
  expect(calls.length).toBe(1);expect(JSON.parse(calls[0].body)).toEqual({markdown:draft,expected_revision:2});
  expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
 });
+test('approval reads forward cancellation for session-change and unmount cleanup',async()=>{
+ const controller=new AbortController();let received;
+ const client=createTauClient({fetchImpl:async(_path,options)=>{received=options.signal;return Response.json({approvals:[]});}});
+ expect(await client.approvals('one',{signal:controller.signal})).toEqual([]);
+ expect(received).toBe(controller.signal);
+});
 test('approval decisions are explicit, authenticated mutations and reject invalid choices',async()=>{
  const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({approval_id:'a',decision:'deny'});}});
  await client.resolveApproval('a','deny');
@@ -174,6 +186,11 @@ test('thinking policy uses dedicated endpoint and loaded revision without assert
 test('agent display identity uses actual Tau settings without invented capabilities',async()=>{
  const client=createTauClient({fetchImpl:async path=>{expect(path).toBe('/api/settings');return Response.json({agent_name:'Tau configured'});}});
  expect(await client.agentIdentity()).toEqual({agents:[{id:'default',name:'Tau configured',avatar_url:'/static/icon-192.png'}],user:{name:'You',avatar_url:null}});
+});
+test('persisted outcome metadata is normalized for timeline chips',async()=>{
+ const {postFromTau}=await import('../static/js/tau-client.js');
+ expect(postFromTau({role:'assistant',content_blocks_json:{outcome:' completed '}}).data.tau_outcome).toBe('completed');
+ expect(postFromTau({role:'assistant',content_blocks_json:{outcome:''}}).data.tau_outcome).toBe(null);
 });
 test('persisted attachments retain stable media metadata only',async()=>{
  const {postFromTau}=await import('../static/js/tau-client.js');
@@ -261,9 +278,10 @@ test('steering existing queue requires explicit active run',async()=>{
  expect(JSON.parse(calls[0].body)).toEqual({run_id:'run-1'});
  expect(calls[0].headers['X-Tau-CSRF']).toBe('1');
 });
-test('commands use the authoritative native catalogue',async()=>{
- const client=createTauClient({fetchImpl:async path=>Response.json(path==='/api/commands'?{commands:[{name:'/model',description:'Choose model'}]}:{})});
- expect(await client.commands()).toEqual({commands:[{name:'/model',description:'Choose model'}]});
+test('commands use the authoritative session-scoped native catalogue',async()=>{
+ const paths=[];const client=createTauClient({fetchImpl:async path=>{paths.push(path);return Response.json({commands:[{name:'/skill:demo',description:'Demo'}]});}});
+ expect(await client.commands('session a')).toEqual({commands:[{name:'/skill:demo',description:'Demo'}]});
+ expect(paths).toEqual(['/api/commands?session_id=session%20a']);
 });
 test('manual compaction uses the dedicated scoped endpoint',async()=>{
  const calls=[];const client=createTauClient({fetchImpl:async(path,options)=>{calls.push({path,...options});return Response.json({session_id:'one',summary:'done'});}});

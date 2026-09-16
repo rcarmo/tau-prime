@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { quickActionItems, shouldOpenQuickActions, shouldPopoutQuickAction } from '../static/js/components/quick-actions.js';
+import { preferredIndex, quickActionItems, shouldOpenQuickActions, shouldPopoutQuickAction } from '../static/js/components/quick-actions.js';
 
 test('quick actions use session metadata, exclude archived, dedupe and filter normalized titles/IDs/descriptions', () => {
   const options = {
@@ -13,6 +13,13 @@ test('quick actions use session metadata, exclude archived, dedupe and filter no
   expect(quickActionItems({ ...options, query: '/MODEL' })[0].commandName).toBe('/model');
   expect(quickActionItems({ ...options, query: 'shell   pane' })[0].key).toBe('workspace:terminal');
   expect(quickActionItems({ ...options, query: 'provider' })[0].key).toBe('slash:/model');
+});
+
+test('selection preference is exact title, then title prefix, then first result', () => {
+  const items = [{title: '@Alpha'}, {title: '/model'}, {title: '/models'}];
+  expect(preferredIndex(items, 'model')).toBe(1);
+  expect(preferredIndex(items, 'mod')).toBe(1);
+  expect(preferredIndex(items, 'missing')).toBe(0);
 });
 
 test('Alt+Enter pop-out is available only for session actions with a real callback', () => {
@@ -34,4 +41,7 @@ test('timeline typing gate excludes shortcuts, controls, composition, repeats, w
   for (const key of [' ', '\n', 'Enter', 'Dead', 'Escape']) expect(shouldOpenQuickActions({ ...base, key })).toBe(false);
   expect(shouldOpenQuickActions({ ...base, target: { isContentEditable: true } })).toBe(false);
   expect(shouldOpenQuickActions({ ...base, target: { tagName: 'INPUT', closest: () => ({}) } })).toBe(false);
+  for (const selector of ['[role="textbox"]', '[role="listbox"]', '[aria-haspopup][aria-expanded="true"]']) {
+    expect(shouldOpenQuickActions({ ...base, target: { tagName: 'DIV', closest: candidate => candidate.includes(selector) ? {} : null } })).toBe(false);
+  }
 });

@@ -20,6 +20,8 @@ from tau_coding.plan import (
     parse_plan_markdown,
     render_plan_markdown,
 )
+from tau_coding.resources import TauResourcePaths
+from tau_coding.skills import load_skills
 from tau_coding.thinking import normalize_thinking_level
 from tau_web.events import build_invalidation_envelope
 from tau_web.plan import SqlitePlanStore
@@ -156,7 +158,6 @@ async def get_models(request: web.Request) -> web.Response:
 
 
 async def get_commands(request: web.Request) -> web.Response:
-    del request
     registry = create_default_command_registry()
     commands = []
     for name in _WEB_COMMAND_NAMES:
@@ -170,6 +171,22 @@ async def get_commands(request: web.Request) -> web.Response:
                 description=command.description,
             )
         )
+    session_id = request.query.get("session_id")
+    if session_id:
+        services = services_for(request)
+        record = await _require_session(services, session_id)
+        workspace = await services.sessions.get_workspace(record.workspace_id)
+        if workspace is None:
+            raise RuntimeError(f"Unknown workspace: {record.workspace_id}")
+        for skill in load_skills(TauResourcePaths(cwd=workspace.root_path)):
+            command_name = f"/skill:{skill.name}"
+            commands.append(
+                CommandDescriptor(
+                    name=command_name,
+                    usage=f"{command_name} [request]",
+                    description=skill.description or "Load this skill.",
+                )
+            )
     return json_response(CommandsResponse(source="runtime", commands=tuple(commands)))
 
 

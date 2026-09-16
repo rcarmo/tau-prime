@@ -3,7 +3,6 @@ import { loadModelPins, saveModelPins, modelPinStorage } from './model-pins.js';
 import { createSpeechInput, speechInputConstructor, shouldStartSpeechPushToTalk } from './compose-speech.js';
 import { sessionMentionQuery, sessionMentionMatches, insertSessionMention } from './session-mentions.js';
 import { composeDrafts } from './compose-drafts.js';
-import { preserveQueuedRecovery, recoverQueuedDraft, returnQueuedText } from '../tau-queue-return.js';
 import { resolveMessageReferences } from '../tau-message-references.js';
 import { TauRunControl } from './tau-run-control.js';
 import { usagePresentation } from './usage.js';
@@ -31,9 +30,9 @@ function formatK(n) {
  * Tiny SVG pie chart showing context window usage.
  * Green when <75%, amber 75–90%, red >90%. Tooltip shows exact numbers.
  */
-function ContextPie({ usage, onCompact, disabled, compacting }) {
+export function ContextPie({ usage, onCompact, disabled, compacting, compactingLabel = '', compactingTitle = '' }) {
     usage = usage || {};
-    const canCompact = usage.compactCommand === '/compact';
+    const canCompact = usage.compactCommand === '/compact' && typeof onCompact === 'function';
     const known = typeof usage.percent === 'number' && Number.isFinite(usage.percent) && usage.percent >= 0;
     if (!known && !canCompact) return null;
     const Tag = canCompact ? 'button' : 'span';
@@ -52,12 +51,17 @@ function ContextPie({ usage, onCompact, disabled, compacting }) {
         : pct > 75 ? 'var(--context-amber, #f59e0b)'
             : 'var(--context-green, #22c55e)';
 
+    const activeCompactionLabel = compacting && compactingLabel.trim();
+    const title = activeCompactionLabel
+        ? [compactingTitle || 'Smart compaction', activeCompactionLabel].join('\n')
+        : [label, usage.source === 'local_estimate' && 'Locally estimated token usage', usagePresentation(usage).title, canCompact ? 'Compact context (agent-advertised /compact)' : 'Context usage'].filter(Boolean).join('\n');
     return html`
+        <span class=${`compose-context-pie-wrap${activeCompactionLabel ? ' is-compacting' : ''}`}>
         <${Tag} class="compose-context-pie icon-btn" type=${canCompact ? 'button' : undefined}
-            role=${canCompact ? undefined : 'img'} aria-label=${canCompact ? `${label}. Compact context` : label}
+            role=${canCompact ? undefined : 'img'} aria-label=${activeCompactionLabel ? `${compactingTitle || 'Smart compaction'}. ${activeCompactionLabel}` : canCompact ? `${label}. Compact context` : label}
             disabled=${canCompact ? disabled : undefined} aria-busy=${compacting ? 'true' : undefined}
             onClick=${canCompact ? onCompact : undefined}
-            title=${[label, usage.source === 'local_estimate' && 'Locally estimated token usage', usagePresentation(usage).title, canCompact && 'Compact context (agent-advertised /compact)'].filter(Boolean).join('\n')}>
+            title=${title}>
             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r=${r}
                     fill="none"
@@ -72,6 +76,8 @@ function ContextPie({ usage, onCompact, disabled, compacting }) {
                     transform="rotate(-90 12 12)" />
             </svg>
         <//>
+        ${activeCompactionLabel && html`<span class="compose-context-compacting-label">${activeCompactionLabel}</span>`}
+        </span>
     `;
 }
 
@@ -133,6 +139,7 @@ export function ComposeBox({
     onQueueRemove,
     onQueueSteer,
     onQueueReorder,
+    onRestoreQueueRefs,
     onModelChange,
     onModelStateChange,
     notificationsEnabled = false,
@@ -233,36 +240,28 @@ export function ComposeBox({
     const uploadController = useRef(null);
     useEffect(() => () => uploadController.current?.abort(), []);
     const [mediaFiles, setMediaFiles] = useState(() => composeDrafts.load(sessionId).files);
-    const latestQueueDraft = useRef(null), returningQueue = useRef(false), queueMounted = useRef(true);
-    latestQueueDraft.current = { sessionId, text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs };
+    const returningQueue = useRef(false), queueMounted = useRef(true);
     useEffect(() => { queueMounted.current = true; return () => { queueMounted.current = false; }; }, []);
-    const returnQueueToEditor = async item => {
+    const returnQueueToEditor = item => {
         if (returningQueue.current || !onQueueRemove) return;
         const origin = sessionId;
-        const text = typeof item.content === 'string' ? item.content : '';
-        if (!text.trim()) return;
-        if (content.trim() && !confirm('Append this queued message to your existing draft?')) return;
+        const parsed = parseQueuedContent(item.content);
+        if (!parsed.text.trim() && parsed.refs.length === 0) return;
         returningQueue.current = true;
-        let recoveryKey;
-        try {
-            const outcome = await returnQueuedText({
-                text,
-                preserve: async value => {
-                    recoveryKey = preserveQueuedRecovery(localStorage, {sessionId: origin, queueId: item.row_id, text: value});
-                },
-                remove: () => onQueueRemove(item.row_id, origin),
-            });
-            if (!outcome.removed) return;
-            const current = latestQueueDraft.current;
-            if (queueMounted.current && current.sessionId === origin) composeDrafts.save(origin, current);
-            const restored = recoverQueuedDraft(localStorage, recoveryKey, origin);
-            if (queueMounted.current && latestQueueDraft.current.sessionId === origin) {
-                setContent(restored);
-                requestAnimationFrame(() => textareaRef.current?.focus());
-            }
-        } catch (error) {
-            alert(`Could not return queued message: ${error.message}. Any preserved recovery copy is retained.`);
-        } finally { returningQueue.current = false; }
+        setContent(parsed.text);
+        setMediaFiles([]);
+        uploadedFiles.current = new WeakMap();
+        setSubmitError('');
+        setUploadProgress(null);
+        onRestoreQueueRefs?.(parsed.refs);
+        requestAnimationFrame(() => {
+            if (!queueMounted.current || sessionId !== origin) return;
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(parsed.text.length, parsed.text.length);
+            Promise.resolve(onQueueRemove(item.row_id, origin))
+                .catch(error => alert(`Could not remove queued message: ${error.message}`))
+                .finally(() => { returningQueue.current = false; });
+        });
     };
     useEffect(() => {
         composeDrafts.save(sessionId, { text: content, files: mediaFiles, fileRefs, folderRefs, messageRefs });
@@ -293,6 +292,11 @@ export function ComposeBox({
     const modelMetadata = new Map((sessionCatalog?.models || []).map(model => [`${model.provider}/${model.id}`, model]));
     const modelNames = new Map((sessionCatalog?.models || []).map(model => [`${model.provider}/${model.id}`, model.name || `${model.provider}/${model.id}`]));
     const filteredModels = modelOptions.filter(label => `${label} ${modelNames.get(label) || ''}`.toLowerCase().includes(modelQuery.trim().toLowerCase()));
+    const modelContextBlocked = label => {
+        const window = modelMetadata.get(label)?.contextWindow;
+        const used = contextUsage?.tokens;
+        return Number.isInteger(window) && window > 0 && Number.isFinite(used) && used > window;
+    };
     const [modelPins, setModelPins] = useState(() => loadModelPins(modelPinStorage()));
     const [modelPinError, setModelPinError] = useState('');
     const [pinSyncStatus, setPinSyncStatus] = useState('');
@@ -553,6 +557,10 @@ export function ComposeBox({
         {
             const model = sessionCatalog?.models?.find(item => `${item.provider}/${item.id}` === modelLabel);
             if (!model) return;
+            if (modelContextBlocked(modelLabel)) {
+                setSubmitError('Compact context before switching to this model.');
+                return;
+            }
             modelMutationPending.current = true;
             setSwitchingModel(true);
             try {
@@ -570,9 +578,18 @@ export function ComposeBox({
         if (event.target === modelSearchRef.current) {
             const choices = Array.from(modelPopupRef.current?.querySelectorAll('[role="option"]:not(:disabled)') || []);
             const index = choices.findIndex(node => node.dataset.modelLabel === highlightedModel);
-            if (['ArrowDown', 'ArrowUp'].includes(event.key) && choices.length) {
+            if ((event.ctrlKey || event.metaKey) && ['Home', 'End'].includes(event.key) && choices.length) {
                 event.preventDefault();
-                const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : choices.length - 1) : (index + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length;
+                const next = event.key === 'Home' ? 0 : choices.length - 1;
+                setHighlightedModel(choices[next].dataset.modelLabel);
+                choices[next].scrollIntoView({ block: 'nearest' });
+                return;
+            }
+            if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key) && choices.length) {
+                event.preventDefault();
+                const step = event.key === 'PageDown' ? 8 : event.key === 'PageUp' ? -8 : event.key === 'ArrowDown' ? 1 : -1;
+                const next = index < 0 ? (step > 0 ? 0 : choices.length - 1)
+                    : Math.max(0, Math.min(choices.length - 1, index + step));
                 setHighlightedModel(choices[next].dataset.modelLabel);
                 choices[next].scrollIntoView({ block: 'nearest' });
                 return;
@@ -1107,11 +1124,11 @@ export function ComposeBox({
                                         id=${`model-option-${encodeURIComponent(modelLabel)}`}
                                         aria-selected=${activeModel === modelLabel}
                                         data-model-label=${modelLabel}
-                                        aria-label=${`${modelNames.get(modelLabel) || modelLabel}, ${modelPins.includes(modelLabel) ? 'pinned' : 'not pinned'}. Alt+Enter to ${modelPins.includes(modelLabel) ? 'unpin' : 'pin'}.`}
+                                        aria-label=${`${modelNames.get(modelLabel) || modelLabel}, ${modelPins.includes(modelLabel) ? 'pinned' : 'not pinned'}. ${modelContextBlocked(modelLabel) ? 'Compact context before switching.' : `Alt+Enter to ${modelPins.includes(modelLabel) ? 'unpin' : 'pin'}.`}`}
                                         aria-keyshortcuts="Alt+Enter"
                                         class=${`compose-model-catalogue-option${activeModel === modelLabel ? ' selected' : ''}${highlightedModel === modelLabel || (!highlightedModel && activeModel === modelLabel) ? ' focused' : ''}`}
                                         onClick=${() => { void handleSelectModel(modelLabel); }}
-                                        disabled=${switchingModel}
+                                        disabled=${switchingModel || modelContextBlocked(modelLabel)}
                                     >
                                         <span class=${`compose-model-catalogue-pin${modelPins.includes(modelLabel) ? ' pinned' : ''}`} aria-hidden="true" title=${modelPins.includes(modelLabel) ? 'Unpin model' : 'Pin model'}>${modelPins.includes(modelLabel) ? '★' : '☆'}</span>
                                         <span class="compose-model-catalogue-option-content">

@@ -1,4 +1,4 @@
-import { tauStatus } from './tau-status.js';
+import { mergeTauStatus, tauStatus } from './tau-status.js';
 import { TauWorkspaceMenu } from './components/tau-workspace-menu.js';
 import { QuickActions } from './components/quick-actions.js';
 import { TauMeters } from './components/tau-meters.js';
@@ -30,6 +30,7 @@ import { stashEditorPopoutState, consumeEditorPopoutState } from './panes/editor
 import katex from 'katex';
 import { marked } from 'marked';
 import { renderMermaid, THEMES as MERMAID_THEMES } from 'beautiful-mermaid';
+import { sanitizeModelSvg, svgDataUrl } from './safe-svg.js';
 
 // URL regex for linkifying text
 const URL_REGEX = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
@@ -124,6 +125,26 @@ function decodeEntitiesDeep(text, maxDepth = 2) {
         current = next;
     }
     return current;
+}
+
+function extractSvgBlocks(text) {
+    if (!text) return {text:'',blocks:[]};
+    const blocks=[], output=[];let current=null;
+    for(const line of text.replace(/\r\n?/g,'\n').split('\n')){
+        if(current===null&&/^```svg\s*$/i.test(line.trim())){current=[];continue;}
+        if(current!==null&&/^```\s*$/.test(line.trim())){output.push(`@@SVG_BLOCK_${blocks.length}@@`);blocks.push(current.join('\n'));current=null;continue;}
+        if(current!==null)current.push(line);else output.push(line);
+    }
+    if(current!==null)output.push('```svg',...current);
+    return {text:output.join('\n'),blocks};
+}
+const escapeCode = source => source.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function injectSvgBlocks(markup,blocks){
+    return markup.replace(/@@SVG_BLOCK_(\d+)@@/g,(_match,index)=>{
+        const source=blocks[Number(index)]||'',sanitized=sanitizeModelSvg(source),code=`<pre><code class="language-svg">${escapeCode(source)}</code></pre>`;
+        if(!sanitized)return code;
+        return `<figure class="model-svg"><img src="${svgDataUrl(sanitized)}" alt="Model-generated SVG preview"><figcaption>SVG preview</figcaption></figure>${code}`;
+    });
 }
 
 function extractMermaidBlocks(text) {
@@ -352,7 +373,8 @@ function renderMarkdown(text, onHashtagClick) {
     if (!text) return '';
 
     const normalizedMath = normalizeMathFences(text);
-    const { text: stripped, blocks: mermaidBlocks } = extractMermaidBlocks(normalizedMath);
+    const {text:withoutSvg,blocks:svgBlocks}=extractSvgBlocks(normalizedMath);
+    const { text: stripped, blocks: mermaidBlocks } = extractMermaidBlocks(withoutSvg);
 
     // Decode HTML entities first (in case content has encoded entities)
     const decoded = decodeEntitiesDeep(stripped, 2);
@@ -374,6 +396,7 @@ function renderMarkdown(text, onHashtagClick) {
 
     // Inject Mermaid blocks after markdown processing to avoid double-encoding
     html_content = injectMermaidBlocks(html_content, mermaidBlocks);
+    html_content = injectSvgBlocks(html_content, svgBlocks);
 
     return html_content;
 }
@@ -1835,7 +1858,7 @@ function App() {
             if (!confirmed) return;
         }
         try {
-            const result = await deletePost(postId, replyCount > 0);
+            const result = await deletePost(postId, replyCount > 0, selectedSessionRef.current);
             if (result?.ids?.length) {
                 animateAndRemovePosts(result.ids);
                 if (hasMore) {
@@ -1847,7 +1870,7 @@ function App() {
             if (replyCount === 0 && errorMessage.includes('Replies exist')) {
                 const confirmed = window.confirm('Delete this message and its replies?');
                 if (!confirmed) return;
-                const result = await deletePost(postId, true);
+                const result = await deletePost(postId, true, selectedSessionRef.current);
                 if (result?.ids?.length) {
                     animateAndRemovePosts(result.ids);
                     if (hasMore) {
@@ -1939,27 +1962,37 @@ function App() {
     }, []);
 
     const handleQueueRemove = useCallback(async (rowId, originSessionId = selectedSessionRef.current) => {
-        if (rowId == null) return;
+        if (rowId == null) return false;
+        setQueuedFollowups(items => items.filter(item => item.row_id !== rowId));
         try {
             await removeAgentQueueItem(rowId, originSessionId);
-            try {
-                await refreshSelectedQueue();
-            } catch (refreshError) {
-                console.warn('Queue item removed, but refresh failed:', refreshError);
-            }
             return true;
         } catch (error) {
             console.error('Failed to remove queued item:', error);
             alert('Failed to remove queued item: ' + error.message);
+            try { await refreshSelectedQueue(); }
+            catch (refreshError) { console.warn('Queue reconciliation failed:', refreshError); }
             return false;
         }
     }, []);
 
     const handleQueueReorder = useCallback(async (rowId, direction) => {
+        const originSessionId = selectedSessionRef.current;
+        setQueuedFollowups(items => {
+            const index = items.findIndex(item => item.row_id === rowId);
+            const target = index + (direction === 'up' ? -1 : 1);
+            if (index < 0 || target < 0 || target >= items.length) return items;
+            const next = [...items];
+            [next[index], next[target]] = [next[target], next[index]];
+            return next;
+        });
         try {
-            const result = await reorderAgentQueueItem(rowId, direction, selectedSessionRef.current);
-            await refreshSelectedQueue();
-        } catch (err) { alert(err.message || 'Failed to reorder queue.'); }
+            await reorderAgentQueueItem(rowId, direction, originSessionId);
+        } catch (error) {
+            alert(error.message || 'Failed to reorder queue.');
+            try { await refreshSelectedQueue(); }
+            catch (refreshError) { console.warn('Queue reconciliation failed:', refreshError); }
+        }
     }, []);
 
     const handleQueueSteer = useCallback(async (rowId) => {
@@ -2361,7 +2394,7 @@ function App() {
                 const payload = data.payload || {};
                 const projectedStatus = tauStatus(event, payload, data.run_id);
                 if (projectedStatus) {
-                    setAgentStatus(projectedStatus);
+                    setAgentStatus(current => mergeTauStatus(current, projectedStatus));
                     if (data.run_id) { setCurrentTurnId(data.run_id); currentTurnIdRef.current = data.run_id; }
                 }
                 if (event === 'tau.agent.agent_start') {
@@ -2794,6 +2827,11 @@ function App() {
                     onQueueRemove=${handleQueueRemove}
                     onQueueSteer=${handleQueueSteer}
                     onQueueReorder=${handleQueueReorder}
+                    onRestoreQueueRefs=${refs => {
+                        setFileRefs(refs.filter(ref => ref.kind === 'file').map(ref => ref.title));
+                        setFolderRefs(refs.filter(ref => ref.kind === 'folder').map(ref => ref.title));
+                        setMessageRefs(refs.filter(ref => ref.kind === 'message').map(ref => ref.title.replace(/^message:/, '')));
+                    }}
                     onModelChange=${setActiveModel}
                     onModelStateChange=${applyModelState}
                     notificationsEnabled=${notificationsEnabled}

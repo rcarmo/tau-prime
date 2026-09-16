@@ -4,16 +4,17 @@ export function TauApprovals({sessionId}) {
  const [items,setItems]=useState([]);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
  const alive=useRef(true);const pending=useRef(false);
  useEffect(()=>{
-  alive.current=true;let loading=false;
+  alive.current=true;let loading=false;let controller=null;
+  setItems([]);setError('');
   const refresh=async()=>{
-   if(loading||pending.current)return;loading=true;
-   try{const result=await getTauApprovals(sessionId);if(alive.current)setItems(result);}
-   catch(e){if(alive.current)setError(e.message);}
-   finally{loading=false;}
+   if(loading||pending.current)return;loading=true;controller=new AbortController();
+   try{const result=await getTauApprovals(sessionId,{signal:controller.signal});if(alive.current)setItems(result);}
+   catch(e){if(alive.current&&e.name!=='AbortError')setError(e.message);}
+   finally{loading=false;controller=null;}
   };
   refresh();const timer=setInterval(refresh,1500);
-  return()=>{alive.current=false;clearInterval(timer);};
- },[]);
+  return()=>{alive.current=false;clearInterval(timer);controller?.abort();};
+ },[sessionId]);
  const decide=async(id,decision)=>{
   if(pending.current)return;pending.current=true;setBusy(true);setError('');
   try{

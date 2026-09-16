@@ -84,9 +84,8 @@ export async function createReply(threadId, content, mediaIds = []) {
 /**
  * Delete a post (optionally cascade replies)
  */
-export async function deletePost(postId, cascade = false) {
-    const url = `/post/${postId}?cascade=${cascade ? 'true' : 'false'}`;
-    return request(url, { method: 'DELETE' });
+export async function deletePost(postId, cascade = false, sessionId = 'default') {
+    return tau.deleteTimelineMessage(sessionId, postId, cascade);
 }
 
 /**
@@ -164,7 +163,7 @@ export const getTauBranches = id => tau.branches(id);
 export const selectTauBranch = (id, leaf) => tau.selectBranch(id, leaf);
 export const getTauMedia = id => tau.media(id);
 export const getTauMediaBlob = id => tau.mediaBlob(id);
-export const getTauApprovals = id => tau.approvals(id);
+export const getTauApprovals = (id, options) => tau.approvals(id, options);
 export const resolveTauApproval = (id, decision) => tau.resolveApproval(id, decision);
 export const getTauPlan = id => tau.plan(id);
 export const saveTauPlan = (id, markdown, revision) => tau.savePlan(id, markdown, revision);
@@ -411,8 +410,8 @@ export function getWorkspaceDownloadUrl(path, showHidden = false) {
     return `${API_BASE}/workspace/download?${query}`;
 }
 
-export async function getAgentCommands() {
-    return tau.commands();
+export async function getAgentCommands(sessionId = '') {
+    return tau.commands(sessionId);
 }
 
 /**

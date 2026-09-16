@@ -684,6 +684,7 @@ function Post({
                             onMessageRef(String(post.id));
                         }
                     }} style=${onMessageRef ? 'cursor:pointer' : ''}>${post.timestamp ? formatTimeLabel(post.timestamp) : ''}</span>
+                    ${data.tau_outcome && html`<span class="post-outcome-chip">${data.tau_outcome}</span>`}
                 </div>
                 ${isHardTruncated && truncatedInfo && html`
                     <div class="post-content truncated">
