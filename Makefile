@@ -3,12 +3,13 @@ SYSTEM_PYTHON ?= python3
 DIST_DIR ?= dist
 UVX ?= .venv/bin/uvx
 
-.PHONY: help setup test lint typecheck check sdist uvx-test package clean
+.PHONY: help setup test test-parity lint typecheck check sdist uvx-test package clean
 
 help:
 	@printf '%s\n' \
 		'setup      Create .venv and install development dependencies' \
 		'test       Run the complete pytest suite' \
+		'test-parity Run the Tau-owned canonical parity suite' \
 		'lint       Run Ruff checks' \
 		'typecheck  Run MyPy checks' \
 		'check      Run tests, lint, and type checking' \
@@ -24,6 +25,13 @@ setup:
 
 test:
 	PATH="$(dir $(PYTHON)):$$PATH" PYTHONPATH=src $(PYTHON) -m pytest -q
+
+test-parity:
+	@mkdir -p tests/parity/node_modules
+	@ln -sfn ../../../src/tau_web/vibes/node_modules/pngjs tests/parity/node_modules/pngjs
+	@ln -sfn ../../../src/tau_web/vibes/node_modules/pixelmatch tests/parity/node_modules/pixelmatch
+	@ln -sfn ../../../src/tau_web/vibes/node_modules/playwright tests/parity/node_modules/playwright
+	@trap 'rm -rf tests/parity/node_modules' EXIT; bun test tests/parity
 
 lint:
 	$(PYTHON) -m ruff check .
