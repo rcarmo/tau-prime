@@ -143,7 +143,10 @@ function injectSvgBlocks(markup,blocks){
     return markup.replace(/@@SVG_BLOCK_(\d+)@@/g,(_match,index)=>{
         const source=blocks[Number(index)]||'',sanitized=sanitizeModelSvg(source),code=`<pre><code class="language-svg">${escapeCode(source)}</code></pre>`;
         if(!sanitized)return code;
-        return `<figure class="model-svg"><img src="${svgDataUrl(sanitized)}" alt="Model-generated SVG preview"><figcaption>SVG preview</figcaption></figure>${code}`;
+        const document=new DOMParser().parseFromString(sanitized,'image/svg+xml');
+        const label=document.documentElement.getAttribute('aria-label')||'Model-generated SVG preview';
+        const escapedLabel=label.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<figure class="model-svg"><img src="${svgDataUrl(sanitized)}" alt="${escapedLabel}"><figcaption>SVG preview</figcaption></figure>${code}`;
     });
 }
 
@@ -202,7 +205,7 @@ function injectMermaidBlocks(html, blocks) {
 }
 
 const ALLOWED_HTML_TAGS = new Set([
-    'strong', 'em', 'b', 'i', 'u', 's', 'br', 'p',
+    'strong', 'em', 'i', 'u', 's', 'br', 'p',
     'ul', 'ol', 'li', 'blockquote',
     'ruby', 'rt', 'rp',
 ]);

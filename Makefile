@@ -3,13 +3,14 @@ SYSTEM_PYTHON ?= python3
 DIST_DIR ?= dist
 UVX ?= .venv/bin/uvx
 
-.PHONY: help setup test test-parity lint typecheck check sdist uvx-test package clean
+.PHONY: help setup test test-parity fixtures-vibes lint typecheck check sdist uvx-test package clean
 
 help:
 	@printf '%s\n' \
 		'setup      Create .venv and install development dependencies' \
 		'test       Run the complete pytest suite' \
 		'test-parity Run the Tau-owned canonical parity suite' \
+		'fixtures-vibes Run the shared fixtures-vibes compliance suite' \
 		'lint       Run Ruff checks' \
 		'typecheck  Run MyPy checks' \
 		'check      Run tests, lint, and type checking' \
@@ -32,6 +33,9 @@ test-parity:
 	@ln -sfn ../../../src/tau_web/vibes/node_modules/pixelmatch tests/parity/node_modules/pixelmatch
 	@ln -sfn ../../../src/tau_web/vibes/node_modules/playwright tests/parity/node_modules/playwright
 	@trap 'rm -rf tests/parity/node_modules' EXIT; bun test tests/parity
+
+fixtures-vibes:
+	$(MAKE) -C references/fixtures-vibes deps compliance PROFILE=$(CURDIR)/tests/fixtures-vibes/profile.json
 
 lint:
 	$(PYTHON) -m ruff check .

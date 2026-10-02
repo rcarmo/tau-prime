@@ -1,0 +1,71 @@
+{
+  "runtime": "tau-prime",
+  "version": "42.3.0",
+  "lifecycle": {
+    "prepare": "mkdir -p \"$FIXTURES_ROOT/tau-home\" \"$FIXTURES_ROOT/workspace\" \"$FIXTURES_ROOT/logs\" && PYTHONPATH=../../src TAU_HOME=\"$FIXTURES_ROOT/tau-home\" FIXTURES_VIBES_API_KEY=fixture-local-only ../../.venv/bin/tau --provider fixtures-vibes --model \"$FIXTURE_MODEL_ID\" --base-url \"$FIXTURE_MODEL_URL\" --api-key-env FIXTURES_VIBES_API_KEY --timeout-seconds 60 --max-retries 0 --max-retry-delay-seconds 0 --set-default setup",
+    "start": "PYTHONPATH=../../src TAU_HOME=\"$FIXTURES_ROOT/tau-home\" TAU_AGENTS_HOME=\"$FIXTURES_ROOT/agents\" TAU_LOGS_DIR=\"$FIXTURES_ROOT/logs\" FIXTURES_VIBES_API_KEY=fixture-local-only exec ../../.venv/bin/tau web --host 127.0.0.1 --port \"$FIXTURES_PORT\" --cwd \"$FIXTURES_ROOT/workspace\" --database \"$FIXTURES_ROOT/tau.sqlite3\""
+  },
+  "readiness": {
+    "path": "/api/health",
+    "status": 200,
+    "timeoutMs": 30000
+  },
+  "session": {
+    "create": {
+      "method": "POST",
+      "path": "/api/sessions",
+      "headers": {
+        "X-Tau-CSRF": "fixtures-vibes"
+      },
+      "body": {
+        "provider_name": "fixtures-vibes",
+        "model": "fixture-1",
+        "title": "{name}",
+        "session_id": "{name}"
+      },
+      "idField": "session_id"
+    },
+    "open": "/?session={id}"
+  },
+  "auth": {
+    "mode": "none"
+  },
+  "selectors": {
+    "composeInput": "body:has(.compose-session-trigger[title]):not(:has(.connection-status)) .compose-box textarea:not([disabled])"
+  },
+  "tools": {
+    "shell": "sh"
+  },
+  "approval": {
+    "button": "^Allow "
+  },
+  "capabilities": [
+    "@cap-queue",
+    "@cap-steer",
+    "@cap-stop",
+    "@cap-attachments",
+    "@cap-model-picker",
+    "@cap-thinking-levels",
+    "@cap-quick-actions",
+    "@cap-slash-commands",
+    "@cap-compaction",
+    "@cap-context-meter",
+    "@cap-thoughts",
+    "@cap-tool-output",
+    "@cap-message-delete",
+    "@cap-messages-tool",
+    "@cap-read-aloud",
+    "@cap-svg-render",
+    "@cap-widgets",
+    "@cap-reconnect",
+    "@cap-session-picker",
+    "@cap-session-manage",
+    "@cap-plan-sidebar",
+    "@cap-workspace",
+    "@cap-system-meters",
+    "@cap-skills",
+    "@cap-search",
+    "@cap-pwa"
+  ],
+  "skips": "skips.json"
+}
