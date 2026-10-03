@@ -9,7 +9,7 @@ help:
 	@printf '%s\n' \
 		'setup      Create .venv and install development dependencies' \
 		'test       Run the complete pytest suite' \
-		'test-parity Run the Tau-owned canonical parity suite' \
+		'test-parity Alias for shared fixtures-vibes compliance' \
 		'fixtures-vibes Run the shared fixtures-vibes compliance suite' \
 		'lint       Run Ruff checks' \
 		'typecheck  Run MyPy checks' \
@@ -27,12 +27,7 @@ setup:
 test:
 	PATH="$(dir $(PYTHON)):$$PATH" PYTHONPATH=src $(PYTHON) -m pytest -q
 
-test-parity:
-	@mkdir -p tests/parity/node_modules
-	@ln -sfn ../../../src/tau_web/vibes/node_modules/pngjs tests/parity/node_modules/pngjs
-	@ln -sfn ../../../src/tau_web/vibes/node_modules/pixelmatch tests/parity/node_modules/pixelmatch
-	@ln -sfn ../../../src/tau_web/vibes/node_modules/playwright tests/parity/node_modules/playwright
-	@trap 'rm -rf tests/parity/node_modules' EXIT; bun test tests/parity
+test-parity: fixtures-vibes
 
 fixtures-vibes:
 	$(MAKE) -C references/fixtures-vibes deps compliance PROFILE=$(CURDIR)/tests/fixtures-vibes/profile.json
