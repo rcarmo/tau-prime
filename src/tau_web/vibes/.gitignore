@@ -1,5 +1,0 @@
-node_modules/
-!static/dist/
-static/dist/*
-!static/dist/app.js
-!static/dist/app.css

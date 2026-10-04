@@ -194,7 +194,9 @@ def _source_files() -> list[Path]:
         if not root.exists():
             continue
         files.extend(
-            path for path in root.rglob("*") if path.is_file() and not _is_excluded_source(path)
+            path
+            for path in root.rglob("*", recurse_symlinks=True)
+            if path.is_file() and not _is_excluded_source(path)
         )
     return sorted(files)
 
@@ -221,7 +223,7 @@ def _package_files() -> list[tuple[Path, str]]:
     }
     for package in ("tau_ai", "tau_agent", "tau_coding", "tau_extensions", "tau_web"):
         package_root = src / package
-        for path in package_root.rglob("*"):
+        for path in package_root.rglob("*", recurse_symlinks=True):
             if not path.is_file() or _is_excluded_source(path):
                 continue
             relative = path.relative_to(src)

@@ -3,7 +3,7 @@ SYSTEM_PYTHON ?= python3
 DIST_DIR ?= dist
 UVX ?= .venv/bin/uvx
 
-.PHONY: help setup test test-parity fixtures-vibes lint typecheck check sdist uvx-test package clean
+.PHONY: help setup test build-frontend test-frontend test-parity fixtures-vibes lint typecheck check sdist uvx-test package clean
 
 help:
 	@printf '%s\n' \
@@ -26,6 +26,15 @@ setup:
 
 test:
 	PATH="$(dir $(PYTHON)):$$PATH" PYTHONPATH=src $(PYTHON) -m pytest -q
+
+# Web front-end: owned in rcarmo/fixtures-vibes (ui/tau); src/tau_web/{vibes,static} link into this submodule.
+TAU_UI := references/fixtures-vibes/ui/tau
+
+build-frontend:
+	$(MAKE) -C $(TAU_UI) build
+
+test-frontend:
+	$(MAKE) -C $(TAU_UI) test lint
 
 test-parity: fixtures-vibes
 
