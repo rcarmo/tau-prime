@@ -27,7 +27,7 @@ setup:
 test:
 	PATH="$(dir $(PYTHON)):$$PATH" PYTHONPATH=src $(PYTHON) -m pytest -q
 
-# Web front-end: owned in rcarmo/fixtures-vibes (ui/tau); src/tau_web/{vibes,static} link into this submodule.
+# Web front-end: owned in rcarmo/fixtures-vibes (ui/tau); src/tau_web/vibes links to it and src/tau_web/static to its sdk/.
 TAU_UI := references/fixtures-vibes/ui/tau
 
 build-frontend:
